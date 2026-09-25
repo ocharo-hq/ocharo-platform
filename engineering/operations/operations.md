@@ -2,29 +2,17 @@
 
 *Last updated: 2026-09-26*
 
-## Initial Git handover
+## Git state
 
-The user requested this order: establish the venture → developer's first commit → enable the native
-repository commit switch → scaffold the full project. The first commit contains the documentation
-baseline, ignore rules, template audit, and build plan. It contains no generated application code.
+The developer created the documentation baseline as `04a13f5952e15d3ee862647fe0f8757a42046416`
+(`Initial commit`) and configured `origin` as
+`https://github.com/sulton-max/ventures.brand-workspace.git`.
+The initial history and remote are preserved during additive scaffold import.
 
-Suggested first-commit subject:
-
-```text
-docs: established Brand Workspace venture and scaffold plan
-```
-
-After making that commit, the user can enable automatic commits by sending this exact standalone
-message in the active task:
-
-```text
-~commit_on workbench/ventures/ventures.brand-workspace
-```
-
-This quoted example does not enable anything. The [shared Git rule][git-rule] states:
-“must change records only through the installed native prompt hook, never by editing JSON or replaying events.”
-The adapter accepts an exact user directive; the agent cannot switch permission on from prose.
-Verify the effective current-task status after the directive. Push and amend remain outside that grant.
+The native switch confirmed ordinary commits ON for the implementation task on 2026-09-26.
+Permission remains runtime state, not a promise from this document. Each continuation checks the
+[native repository switch][git-rule]; a new task must obtain its required confirmation. The human
+publishes. No push, amend, or unrelated workspace commit is implied.
 
 ## Scaffold continuation
 

@@ -4,39 +4,38 @@
 
 ## Current milestone
 
-Repository definition baseline, prepared for the developer's initial commit. The working repository
-name is `ventures.brand-workspace`; its .NET namespace is `BrandWorkspace` and code slug is
-`brand-workspace`. The user has not selected a final commercial name.
+The developer committed the documentation baseline as `04a13f5` and created the GitHub remote
+`https://github.com/sulton-max/ventures.brand-workspace.git`. The adapted .NET/Vue/PostgreSQL/worker
+foundation is implemented and technically verified under [r0.1](../engineering/planning/rough-track/r0.1/r0.1.md).
 
-No application code or runtime has been scaffolded. No provider account is connected. No development
-ports, remote Git repository, deployment, or marketing publication have been created.
+`ventures.brand-workspace` is the repository name, `BrandWorkspace` the .NET namespace, and
+`brand-workspace` the code slug. The commercial name remains a working name. No provider account,
+organization membership, or content workflow is implemented by this foundation.
 
 ## Confirmed direction
 
 - A sibling venture repository owns the general platform; Studio keeps its creative scope.
 - Content & Publishing is the first platform module; Ocharo is the first organization.
 - Reusable capabilities belong in wow-two libraries; apparel semantics stay optional.
-- The user creates the first commit before full template scaffolding begins.
-- Automatic commits require the native repository directive; this baseline grants no permission.
+- The developer created the first commit before full template scaffolding began.
+- Native commit permission is checked for each task; documentation never grants it.
 
 ## Applied implementation defaults
 
 Current shared conventions require .NET 10 and Vue 3 with strict TypeScript, Vite, Tailwind v4,
 and `@wow-two-beta/ui-vue`. The inspected template's React starter is not an exception.
 Use a modular backend serving the frontend and a separate worker process. PostgreSQL is the target
-shared API/worker store. These are design choices; no runtime verification has occurred here.
+shared API/worker store. Executed verification and its limits are recorded separately below.
 
 ## Continuation
 
-After the developer commits the baseline, verify the commit, working tree, and native commit status
-under the [operations sequence](../engineering/operations/operations.md) before beginning
-[r0.1](../engineering/planning/rough-track/r0.1/r0.1.md). Automatic commits require the exact user
-directive and effective ON status; checking or enabling that status never means editing its record.
-Preserve the baseline and `.git` during the
-template import; the existing scaffold script refuses an already existing destination.
+Review scaffold acceptance under [r0.1](../engineering/planning/rough-track/r0.1/r0.1.md).
+The first product milestone afterward is authenticated organization membership and tenant-aware content
+preparation with immutable approval and honest manual export. Automated scheduling and one authorized
+provider path follow separately. A technical queue probe does not complete that delivery milestone.
 
-The first product milestone after the scaffold is tenant-aware content preparation and honest manual
-export. Automated scheduling and one authorized provider path follow separately.
+The initial Git history and remote remain intact. Check the effective native commit permission under
+[operations](../engineering/operations/operations.md) when continuing in another task.
 
 ## External inputs
 

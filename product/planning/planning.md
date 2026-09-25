@@ -4,8 +4,8 @@
 
 | Milestone | Outcome | Current status |
 |---|---|---|
-| Repository baseline | Coherent definition, architecture, template audit, and initial Git handover | Prepared for the developer's first commit |
-| Adapted scaffold | Runnable .NET/Vue foundation, storage, worker, and packaging | Pending initial commit |
+| Repository baseline | Coherent definition, architecture, template audit, and initial Git handover | Committed by the developer as `04a13f5` |
+| Adapted scaffold | Runnable .NET/Vue foundation, storage, worker, and packaging | Technical verification passed; developer acceptance pending |
 | Useful preparation | Tenant-aware source selection, drafts, approval, manual export | Planned; no implementation |
 | Reliable delivery | One authorized provider path, scheduling, recovery, observations | Planned; access unverified |
 | Broader operating platform | Modules justified by actual workflows and adoption | Opportunity portfolio |

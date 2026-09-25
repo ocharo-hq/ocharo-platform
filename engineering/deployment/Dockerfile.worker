@@ -1,0 +1,22 @@
+# syntax=docker/dockerfile:1
+
+# Build context: engineering/codebase/. No frontend is built for the worker.
+FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
+WORKDIR /src/brand-workspace.backend-services
+COPY brand-workspace.backend-services/ ./
+RUN dotnet publish BrandWorkspace.Worker/BrandWorkspace.Worker.csproj \
+    --configuration Release --output /app/publish \
+    -p:BuildSpa=false -p:UseAppHost=false -p:RestoreLockedMode=true
+
+# The shared backend SDK may require the ASP.NET Core framework without hosting HTTP.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /app/publish/ ./
+USER app
+# Process liveness only. The API system status exposes the worker's database heartbeat.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
+    CMD kill -0 1 || exit 1
+ENTRYPOINT ["dotnet", "BrandWorkspace.Worker.dll"]

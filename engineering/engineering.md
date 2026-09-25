@@ -2,19 +2,20 @@
 
 *Last updated: 2026-09-26*
 
-## Target stack
+## Foundation stack
 
-| Area | Target | Baseline status |
+| Area | Target | Implementation status |
 |---|---|---|
-| Backend | .NET 10, ASP.NET Core, EF Core, Clean Architecture, backend beta SDK | Planned |
-| Frontend | Vue 3, strict TypeScript, Vite, Tailwind v4, Vue beta UI SDK | Planned |
-| Persistence | PostgreSQL with versioned migrations | Planned |
-| Execution | Independent worker using durable shared-library primitives | Planned |
-| Hosting | API serves built frontend; separate worker executable/image | Planned |
-| Source | Existing product template, adapted to current conventions | Audited; not imported |
+| Backend | .NET 10, ASP.NET Core, Clean Architecture, backend beta SDK | Implemented and locally verified |
+| Frontend | Vue 3, strict TypeScript, Vite, Tailwind v4, Vue beta UI SDK | Implemented and locally verified |
+| Persistence | PostgreSQL, Npgsql, embedded SQL migrations through the backend SDK | Implemented and locally verified |
+| Execution | Independent worker, Hangfire PostgreSQL storage, technical probes | Implemented and locally verified |
+| Hosting | API serves built frontend; separate worker executable/image | Implemented and locally verified |
+| Source | Existing product template, adapted to current conventions | Audited source adapted additively |
 
-Installed toolchain inspection found .NET SDK `10.0.300` and Node `v24.11.0`; this is not a
-project build or dependency verification. Package pins will be verified during scaffolding.
+Toolchain pins: .NET SDK `10.0.300`, Node `24.11.0`, npm `11.6.1`. Published SDK inputs are
+`WoW2.Sdk.Backend.Beta` `10.0.58-beta` and `@wow-two-beta/ui-vue` `0.0.6`. Lockfiles record
+resolved dependency graphs. Runtime and test proof remains in the verification record.
 
 ## Navigation
 

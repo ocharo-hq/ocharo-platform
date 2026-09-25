@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/Services/">
+    <Project Path="BrandWorkspace.Domain/BrandWorkspace.Domain.csproj" />
+    <Project Path="BrandWorkspace.Application/BrandWorkspace.Application.csproj" />
+    <Project Path="BrandWorkspace.Infrastructure/BrandWorkspace.Infrastructure.csproj" />
+    <Project Path="BrandWorkspace.Persistence/BrandWorkspace.Persistence.csproj" />
+    <Project Path="BrandWorkspace.Worker/BrandWorkspace.Worker.csproj" />
+    <Project Path="BrandWorkspace.Api/BrandWorkspace.Api.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/BrandWorkspace.Tests.Unit/BrandWorkspace.Tests.Unit.csproj" />
+    <Project Path="tests/BrandWorkspace.Tests.E2E/BrandWorkspace.Tests.E2E.csproj" />
+  </Folder>
+</Solution>

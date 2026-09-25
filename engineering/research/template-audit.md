@@ -6,9 +6,15 @@
 
 Use the existing product-template as an adaptation source after the human's documentation-only first commit. Its current output is not a conformant finished scaffold: Vue, `.slnx`, build integration and several conventions need explicit updates. Preserve the initial repository and import selected adapted files; the shared creation script has no existing-repository import mode.
 
-No product source, shared script, package, runtime or provider connection was changed. No restore, build, test, container or deployment ran. The audit and [source manifest](template-source-manifest.json) are part of the documentation baseline.
+At the initial audit, no product source, shared script, package, runtime or provider connection was changed. The audit and [source manifest](template-source-manifest.json) were committed in the documentation baseline. Executed adoption evidence is recorded separately below and in [verification](../planning/verification.md).
 
 ## Source provenance
+
+The developer's baseline commit is `04a13f5952e15d3ee862647fe0f8757a42046416`.
+Before adaptation on 2026-09-26, all 63 selected files matched the recorded SHA-256 values.
+Only those files were copied into a task-owned temporary staging directory, excluding generated
+output and Git state. Code and deployment configuration are imported additively; the repository's
+baseline documents, `.git`, and remote are preserved.
 
 | Source | Observed snapshot | Qualification |
 |---|---|---|

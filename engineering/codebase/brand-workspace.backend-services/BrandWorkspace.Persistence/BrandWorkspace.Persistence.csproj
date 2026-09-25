@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="WoW2.Sdk.Backend.Beta" />
+    <ProjectReference Include="../BrandWorkspace.Application/BrandWorkspace.Application.csproj" />
+    <ProjectReference Include="../BrandWorkspace.Domain/BrandWorkspace.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Migrations/**/*.sql"><LogicalName>Migrations/%(RecursiveDir)%(Filename)%(Extension)</LogicalName></EmbeddedResource></ItemGroup>
+</Project>

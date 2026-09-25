@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="WoW2.Sdk.Backend.Beta" />
+    <ProjectReference Include="../BrandWorkspace.Application/BrandWorkspace.Application.csproj" />
+    <ProjectReference Include="../BrandWorkspace.Infrastructure/BrandWorkspace.Infrastructure.csproj" />
+    <ProjectReference Include="../BrandWorkspace.Persistence/BrandWorkspace.Persistence.csproj" />
+    <ProjectReference Include="../BrandWorkspace.Domain/BrandWorkspace.Domain.csproj" />
+  </ItemGroup>
+  <PropertyGroup><SpaRoot>$(MSBuildProjectDirectory)/../../brand-workspace.frontend-services/</SpaRoot></PropertyGroup>
+  <Target Name="BuildSpa" BeforeTargets="PrepareForBuild;ResolveProjectStaticWebAssets"
+          Condition="'$(BuildSpa)' != 'false' and '$(DesignTimeBuild)' != 'true' and '$(NoBuild)' != 'true'">
+    <Error Condition="!Exists('$(SpaRoot)package-lock.json')" Text="The locked frontend dependency manifest is required." />
+    <Exec Command="npm ci" WorkingDirectory="$(SpaRoot)" />
+    <Exec Command="npm run build" WorkingDirectory="$(SpaRoot)" />
+    <ItemGroup>
+      <Content Remove="@(Content)" Condition="$([System.String]::Copy('%(Content.Identity)').Replace('\', '/').StartsWith('wwwroot/'))" />
+      <Content Include="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>

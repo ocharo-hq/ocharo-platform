@@ -1,0 +1,74 @@
+name: brand-workspace
+
+x-runtime-environment: &runtime-environment
+  DOTNET_ENVIRONMENT: Production
+  ConnectionStrings__Database: "Host=postgres;Port=5432;Database=brand_workspace;Username=brand_workspace;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in engineering/deployment/.env}"
+
+x-api-image: &api-image
+  image: brand-workspace-api:local
+  build:
+    context: ../codebase
+    dockerfile: ../deployment/Dockerfile
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: brand_workspace
+      POSTGRES_USER: brand_workspace
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in engineering/deployment/.env}
+    ports:
+      - "127.0.0.1:8270:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  migrate:
+    <<: *api-image
+    command: ["--migrate"]
+    environment: *runtime-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  api:
+    <<: *api-image
+    environment:
+      <<: *runtime-environment
+      ASPNETCORE_URLS: http://+:8080
+    ports:
+      - "127.0.0.1:8268:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  worker:
+    image: brand-workspace-worker:local
+    build:
+      context: ../codebase
+      dockerfile: ../deployment/Dockerfile.worker
+    environment: *runtime-environment
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    stop_grace_period: 60s
+
+volumes:
+  postgres-data:

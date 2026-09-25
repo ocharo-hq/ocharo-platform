@@ -1,0 +1,38 @@
+name: Verify Brand Workspace
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: engineering/codebase/brand-workspace.frontend-services/package-lock.json
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.300
+      - name: Pin npm
+        run: npm install --global npm@11.6.1
+      - name: Verify frontend
+        working-directory: engineering/codebase/brand-workspace.frontend-services
+        run: |
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test
+      - name: Verify backend and generated frontend
+        working-directory: engineering/codebase/brand-workspace.backend-services
+        run: |
+          dotnet restore BrandWorkspace.BackendServices.slnx --locked-mode
+          dotnet build BrandWorkspace.BackendServices.slnx -c Release --no-restore
+          dotnet test BrandWorkspace.BackendServices.slnx -c Release --no-build
+      - name: Build deployment images
+        working-directory: engineering/deployment
+        run: docker compose --env-file .env.example build

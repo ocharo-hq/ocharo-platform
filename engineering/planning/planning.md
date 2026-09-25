@@ -6,18 +6,16 @@
 
 | Track | Scope | State |
 |---|---|---|
-| [r0.1](rough-track/r0.1/r0.1.md) | Complete adapted template foundation | Planned; follows the developer's initial commit |
+| [r0.1](rough-track/r0.1/r0.1.md) | Complete adapted template foundation | Technical scaffold verified; developer acceptance pending |
 
-No version track is active while the rough scaffold is planned. Later product work remains in the
+No version track is active while the rough scaffold awaits acceptance. Later product work remains in the
 [backlog](backlog.md); this baseline does not assign speculative release versions.
 
 ## Continuation gate
 
-The user requested the repository baseline first, their initial commit second, and full scaffolding
-afterward. Verify that initial commit and inspect the native repository commit status through the
-[operations sequence](../operations/operations.md) before application implementation. Commit automation
-requires the exact user directive and effective ON status; natural-language intent does not change it.
-Scaffolding and staging are authorized work; an OFF flag forbids automatic commits, not those operations.
+The developer created `04a13f5` and configured the GitHub remote. The native repository switch confirms
+automatic commits ON for the current task. These checkpoints permit the authorized scaffold work;
+later tasks still inspect the current native state under [operations](../operations/operations.md).
 
 ## Decisions
 
@@ -38,8 +36,9 @@ Detailed current work belongs only in the rough track.
 ## Log
 
 - 2026-09-26 — Established the documentation baseline and inspected the standard template.
+- 2026-09-26 — Verified the adapted foundation, 30 tests, clean publish, and packaged restart recovery.
 
 ## Evidence
 
 [Template audit](../research/template-audit.md) and [verification](verification.md) distinguish current
-source evidence, required adaptations, and checks not yet executed.
+source evidence, adopted changes, and checks not yet executed.

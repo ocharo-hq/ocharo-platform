@@ -2,11 +2,17 @@
 
 *Last updated: 2026-09-26*
 
-No application code exists in the initial repository baseline.
+`brand-workspace.backend-services/BrandWorkspace.BackendServices.slnx` groups the API, worker,
+Application, Domain, Infrastructure, Persistence, and meaningful test projects. Projects sit directly
+beside the solution; tests sit in `tests/`. Central package versions and per-project lockfiles make
+restore inputs explicit. The API serves generated frontend assets from its ignored `wwwroot/`.
 
-The post-commit scaffold creates `brand-workspace.backend-services/` with
-`BrandWorkspace.BackendServices.slnx`, the Clean Architecture projects, tests, and a worker host.
-`brand-workspace.frontend-services/` holds the Vue application. These are planned paths, not existing
-executables or working run commands.
+`brand-workspace.frontend-services/` contains the Vue application, strict TypeScript, Vite, Tailwind,
+public Vue SDK consumption, tests, and an npm lockfile. Bootstrap owns preview configuration;
+presentation, application, domain, and integration retain their boundaries.
 
-Template adaptation and verification belong to [r0.1](../planning/rough-track/r0.1/r0.1.md).
+The foundation contains technical diagnostics only. It has no organization membership or content
+records. The later preparation milestone adds those through explicit tenant authorization.
+
+Build and runtime commands live in [development](../development/development.md) and
+[deployment](../deployment/deployment.md). Evidence belongs in [verification](../planning/verification.md).

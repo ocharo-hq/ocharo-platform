@@ -8,6 +8,10 @@ One platform repository owns the API/frontend, integration worker, and product m
 a versioned release contract and initially a PostgreSQL database. Studio is a separate creative product.
 There is no separate repository or microservice for each calendar, approval, or observation feature.
 
+The diagram describes the product target. In the technical foundation, only the API/SPA, PostgreSQL,
+and worker are wired. Authentication, tenant records, immutable media, Studio imports, and provider
+connections are later product work. No foundation diagnostic grants access to business records.
+
 ```mermaid
 flowchart LR
     Browser[Authorized brand workspace] --> API[API and Vue frontend]
@@ -35,6 +39,21 @@ flowchart LR
 Infrastructure primitives and reusable brand behavior are separate concerns. Existing SDK defects
 are fixed in their owner. New reusable behavior is proven through the product, then completed and
 adopted through the shared-library cycle. Product modules must not depend on Ocharo constants.
+
+## Foundation composition
+
+The API exposes read-only system status, liveness, readiness, and the built Vue shell. Unknown API
+routes return JSON errors. The worker is a separate executable; its normal host consumes durable
+PostgreSQL jobs. A client-only diagnostic command submits harmless probes without starting a worker.
+
+Schema changes have one explicit owner: the API executable's `--migrate` command, packaged as the
+one-shot Compose migration service. Ordinary API and worker startup does not create or upgrade
+schema. The selected shared SDK supports embedded SQL migrations with PostgreSQL locking, so the
+foundation does not carry the template's SQLite/EF initialization path.
+
+Worker timestamps are diagnostic observations, not proof that a publication succeeded. Durable
+probe execution establishes the host/queue boundary; it does not establish exactly-once external
+effects, publication scheduling, cancellation, or provider reconciliation.
 
 ## Invariants
 

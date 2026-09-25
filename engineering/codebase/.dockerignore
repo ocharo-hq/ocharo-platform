@@ -1,0 +1,27 @@
+# Rebuild generated output inside the image.
+**/bin/
+**/obj/
+**/dist/
+**/node_modules/
+**/.vite/
+**/*.Api/wwwroot/
+**/coverage/
+**/test-results/
+**/playwright-report/
+**/*.tsbuildinfo
+
+# Local state and credentials are not image inputs.
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/.env
+**/.env.*
+**/appsettings.Local.json
+
+# Editor, operating-system, and repository metadata.
+**/.git/
+**/.idea/
+**/.vs/
+**/.vscode/
+**/*.user
+**/.DS_Store

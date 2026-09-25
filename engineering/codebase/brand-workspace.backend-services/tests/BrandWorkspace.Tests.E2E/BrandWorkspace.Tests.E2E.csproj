@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><IsTestProject>true</IsTestProject></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="WoW2.Sdk.Backend.Beta.Testing" />
+    <ProjectReference Include="../../BrandWorkspace.Api/BrandWorkspace.Api.csproj" />
+    <ProjectReference Include="../../BrandWorkspace.Worker/BrandWorkspace.Worker.csproj" />
+  </ItemGroup>
+</Project>
