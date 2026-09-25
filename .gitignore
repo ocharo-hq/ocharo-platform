@@ -1,0 +1,28 @@
+# Build and generated output
+**/bin/
+**/obj/
+**/dist/
+**/.vite/
+**/node_modules/
+**/*.Api/wwwroot/
+*.tsbuildinfo
+coverage/
+test-results/
+playwright-report/
+
+# Local state and credentials
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+!.env.example
+**/appsettings.Local.json
+engineering/operations/secrets/
+.vector/
+
+# Editor and operating-system state
+.idea/
+.vs/
+.vscode/*
+.DS_Store

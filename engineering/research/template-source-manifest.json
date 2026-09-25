@@ -1,0 +1,334 @@
+{
+  "inspected_on": "2026-09-26",
+  "source_repository": "/Users/max/Projects/10x-ws/workbench/career/engineering/wow-two/wow-two-ws/workbench/wow-two-sdk-beta/wow-two-sdk-beta.product-template",
+  "source_head": "bf6dfacee965e1fafd6cdf84fb0f4167d49f5120",
+  "source_status": [
+    " M README.md",
+    "?? .claude/",
+    "?? CLAUDE.md",
+    "?? engineering/",
+    "?? product/"
+  ],
+  "selection_note": "Current working-tree source; not copied into product code. Excludes Git history, build/package caches, local secrets/databases, generated SPA output, and OS files. Recheck before adoption.",
+  "files": [
+    {
+      "path": ".claude/rules/file-references.md",
+      "sha256": "294456132f799bf2ea5ff8399309249cf24141836c35d3095b0ce08f5ab04ed0",
+      "bytes": 1939
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "0d4ce178ce950bd5fd3e76d2822df049fdf9bc1e6ee119118afa1860739e3833",
+      "bytes": 1070
+    },
+    {
+      "path": "README.md",
+      "sha256": "923e4baf498826b4eff78edf8b1a3041aabf28e3301cf7040ed7907b4e733624",
+      "bytes": 875
+    },
+    {
+      "path": "engineering/architecture/architecture.md",
+      "sha256": "4e69586824ab07f90b021cb90bbbf4fdf9c0296f5284ebbe3f990de62f2c0fe3",
+      "bytes": 176
+    },
+    {
+      "path": "engineering/codebase/.dockerignore",
+      "sha256": "668b93d04e9d279785af566bbc2e662528ed4135e548776e706b1e99095d3d84",
+      "bytes": 496
+    },
+    {
+      "path": "engineering/codebase/codebase.md",
+      "sha256": "a639f898518883ac377806bec241e3857eb2e016001af8fa2b9d17bd69b57b4d",
+      "bytes": 200
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Directory.Build.props",
+      "sha256": "a5602b3d98d29e186669c0c8f98c5258f463b137b272789bb2b4f4aa8afa0fa7",
+      "bytes": 419
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Directory.Packages.props",
+      "sha256": "057782ab738a0228a976c23c74476e0a8f10c612b590d298f861f4d4d1c9cc87",
+      "bytes": 1467
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/Configurations/AppInitialization.cs",
+      "sha256": "02b7d43f9fb4f08748ab8c7cb79cf21559efdd3f17c8f08d95070d373ce8b2fe",
+      "bytes": 413
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/Configurations/HostConfiguration.cs",
+      "sha256": "772f7e61573db45745d08499d32025471cfa5f8cb34a4d2a830c6c3c847cc38b",
+      "bytes": 1115
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/Configurations/HostConfigurationExtensions.cs",
+      "sha256": "0941f3921b76fe2230a530244af437c2218d0ef9c4b7d494dd1eae8ad8647d57",
+      "bytes": 1383
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/Controllers/GreetingController.cs",
+      "sha256": "57a232310dbfbe0fe6bfff7c6f62d06d9e180e50cd28bdf42f41726dfcef6b4c",
+      "bytes": 981
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/Program.cs",
+      "sha256": "98c815de2f9c19b0fa1140b7aa600de15222b38dbcff4782476005d8b3283af0",
+      "bytes": 192
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/Properties/launchSettings.json",
+      "sha256": "41bc026902f25886c3bab0c2f8d2d1e9324e259c4f429b43280e088871d649fa",
+      "bytes": 618
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/Sample.Api.csproj",
+      "sha256": "ff591176175cfb51d1e403f7991c9ad5ddbe1cec03dcf372f5e607baa158dbc8",
+      "bytes": 638
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/appsettings.Development.json",
+      "sha256": "817db0bf2ecca78364c41dbaf7949bf2504cf47a1c3d0d54f3be8178fefc030b",
+      "bytes": 119
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Api/appsettings.json",
+      "sha256": "fbfb625b1cb90535286796570601a4cd0b2cc517139f6697ca9f5bd7f123a7a1",
+      "bytes": 210
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Application/Abstractions/IClock.cs",
+      "sha256": "ba28e0ecf0a0dcc4e3c2068ad1233b9becc3b5727ef026c8d83d1bc805ed3f6e",
+      "bytes": 242
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Application/DependencyInjection.cs",
+      "sha256": "ea0bdd97f4d712c94d1a056fb1dbe5d4218b35da092dfad5b4bbc6b0d6f4c95d",
+      "bytes": 582
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Application/Greetings/Queries/GetGreeting/GetGreetingQuery.cs",
+      "sha256": "43292a2a978a7a7802bce3345e9cd0ca3250eeb16cb2fbed67eeba2c2a2c1461",
+      "bytes": 426
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Application/Greetings/Queries/GetGreeting/GetGreetingQueryHandler.cs",
+      "sha256": "9e96760e53671569b93ddbbdcde2865b887ab3a942fb621314d8ea5aab89e63b",
+      "bytes": 1223
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Application/Sample.Application.csproj",
+      "sha256": "9100fd15f5f9cb622f8f09c5095b0fcb40d224b5a055399fd7b7b00b1c46dabc",
+      "bytes": 561
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Domain/Greetings/Entities/GreetingLog.cs",
+      "sha256": "0760e5692f6556fde3e2431f262575ee255f719568e4c62feaa6a62198e7bd6d",
+      "bytes": 596
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Domain/Sample.Domain.csproj",
+      "sha256": "de558b028872acf91e9de2bdc6fa320954e5bd25831e4daf1ba63390ac627120",
+      "bytes": 186
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Infrastructure/DependencyInjection.cs",
+      "sha256": "5be3608c139caa7000c688ad278a67bab5c97f97e72c506fd89f1d56fee68237",
+      "bytes": 600
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Infrastructure/Sample.Infrastructure.csproj",
+      "sha256": "b380a99199b0d83d1a60a7818e5a8abe9d24dd529d3032ac40d31b7bbe1043ca",
+      "bytes": 351
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Infrastructure/Time/SystemClock.cs",
+      "sha256": "fae2a20ea585e9fd9485bac6b186b65f05d81a40b538f85a6b46e46e1c5a9450",
+      "bytes": 259
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Persistence/DependencyInjection.cs",
+      "sha256": "b339a813e282121d07a56c943050670d258127e2924452feb04dab91ef534310",
+      "bytes": 1175
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Persistence/Sample.Persistence.csproj",
+      "sha256": "6fecb893d969899b1d706e159d6907d0204432b933b39caee775ba5fdd968664",
+      "bytes": 482
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.Persistence/SampleDbContext.cs",
+      "sha256": "de0b2fe50facb37c4a23a55e204c18036335bd35a8c87300e81457e27791fce8",
+      "bytes": 1141
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/Sample.sln",
+      "sha256": "dfa4f2a58a9224705977ba2a5535821d8f0dbf082d841871eae7ed81b6dee9bd",
+      "bytes": 7591
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/tests/Sample.Tests/GetGreetingQueryHandlerTests.cs",
+      "sha256": "66996187de22c2248b0e7ea4f14e459b55cbdab945c64ac6bf9cd31fc3f7a8c4",
+      "bytes": 855
+    },
+    {
+      "path": "engineering/codebase/sample.backend-services/tests/Sample.Tests/Sample.Tests.csproj",
+      "sha256": "7eb27bfd22a6a87b92ec703d53b4f1af52cad1dbb62b4c1c2dad16129053268f",
+      "bytes": 541
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/index.html",
+      "sha256": "2d857f6484d172015fe6d90f6122cd0cb45e1c553dd7bc05fa1263deb0e4efa2",
+      "bytes": 293
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/package.json",
+      "sha256": "c70efd55b911c7d74e81d7d5d31a78f767193e597865a87dc8c0ec5e70acbc2b",
+      "bytes": 661
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/scripts/deploy.mjs",
+      "sha256": "13f01d13c1626518d3f72504c6669ebccc897548b7eb42202727b3e7046cde74",
+      "bytes": 1085
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/src/App.tsx",
+      "sha256": "5af041781623db42dd9d438ab27908cc758072a834bb02967471e9c3e73bd46a",
+      "bytes": 1877
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/src/main.tsx",
+      "sha256": "f3f10a59bdbd89709f790ef72010e6b6b2c1a9553c216b363c9a489b61925a9a",
+      "bytes": 319
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/src/vite-env.d.ts",
+      "sha256": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
+      "bytes": 38
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/tsconfig.app.json",
+      "sha256": "c2cf9adb2eec0863312416a695835282210a25472eb9dc0230a1459f957afbcd",
+      "bytes": 661
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/tsconfig.json",
+      "sha256": "770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808",
+      "bytes": 119
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/tsconfig.node.json",
+      "sha256": "088ef0ecec12d7315e1417c9e16b40f1fcc79535cfde3da3099e4b2649b6b933",
+      "bytes": 589
+    },
+    {
+      "path": "engineering/codebase/sample.frontend-services/vite.config.ts",
+      "sha256": "521741ab6dc87955f10e8d5cc4c0107dc19ea1be76888a1a246d47b2a09e2136",
+      "bytes": 607
+    },
+    {
+      "path": "engineering/deployment/Dockerfile",
+      "sha256": "9f21fd52c931fd39751fab29ab2ae85ed0a7742d0601e7d1cf5f78c514ed4c8c",
+      "bytes": 1536
+    },
+    {
+      "path": "engineering/deployment/deployment.md",
+      "sha256": "96c4f84f5f18804eb68ccea596a502a6b08be387e316b613a16dfb6a588f462c",
+      "bytes": 139
+    },
+    {
+      "path": "engineering/deployment/docker-compose.yml",
+      "sha256": "75c414aa1a68cd3f906e943ef92cef48b665aa1f3285c6787767b5403821ff2e",
+      "bytes": 479
+    },
+    {
+      "path": "engineering/development/backend-guidelines.md",
+      "sha256": "3510af04f52aebe820279c391bf5e3b335ff966dddc77a69856656a544e51ff4",
+      "bytes": 127
+    },
+    {
+      "path": "engineering/development/development.md",
+      "sha256": "14f100a7b0b3bcfd66f59f8a1d5e8eef7cc1cf2c9f259053432491c8ef57a1e6",
+      "bytes": 138
+    },
+    {
+      "path": "engineering/development/frontend-guidelines.md",
+      "sha256": "28ee5404f35878f8427d2e40a96e00ccf9b42a30bbd307244a7420de148d9ac9",
+      "bytes": 129
+    },
+    {
+      "path": "engineering/development/iteration-guide.md",
+      "sha256": "40ce0a39de307290fbdbe6ad28f4da1b191bebfc3dd513a5dfc452de831c6e03",
+      "bytes": 176
+    },
+    {
+      "path": "engineering/engineering.md",
+      "sha256": "488398f4d06ab6377a6511270a469d116db3f0cecfa17110bb489fd03da4759a",
+      "bytes": 211
+    },
+    {
+      "path": "engineering/planning/backlog.md",
+      "sha256": "08dddde0fc2289d16b3216ebac80604d95a14f92a886f87cbe2e5d9883fc7dd2",
+      "bytes": 293
+    },
+    {
+      "path": "engineering/planning/planning.md",
+      "sha256": "ce1c9e524df23eb609bafe263603911dde4ce55d7011d5ef34c8aee851170680",
+      "bytes": 385
+    },
+    {
+      "path": "engineering/planning/rules.md",
+      "sha256": "399e58a15812a4a721bb4d834af16c4df49b3a21b247d2f0cd265f08ff3e67a7",
+      "bytes": 162
+    },
+    {
+      "path": "engineering/research/research.md",
+      "sha256": "1aded2c77e936d877d9198ed1d5e839238b09b69978979d7b6c87bc643e78c07",
+      "bytes": 121
+    },
+    {
+      "path": "engineering/scripts/scripts.md",
+      "sha256": "01319ff57f4fb46343f7879f39998e1aefb112c28bf7b83c7dfa0e679a9ce8b2",
+      "bytes": 92
+    },
+    {
+      "path": "engineering/versions/versions.md",
+      "sha256": "83c77f02e1bec234382f94644fdcdde4a0d62d8f2825dc037685598fbc2cf06a",
+      "bytes": 169
+    },
+    {
+      "path": "product/context.md",
+      "sha256": "8249e0347acc01998ed01243e77f427d5f00577719d09ed433c1b7aa0b6b4335",
+      "bytes": 370
+    },
+    {
+      "path": "product/features/features.md",
+      "sha256": "83417e65e2a7f16cd385857986ef406f297a8fbd41d910f6b791407a24d4bb2c",
+      "bytes": 123
+    },
+    {
+      "path": "product/flows/flows.md",
+      "sha256": "7a61b2482df04eb000efad9207eec1ce7b60ee8b471d1c730eb44b8df859ea9c",
+      "bytes": 116
+    },
+    {
+      "path": "product/marketing/marketing.md",
+      "sha256": "61f07f60f1703c23e8bd38df5275298b0b6ba3772ca1034789a932fef7e25f00",
+      "bytes": 114
+    },
+    {
+      "path": "product/planning/planning.md",
+      "sha256": "5570013d2313d1ae2c984de20510d867aa0fe0a1b2d6c2421b8f404a48aaf4f7",
+      "bytes": 327
+    },
+    {
+      "path": "product/product.md",
+      "sha256": "f305eb27d22bfa8010ea28bc6b386d4999a306460471dd9790d3ba461f49bdad",
+      "bytes": 106
+    }
+  ],
+  "scaffold_script": {
+    "path": ".claude/skills/create-repo/scaffold.sh",
+    "sha256": "8d5a477947eff71af87f9c9d9b76ea15d85d8fa396c50109df34c3297b711b5b"
+  }
+}
