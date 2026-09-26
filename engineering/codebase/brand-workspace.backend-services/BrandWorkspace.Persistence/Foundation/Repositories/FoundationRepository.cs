@@ -50,6 +50,17 @@ public sealed class FoundationRepository(NpgsqlDataSource dataSource) : IFoundat
         await using var command = dataSource.CreateCommand("""
             SELECT version = 1 AND to_regclass('foundation.worker_heartbeats') IS NOT NULL
                 AND to_regclass('foundation.probe_receipts') IS NOT NULL
+                AND to_regclass('access.users') IS NOT NULL
+                AND to_regclass('access.sessions') IS NOT NULL
+                AND to_regclass('access.organizations') IS NOT NULL
+                AND to_regclass('access.memberships') IS NOT NULL
+                AND to_regclass('preparation.brands') IS NOT NULL
+                AND to_regclass('preparation.media') IS NOT NULL
+                AND to_regclass('preparation.drafts') IS NOT NULL
+                AND to_regclass('preparation.draft_revisions') IS NOT NULL
+                AND to_regclass('preparation.draft_media') IS NOT NULL
+                AND to_regclass('preparation.approvals') IS NOT NULL
+                AND to_regclass('preparation.exports') IS NOT NULL
                 AND to_regclass('hangfire.job') IS NOT NULL
                 AND to_regclass('hangfire.jobqueue') IS NOT NULL
             FROM foundation.schema_version WHERE id = 1

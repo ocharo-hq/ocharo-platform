@@ -17,6 +17,10 @@
 **/.env
 **/.env.*
 **/appsettings.Local.json
+**/.local/
+**/*.pfx
+**/*.p12
+**/*.key
 
 # Editor, operating-system, and repository metadata.
 **/.git/

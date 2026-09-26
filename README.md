@@ -10,15 +10,18 @@ belongs in optional apparel modules. **Brand Workspace is the working name.**
 
 The developer committed the documentation baseline as `04a13f5` and established
 [the GitHub repository](https://github.com/sulton-max/ventures.brand-workspace).
-The adapted scaffold is implemented and technically verified under [r0.1](engineering/planning/rough-track/r0.1/r0.1.md).
+The adapted foundation is complete under [r0.1](engineering/planning/rough-track/r0.1/r0.1.md).
+Authenticated content preparation is the current increment under
+[r0.2](engineering/planning/rough-track/r0.2/r0.2.md).
 
 The foundation uses a .NET 10 API serving a Vue 3 frontend, PostgreSQL persistence, and an
 independent worker. Shared wow-two libraries provide reusable capabilities. Template adaptations
 are recorded in the [audit](engineering/research/template-audit.md); executed results live in
 [verification](engineering/planning/verification.md).
 
-This foundation does not yet implement accounts, brands, drafts, approvals, scheduling, or provider
-connections. Ocharo remains the first planned organization. No social account is connected.
+The preparation workflow supports provisioned operators, isolated organizations, brands, original
+image uploads, versioned drafts, review, approval, and manual ZIP packages. Ocharo remains user-entered
+tenant configuration. Scheduling and social-provider connections are later work.
 
 ## Start here
 
@@ -26,7 +29,8 @@ connections. Ocharo remains the first planned organization. No social account is
 - [Current state](product/context.md): current milestone and unresolved external inputs.
 - [Architecture](engineering/architecture/architecture.md): runtime, data ownership, shared libraries, and Studio boundary.
 - [Engineering plan](engineering/planning/planning.md): scaffold sequence and later product milestones.
-- [Scaffold track](engineering/planning/rough-track/r0.1/r0.1.md): the concrete foundation scope.
+- [Preparation track](engineering/planning/rough-track/r0.2/r0.2.md): the current usable workflow.
+- [Operator access](engineering/deployment/operator-access.md): provision an operator and run HTTPS locally.
 - [Template audit](engineering/research/template-audit.md): inspected source, drift, and adoption procedure.
 
 ## Canonical analysis

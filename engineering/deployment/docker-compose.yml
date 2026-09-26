@@ -3,6 +3,8 @@ name: brand-workspace
 x-runtime-environment: &runtime-environment
   DOTNET_ENVIRONMENT: Production
   ConnectionStrings__Database: "Host=postgres;Port=5432;Database=brand_workspace;Username=brand_workspace;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in engineering/deployment/.env}"
+  DataProtection__KeysPath: /var/lib/brand-workspace/keys
+  DataProtection__ApplicationName: brand-workspace:Production
 
 x-api-image: &api-image
   image: brand-workspace-api:local
@@ -48,6 +50,8 @@ services:
       ASPNETCORE_URLS: http://+:8080
     ports:
       - "127.0.0.1:8268:8080"
+    volumes:
+      - data-protection-keys:/var/lib/brand-workspace/keys
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,3 +76,4 @@ services:
 
 volumes:
   postgres-data:
+  data-protection-keys:

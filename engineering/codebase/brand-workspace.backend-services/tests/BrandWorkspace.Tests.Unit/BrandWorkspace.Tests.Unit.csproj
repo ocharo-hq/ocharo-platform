@@ -6,5 +6,6 @@
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="AwesomeAssertions" />
     <ProjectReference Include="../../BrandWorkspace.Domain/BrandWorkspace.Domain.csproj" />
+    <ProjectReference Include="../../BrandWorkspace.Infrastructure/BrandWorkspace.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

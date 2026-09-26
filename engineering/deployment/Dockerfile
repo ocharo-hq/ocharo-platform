@@ -19,11 +19,15 @@ RUN dotnet publish BrandWorkspace.Api/BrandWorkspace.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install --yes --no-install-recommends curl libfontconfig1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /var/lib/brand-workspace/keys \
+    && chown app:app /var/lib/brand-workspace/keys \
+    && chmod 700 /var/lib/brand-workspace/keys
 COPY --from=build /app/publish/ ./
 ENV ASPNETCORE_URLS=http://+:8080
 USER app
+RUN dotnet BrandWorkspace.Api.dll --verify-media-runtime
 EXPOSE 8080
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
     CMD curl --fail --silent --show-error http://127.0.0.1:8080/health/ready || exit 1

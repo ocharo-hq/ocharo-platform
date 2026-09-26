@@ -1,0 +1,14 @@
+# Optional direct TLS for local packaged authentication. Supply your explicit local certificate.
+services:
+  api:
+    environment:
+      ASPNETCORE_URLS: "http://+:8080;https://+:8443"
+      Kestrel__Certificates__Default__Path: /https/localhost.pfx
+      Kestrel__Certificates__Default__Password: "${BRAND_WORKSPACE_HTTPS_PASSWORD:?Set the local certificate password}"
+    ports:
+      - "127.0.0.1:8269:8443"
+    volumes:
+      - type: bind
+        source: "${BRAND_WORKSPACE_HTTPS_CERTIFICATE:?Set the absolute local PFX certificate path}"
+        target: /https/localhost.pfx
+        read_only: true

@@ -6,9 +6,10 @@
 
 | Track | Scope | State |
 |---|---|---|
-| [r0.1](rough-track/r0.1/r0.1.md) | Complete adapted template foundation | Technical scaffold verified; developer acceptance pending |
+| [r0.1](rough-track/r0.1/r0.1.md) | Adapted template foundation | Done; developer requested continuation |
+| [r0.2](rough-track/r0.2/r0.2.md) | Authenticated content preparation | Technical work verified; developer review pending |
 
-No version track is active while the rough scaffold awaits acceptance. Later product work remains in the
+No version track is active during this coordinated product bootstrap. Later product work remains in the
 [backlog](backlog.md); this baseline does not assign speculative release versions.
 
 ## Continuation gate
@@ -37,6 +38,8 @@ Detailed current work belongs only in the rough track.
 
 - 2026-09-26 — Established the documentation baseline and inspected the standard template.
 - 2026-09-26 — Verified the adapted foundation, 30 tests, clean publish, and packaged restart recovery.
+- 2026-09-26 — Developer requested continued scaffolding; began authenticated preparation under `r0.2`.
+- 2026-09-26 — Verified preparation with 79 tests, HTTPS browser/package flows, and session/export persistence.
 
 ## Evidence
 

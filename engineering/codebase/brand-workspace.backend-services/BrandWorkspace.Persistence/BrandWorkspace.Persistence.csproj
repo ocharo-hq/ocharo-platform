@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
     <PackageReference Include="WoW2.Sdk.Backend.Beta" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <ProjectReference Include="../BrandWorkspace.Application/BrandWorkspace.Application.csproj" />
     <ProjectReference Include="../BrandWorkspace.Domain/BrandWorkspace.Domain.csproj" />
   </ItemGroup>

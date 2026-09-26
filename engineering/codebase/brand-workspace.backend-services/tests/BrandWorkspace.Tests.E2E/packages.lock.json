@@ -1633,15 +1633,6 @@
           "Microsoft.Extensions.Http": "10.0.9"
         }
       },
-      "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
-        "type": "Transitive",
-        "resolved": "10.0.3",
-        "contentHash": "6SEGWi35DZ9syBqCT8v5vEkm9tWUayWxVkHWLwW2FdyXSwS0zzEpIzGPLVQGeug3VU8d+hK/PFxFwwZnblv/zA==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore.Relational": "10.0.3",
-          "Microsoft.Extensions.Identity.Stores": "10.0.3"
-        }
-      },
       "Microsoft.AspNetCore.Mvc.Testing": {
         "type": "Transitive",
         "resolved": "10.0.3",
@@ -2744,16 +2735,6 @@
           "Microsoft.Extensions.Logging.Abstractions": "10.0.0"
         }
       },
-      "Npgsql.EntityFrameworkCore.PostgreSQL": {
-        "type": "Transitive",
-        "resolved": "10.0.0",
-        "contentHash": "E2+uSWxSB8LdsUVwPaqRWOcGOP92biry2JEwc0KJMdLJF+aZdczeIdEXVwEyv4nSVMQJH0o8tLhyAMiR6VF0lw==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "[10.0.0, 11.0.0)",
-          "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, 11.0.0)",
-          "Npgsql": "10.0.0"
-        }
-      },
       "NSec.Cryptography": {
         "type": "Transitive",
         "resolved": "22.4.0",
@@ -3247,29 +3228,15 @@
         "resolved": "1.0.0",
         "contentHash": "LFQsCZlV0xlUyXAOMUo5kkSl+8zAQXXbbdwWchtk0B4o7zotZhQsQOcJUELGHdfPfm/xDAsz6hONAuV25bJaAg=="
       },
-      "SkiaSharp": {
-        "type": "Transitive",
-        "resolved": "3.119.2",
-        "contentHash": "nmy2dOFWPvQKMglfpjz8+/xQQcSrL9jzul3cUyzCJVSwrmSAw+6B1sEgU7jt6NZBptwGq2k/V0kjyu2GizMFtg==",
-        "dependencies": {
-          "SkiaSharp.NativeAssets.Win32": "3.119.2",
-          "SkiaSharp.NativeAssets.macOS": "3.119.2"
-        }
-      },
-      "SkiaSharp.NativeAssets.Linux": {
-        "type": "Transitive",
-        "resolved": "3.119.2",
-        "contentHash": "9WzxSyG/s9Id506j0Ht+Bi5ucOpWKPzd1XXr9TD4fuCafHHy2swRSlbZtC3IDQAsvCH63OerkDJajj43uSv5og=="
-      },
       "SkiaSharp.NativeAssets.macOS": {
         "type": "Transitive",
-        "resolved": "3.119.2",
-        "contentHash": "I2jMGQ/26KOnc6iAoR+Mxh9vSJJ2vioJyj9aJ9OL5yEZyXothXJxf4vBMqnSaiXMqiiU1scG7KqtT0CLkmMmWA=="
+        "resolved": "4.152.1",
+        "contentHash": "gKaE2zNHsPLjlA88ZClRNmtZlHNGEa/W4iPy5GpP1TtUELIXzrSr2udCbl1GWYFuCdA36IycBk5YhUuK1xi9UA=="
       },
       "SkiaSharp.NativeAssets.Win32": {
         "type": "Transitive",
-        "resolved": "3.119.2",
-        "contentHash": "uYe+da6+GXVgPKkCopzvIZ83DmC8SXXKeUAPrNcztJNsg0SjPQAxfKMOPZqmVjbzznrq/QUIjLUlJSZV/e0IPA=="
+        "resolved": "4.152.1",
+        "contentHash": "MLDP6XT8CHLHF6gZlpW06iswGNBlL/JB2+SKuSLz0Y0k1zzsfofNyUY6J6FC32A4/F67E9S8MwovRBL+ELw0lw=="
       },
       "Snappier": {
         "type": "Transitive",
@@ -3850,6 +3817,8 @@
         "dependencies": {
           "BrandWorkspace.Application": "[1.0.0, )",
           "BrandWorkspace.Domain": "[1.0.0, )",
+          "SkiaSharp": "[4.152.1, )",
+          "SkiaSharp.NativeAssets.Linux": "[4.152.1, )",
           "WoW2.Sdk.Backend.Beta": "[10.0.58-beta, )"
         }
       },
@@ -3858,6 +3827,8 @@
         "dependencies": {
           "BrandWorkspace.Application": "[1.0.0, )",
           "BrandWorkspace.Domain": "[1.0.0, )",
+          "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.3, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.0, )",
           "WoW2.Sdk.Backend.Beta": "[10.0.58-beta, )"
         }
       },
@@ -3870,6 +3841,16 @@
           "BrandWorkspace.Persistence": "[1.0.0, )",
           "Microsoft.Extensions.Hosting": "[10.0.3, )",
           "WoW2.Sdk.Backend.Beta": "[10.0.58-beta, )"
+        }
+      },
+      "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.3, )",
+        "resolved": "10.0.3",
+        "contentHash": "6SEGWi35DZ9syBqCT8v5vEkm9tWUayWxVkHWLwW2FdyXSwS0zzEpIzGPLVQGeug3VU8d+hK/PFxFwwZnblv/zA==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore.Relational": "10.0.3",
+          "Microsoft.Extensions.Identity.Stores": "10.0.3"
         }
       },
       "Microsoft.Extensions.Hosting": {
@@ -3901,6 +3882,33 @@
           "Microsoft.Extensions.Logging.EventSource": "10.0.3",
           "Microsoft.Extensions.Options": "10.0.3"
         }
+      },
+      "Npgsql.EntityFrameworkCore.PostgreSQL": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.0, )",
+        "resolved": "10.0.0",
+        "contentHash": "E2+uSWxSB8LdsUVwPaqRWOcGOP92biry2JEwc0KJMdLJF+aZdczeIdEXVwEyv4nSVMQJH0o8tLhyAMiR6VF0lw==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "[10.0.0, 11.0.0)",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, 11.0.0)",
+          "Npgsql": "10.0.0"
+        }
+      },
+      "SkiaSharp": {
+        "type": "CentralTransitive",
+        "requested": "[4.152.1, )",
+        "resolved": "4.152.1",
+        "contentHash": "p3rj8SVoa+2Tmx1EITE4jIwCDPcYjwXdZ3c9yM6l9wNn6572hwxzrth6WOBK0iGnAoTGoJBZuZpy8wYjbov6sw==",
+        "dependencies": {
+          "SkiaSharp.NativeAssets.Win32": "4.152.1",
+          "SkiaSharp.NativeAssets.macOS": "4.152.1"
+        }
+      },
+      "SkiaSharp.NativeAssets.Linux": {
+        "type": "CentralTransitive",
+        "requested": "[4.152.1, )",
+        "resolved": "4.152.1",
+        "contentHash": "1bB3eedb+4ZcyWigUzxXCE7LrNOlmyAs1crGCnX8UEHKl0nHOmzDt3E0d53IIgiguS88RKeCPy1ArDXK5FoDCw=="
       },
       "WoW2.Sdk.Backend.Beta": {
         "type": "CentralTransitive",

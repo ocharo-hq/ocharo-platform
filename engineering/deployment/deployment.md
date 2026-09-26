@@ -7,10 +7,16 @@
 `Dockerfile` builds the Vue frontend in a Node stage and publishes the API with that generated
 `wwwroot`. `Dockerfile.worker` publishes the independent worker. Both build from
 `engineering/codebase/`, require NuGet lockfiles, and run as the image's unprivileged `app` user.
+Both images include `libfontconfig1` for the matching SkiaSharp Linux native provider. The API image
+build runs `--verify-media-runtime` as that same user: it decodes a known PNG through the production
+validator and verifies its hash without contacting PostgreSQL or starting HTTP. This catches missing
+native dependencies and incompatible native/managed library versions before the image is accepted.
 
 Compose names the local stack `brand-workspace`. PostgreSQL stores its data in the
 `brand-workspace_postgres-data` volume. A one-shot `migrate` service runs the API `--migrate` command;
 both ordinary hosts wait for its successful completion. Neither ordinary host changes schema.
+The API's separate `brand-workspace_data-protection-keys` volume preserves protected sessions across
+process replacement. Its image directory belongs to the unprivileged runtime user.
 
 The checked-in `.env.example` contains a clearly labelled local demonstration password. Use a local
 ignored `.env` for any different credentials. The scaffold performs no social-provider requests.
@@ -32,8 +38,9 @@ docker compose --env-file .env.example ps
 docker compose --env-file .env.example logs --tail 50 api worker migrate
 ```
 
-The application is at `http://127.0.0.1:8268`. The local container HTTP endpoint is bound only to
-loopback; development HTTPS has separate ports below. `check.sh` validates API readiness, actual
+The public application shell and diagnostics are at `http://127.0.0.1:8268`. Operator access requires
+HTTPS; [operator setup](operator-access.md) documents provisioning and the optional packaged TLS listener.
+The local container HTTP endpoint is bound only to loopback. `check.sh` validates API readiness, actual
 worker heartbeat, root/deep-link SPA responses, and JSON errors for unknown API paths and methods.
 
 Stop this stack without deleting its database:
@@ -56,7 +63,8 @@ dotnet run --project BrandWorkspace.Api --no-launch-profile -- --migrate
 
 That command runs from the backend directory with `ConnectionStrings__Database` configured. Embedded
 SQL migrations use the shared SDK runner and PostgreSQL locking; the explicit command also initializes
-the provider-owned Hangfire schema. Re-running it verifies already-applied source integrity.
+the provider-owned Hangfire schema. The access migration includes framework-generated Identity DDL;
+Identity does not run a second migration system at startup. Re-running verifies source integrity.
 
 Client-only diagnostics run from the worker image without starting a worker server:
 
@@ -72,12 +80,12 @@ the existing PostgreSQL state. This is a queue durability check, not a publicati
 ## Health semantics
 
 - `/health/live`: the API process serves requests; it does not check dependencies.
-- `/health/ready`: PostgreSQL is reachable and the expected foundation/queue schema is present.
+- `/health/ready`: PostgreSQL is reachable and the expected application/queue schema is present.
 - `/api/system/status`: foundation metadata and latest worker heartbeat (`waiting`, `healthy`, `stale`).
 - Worker image health: process liveness only. Read system status for heartbeat freshness.
 
-No user content, tenant records, provider credentials, or business mutations exist in these endpoints.
-Add authenticated organization boundaries before introducing that state.
+These endpoints expose only technical diagnostics. Authenticated preparation lives under the
+organization API boundary and requires current membership.
 
 ## Ports
 
@@ -85,13 +93,14 @@ Add authenticated organization boundaries before introducing that state.
 |---|---|
 | API development | HTTPS 8264 / HTTP 8265 |
 | Vue development | HTTPS 8266 |
-| Packaged API and SPA | HTTP 8268, loopback only |
+| Packaged API and SPA | HTTP 8268; optional HTTPS 8269; loopback only |
 | PostgreSQL | 8270, loopback only |
 | Worker | No HTTP listener |
 
 Use the shared [port ledger](../../../../../conventions/deployment/hosting/ports.md) when adding services.
 Default Vite uses mkcert; certificate trust stays user-controlled. `npm run dev:http` is an explicit
-headless fallback. Vite proxies `/api` to the HTTPS development API.
+diagnostic fallback; secure session cookies require the HTTPS frontend. Vite proxies `/api` to the
+HTTPS development API. Browser application and API requests remain same-origin.
 
 ## CI and publication
 
@@ -104,7 +113,9 @@ PostgreSQL still requires this product's topology. No release or remote deployme
 
 Before public hosting, explicitly set `AllowedHosts` to the intended host names, for example
 `<public-host>;localhost;127.0.0.1`; replace the placeholder with the actual hostname. The default
-accepts only local hosts. TLS termination, trusted proxies, credentials, backups, authentication,
-and organization isolation need their own deployment/product work before storing real brand data.
+accepts only local hosts. The initial topology supports direct TLS. A reverse proxy requires an
+explicit trusted-proxy configuration; arbitrary forwarded headers do not change request authority.
+Production credentials, key encryption, backups, identity recovery, and operational acceptance remain
+separate work before storing real brand data. No real brand account is provisioned by scaffolding.
 
 Executed verification is recorded in [verification](../planning/verification.md).

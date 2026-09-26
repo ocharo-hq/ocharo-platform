@@ -20,6 +20,11 @@ playwright-report/
 **/appsettings.Local.json
 engineering/operations/secrets/
 .vector/
+.local/
+**/.local/
+*.pfx
+*.p12
+*.key
 
 # Editor and operating-system state
 .idea/

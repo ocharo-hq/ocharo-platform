@@ -6,11 +6,15 @@
 
 The developer committed the documentation baseline as `04a13f5` and created the GitHub remote
 `https://github.com/sulton-max/ventures.brand-workspace.git`. The adapted .NET/Vue/PostgreSQL/worker
-foundation is implemented and technically verified under [r0.1](../engineering/planning/rough-track/r0.1/r0.1.md).
+foundation was committed as `d4b1add` under [r0.1](../engineering/planning/rough-track/r0.1/r0.1.md).
+The developer requested continued scaffolding. Authenticated preparation is implemented under
+[r0.2](../engineering/planning/rough-track/r0.2/r0.2.md). Technical verification passed 79 tests,
+the HTTPS browser/package workflows, and session/export persistence across container replacement.
+Developer review remains open; [verification](../engineering/planning/verification.md) records the limits.
 
 `ventures.brand-workspace` is the repository name, `BrandWorkspace` the .NET namespace, and
-`brand-workspace` the code slug. The commercial name remains a working name. No provider account,
-organization membership, or content workflow is implemented by this foundation.
+`brand-workspace` the code slug. The commercial name remains a working name. Organizations and brands
+are created by operators; no Ocharo identity or real account is seeded by the application.
 
 ## Confirmed direction
 
@@ -29,10 +33,14 @@ shared API/worker store. Executed verification and its limits are recorded separ
 
 ## Continuation
 
-Review scaffold acceptance under [r0.1](../engineering/planning/rough-track/r0.1/r0.1.md).
-The first product milestone afterward is authenticated organization membership and tenant-aware content
-preparation with immutable approval and honest manual export. Automated scheduling and one authorized
-provider path follow separately. A technical queue probe does not complete that delivery milestone.
+Review the usable preparation increment under [r0.2](../engineering/planning/rough-track/r0.2/r0.2.md).
+Local email/password operators are provisioned through the administrator CLI; public registration and
+email delivery are absent. The workflow provides isolated organizations, brands, immutable PNG/JPEG
+uploads, versioned drafts, review, owner approval/revocation, and downloadable manual ZIP snapshots.
+Operator setup and HTTPS commands live in [operator access](../engineering/deployment/operator-access.md).
+
+Automated scheduling and one explicitly authorized provider path follow separately. A technical queue
+probe or prepared ZIP does not establish that a provider published anything.
 
 The initial Git history and remote remain intact. Check the effective native commit permission under
 [operations](../engineering/operations/operations.md) when continuing in another task.
