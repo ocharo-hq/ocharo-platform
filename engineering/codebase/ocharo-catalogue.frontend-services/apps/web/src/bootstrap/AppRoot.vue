@@ -73,22 +73,28 @@ onMounted(() => {
       class="no-print sr-only focus:not-sr-only focus:fixed focus:left-5 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-card focus:px-5 focus:py-3"
       >{{ t('Skip to content') }}</a
     >
-    <AppShellHeader class="no-print border-b border-border bg-card/95 backdrop-blur">
-      <Navbar :bordered="false" container-class="max-w-[1800px] px-5 sm:px-8" class="bg-card">
+    <AppShellHeader
+      class="no-print border-b border-border bg-card/95 backdrop-blur max-lg:h-auto max-lg:flex-col max-lg:items-stretch max-lg:gap-0"
+    >
+      <Navbar :bordered="false" container-class="max-w-[1800px] px-5 sm:px-8" class="shrink-0 bg-card">
         <template #start>
-          <RouterLink to="/catalogues" class="flex shrink-0 flex-col items-center py-2" aria-label="Ocharo Catalogue">
+          <RouterLink
+            to="/catalogues"
+            class="flex min-h-11 shrink-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+            aria-label="Ocharo Catalogue"
+          >
             <img
               :src="dark ? '/brand/ocharo-wordmark-reverse.png' : '/brand/ocharo-wordmark-ink.png'"
               alt="Ocharo"
-              class="h-10 w-32 object-contain"
+              class="h-10 w-[106px] shrink-0 object-contain"
             />
-            <span class="text-[10px] font-medium uppercase tracking-[.28em] text-muted-foreground">{{
+            <span class="whitespace-nowrap text-xs font-medium leading-4 text-muted-foreground">{{
               t('Catalogue')
             }}</span>
           </RouterLink>
         </template>
         <template #center>
-          <nav v-if="!publicRoute" :aria-label="t('Main navigation')" class="hidden gap-1 md:flex">
+          <nav v-if="!publicRoute" :aria-label="t('Main navigation')" class="hidden gap-1 lg:flex">
             <RouterLink
               v-for="item in navigation"
               :key="item.path"
@@ -107,7 +113,7 @@ onMounted(() => {
         <template #end
           ><button
             type="button"
-            class="btn-outline rounded-full"
+            class="btn-outline min-h-11 min-w-11 rounded-full lg:min-h-0 lg:min-w-0"
             :aria-label="t('Preferences')"
             @click="preferences = true"
           >
@@ -118,7 +124,7 @@ onMounted(() => {
       <nav
         v-if="!publicRoute"
         :aria-label="t('Main navigation')"
-        class="flex gap-2 overflow-x-auto border-t border-border px-4 py-2 md:hidden"
+        class="flex w-full shrink-0 gap-2 overflow-x-auto border-t border-border px-4 py-2 lg:hidden"
       >
         <RouterLink
           v-for="item in navigation"
@@ -126,7 +132,7 @@ onMounted(() => {
           :to="item.path"
           :aria-current="active(item.path) ? 'page' : undefined"
           :class="[
-            'flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs',
+            'flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs',
             active(item.path) ? 'bg-primary-soft text-primary' : 'text-muted-foreground',
           ]"
           ><Icon :icon="item.icon" :size="15" />{{ t(item.label) }}</RouterLink
