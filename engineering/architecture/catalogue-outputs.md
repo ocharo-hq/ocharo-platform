@@ -2,6 +2,17 @@
 
 *Last updated: 2026-10-01*
 
+
+## Current review target
+
+The user corrected the active target to **Ocharo Catalogue**, frontend `8282` and API HTTPS
+`8278`. Native Catalogue now contains the gallery, product review and Web/PDF designers.
+Read [native Catalogue verification](../research/catalogue/2026-10-01-catalogue-review/native-catalogue-verification.md) for the current review instructions.
+The Desk architecture/results below remain historical implementation evidence, not instructions
+to redirect Catalogue review into Desk. Existing Catalogue product data was retained. Authentication
+and consolidation of the two stores remain explicit integration work; no migration occurred here.
+
+
 ## Ownership and entrypoints
 
 Ocharo Desk owns authenticated products, catalogue authoring, preparation and publication.

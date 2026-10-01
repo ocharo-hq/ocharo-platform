@@ -2,6 +2,24 @@
 
 *Last updated: 2026-09-29 03:38 PM +05*
 
+## Dedicated Catalogue app — current review target
+
+The requested authoring app is **Ocharo Catalogue**, frontend `https://localhost:8282`,
+backend `OcharoCatalogue.Api` at `https://localhost:8278` with the `https` launch profile.
+Its source lives under `engineering/codebase/ocharo-catalogue.{frontend,backend}-services/`.
+Products, prices, translations, collections, named catalogues and both designers are edited there.
+Desk at `8266` remains a separate operator workspace. A Desk link is not a Catalogue implementation.
+
+Catalogue retains its existing SQLite products, media hashes and product revision history.
+New design/release tables are added idempotently; this work does not adopt or overwrite live data.
+No automatic synchronization with Desk Commerce exists. Do not edit the same brand in both stores
+and imply they are synchronized. Authentication and canonical-store consolidation remain explicit
+integration work before deploying Catalogue's loopback-only write APIs publicly.
+
+Routes: `/` products; `/catalogues` saved gallery; `/catalogues/{id}/web` responsive designer;
+`/catalogues/{id}/pdf` page designer; `/c/{slug}?locale=en` published reader.
+Interface preferences are independent of authored catalogue languages.
+
 ## Current Platform build — 2026-09-29
 
 The canonical checkout is `ocharo-ws/workbench/ocharo-platform`, owned by Ocharo.

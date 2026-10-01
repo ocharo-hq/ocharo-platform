@@ -1,0 +1,7 @@
+
+> ocharocatalogue-frontend@0.0.0 lint /Users/max/Projects/10x-ws/workbench/career/engineering/wow-two/wow-two-ws/workbench/ocharo-hq/ocharo-ws/workbench/ocharo-platform/engineering/codebase/ocharo-catalogue.frontend-services
+> pnpm --filter @ocharocatalogue/web lint
+
+
+> @ocharocatalogue/web@0.0.0 lint /Users/max/Projects/10x-ws/workbench/career/engineering/wow-two/wow-two-ws/workbench/ocharo-hq/ocharo-ws/workbench/ocharo-platform/engineering/codebase/ocharo-catalogue.frontend-services/apps/web
+> eslint .

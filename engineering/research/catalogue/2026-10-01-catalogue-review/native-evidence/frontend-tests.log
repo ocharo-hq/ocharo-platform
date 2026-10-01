@@ -1,0 +1,16 @@
+
+> ocharocatalogue-frontend@0.0.0 test /Users/max/Projects/10x-ws/workbench/career/engineering/wow-two/wow-two-ws/workbench/ocharo-hq/ocharo-ws/workbench/ocharo-platform/engineering/codebase/ocharo-catalogue.frontend-services
+> pnpm --filter @ocharocatalogue/web test
+
+
+> @ocharocatalogue/web@0.0.0 test /Users/max/Projects/10x-ws/workbench/career/engineering/wow-two/wow-two-ws/workbench/ocharo-hq/ocharo-ws/workbench/ocharo-platform/engineering/codebase/ocharo-catalogue.frontend-services/apps/web
+> vitest run
+
+
+ RUN  v4.1.11 /Users/max/Projects/10x-ws/workbench/career/engineering/wow-two/wow-two-ws/workbench/ocharo-hq/ocharo-ws/workbench/ocharo-platform/engineering/codebase/ocharo-catalogue.frontend-services/apps/web
+
+
+ Test Files  13 passed (13)
+      Tests  65 passed (65)
+   Start at  18:32:54
+   Duration  1.34s (transform 2.57s, setup 0ms, import 3.98s, tests 865ms, environment 4.46s)

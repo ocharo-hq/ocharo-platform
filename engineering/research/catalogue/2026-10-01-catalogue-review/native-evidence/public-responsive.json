@@ -1,0 +1,176 @@
+[
+  {
+    "device": "phone",
+    "view": "web",
+    "width": 390,
+    "overflow": false,
+    "columns": "351px",
+    "buttons": [
+      {
+        "text": "English",
+        "height": 44
+      },
+      {
+        "text": "Read online",
+        "height": 64
+      },
+      {
+        "text": "PDF pages",
+        "height": 64
+      },
+      {
+        "text": "Share catalogue",
+        "height": 44
+      },
+      {
+        "text": "Copy page link",
+        "height": 44
+      },
+      {
+        "text": "Save piece",
+        "height": 44
+      }
+    ]
+  },
+  {
+    "device": "phone",
+    "view": "pdf",
+    "width": 390,
+    "overflow": false,
+    "columns": "390px",
+    "buttons": [
+      {
+        "text": "English",
+        "height": 44
+      },
+      {
+        "text": "Read online",
+        "height": 64
+      },
+      {
+        "text": "PDF pages",
+        "height": 64
+      },
+      {
+        "text": "Share catalogue",
+        "height": 44
+      }
+    ]
+  },
+  {
+    "device": "tablet",
+    "view": "web",
+    "width": 820,
+    "overflow": false,
+    "columns": "368.859px 320.75px",
+    "buttons": [
+      {
+        "text": "English",
+        "height": 44
+      },
+      {
+        "text": "Read online",
+        "height": 44
+      },
+      {
+        "text": "PDF pages",
+        "height": 44
+      },
+      {
+        "text": "Share catalogue",
+        "height": 44
+      },
+      {
+        "text": "Copy page link",
+        "height": 44
+      },
+      {
+        "text": "Save piece",
+        "height": 44
+      }
+    ]
+  },
+  {
+    "device": "tablet",
+    "view": "pdf",
+    "width": 820,
+    "overflow": false,
+    "columns": "394px 394px",
+    "buttons": [
+      {
+        "text": "English",
+        "height": 44
+      },
+      {
+        "text": "Read online",
+        "height": 44
+      },
+      {
+        "text": "PDF pages",
+        "height": 44
+      },
+      {
+        "text": "Share catalogue",
+        "height": 44
+      }
+    ]
+  },
+  {
+    "device": "desktop",
+    "view": "web",
+    "width": 1440,
+    "overflow": false,
+    "columns": "708.484px 472.328px",
+    "buttons": [
+      {
+        "text": "English",
+        "height": 44
+      },
+      {
+        "text": "Read online",
+        "height": 44
+      },
+      {
+        "text": "PDF pages",
+        "height": 44
+      },
+      {
+        "text": "Share catalogue",
+        "height": 44
+      },
+      {
+        "text": "Copy page link",
+        "height": 44
+      },
+      {
+        "text": "Save piece",
+        "height": 44
+      }
+    ]
+  },
+  {
+    "device": "desktop",
+    "view": "pdf",
+    "width": 1440,
+    "overflow": false,
+    "columns": "458.656px 458.672px 458.672px",
+    "buttons": [
+      {
+        "text": "English",
+        "height": 44
+      },
+      {
+        "text": "Read online",
+        "height": 44
+      },
+      {
+        "text": "PDF pages",
+        "height": 44
+      },
+      {
+        "text": "Share catalogue",
+        "height": 44
+      }
+    ]
+  }
+]
