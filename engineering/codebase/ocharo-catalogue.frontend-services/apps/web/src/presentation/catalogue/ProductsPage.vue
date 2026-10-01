@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { CheckSquare, Copy, ImageOff, Search, Square } from 'lucide-vue-next';
+import { CheckSquare, CirclePlus, Copy, ImageOff, Search, Square } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { useCatalogueStore, useProductList } from '../../application/catalogue';
 import { availabilityLabels, formatUzs, statusLabels } from '../../domain/catalogue/CatalogueRules';
@@ -38,6 +38,9 @@ onMounted(() => list.load());
           {{ counts.total }} ta mahsulot · {{ counts.active }} tasi katalogda · {{ counts.issues }} ta ochiq savol
         </p>
       </div>
+      <RouterLink to="/products/new" class="btn-primary">
+        <Icon :icon="CirclePlus" :size="16" />Yangi mahsulot
+      </RouterLink>
     </div>
 
     <div class="panel mt-6 grid gap-3 p-4 md:grid-cols-[1fr_auto_auto_auto]">

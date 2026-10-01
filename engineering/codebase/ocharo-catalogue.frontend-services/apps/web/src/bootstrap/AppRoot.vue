@@ -9,7 +9,6 @@ import {
   Boxes,
   BookOpen,
   ChevronRight,
-  CirclePlus,
   Languages,
   Layers,
   Printer,
@@ -107,9 +106,6 @@ onMounted(() => store.loadSettings());
           <Icon :icon="ChevronRight" :size="13" class="hidden text-muted-foreground sm:block" />
           <span class="text-xs font-semibold">{{ section }}</span>
         </div>
-        <RouterLink to="/products/new" class="btn-primary"
-          ><Icon :icon="CirclePlus" :size="16" />Yangi mahsulot</RouterLink
-        >
       </header>
       <nav
         aria-label="Mobil bo‘limlar"
