@@ -92,11 +92,13 @@ public static partial class CommerceRules
         {
             var price=product.Document.Pricing;
             var prior=previous?.Products.FirstOrDefault(item=>item.Document.Id==product.Document.Id)?.Document.Pricing;
-            if(price is null || JsonSerializer.Serialize(price)==JsonSerializer.Serialize(prior))continue;
+            if(price is null || SamePricing(price,prior))continue;
             Require(price.Currency=="UZS" && price.Tiers.Count==2
                 && price.Tiers[0].MinimumQuantity==1 && price.Tiers[0].MaximumQuantity==9
                 && price.Tiers[1].MinimumQuantity==10 && price.Tiers[1].MaximumQuantity is null,
                 "Edited prices must use UZS with two tiers: 1–9 pieces and 10+ pieces.");
+            Require(price.Status!="confirmed" || price.Tiers.All(tier=>tier.UnitPrice>0),
+                "Enter positive UZS amounts for both price tiers before confirming prices.");
         }
     }
     public static bool EditionEligible(CatalogueEdition edition, CommerceSnapshot snapshot)
@@ -113,6 +115,9 @@ public static partial class CommerceRules
         Require(request.AssetReleases is not null && request.AssetReleases.Count<=100 && request.AssetReleases.All(a=>a is not null&&CommerceRules.Hash(a.Sha256)&&!string.IsNullOrWhiteSpace(a.Id)),"Asset release evidence is invalid.");
         Require(request.Materials is not null && request.Materials.Count<=100 && request.Materials.All(m=>m is not null&&!string.IsNullOrWhiteSpace(m.Slot)&&!string.IsNullOrWhiteSpace(m.Source)&&(m.Sha256 is null||CommerceRules.Hash(m.Sha256))),"Material evidence is invalid.");
     }
+    private static bool SamePricing(ProductPricing? left, ProductPricing? right) => ReferenceEquals(left,right)
+        || left is not null && right is not null && left.Currency==right.Currency && left.Status==right.Status
+        && left.Wording==right.Wording && left.Tiers.SequenceEqual(right.Tiers);
     public static CommerceSnapshot RestrictEditorApprovals(CommerceSnapshot next, CommerceSnapshot? previous)
     {
         var products = next.Products.Select(item => {
@@ -120,7 +125,7 @@ public static partial class CommerceRules
             ProductLocale Locale(ProductLocale value, ProductLocale? prior) => value == prior ? value : value with { Status = "draft" };
             var doc = item.Document with {
                 Locales = new(Locale(item.Document.Locales.Uz, old?.Locales.Uz), Locale(item.Document.Locales.Ru, old?.Locales.Ru), Locale(item.Document.Locales.En, old?.Locales.En)),
-                Pricing = item.Document.Pricing == old?.Pricing ? item.Document.Pricing : item.Document.Pricing is {} price ? price with { Status = "draft" } : null
+                Pricing = SamePricing(item.Document.Pricing,old?.Pricing) ? item.Document.Pricing : item.Document.Pricing is {} price ? price with { Status = "draft" } : null
             };
             return item with { Document = doc, Translations = item.Translations?.ToDictionary(entry => entry.Key,
                 entry => Locale(entry.Value, previous?.Products.FirstOrDefault(p => p.Document.Id == item.Document.Id)?.Translations?.GetValueOrDefault(entry.Key))) };

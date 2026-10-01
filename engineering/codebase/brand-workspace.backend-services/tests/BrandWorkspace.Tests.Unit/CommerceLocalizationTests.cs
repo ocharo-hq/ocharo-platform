@@ -135,6 +135,41 @@ public sealed class CommerceLocalizationTests
         wrong.Should().Throw<PreparationException>();
     }
     [Fact]
+    public void IncompleteFixedPrices_SaveOnlyAsDraft_AndNeverAppearAsPublicPrices()
+    {
+        var product=Product();
+        var incomplete=product with {Document=product.Document with {Pricing=new("UZS","draft",[new(1,9,130000),new(10,null,0)],null)}};
+        Action saveDraft=()=>CommerceRules.ValidateEditedPrices(Snapshot(incomplete),Snapshot(product));
+        saveDraft.Should().NotThrow();
+        var view=JsonSerializer.SerializeToElement(PublicProjection.Catalogue(Release(incomplete),"en")).GetProperty("products")[0];
+        view.GetProperty("pricing").ValueKind.Should().Be(JsonValueKind.Null);
+        view.GetProperty("price").ValueKind.Should().Be(JsonValueKind.Null);
+        var confirmed=incomplete with {Document=incomplete.Document with {Pricing=incomplete.Document.Pricing! with {Status="confirmed"}}};
+        Action confirmIncomplete=()=>CommerceRules.ValidateEditedPrices(Snapshot(confirmed),Snapshot(incomplete));
+        confirmIncomplete.Should().Throw<PreparationException>().WithMessage("*positive UZS amounts for both price tiers*");
+        var complete=confirmed with {Document=confirmed.Document with {Pricing=confirmed.Document.Pricing! with {Tiers=[new(1,9,130000),new(10,null,100000)]}}};
+        Action confirmComplete=()=>CommerceRules.ValidateEditedPrices(Snapshot(complete),Snapshot(incomplete));
+        confirmComplete.Should().NotThrow();
+    }
+    [Theory]
+    [InlineData("UZS")]
+    [InlineData("USD")]
+    public void EditorSave_PreservesEquivalentDeserializedPrices_AndRevokesOnlyChangedPricing(string currency)
+    {
+        var product=Product();product=product with {Document=product.Document with {Pricing=new(currency,"confirmed",[new(1,9,130000),new(10,null,100000)],"Per piece")}};
+        var serialized=JsonSerializer.Serialize(Snapshot(product));
+        var previous=JsonSerializer.Deserialize<CommerceSnapshot>(serialized)!;
+        var incoming=JsonSerializer.Deserialize<CommerceSnapshot>(serialized)!;
+        incoming.Products[0].Document.Pricing!.Tiers.Should().NotBeSameAs(previous.Products[0].Document.Pricing!.Tiers);
+        incoming=incoming with {Products=[incoming.Products[0] with {Document=incoming.Products[0].Document with {Notes="Unrelated private note"}}]};
+        var restricted=CommerceRules.RestrictEditorApprovals(incoming,previous);
+        restricted.Products[0].Document.Pricing!.Status.Should().Be("confirmed");
+        restricted.Products[0].Document.Pricing!.Currency.Should().Be(currency);
+        var changed=incoming.Products[0] with {Document=incoming.Products[0].Document with {Pricing=incoming.Products[0].Document.Pricing! with {Tiers=[new(1,9,140000),new(10,null,100000)]}}};
+        var revised=CommerceRules.RestrictEditorApprovals(incoming with {Products=[changed]},previous);
+        revised.Products[0].Document.Pricing!.Status.Should().Be("draft");
+    }
+    [Fact]
     public void NamedCatalogues_CoexistInOneLocale_AndFilterWebProductsWithoutLeakingCopy()
     {
         var product=Product(); var draft=product with {Document=product.Document with {Id="draft-vest",Locales=ProductLocales.Empty()}};
