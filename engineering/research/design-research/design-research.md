@@ -9,18 +9,18 @@ Catalogue supports desktop (primary), tablet and phone. Review sizes are 1440 ×
 
 ## Catalogue header — selected option B
 
-The user selected the compact-symbol layout on 2026-10-02 for Catalogue review.
-This trial supersedes option C. The approved compact artwork is scaled without
-reshaping the needle; ink and reverse assets match the reviewed option B bytes.
+The user selected the smaller stacked full-wordmark layout on 2026-10-02 for
+Catalogue review. The approved wordmark artwork is scaled without reshaping
+the needle; the translated app name sits underneath.
 
 | Element | Value |
 |---|---|
 | Primary row | 56px, SDK `Navbar` |
 | Brand link | At least 44px high; keyboard focus ring |
-| Compact symbol | 32 × 32px; contain original aspect ratio |
-| App label | Translated `Catalogue`, beside the compact symbol |
-| Label type | UI sans, 14px / 20px, semibold weight |
-| Brand gap | 10px |
+| Full wordmark | 80 × 30px; contain original aspect ratio |
+| App label | Translated `Catalogue`, centered underneath the wordmark |
+| Label type | UI sans, 10px / 12px, medium weight, uppercase; 0.28em tracking |
+| Brand gap | 2px vertically; 44px total stack |
 | Desktop navigation | Inline at `lg` (1024px) and above |
 | Tablet/phone navigation | Separate horizontal scroll row; at least 44px targets |
 | Preferences | At least 44 × 44px below `lg` |
@@ -48,10 +48,10 @@ Below `lg`, the header grows to its contents and stacks those rows. The primary
 row keeps its height in either layout. The brand link goes to the catalogue gallery;
 existing route selection, Preferences and theme/locale behavior remain active.
 
-Use approved `ocharo-symbol-ink.png` in light mode and `ocharo-micro-reverse.png`
+Use approved `ocharo-wordmark-ink.png` in light mode and `ocharo-wordmark-reverse.png`
 in dark mode. These are byte-identical copies of the approved logo-family exports.
 Keep the label on one line. Preserve visible keyboard focus and avoid clipping
-navigation or shrinking the compact symbol to fit tablet navigation.
+navigation or compressing the wordmark to fit tablet navigation.
 
 ## Review
 
