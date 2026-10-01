@@ -80,15 +80,15 @@ onMounted(() => {
         <template #start>
           <RouterLink
             to="/catalogues"
-            class="flex min-h-11 shrink-0 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+            class="flex min-h-11 shrink-0 items-center gap-2.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
             aria-label="Ocharo Catalogue"
           >
             <img
-              :src="dark ? '/brand/ocharo-wordmark-reverse.png' : '/brand/ocharo-wordmark-ink.png'"
+              :src="dark ? '/brand/ocharo-micro-reverse.png' : '/brand/ocharo-symbol-ink.png'"
               alt="Ocharo"
-              class="h-10 w-[106px] shrink-0 object-contain"
+              class="h-8 w-8 shrink-0 object-contain"
             />
-            <span class="whitespace-nowrap text-xs font-medium leading-4 text-muted-foreground">{{
+            <span class="whitespace-nowrap text-sm font-semibold leading-5 text-muted-foreground">{{
               t('Catalogue')
             }}</span>
           </RouterLink>

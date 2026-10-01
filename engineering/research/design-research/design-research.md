@@ -1,25 +1,26 @@
 # Ocharo Platform — Catalogue design
 
-*Last updated: 2026-10-01*
+*Last updated: 2026-10-02*
 
 ## Screens
 
 Catalogue supports desktop (primary), tablet and phone. Review sizes are 1440 × 900,
 820 × 1180 and 390 × 844; 320px is the narrow-width boundary.
 
-## Catalogue header — selected option C
+## Catalogue header — selected option B
 
-The user selected the inline wordmark layout on 2026-10-01 for Catalogue review.
-The original approved wordmark artwork is scaled without reshaping the needle.
+The user selected the compact-symbol layout on 2026-10-02 for Catalogue review.
+This trial supersedes option C. The approved compact artwork is scaled without
+reshaping the needle; ink and reverse assets match the reviewed option B bytes.
 
 | Element | Value |
 |---|---|
 | Primary row | 56px, SDK `Navbar` |
 | Brand link | At least 44px high; keyboard focus ring |
-| Wordmark | 106 × 40px; contain original aspect ratio |
-| App label | Translated `Catalogue`, beside the wordmark |
-| Label type | UI sans, 12px / 16px, medium weight |
-| Brand gap | 12px |
+| Compact symbol | 32 × 32px; contain original aspect ratio |
+| App label | Translated `Catalogue`, beside the compact symbol |
+| Label type | UI sans, 14px / 20px, semibold weight |
+| Brand gap | 10px |
 | Desktop navigation | Inline at `lg` (1024px) and above |
 | Tablet/phone navigation | Separate horizontal scroll row; at least 44px targets |
 | Preferences | At least 44 × 44px below `lg` |
@@ -47,9 +48,10 @@ Below `lg`, the header grows to its contents and stacks those rows. The primary
 row keeps its height in either layout. The brand link goes to the catalogue gallery;
 existing route selection, Preferences and theme/locale behavior remain active.
 
-Use the approved ink wordmark in light mode and reverse wordmark in dark mode.
+Use approved `ocharo-symbol-ink.png` in light mode and `ocharo-micro-reverse.png`
+in dark mode. These are byte-identical copies of the approved logo-family exports.
 Keep the label on one line. Preserve visible keyboard focus and avoid clipping
-navigation or shrinking the wordmark to fit tablet navigation.
+navigation or shrinking the compact symbol to fit tablet navigation.
 
 ## Review
 
