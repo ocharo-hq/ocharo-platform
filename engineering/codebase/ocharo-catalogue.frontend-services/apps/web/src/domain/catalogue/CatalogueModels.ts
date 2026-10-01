@@ -18,6 +18,7 @@ export interface ProductLocales {
   uz: ProductLocale;
   ru: ProductLocale;
   en: ProductLocale;
+  additional?: Record<string, ProductLocale>;
 }
 
 export interface PriceTier {
@@ -45,6 +46,8 @@ export interface ProductMedia {
   hasPreview: boolean;
   alt: string | null;
   sourcePath: string | null;
+  isActive?: boolean;
+  group?: string | null;
 }
 
 export interface ReviewIssue {
@@ -129,6 +132,9 @@ export interface ProductSummary {
   wholesalePrice: number | null;
   pricingStatus: PricingStatus | null;
   localesApproved: number;
+  unconfirmedTranslations?: number;
+  languagesTotal?: number;
+  collectionIds?: string[];
   openIssues: number;
   mediaCount: number;
   primaryImageUrl: string | null;
@@ -274,7 +280,7 @@ export interface ProductInput {
   tags: string[];
   locales: ProductLocales;
   pricing: ProductPricing | null;
-  media?: { id: string; role: MediaRole; alt: string | null }[];
+  media?: { id: string; role: MediaRole; alt: string | null; isActive?: boolean; group?: string | null }[];
   issues: ReviewIssue[];
   notes: string | null;
   stock?: Record<string, number> | null;

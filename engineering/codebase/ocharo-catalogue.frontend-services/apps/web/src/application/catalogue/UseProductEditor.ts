@@ -1,12 +1,15 @@
 import { computed, ref, shallowRef } from 'vue';
+import { useUiLocale } from '../shared/UseUiLocale';
 import type { MediaRole, ProductDetail, ProductInput, RevisionSummary } from '../../domain/catalogue/CatalogueModels';
 import { activationProblem, emptyLocale, tierProblem, toInput } from '../../domain/catalogue/CatalogueRules';
+import { catalogueLanguages, productLocale } from '../../domain/catalogue/CatalogueLanguages';
 import { catalogueApi, describeFailure } from '../../integration/catalogue';
 import { useCatalogueStore } from './CatalogueStore';
 
 /** Edits one product: load, dirty tracking, revision-checked save, images, history and restore. */
 export function useProductEditor() {
   const store = useCatalogueStore();
+  const { t } = useUiLocale();
   const detail = shallowRef<ProductDetail | null>(null);
   const draft = ref<ProductInput | null>(null);
   const baseline = ref('');
@@ -25,12 +28,18 @@ export function useProductEditor() {
       if (tiers) list.push(tiers);
     }
     if (value.status === 'active') {
-      const media = detail.value?.document.media.filter((m) => value.media?.some((x) => x.id === m.id)) ?? [];
+      const media =
+        detail.value?.document.media
+          .filter((m) => value.media?.some((x) => x.id === m.id && x.isActive !== false))
+          .map((m) => ({ ...m, isActive: true })) ?? [];
       const reason = activationProblem({ locales: value.locales, media });
       if (reason) list.push(reason);
     }
-    for (const code of ['uz', 'ru', 'en'] as const)
-      if (value.locales[code].status === 'approved' && !value.locales[code].name?.trim())
+    for (const { code } of catalogueLanguages)
+      if (
+        productLocale(value.locales, code)?.status === 'approved' &&
+        !productLocale(value.locales, code)?.name?.trim()
+      )
         list.push(`Tasdiqlangan ${code.toUpperCase()} matnga nom kerak.`);
     return list;
   });
@@ -105,7 +114,7 @@ export function useProductEditor() {
       }
       adopt(result.value);
       await loadHistory();
-      store.succeed(`Saqlandi — ${result.value.document.id}, versiya ${result.value.revision}.`);
+      store.succeed(`${t('Saved')} · ${result.value.document.id} · ${t('Revision')} ${result.value.revision}`);
       return result.value.document.id;
     },
     async upload(files: FileList | File[], role: MediaRole) {

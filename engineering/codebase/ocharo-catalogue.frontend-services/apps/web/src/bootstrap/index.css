@@ -83,3 +83,51 @@ body {
     transition-duration: 0.01ms;
   }
 }
+
+/* Warm paper remains the editing surface; dark mode keeps the same warm hue family. */
+html.dark {
+  --color-background: #201e1b;
+  --color-foreground: #f4eee5;
+  --color-card: #292622;
+  --color-card-foreground: #f4eee5;
+  --color-primary: #ddb0b9;
+  --color-primary-foreground: #2e1d24;
+  --color-primary-soft: #473239;
+  --color-primary-soft-foreground: #f0cbd1;
+  --color-secondary: #35312c;
+  --color-secondary-foreground: #e1d9cd;
+  --color-muted: #35312c;
+  --color-muted-foreground: #bcb4a8;
+  --color-border: #4b443c;
+  --color-ring: #ddb0b9;
+  --color-success: #a6cfb4;
+  --color-success-soft: #263d30;
+  --color-success-soft-foreground: #c1e1ca;
+  --color-warning: #e1bd79;
+  --color-warning-soft: #473b25;
+  --color-warning-soft-foreground: #f0d299;
+  --color-destructive: #efaaa1;
+  --color-destructive-soft: #492b28;
+  --color-destructive-soft-foreground: #ffd0c8;
+}
+
+@media (max-width: 1023px) {
+  .catalogue-edit-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+.catalogue-edit-modal {
+  max-width: calc(100vw - 3rem) !important;
+}
+@media (max-width: 1023px) {
+  .catalogue-edit-modal {
+    max-width: 100vw !important;
+  }
+}

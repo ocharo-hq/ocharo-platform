@@ -19,6 +19,26 @@ export const catalogueRouter = createAppRouter(
       lazy: () => import('../presentation/catalogue/CollectionsPage.vue'),
       handle: { title: 'To‘plamlar' },
     },
+    {
+      path: '/catalogues',
+      lazy: () => import('../presentation/design/CatalogueGalleryPage.vue'),
+      handle: { title: 'Catalogues' },
+    },
+    {
+      path: '/catalogues/:id/web',
+      lazy: () => import('../presentation/design/CatalogueWebDesignerPage.vue'),
+      handle: { title: 'Web designer' },
+    },
+    {
+      path: '/catalogues/:id/pdf',
+      lazy: () => import('../presentation/design/CataloguePdfDesignerPage.vue'),
+      handle: { title: 'PDF designer' },
+    },
+    {
+      path: '/c/:slug',
+      lazy: () => import('../presentation/public/CatalogueEditionPage.vue'),
+      handle: { title: 'Catalogue' },
+    },
     { path: '/copy', lazy: () => import('../presentation/catalogue/CopyPage.vue'), handle: { title: 'Matnlar' } },
     { path: '/stock', lazy: () => import('../presentation/catalogue/StockPage.vue'), handle: { title: 'Qoldiq' } },
     { path: '/pricing', lazy: () => import('../presentation/catalogue/PricingPage.vue'), handle: { title: 'Narxlar' } },

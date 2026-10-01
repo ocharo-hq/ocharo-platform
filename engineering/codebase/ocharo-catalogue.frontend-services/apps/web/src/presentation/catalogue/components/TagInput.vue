@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useUiLocale } from '../../../application/shared/UseUiLocale';
+const { t } = useUiLocale();
 import { X } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 
@@ -32,7 +34,7 @@ function remove(value: string) {
         <button
           type="button"
           class="rounded-full p-0.5 hover:bg-card"
-          :aria-label="`${value} ni olib tashlash`"
+          :aria-label="`${t('Remove')} ${value}`"
           @click="remove(value)"
         >
           <Icon :icon="X" :size="11" />
@@ -41,7 +43,7 @@ function remove(value: string) {
       <input
         v-model="entry"
         class="min-w-24 flex-1 bg-transparent px-1 py-1 text-sm outline-none"
-        :placeholder="props.placeholder ?? 'Qo‘shish…'"
+        :placeholder="props.placeholder ?? t('Add…')"
         :aria-label="props.label"
         @keydown.enter.prevent="add(entry)"
         @keydown.,.prevent="add(entry)"

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { ProductStatus } from '../../../domain/catalogue/CatalogueModels';
-import { statusLabels } from '../../../domain/catalogue/CatalogueRules';
+import { useUiLocale } from '../../../application/shared/UseUiLocale';
+const { t } = useUiLocale();
 
 /** Product lifecycle chip. */
 defineOptions({ name: 'StatusBadge' });
@@ -17,5 +18,7 @@ const tone = computed(
 </script>
 
 <template>
-  <span :class="['chip', tone]">{{ statusLabels[props.status] }}</span>
+  <span :class="['chip', tone]">{{
+    t(props.status === 'active' ? 'Active' : props.status === 'draft' ? 'Draft' : 'Archived')
+  }}</span>
 </template>

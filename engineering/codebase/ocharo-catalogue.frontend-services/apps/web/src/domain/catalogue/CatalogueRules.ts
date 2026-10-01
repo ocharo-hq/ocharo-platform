@@ -43,7 +43,7 @@ export function formatUzs(value: number | null | undefined): string {
 /** Why a product cannot be activated yet, or null. Mirrors the API rule. */
 export function activationProblem(document: Pick<ProductDocument, 'locales' | 'media'>): string | null {
   if (!document.locales.uz.name?.trim()) return 'Faol mahsulotga o‘zbekcha nom kerak.';
-  if (document.media.length === 0) return 'Faol mahsulotga kamida bitta rasm kerak.';
+  if (!document.media.some((media) => media.isActive !== false)) return 'Faol mahsulotga kamida bitta rasm kerak.';
   return null;
 }
 
@@ -68,7 +68,13 @@ export function toInput(document: ProductDocument, expectedRevision?: number): P
     tags: [...document.tags],
     locales: structuredClone(document.locales),
     pricing: document.pricing ? structuredClone(document.pricing) : null,
-    media: document.media.map((m) => ({ id: m.id, role: m.role, alt: m.alt })),
+    media: document.media.map((m) => ({
+      id: m.id,
+      role: m.role,
+      alt: m.alt,
+      ...(m.isActive !== undefined ? { isActive: m.isActive } : {}),
+      ...(m.group !== undefined ? { group: m.group } : {}),
+    })),
     issues: structuredClone(document.issues),
     notes: document.notes,
     stock: document.stock ? { ...document.stock } : null,
