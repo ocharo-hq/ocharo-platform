@@ -31,7 +31,7 @@ async function render(document = documentId, page = 'detail', missing = false) {
     access.api.getDesign = getDesign;
     const workspace = {organization: ref({id: organizationId, role: 'owner'}), canEdit: computed(() => true)} as unknown as WorkspaceControls;
     return () => h(DesignEditorPage, {access, workspace, kind: 'catalogue', initialDocumentId: document || null, initialPageId: page || null});
-  }}), {global: {stubs: {DesignCanvas: true, DesignPrintPreview: true, CataloguePublication: true, DesignRecovery: true, DesignRevisionHistory: true, CatalogueTools: true, CardTools: true}}});
+  }}), {global: {stubs: {DesignCanvas: true, DesignPrintPreview: true, CataloguePublication: true, CatalogueSettingsPanel: true, DesignRecovery: true, DesignRevisionHistory: true, CatalogueTools: true, CardTools: true}}});
   await flushPromises();
   return {getDesign};
 }

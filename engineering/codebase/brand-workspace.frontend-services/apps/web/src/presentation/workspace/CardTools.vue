@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed } from 'vue';
 import { cloneSnapshot, type DesignSnapshot } from '@/domain/workspace/EditorModels';
 import { brandAssets } from '@/domain/workspace/Templates';
 import { fitTextFrame } from '@/domain/workspace/FitTextFrame';
+
+const { t } = useUiLocale();
 
 defineOptions({ name: 'CardTools' });
 const props = defineProps<{ snapshot: DesignSnapshot; pageId: string; selectedId: string | null }>();
@@ -74,16 +77,16 @@ function photoBackground(show: boolean): void {
 
 <template>
   <section class="template-tools">
-    <h3>Business card tools</h3>
-    <div class="template-tool-actions"><button v-if="front" type="button" :aria-pressed="pageId === front.id" @click="emit('update:pageId', front.id); emit('update:selectedId', null)">Front</button><button v-if="back" type="button" :aria-pressed="pageId === back.id" @click="emit('update:pageId', back.id); emit('update:selectedId', null)">Back</button></div>
-    <label v-if="descriptor" class="descriptor-toggle"><input type="checkbox" :checked="descriptor.opacity !== 0" @change="patch(descriptor.id, {opacity: ($event.target as HTMLInputElement).checked ? 1 : 0})"> Show front descriptor</label>
-    <label v-if="photo" class="descriptor-toggle"><input type="checkbox" :checked="photo.opacity !== 0" @change="photoBackground(($event.target as HTMLInputElement).checked)"> Use photographic background</label>
-    <button v-if="photo && front" type="button" class="photo-control" @click="emit('update:pageId', front.id); emit('update:selectedId', photo.id)">Edit front photograph</button>
-    <div class="palette-options" aria-label="Card color palettes"><button type="button" title="Restore original Charcoal veil colors" @click="palette(null)">Original v5</button><button v-for="theme in palettes" :key="theme.name" type="button" :style="{background: theme.front, color: theme.logo === 'charcoal' ? '#302B25' : '#F6F0E5'}" @click="palette(theme)">{{ theme.name }}</button></div>
-    <label v-if="logo" class="field-label">Logo color<select :value="logo.src" @change="setLogo(($event.target as HTMLSelectElement).value)"><option :value="brandAssets.whiteLogo">Original white</option><option :value="brandAssets.blackLogo">Original black</option><option v-for="(src, name) in brandAssets.logoColors" :key="name" :value="src">{{ name }}</option></select></label>
-    <label v-for="field in fields" :key="field.id" class="field-label">{{ labels[field.id] ?? field.label }}<input type="text" :value="field.text" @change="patch(field.id, {text: ($event.target as HTMLInputElement).value})"></label>
-    <p class="template-help">85 × 55 mm. The logo remains the original artwork. Change the front photo or back color with the page controls.</p>
-    <p class="template-source">Based on Charcoal veil v5 · {{ snapshot.locale.toUpperCase() }}</p>
+    <h3>{{ t("Business card tools") }}</h3>
+    <div class="template-tool-actions"><button v-if="front" type="button" :aria-pressed="pageId === front.id" @click="emit('update:pageId', front.id); emit('update:selectedId', null)">{{ t("Front") }}</button><button v-if="back" type="button" :aria-pressed="pageId === back.id" @click="emit('update:pageId', back.id); emit('update:selectedId', null)">{{ t("Back") }}</button></div>
+    <label v-if="descriptor" class="descriptor-toggle"><input type="checkbox" :checked="descriptor.opacity !== 0" @change="patch(descriptor.id, {opacity: ($event.target as HTMLInputElement).checked ? 1 : 0})"> {{ t("Show front descriptor") }}</label>
+    <label v-if="photo" class="descriptor-toggle"><input type="checkbox" :checked="photo.opacity !== 0" @change="photoBackground(($event.target as HTMLInputElement).checked)"> {{ t("Use photographic background") }}</label>
+    <button v-if="photo && front" type="button" class="photo-control" @click="emit('update:pageId', front.id); emit('update:selectedId', photo.id)">{{ t("Edit front photograph") }}</button>
+    <div class="palette-options" :aria-label="t('Card color palettes')"><button type="button" :title="t('Restore original Charcoal veil colors')" @click="palette(null)">{{ t("Original v5") }}</button><button v-for="theme in palettes" :key="theme.name" type="button" :style="{background: theme.front, color: theme.logo === 'charcoal' ? '#302B25' : '#F6F0E5'}" @click="palette(theme)">{{ t(theme.name) }}</button></div>
+    <label v-if="logo" class="field-label">{{ t("Logo color") }}<select :value="logo.src" @change="setLogo(($event.target as HTMLSelectElement).value)"><option :value="brandAssets.whiteLogo">{{ t("Original white") }}</option><option :value="brandAssets.blackLogo">{{ t("Original black") }}</option><option v-for="(src, name) in brandAssets.logoColors" :key="name" :value="src">{{ name }}</option></select></label>
+    <label v-for="field in fields" :key="field.id" class="field-label">{{ t(labels[field.id] ?? field.label) }}<input type="text" :value="field.text" @change="patch(field.id, {text: ($event.target as HTMLInputElement).value})"></label>
+    <p class="template-help">{{ t("85 × 55 mm. The logo remains the original artwork. Change the front photo or back color with the page controls.") }}</p>
+    <p class="template-source">{{ t("Based on Charcoal veil v5 ·") }} {{ snapshot.locale.toUpperCase() }}</p>
   </section>
 </template>
 

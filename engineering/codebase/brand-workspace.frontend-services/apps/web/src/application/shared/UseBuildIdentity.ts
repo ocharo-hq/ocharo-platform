@@ -1,5 +1,5 @@
 import { onBeforeUnmount, ref } from 'vue';
-import { readBuildIdentity } from '../../integration/common/BuildIdentityApi';
+import { readBuildIdentity } from '../../integration/shared/BuildIdentityApi';
 
 /** Loads technical About data only on request and cancels when the view closes. */
 export function useBuildIdentity() {

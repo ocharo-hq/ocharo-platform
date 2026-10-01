@@ -5,19 +5,22 @@ const fonts = { serif: 'Georgia, Times New Roman, serif', sans: 'Arial, sans-ser
 export function layoutDesignText(context: CanvasRenderingContext2D, element: DesignElement, unit: number) {
   const size = (element.fontSize ?? 3) * unit;
   context.font = `${element.fontWeight ?? 'normal'} ${size}px ${fonts[element.fontFamily ?? 'sans']}`;
-  context.textBaseline = 'alphabetic'; context.textAlign = element.align ?? 'left';
+  context.direction = element.direction ?? 'ltr';
+  const alignment = element.align ?? (element.direction === 'rtl' ? 'right' : 'left');
+  context.textBaseline = 'alphabetic'; context.textAlign = alignment;
   context.letterSpacing = `${(element.letterSpacing ?? 0) * unit}px`;
   const width = element.width * unit, lines: string[] = [];
   for (const paragraph of (element.text ?? '').split('\n')) {
     let line = '';
-    for (const word of paragraph.split(/\s+/)) {
-      const candidate = line ? `${line} ${word}` : word;
-      if (context.measureText(candidate).width > width && line) { lines.push(line); line = word; }
+    const tokens = paragraph.split(/(\s+|[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}])/u).filter(Boolean);
+    for (const token of tokens) {
+      const candidate = line + token;
+      if (context.measureText(candidate).width > width && line.trim() && token.trim()) { lines.push(line.trimEnd()); line = token.trimStart(); }
       else line = candidate;
     }
     lines.push(line);
   }
-  const anchor = element.align === 'center' ? width / 2 : element.align === 'right' ? width : 0;
+  const anchor = alignment === 'center' ? width / 2 : alignment === 'right' ? width : 0;
   const metrics = context.measureText('Hg'), lineHeight = size * (element.lineHeight ?? 1.2);
   const ascent = metrics.fontBoundingBoxAscent ?? size * 0.8, descent = metrics.fontBoundingBoxDescent ?? size * 0.2;
   const baseline = (lineHeight - ascent - descent) / 2 + ascent;

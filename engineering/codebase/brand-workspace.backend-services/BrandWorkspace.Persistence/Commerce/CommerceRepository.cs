@@ -47,11 +47,14 @@ public sealed class CommerceRepository(NpgsqlDataSource source, TimeProvider tim
         if ((previous?.Revision ?? 0)!=expectedRevision) throw new PreparationException("conflict","The draft changed. Reload before saving.");
         await using(var slug=Cmd(c,tx,"SELECT public_slug FROM commerce.profiles WHERE organization_id=$1 AND brand_id=$2",organizationId,brandId))
             if(await slug.ExecuteScalarAsync(token) is string assigned && assigned!=snapshot.Slug) throw new PreparationException("conflict","The public slug is fixed after its first release.");
-        snapshot = snapshot with { CatalogueEditions = previous?.Snapshot.CatalogueEditions ?? [] };
+        snapshot = snapshot with { CatalogueEditions = previous?.Snapshot.CatalogueEditions ?? [], Products = snapshot.Products.Select(item => {
+            var old = previous?.Snapshot.Products.FirstOrDefault(p => p.Document.Id == item.Document.Id);
+            return item with { Translations = item.Translations ?? old?.Translations, MediaGroups = item.MediaGroups ?? old?.MediaGroups };
+        }).ToArray() };
         if(!owner) snapshot=CommerceRules.RestrictEditorApprovals(snapshot,previous?.Snapshot);
         snapshot=snapshot with { Products=snapshot.Products.Select(p => {
             var old=previous?.Snapshot.Products.FirstOrDefault(x=>x.Document.Id==p.Document.Id);
-            var same=old is not null && JsonSerializer.Serialize(old.Document,Json)==JsonSerializer.Serialize(p.Document,Json);
+            var same=old is not null && JsonSerializer.Serialize(new { old.Document, old.Translations, old.MediaGroups },Json)==JsonSerializer.Serialize(new { p.Document, p.Translations, p.MediaGroups },Json);
             return p with { Revision=old is null ? 1 : same ? old.Revision : checked(old.Revision+1), SourceRevision=old?.SourceRevision ?? p.SourceRevision };
         }).ToArray() };
         var result = await WriteDraft(c, tx, organizationId, actor, brandId, expectedRevision, snapshot, blobs, token);

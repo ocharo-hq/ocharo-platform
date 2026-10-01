@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { useAuth } from '@wow-two-beta/ui-vue/auth';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 
@@ -7,6 +8,8 @@ import type { Session } from '@/domain/workspace/Models';
 
 import LoginPage from './LoginPage.vue';
 import WorkspacePage from './WorkspacePage.vue';
+
+const { t } = useUiLocale();
 
 /** Keeps private views behind a resolved, revalidated server session. */
 defineOptions({ name: 'SessionGate' });
@@ -17,24 +20,24 @@ const auth = useAuth<Session>();
 
 <template>
   <main v-if="auth.isPending || access.invalidated.value" class="mx-auto max-w-xl px-6 py-24" aria-busy="true">
-    <p role="status">Checking your session…</p>
+    <p role="status">{{ t("Checking your session…") }}</p>
   </main>
   <main v-else-if="!auth.isAuthenticated && access.sessionError.value" class="mx-auto max-w-xl px-6 py-24">
-    <h1 class="text-2xl font-semibold">Session unavailable</h1>
-    <p role="alert" class="mt-5 leading-7">{{ access.sessionError.value }}</p>
-    <Button class="mt-6" @click="auth.refresh">Retry session</Button>
+    <h1 class="text-2xl font-semibold">{{ t("Session unavailable") }}</h1>
+    <p role="alert" class="mt-5 leading-7">{{ t(access.sessionError.value ?? '') }}</p>
+    <Button class="mt-6" @click="auth.refresh">{{ t("Retry session") }}</Button>
   </main>
   <LoginPage v-else-if="!auth.isAuthenticated" :access="access" />
   <template v-else>
     <section v-if="access.checking.value || access.sessionError.value" class="mx-auto max-w-xl px-6 py-24">
-      <p v-if="access.checking.value" role="status">Rechecking your session…</p>
+      <p v-if="access.checking.value" role="status">{{ t("Rechecking your session…") }}</p>
       <template v-else
-        ><h1 class="text-2xl font-semibold">Verify your session to continue</h1>
-        <p role="alert" class="mt-5">{{ access.sessionError.value }}</p>
+        ><h1 class="text-2xl font-semibold">{{ t("Verify your session to continue") }}</h1>
+        <p role="alert" class="mt-5">{{ t(access.sessionError.value ?? '') }}</p>
         <p class="mt-3 text-sm text-muted-foreground">
-          This page keeps your unsaved edits while the session is checked.
+          {{ t("This page keeps your unsaved edits while the session is checked.") }}
         </p>
-        <Button class="mt-6" @click="access.recheck">Retry session</Button></template
+        <Button class="mt-6" @click="access.recheck">{{ t("Retry session") }}</Button></template
       >
     </section>
     <div v-show="!access.checking.value && !access.sessionError.value">

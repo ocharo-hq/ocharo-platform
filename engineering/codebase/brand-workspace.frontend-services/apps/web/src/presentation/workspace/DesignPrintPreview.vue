@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { onScopeDispose, ref, watch } from 'vue';
 import { renderDesignPage } from '@/application/workspace/ExportDocument';
 import type { DesignPage } from '@/domain/workspace/EditorModels';
+
+const { t } = useUiLocale();
 
 defineOptions({ name: 'DesignPrintPreview' });
 const props = defineProps<{ page: DesignPage }>();
@@ -26,8 +29,8 @@ onScopeDispose(() => { sequence++; const canvas = holder.value?.querySelector('c
 <template>
   <div class="print-preview" :style="{ aspectRatio: `${page.width} / ${page.height}`, background: page.background }" :aria-busy="busy">
     <div ref="holder" class="print-preview-canvas" />
-    <p v-if="busy" class="preview-message" role="status">Rendering PDF preview…</p>
-    <p v-if="error" class="preview-message preview-error" role="alert">{{ error }}</p>
+    <p v-if="busy" class="preview-message" role="status">{{ t("Rendering PDF preview…") }}</p>
+    <p v-if="error" class="preview-message preview-error" role="alert">{{ t(error) }}</p>
   </div>
 </template>
 

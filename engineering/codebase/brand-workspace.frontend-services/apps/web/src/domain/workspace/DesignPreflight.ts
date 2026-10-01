@@ -4,7 +4,7 @@ export interface DesignPreflightIssue {
   pageId: string; pageNumber: number; pageTitle: string;
   elementId: string; elementLabel: string;
   severity: 'warning' | 'error';
-  code: 'outside-page' | 'text-overflow' | 'missing-image';
+  code: 'outside-page' | 'text-overflow' | 'missing-image' | 'missing-translation' | 'independent-copy';
   message: string;
 }
 export interface DesignPreflightReport { pageCount: number; issues: DesignPreflightIssue[] }

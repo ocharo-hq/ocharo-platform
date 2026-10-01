@@ -41,11 +41,11 @@ describe('canonical catalogue editions', () => {
     const draft = fixture(); draft.snapshot.products[0]!.document.status='archived';
     expect(()=>composeCataloguePages(org,draft,[{productId:'sample-1',imageHashes:[hashes[0]!]}],'product','en')).toThrow('no longer available');
   });
-  it('keeps edition prices separate from canonical prices and keeps price frames bounded', () => {
+  it('requires canonical price edits while preserving copied price frames', () => {
     const draft=fixture(), pages=composeCataloguePages(org,draft,[{productId:'sample-1',imageHashes:[hashes[0]!]}],'product','en');
     const design=appendCataloguePages(createCatalogueCover('en'),pages), page=design.pages[1]!, price=page.elements.find(item=>item.role==='price')!;
-    const changed=setCataloguePrice(design,page.id,price.id,142.99);
-    expect(changed.pages[1]?.elements.find(item=>item.id===price.id)).toMatchObject({text:'142.99',width:price.width});
+    expect(()=>setCataloguePrice(design,page.id,price.id,142.99)).toThrow('Edit canonical prices in Products');
+    expect(price.text).toBe('125.75');
     expect(draft.snapshot.products[0]?.document.pricing?.tiers[0]?.unitPrice).toBe(125.75);
   });
   it('inserts after the selected page, removes safely and preserves independent page identities', () => {

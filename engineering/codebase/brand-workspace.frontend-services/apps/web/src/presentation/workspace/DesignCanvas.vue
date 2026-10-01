@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, ref, watch, type CSSProperties } from 'vue';
 import type { DesignElement, DesignPage } from '@/domain/workspace/EditorModels';
+
+const { t } = useUiLocale();
 
 defineOptions({ name: 'DesignCanvas' });
 const props = withDefaults(defineProps<{ page: DesignPage; selectedId?: string | null; editable?: boolean; scale?: number }>(), {
@@ -32,7 +35,7 @@ function typography(element: DesignElement): CSSProperties {
     fontFamily: element.fontFamily === 'serif' ? 'Georgia, Times New Roman, serif' : 'Arial, sans-serif',
     fontSize: `${(element.fontSize ?? 3) / props.page.width * 100}cqw`, fontWeight: element.fontWeight ?? 'normal',
     lineHeight: element.lineHeight ?? 1.2, letterSpacing: `${(element.letterSpacing ?? 0) / props.page.width * 100}cqw`,
-    textAlign: element.align ?? 'left',
+    textAlign: element.align ?? (element.direction === 'rtl' ? 'right' : 'left'), direction: element.direction ?? 'ltr',
   };
 }
 function imageStyle(element: DesignElement): CSSProperties {
@@ -101,7 +104,7 @@ function keyboard(event: KeyboardEvent): void {
 </script>
 
 <template>
-  <div ref="surface" class="design-canvas" :class="{ 'is-editable': editable }" :style="{ width: `${scale * 100}%`, aspectRatio: `${page.width} / ${page.height}`, background: page.background }" :tabindex="editable ? 0 : -1" role="group" :aria-label="`${page.title} design canvas`" @pointerdown.self="emit('select', null)" @pointermove="move" @pointerup="finish($event)" @pointercancel="finish($event, true)" @keydown="keyboard">
+  <div ref="surface" class="design-canvas" :class="{ 'is-editable': editable }" :style="{ width: `${scale * 100}%`, aspectRatio: `${page.width} / ${page.height}`, background: page.background }" :tabindex="editable ? 0 : -1" role="group" :aria-label="t('{title} design canvas', {title:page.title})" @pointerdown.self="emit('select', null)" @pointermove="move" @pointerup="finish($event)" @pointercancel="finish($event, true)" @keydown="keyboard">
     <div class="design-canvas-clip" @pointerdown.self="emit('select', null)">
       <div v-for="element in elements" :key="element.id" class="design-element" :class="{ 'is-text': element.type === 'text', 'is-image': element.type === 'image', 'is-locked': element.locked }" :style="[frame(element), element.type === 'text' ? typography(element) : {}]" :title="editable ? element.label : undefined" @pointerdown="start($event, element)">
         <img v-if="element.type === 'image'" :src="element.src" :style="imageStyle(element)" alt="" draggable="false" @load="loaded($event, element.src)">
@@ -110,7 +113,7 @@ function keyboard(event: KeyboardEvent): void {
     </div>
     <div v-if="editable && selected" class="design-selection" :style="{ ...frame(selected), opacity: 1, background: 'transparent', boxShadow: undefined }" aria-hidden="true">
       <span class="design-selection-label">{{ selected.label }}</span>
-      <button v-if="!selected.locked" type="button" class="design-resize" aria-label="Resize selected element" @pointerdown="start($event, selected, 'resize')" />
+      <button v-if="!selected.locked" type="button" class="design-resize" :aria-label="t('Resize selected element')" @pointerdown="start($event, selected, 'resize')" />
     </div>
   </div>
 </template>

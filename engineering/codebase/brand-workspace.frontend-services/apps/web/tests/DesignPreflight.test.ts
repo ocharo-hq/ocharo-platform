@@ -58,6 +58,18 @@ describe('catalogue export preflight', () => {
     const before = JSON.stringify(input), result = await inspectDesign(input, undefined, undefined, imageLoader);
     expect(result.issues).toEqual([]); expect(imageLoader).toHaveBeenCalledTimes(1); expect(JSON.stringify(input)).toBe(before);
   });
+  it('blocks missing translated names and quantity labels without accepting an unrelated locale', async () => {
+    const input=snapshot(page([text({text:'',binding:{kind:'product',field:'name',productId:'coat'}}),text({id:'quantity',text:'1–9',binding:{kind:'product',field:'price-label',productId:'coat',index:0}})]));
+    input.locale='fr'; input.catalogueSettings={mediaGroup:'all',priceDisplay:{show:true,showRetail:true,showWholesale:true,showCurrency:true,showQuantity:true},copyByLocale:{}};
+    const result=await inspectDesign(input,undefined,undefined,imageLoader);
+    expect(result.issues.filter(issue=>issue.code==='missing-translation')).toHaveLength(2);
+    expect(result.issues.every(issue=>issue.severity==='error')).toBe(true);
+  });
+  it('keeps independent extra-language copy explicitly reviewable', async () => {
+    const input=snapshot(page([text({text:'Review'})]));input.locale='ja';
+    const result=await inspectDesign(input,undefined,undefined,imageLoader);
+    expect(result.issues).toContainEqual(expect.objectContaining({code:'independent-copy',severity:'warning'}));
+  });
   it('keeps intentional bleed as reviewable warnings and propagates cancellation', async () => {
     const input = snapshot(page([{ id: 'bleed', type: 'shape', label: 'Background', x: -3, y: -3, width: 216, height: 303 }]));
     expect((await inspectDesign(input, undefined, undefined, imageLoader)).issues[0]?.severity).toBe('warning');

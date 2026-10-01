@@ -1,3 +1,4 @@
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef } from 'vue';
 
 import type { AuthStrategy } from '@wow-two-beta/ui-vue/auth';
@@ -38,6 +39,7 @@ export function useAccess(
     reload: () => window.location.reload(),
   },
 ) {
+  const { t } = useUiLocale();
   const session = shallowRef<Session | null>(null);
   const sessionError = ref<string | null>(null);
   const checking = ref(false);
@@ -79,7 +81,7 @@ export function useAccess(
   /** Prevents accidental loss of edits and switches context only with no pending writes. */
   function navigate(path: string): void {
     if (busy.value || !path.startsWith('/') || path.startsWith('//')) return;
-    if (dirty.value && !window.confirm('Discard unsaved changes and leave this page?')) return;
+    if (dirty.value && !window.confirm(t('Discard unsaved changes and leave this page?'))) return;
     dirty.value = false;
     navigation.assign(path);
   }
@@ -106,7 +108,7 @@ export function useAccess(
   }
   /** Confirms the server logout before replacing the current document. */
   async function logout(): Promise<void> {
-    if (busy.value || (dirty.value && !window.confirm('Discard unsaved changes and sign out?'))) return;
+    if (busy.value || (dirty.value && !window.confirm(t('Discard unsaved changes and sign out?')))) return;
     const result = await write((signal) => api.logout(signal));
     if (result.ok) authenticated();
     else sessionError.value = failureMessage(result.failure);

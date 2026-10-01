@@ -24,7 +24,7 @@ export function useCommerce(access: AccessControls) {
       derivative: { mediaId: uploaded.value.id, sha256: uploaded.value.sha256, mediaType: uploaded.value.contentType },
       ...(manifest.sourceApproval ? { sourceApproval: manifest.sourceApproval } : {}),
     }, s), signal);
-    if (!result.ok) throw new Error(`The image is in Media, but its Studio record was not saved. ${failureMessage(result.failure)}`);
+    if (!result.ok) throw new Error('The image is in Media, but its Studio record was not saved.', { cause: failureMessage(result.failure) });
     return result.value;
   }
   return { ...api, importPackage };

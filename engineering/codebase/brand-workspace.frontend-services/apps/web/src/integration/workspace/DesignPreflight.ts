@@ -22,6 +22,17 @@ export async function inspectDesign(snapshot: DesignSnapshot, pageIds?: readonly
           pageTitle: page.title, elementId: element.id, elementLabel: element.label, code, severity, message });
       };
       if (crossesPageEdge(element, page)) add('outside-page', 'warning', 'Extends beyond the page. That part will be cropped.');
+      if (checked.kind === 'catalogue' && element.type === 'text') {
+        if (element.binding && !element.text?.trim() &&
+          (element.binding.kind === 'product' && ['name','price'].includes(element.binding.field) ||
+            element.binding.kind === 'shared' && ['collection','sizes','pieces'].includes(element.binding.field)))
+          add('missing-translation', 'error', `Complete this ${checked.locale} catalogue text before export.`);
+        if (element.binding?.kind === 'product' && element.binding.field === 'price-label' &&
+          checked.catalogueSettings?.priceDisplay.showQuantity && !checked.catalogueSettings.copyByLocale[checked.locale]?.pieces?.trim())
+          add('missing-translation', 'error', `Add the ${checked.locale} quantity unit in shared catalogue text.`);
+        if (!['uz','ru','en'].includes(checked.locale) && !element.binding && element.role !== 'page-number' && element.text?.trim() && !/^\d+$/.test(element.text))
+          add('independent-copy', 'warning', `Confirm this independent text is in ${checked.locale}. It is not connected to translated product fields.`);
+      }
       if (element.type === 'text' && layoutDesignText(context, element, unit).overflow)
         add('text-overflow', 'warning', 'Text extends beyond its frame and will be clipped. Enlarge the frame or shorten the text.');
       if (element.type === 'image') {

@@ -80,6 +80,51 @@ public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : 
     }
 
     [Theory]
+    [InlineData("fr")]
+    [InlineData("zh-Hans")]
+    [InlineData("ar")]
+    public async Task ExtendedLanguage_CanPublishAndDownloadItsExactSavedEdition(string locale)
+    {
+        var x=await Create(locale:locale);using var client=x.Client;
+        using var attached=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));
+        attached.StatusCode.Should().Be(HttpStatusCode.OK,await attached.Content.ReadAsStringAsync());
+        var draft=await Data(attached);
+        draft.GetProperty("snapshot").GetProperty("catalogueEditions")[0].GetProperty("locale").GetString().Should().Be(locale);
+        using var unsupported=await client.PostAsJsonAsync(x.Path+"/catalogue-editions/xx/publish",new{expectedRevision=2,note="Unsupported locale"});
+        unsupported.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var published=await client.PostAsJsonAsync(x.Path+$"/catalogue-editions/{locale}/publish",new{expectedRevision=2,note="Reviewed translated edition"});
+        published.StatusCode.Should().Be(HttpStatusCode.OK,await published.Content.ReadAsStringAsync());
+        using var anonymous=fixture.Factory.CreateClient();
+        var view=await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale={locale}");
+        view.GetProperty("locale").GetString().Should().Be(locale);
+        view.GetProperty("availableLocales").EnumerateArray().Select(item=>item.GetString()).Should().Equal(locale);
+        view.GetProperty("edition").GetProperty("locale").GetString().Should().Be(locale);
+        view.GetProperty("edition").GetProperty("sourceDesignId").GetGuid().Should().Be(x.Design);
+        (await anonymous.GetByteArrayAsync(view.GetProperty("edition").GetProperty("pdfUrl").GetString()!)).Should().Equal(Pdf);
+        var english=await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale=en");
+        english.GetProperty("edition").ValueKind.Should().Be(JsonValueKind.Null,"an extended edition must not fall back to another language");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ConnectedCatalogueSettings_BindTheEditionToItsCanonicalBrand(bool foreignBrand)
+    {
+        var x=await Create(foreignSettingsBrand:foreignBrand);using var client=x.Client;
+        using var response=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));
+        response.StatusCode.Should().Be(foreignBrand?HttpStatusCode.BadRequest:HttpStatusCode.OK,await response.Content.ReadAsStringAsync());
+        var current=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        current.GetProperty("revision").GetInt32().Should().Be(foreignBrand?1:2);
+        current.GetProperty("snapshot").GetProperty("catalogueEditions").GetArrayLength().Should().Be(foreignBrand?0:1);
+        if(foreignBrand)
+        {
+            await using var command=fixture.DataSource.CreateCommand("SELECT COUNT(*) FROM commerce.media WHERE brand_id=$1");
+            command.Parameters.AddWithValue(x.Brand);
+            Convert.ToInt32(await command.ExecuteScalarAsync()).Should().Be(0,"a foreign source must be rejected before storing its rendered artifacts");
+        }
+    }
+
+    [Theory]
     [InlineData(true)]
     [InlineData(false)]
     public async Task SourceReferences_RejectForeignBrandAndUnknownProducts(bool foreignBrand)
@@ -177,7 +222,7 @@ public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : 
         foreach(var response in responses)response.Dispose();
     }
 
-    private async Task<Setup> Create(object? sourcePage=null)
+    private async Task<Setup> Create(object? sourcePage=null,string locale="en",bool? foreignSettingsBrand=null)
     {
         var owner=await fixture.CreateOwnerAsync();var client=await fixture.LoginAsync(owner);
         using var brandResponse=await client.PostAsJsonAsync($"/api/organizations/{owner.OrganizationId}/brands",new{name="Edition fixture",timeZone="Asia/Tashkent"});
@@ -185,9 +230,13 @@ public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : 
         var slug="edition-"+Guid.NewGuid().ToString("N");
         var snapshot=new CommerceSnapshot{Slug=slug,Identity=new BrandIdentity{Name="Edition fixture"}};
         using var saved=await client.PutAsJsonAsync(path,new{expectedRevision=0,snapshot});saved.StatusCode.Should().Be(HttpStatusCode.OK,await saved.Content.ReadAsStringAsync());
-        using var design=await client.PostAsJsonAsync($"/api/organizations/{owner.OrganizationId}/design-documents",new{kind="catalogue",title="Saved source title",snapshot=new{
-            schemaVersion=1,kind="catalogue",locale="en",templateId="fixture-template",pages=new[]{sourcePage??new{id="cover",title="Saved cover",width=210,height=297,productIds=Array.Empty<string>(),elements=Array.Empty<object>()}}
-        }});
+        var designSnapshot=JsonSerializer.SerializeToNode(new{
+            schemaVersion=1,kind="catalogue",locale,templateId="fixture-template",pages=new[]{sourcePage??new{id="cover",title="Saved cover",width=210,height=297,productIds=Array.Empty<string>(),elements=Array.Empty<object>()}}
+        })!;
+        if(foreignSettingsBrand is {} foreign)
+            designSnapshot["catalogueSettings"]=JsonSerializer.SerializeToNode(new{brandId=foreign?Guid.NewGuid():brand,
+                mediaGroup="all",priceDisplay=new{show=true,showCurrency=true,showQuantity=true,showRetail=true,showWholesale=true},copyByLocale=new{} });
+        using var design=await client.PostAsJsonAsync($"/api/organizations/{owner.OrganizationId}/design-documents",new{kind="catalogue",title="Saved source title",snapshot=designSnapshot});
         design.StatusCode.Should().Be(HttpStatusCode.OK,await design.Content.ReadAsStringAsync());
         return new(owner,client,brand,(await Data(design)).GetProperty("id").GetGuid(),path,slug);
     }

@@ -4,12 +4,18 @@ import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 import { useCommerce } from '@/application/workspace/UseCommerce';
-import type { CommerceDraft, CommerceRelease, Locale } from '@/domain/workspace/Commerce';
+import type { CommerceDraft, CommerceRelease, CatalogueLocale } from '@/domain/workspace/Commerce';
 import type { DesignPage } from '@/domain/workspace/EditorModels';
+import { catalogueMedia, catalogueMediaGroups } from '@/domain/workspace/CatalogueEditing';
+import type { CatalogueMediaGroup } from '@/domain/workspace/EditorModels';
+import { translateDesignerNotice } from '@/domain/shared/DesignerUiMessages';
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { catalogueLayouts, composeCataloguePages, productName, type CataloguePageLayout } from '@/domain/workspace/CatalogueComposer';
 
 defineOptions({ name: 'CatalogueBuilder' });
-const props = defineProps<{ access: AccessControls; workspace: WorkspaceControls; locale: Locale; disabled: boolean; hasDocument: boolean; initialBrandId?: string }>();
+const { t } = useUiLocale();
+const mediaGroup = ref<CatalogueMediaGroup>('all');
+const props = defineProps<{ access: AccessControls; workspace: WorkspaceControls; locale: CatalogueLocale; disabled: boolean; hasDocument: boolean; initialBrandId?: string }>();
 const emit = defineEmits<{ pages: [pages: DesignPage[], brandName: string]; close: [] }>();
 const api = useCommerce(props.access), controller = new AbortController();
 const brandId = ref(props.initialBrandId ?? ''), releaseId = ref('draft'), query = ref(''), layout = ref<CataloguePageLayout>('product');
@@ -29,6 +35,7 @@ const warnings = computed(() => selected.value.reduce((sum, item) => sum + (imag
 watch(() => props.workspace.brands.value, brands => { if (!brandId.value && brands?.length) brandId.value = brands[0]!.id; }, { immediate: true });
 watch(brandId, () => { void load(); }, { immediate: true });
 watch(releaseId, () => { images.value = {}; });
+watch(mediaGroup, () => { images.value = Object.fromEntries(selected.value.map(product => [product.document.id,catalogueMedia(product,mediaGroup.value).slice(0,capacity.value).map(image=>image.sha256)])); });
 watch(layout, () => { images.value = Object.fromEntries(Object.entries(images.value).map(([id, hashes]) => [id, hashes.slice(0, capacity.value)])); });
 onScopeDispose(() => controller.abort());
 async function load(): Promise<void> {
@@ -47,7 +54,8 @@ async function load(): Promise<void> {
 function toggleProduct(id: string): void {
   if (Object.hasOwn(images.value, id)) { const next = { ...images.value }; delete next[id]; images.value = next; }
   else {
-    const first = products.value.find(item => item.document.id === id)?.document.media[0];
+    const product = products.value.find(item => item.document.id === id);
+    const first = product ? catalogueMedia(product,mediaGroup.value)[0] : undefined;
     images.value = { ...images.value, [id]: first ? [first.sha256] : [] };
   }
 }
@@ -60,32 +68,33 @@ function add(): void {
   if (!source.value || props.disabled || loading.value) return;
   try {
     const pages = composeCataloguePages(props.workspace.organization.value!.id, source.value,
-      selected.value.map(item => ({ productId: item.document.id, imageHashes: images.value[item.document.id] ?? [] })), layout.value, props.locale);
+      selected.value.map(item => ({ productId: item.document.id, imageHashes: images.value[item.document.id] ?? [], mediaGroup: mediaGroup.value })), layout.value, props.locale);
     emit('pages', pages, source.value.snapshot.identity.name);
   } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Unable to compose pages.'; }
 }
 </script>
 
 <template>
-  <section class="catalogue-builder" aria-label="Catalogue builder">
-    <header><div><p class="eyebrow">Build your edition</p><h2>Products, photographs, pages.</h2><p>Choose your source, select garments, and give each one a layout.</p></div><button type="button" class="quiet-button" @click="emit('close')">Close builder</button></header>
+  <section class="catalogue-builder" :aria-label="t('Catalogue builder')">
+    <header><div><p class="eyebrow">{{ t("Build your edition") }}</p><h2>{{ t("Products, photographs, pages.") }}</h2><p>{{ t("Choose your source, select garments, and give each one a layout.") }}</p></div><button type="button" class="quiet-button" @click="emit('close')">{{ t("Close builder") }}</button></header>
     <div class="builder-controls">
-      <label class="field-label">Catalogue brand<select aria-label="Catalogue brand" v-model="brandId" :disabled="loading || disabled"><option value="">Choose brand</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
-      <label class="field-label">Product source<select aria-label="Product source" v-model="releaseId" :disabled="loading || disabled"><option value="draft">Current saved draft{{ draft ? ` · revision ${draft.revision}` : '' }}</option><option v-for="release in releases.filter(item => !item.withdrawnAt)" :key="release.id" :value="release.id">Published release {{ release.revision }}</option></select></label>
-      <label class="field-label">Find products<input aria-label="Find products" v-model="query" placeholder="Name or product ID"></label>
+      <label class="field-label">{{ t("Catalogue brand") }}<select :aria-label="t('Catalogue brand')" v-model="brandId" :disabled="loading || disabled"><option value="">{{ t("Choose brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
+      <label class="field-label">{{ t("Product source") }}<select :aria-label="t('Product source')" v-model="releaseId" :disabled="loading || disabled"><option value="draft">{{ t("Current saved draft") }}{{ draft ? ` · ${t('Revision')} ${draft.revision}` : '' }}</option><option v-for="release in releases.filter(item => !item.withdrawnAt)" :key="release.id" :value="release.id">{{ t("Published release") }} {{ release.revision }}</option></select></label>
+      <label class="field-label">{{ t("Find products") }}<input :aria-label="t('Find products')" v-model="query" :placeholder="t('Name or product ID')"></label>
     </div>
-    <fieldset class="layout-picker" :disabled="disabled"><legend>Page template</legend><label v-for="option in catalogueLayouts" :key="option.id" :class="{ chosen: layout === option.id }"><input v-model="layout" type="radio" name="catalogue-layout" :value="option.id"><strong>{{ option.title }}</strong><span>{{ option.description }}</span></label></fieldset>
-    <p v-if="error" role="alert" class="editor-alert">{{ error }}</p><p v-if="loading" role="status">Loading saved products…</p>
-    <p v-else-if="!source">Create and save products in Products &amp; releases to start your catalogue.</p>
+    <label class="field-label">{{ t('Photo group for all products') }}<select v-model="mediaGroup"><option v-for="group in catalogueMediaGroups" :key="group" :value="group">{{ t(group) }}</option></select></label>
+    <fieldset class="layout-picker" :disabled="disabled"><legend>{{ t("Page template") }}</legend><label v-for="option in catalogueLayouts" :key="option.id" :class="{ chosen: layout === option.id }"><input v-model="layout" type="radio" name="catalogue-layout" :value="option.id"><strong>{{ t(option.title) }}</strong><span>{{ t(option.description) }}</span></label></fieldset>
+    <p v-if="error" role="alert" class="editor-alert">{{ translateDesignerNotice(error,t) }}</p><p v-if="loading" role="status">{{ t("Loading saved products…") }}</p>
+    <p v-else-if="!source">{{ t("Create and save products in Products & releases to start your catalogue.") }}</p>
     <div v-else class="builder-products">
       <article v-for="product in visible" :key="product.document.id" :class="{ chosen: Object.hasOwn(images, product.document.id) }">
-        <label class="product-choice"><input type="checkbox" :checked="Object.hasOwn(images, product.document.id)" :disabled="disabled || !product.document.media.length" @change="toggleProduct(product.document.id)"><span><strong>{{ productName(product, locale) }}</strong><small>{{ product.document.id }} · product revision {{ product.revision }}</small></span></label>
-        <p v-if="!product.document.media.length" class="template-help">Add a product image in Products &amp; releases.</p>
-        <div v-if="Object.hasOwn(images, product.document.id)" class="image-picker"><label v-for="image in product.document.media" :key="image.sha256" :class="{ chosen: images[product.document.id]?.includes(image.sha256) }"><input type="checkbox" :checked="images[product.document.id]?.includes(image.sha256)" :disabled="disabled || (!images[product.document.id]?.includes(image.sha256) && (images[product.document.id]?.length ?? 0) >= capacity)" @change="toggleImage(product.document.id, image.sha256)"><img :src="api.image(workspace.organization.value!.id, brandId, image.sha256)" :alt="image.alt || image.fileName" loading="lazy"><span>{{ image.role }}{{ source.snapshot.mediaApprovals[image.sha256]?.approvedForPublication ? '' : ' · unreviewed' }}</span></label></div>
+        <label class="product-choice"><input type="checkbox" :checked="Object.hasOwn(images, product.document.id)" :disabled="disabled || !product.document.media.length" @change="toggleProduct(product.document.id)"><span><strong>{{ productName(product, locale) }}</strong><small>{{ product.document.id }} {{ t("· product revision") }} {{ product.revision }}</small></span></label>
+        <p v-if="!product.document.media.length" class="template-help">{{ t("Add a product image in Products & releases.") }}</p>
+        <div v-if="Object.hasOwn(images, product.document.id)" class="image-picker"><label v-for="image in catalogueMedia(product,mediaGroup)" :key="image.sha256" :class="{ chosen: images[product.document.id]?.includes(image.sha256) }"><input type="checkbox" :checked="images[product.document.id]?.includes(image.sha256)" :disabled="disabled || (!images[product.document.id]?.includes(image.sha256) && (images[product.document.id]?.length ?? 0) >= capacity)" @change="toggleImage(product.document.id, image.sha256)"><img :src="api.image(workspace.organization.value!.id, brandId, image.sha256)" :alt="image.alt || image.fileName" loading="lazy"><span>{{ t(image.role) }}{{ source.snapshot.mediaApprovals[image.sha256]?.approvedForPublication ? '' : ` · ${t('unreviewed')}` }}</span></label></div>
       </article>
-      <p v-if="!visible.length">No products match this search.</p>
+      <p v-if="!visible.length">{{ t("No products match this search.") }}</p>
     </div>
-    <footer><div><p>{{ selected.length }} products selected · up to {{ capacity }} images per page</p><p v-if="warnings" class="review-warning">{{ warnings }} chosen images need publication review. This edition remains a private working design.</p><p class="template-help">Pages copy saved product revisions. Editing a page price changes this edition; canonical product prices stay in Products &amp; releases.</p></div><Button :is-disabled="disabled || loading || !selected.length" @click="add">{{ hasDocument ? 'Insert selected pages' : 'Create catalogue' }}</Button></footer>
+    <footer><div><p>{{ selected.length }} {{ t("products selected · up to") }} {{ capacity }} {{ t("images per page") }}</p><p v-if="warnings" class="review-warning">{{ warnings }} {{ t("chosen images need publication review. This edition remains a private working design.") }}</p><p class="template-help">{{ t('Prices come from Products. Catalogue settings control which price details appear.') }}</p></div><Button :is-disabled="disabled || loading || !selected.length" @click="add">{{ hasDocument ? t("Insert selected pages") : t("Create catalogue") }}</Button></footer>
   </section>
 </template>
 

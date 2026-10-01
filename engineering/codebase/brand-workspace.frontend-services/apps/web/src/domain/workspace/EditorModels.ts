@@ -1,7 +1,27 @@
+import { catalogueLocales, type CatalogueLocale } from './Commerce';
+
 /** Portable, versioned design snapshots; all geometry uses millimetres. */
 export type DesignKind = 'catalogue' | 'business-card';
+export interface CatalogueCopy {
+  collection: string; coverNote: string; header: string; footer: string; sizes: string;
+  pieces: string; priceOnRequest: string; prices: string; materials: string; decoration: string;
+}
+export type CatalogueMediaGroup = 'all' | 'model' | 'product' | 'detail' | 'fabric';
+export interface CatalogueSettings {
+  copyByLocale: Partial<Record<CatalogueLocale, CatalogueCopy>>;
+  mediaGroup: CatalogueMediaGroup;
+  priceDisplay: { show: boolean; showCurrency: boolean; showQuantity: boolean; showRetail: boolean; showWholesale: boolean };
+  brandId?: string;
+  sourceRevision?: number;
+}
+export type CatalogueBinding = { kind: 'shared'; field: keyof CatalogueCopy } | {
+  kind: 'product'; field: 'name' | 'fabric' | 'decoration' | 'description' | 'details' | 'notes' | 'sizes' | 'price' | 'price-label' | 'currency';
+  index?: number; productId?: string;
+};
 export interface DesignElement {
   id: string;
+  binding?: CatalogueBinding;
+  direction?: 'ltr' | 'rtl';
   type: 'text' | 'image' | 'shape';
   label: string;
   x: number; y: number; width: number; height: number;
@@ -34,13 +54,14 @@ export interface DesignPage {
   id: string; title: string; width: number; height: number; background: string;
   elements: DesignElement[];
   productIds?: string[];
-  catalogueSource?: { brandId: string; revision: number; productRevision: number; productId: string; layout: 'product' | 'continuation' | 'collage'; currency: string | null; imageHashes: string[] };
+  catalogueSource?: { brandId: string; revision: number; productRevision: number; productId: string; layout: 'product' | 'continuation' | 'collage'; currency: string | null; imageHashes: string[]; mediaGroup?: CatalogueMediaGroup };
 }
 export interface DesignSnapshot {
   schemaVersion: 1;
   kind: DesignKind;
   templateId: string;
-  locale: 'uz' | 'ru' | 'en';
+  locale: CatalogueLocale;
+  catalogueSettings?: CatalogueSettings;
   pages: DesignPage[];
 }
 export interface DesignSummary {
@@ -57,8 +78,21 @@ export function validateSnapshot(value: unknown): DesignSnapshot {
   const metadata = (v: unknown, max = 256): v is string => typeof v === 'string' && v.trim().length > 0 && v.length <= max && !/[\u0000-\u001f\u007f]/.test(v);
   const color = (v: unknown): v is string => typeof v === 'string' && /^#[\da-f]{6}$/i.test(v);
   if (!d || d.schemaVersion !== 1 || !['catalogue', 'business-card'].includes(d.kind) ||
-      !['uz', 'ru', 'en'].includes(d.locale) || !metadata(d.templateId) ||
+      !catalogueLocales.some(item => item.code === d.locale) || !metadata(d.templateId) ||
       !Array.isArray(d.pages) || d.pages.length < 1 || d.pages.length > 100) throw new Error('Unsupported design file.');
+  const groups = ['all', 'model', 'product', 'detail', 'fabric'];
+  const copyFields = ['collection', 'coverNote', 'header', 'footer', 'sizes', 'pieces', 'priceOnRequest', 'prices', 'materials', 'decoration'];
+  if (d.catalogueSettings !== undefined) {
+    const settings = d.catalogueSettings;
+    if (d.kind !== 'catalogue' || !settings || !groups.includes(settings.mediaGroup) ||
+      !settings.priceDisplay || !['show', 'showCurrency', 'showQuantity', 'showRetail', 'showWholesale'].every(key => typeof settings.priceDisplay[key as keyof CatalogueSettings['priceDisplay']] === 'boolean') ||
+      !settings.copyByLocale || typeof settings.copyByLocale !== 'object' || Array.isArray(settings.copyByLocale) || Object.keys(settings.copyByLocale).length > catalogueLocales.length ||
+      (settings.brandId !== undefined && !/^[a-f0-9-]{36}$/i.test(settings.brandId)) ||
+      (settings.sourceRevision !== undefined && (!Number.isSafeInteger(settings.sourceRevision) || settings.sourceRevision < 1))) throw new Error('Invalid catalogue settings.');
+    for (const [locale, copy] of Object.entries(settings.copyByLocale)) {
+      if (!catalogueLocales.some(item => item.code === locale) || !copy || !copyFields.every(key => typeof copy[key as keyof CatalogueCopy] === 'string' && copy[key as keyof CatalogueCopy].length <= 1000)) throw new Error('Invalid catalogue copy.');
+    }
+  }
   const ids = new Set<string>();
   const number = (n: unknown, min: number, max: number) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
   for (const p of d.pages) {
@@ -73,6 +107,7 @@ export function validateSnapshot(value: unknown): DesignSnapshot {
           !Number.isSafeInteger(source.revision) || source.revision < 1 ||
           !Number.isSafeInteger(source.productRevision) || source.productRevision < 1 ||
           !['product', 'continuation', 'collage'].includes(source.layout) ||
+          (source.mediaGroup !== undefined && !groups.includes(source.mediaGroup)) ||
           (source.currency !== null && !/^[A-Z]{3}$/.test(source.currency)) ||
           !Array.isArray(source.imageHashes) || source.imageHashes.length > 6 ||
           !source.imageHashes.every(hash => /^[a-f0-9]{64}$/.test(hash))) throw new Error('Invalid catalogue source.');
@@ -84,6 +119,7 @@ export function validateSnapshot(value: unknown): DesignSnapshot {
           !['text', 'image', 'shape'].includes(e.type) || !number(e.x, -1000, 1000) || !number(e.y, -1000, 1000) ||
           !number(e.width, 0.1, 2000) || !number(e.height, 0.1, 2000) ||
           (e.src !== undefined && !isSafeDesignSource(e.src)) ||
+          (e.direction !== undefined && !['ltr','rtl'].includes(e.direction)) ||
           (e.fontFamily !== undefined && !['serif', 'sans'].includes(e.fontFamily)) ||
           (e.fontWeight !== undefined && !['normal', 'bold'].includes(e.fontWeight)) ||
           (e.align !== undefined && !['left', 'center', 'right'].includes(e.align)) ||
@@ -98,6 +134,16 @@ export function validateSnapshot(value: unknown): DesignSnapshot {
           (e.color !== undefined && !color(e.color)) ||
           (e.background !== undefined && !color(e.background)) ||
           (e.borderColor !== undefined && !color(e.borderColor))) throw new Error('Invalid element in design file.');
+      if (e.binding !== undefined) {
+        const binding = e.binding;
+        if (d.kind !== 'catalogue' || e.type !== 'text' || !binding ||
+          (binding.kind !== 'shared' && binding.kind !== 'product') ||
+          (binding.kind === 'shared' && !copyFields.includes(binding.field)) ||
+          (binding.kind === 'product' && (!['name','fabric','decoration','description','details','notes','sizes','price','price-label','currency'].includes(binding.field) ||
+            !metadata(binding.productId ?? e.productId) ||
+            (binding.index !== undefined && (!Number.isSafeInteger(binding.index) || binding.index < 0 || binding.index > 49)) ||
+            (['price','price-label'].includes(binding.field) && binding.index === undefined)))) throw new Error('Invalid catalogue binding.');
+      }
       for (const [key, min, max] of [['fontSize', 0.5, 200], ['lineHeight', 0.5, 4], ['letterSpacing', -5, 30], ['cropX', 0, 100], ['cropY', 0, 100], ['zoom', 1, 5], ['opacity', 0, 1], ['rotation', -360, 360], ['radius', 0, 1000], ['borderWidth', 0, 20]] as const) {
         if (e[key] !== undefined && !number(e[key], min, max)) throw new Error(`Invalid ${key}.`);
       }

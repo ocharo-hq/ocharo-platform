@@ -8,7 +8,7 @@ import cardEn from './templates/card-en.json';
 import products from './templates/products.json';
 import assets from './templates/brand-assets.json';
 
-export type TemplateLocale = DesignSnapshot['locale'];
+export type TemplateLocale = 'uz' | 'ru' | 'en';
 export type CardVariant = 'labelled' | 'logo-only';
 export const catalogueProducts = products;
 export const brandAssets = assets;

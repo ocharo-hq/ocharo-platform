@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef, useId, watch } from 'vue';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { cloneSnapshot, type DesignDocument } from '@/domain/workspace/EditorModels';
 import type { DesignRevision, DesignRevisionCopy } from '@/domain/workspace/DesignRevisions';
 import DesignPrintPreview from './DesignPrintPreview.vue';
+
+const { t } = useUiLocale();
 
 defineOptions({ name: 'DesignRevisionHistory' });
 const props = defineProps<{ access: AccessControls; organizationId: string; document: DesignDocument | null; canEdit: boolean; disabled?: boolean }>();
@@ -90,46 +93,46 @@ function date(value: string): string { return new Date(value).toLocaleString(); 
 </script>
 
 <template>
-  <section class="revision-history" aria-label="Saved design history">
+  <section class="revision-history" :aria-label="t('Saved design history')">
     <button type="button" class="history-toggle" :aria-expanded="expanded" :aria-controls="panelId" :disabled="locked || !document" @click="toggle">
-      <span>Saved revision history</span><span aria-hidden="true">{{ expanded ? '−' : '+' }}</span>
+      <span>{{ t("Saved revision history") }}</span><span aria-hidden="true">{{ expanded ? '−' : '+' }}</span>
     </button>
-    <p v-if="!document" class="history-hint">Save a design to start its revision history.</p>
+    <p v-if="!document" class="history-hint">{{ t("Save a design to start its revision history.") }}</p>
     <div v-if="expanded" :id="panelId" class="history-content">
-      <p class="history-hint">Inspect earlier saved pages. Restoring creates a separate unsaved copy for editing.</p>
-      <div class="history-actions"><button type="button" class="quiet-button" :disabled="locked || loading" @click="load()">Refresh history</button><span v-if="loading" role="status">Loading revisions…</span></div>
-      <p v-if="listError" role="alert" class="editor-alert">{{ listError }}</p>
-      <p v-if="!loading && !listError && !revisions.length">No saved revisions were returned. Refresh to try again.</p>
+      <p class="history-hint">{{ t("Inspect earlier saved pages. Restoring creates a separate unsaved copy for editing.") }}</p>
+      <div class="history-actions"><button type="button" class="quiet-button" :disabled="locked || loading" @click="load()">{{ t("Refresh history") }}</button><span v-if="loading" role="status">{{ t("Loading revisions…") }}</span></div>
+      <p v-if="listError" role="alert" class="editor-alert">{{ t(listError) }}</p>
+      <p v-if="!loading && !listError && !revisions.length">{{ t("No saved revisions were returned. Refresh to try again.") }}</p>
       <div class="history-layout">
         <div class="history-list">
-          <ol aria-label="Saved revisions">
+          <ol :aria-label="t('Saved revisions')">
             <li v-for="revision in revisions" :key="revision.revision">
               <button type="button" class="revision-choice" :aria-pressed="selected === revision.revision" :disabled="locked" @click="inspect(revision.revision)">
-                <strong>Revision {{ revision.revision }}<span v-if="revision.revision === document?.revision"> · loaded</span></strong>
+                <strong>{{ t("Revision") }} {{ revision.revision }}<span v-if="revision.revision === document?.revision"> {{ ' ' + t('· loaded') }}</span></strong>
                 <span>{{ revision.title }}</span>
                 <time :datetime="revision.savedAtUtc">{{ date(revision.savedAtUtc) }}</time>
-                <span>Saved by {{ revision.savedBy }}<span v-if="revision.archived"> · archived</span></span>
+                <span>{{ t("Saved by") }} {{ revision.savedBy }}<span v-if="revision.archived"> {{ ' ' + t('· archived') }}</span></span>
               </button>
             </li>
           </ol>
-          <button v-if="hasMore" type="button" class="quiet-button" :disabled="locked || loading" @click="load(true)">Load older revisions</button>
+          <button v-if="hasMore" type="button" class="quiet-button" :disabled="locked || loading" @click="load(true)">{{ t("Load older revisions") }}</button>
         </div>
         <div class="history-preview" :aria-busy="previewLoading">
-          <p v-if="previewLoading" role="status">Loading revision {{ selected }}…</p>
-          <div v-if="previewError"><p role="alert" class="editor-alert">{{ previewError }}</p><button v-if="selected" type="button" class="quiet-button" :disabled="locked" @click="inspect(selected)">Retry revision</button></div>
+          <p v-if="previewLoading" role="status">{{ t("Loading revision") }} {{ selected }}…</p>
+          <div v-if="previewError"><p role="alert" class="editor-alert">{{ t(previewError) }}</p><button v-if="selected" type="button" class="quiet-button" :disabled="locked" @click="inspect(selected)">{{ t("Retry revision") }}</button></div>
           <template v-if="preview">
             <h3>{{ preview.title }}</h3>
-            <p>Revision {{ preview.revision }} · {{ preview.snapshot.locale.toUpperCase() }} · {{ preview.snapshot.pages.length }} pages</p>
-            <p v-if="metadata">Saved <time :datetime="metadata.savedAtUtc">{{ date(metadata.savedAtUtc) }}</time> by {{ metadata.savedBy }}</p>
-            <label :for="pageId" class="field-label">Preview page</label>
-            <select :id="pageId" v-model="pageIndex" aria-label="Historical preview page">
+            <p>{{ t("Revision") }} {{ preview.revision }} · {{ preview.snapshot.locale.toUpperCase() }} · {{ preview.snapshot.pages.length }} {{ t("pages") }}</p>
+            <p v-if="metadata">{{ t("Saved") }} <time :datetime="metadata.savedAtUtc">{{ date(metadata.savedAtUtc) }}</time> {{ t("by") }} {{ metadata.savedBy }}</p>
+            <label :for="pageId" class="field-label">{{ t("Preview page") }}</label>
+            <select :id="pageId" v-model="pageIndex" :aria-label="t('Historical preview page')">
               <option v-for="(item, index) in preview.snapshot.pages" :key="item.id" :value="index">{{ index + 1 }}. {{ item.title }}</option>
             </select>
-            <div v-if="page" class="history-page"><DesignPrintPreview :key="`${preview.revision}-${page.id}`" :page="page" /></div>
-            <button type="button" class="restore-button" :disabled="locked || !canEdit || loading || previewLoading" @click="restore">Restore as new unsaved copy</button>
-            <p v-if="!canEdit" class="history-hint">An editor or owner can restore a copy.</p>
+            <div v-if="page" class="history-page" :lang="preview.snapshot.locale"><DesignPrintPreview :key="`${preview.revision}-${page.id}`" :page="page" /></div>
+            <button type="button" class="restore-button" :disabled="locked || !canEdit || loading || previewLoading" @click="restore">{{ t("Restore as new unsaved copy") }}</button>
+            <p v-if="!canEdit" class="history-hint">{{ t("An editor or owner can restore a copy.") }}</p>
           </template>
-          <p v-else-if="!previewLoading && !previewError" class="history-hint">Choose a revision to preview its pages.</p>
+          <p v-else-if="!previewLoading && !previewError" class="history-hint">{{ t("Choose a revision to preview its pages.") }}</p>
         </div>
       </div>
     </div>

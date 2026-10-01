@@ -1,21 +1,24 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { DesignRecoveryControls } from '@/application/workspace/UseDesignRecovery';
+
+const { t } = useUiLocale();
 
 defineOptions({ name: 'DesignRecovery' });
 defineProps<{ recovery: DesignRecoveryControls; disabled: boolean }>();
 </script>
 
 <template>
-  <section v-if="recovery.supported.value" class="design-recovery" aria-label="Tab design recovery">
-    <div><b>Keep unsaved changes in this tab</b><p>Optional recovery through reload and re-sign-in, for this account in this tab. Save before closing the tab.</p></div>
-    <p class="recovery-status" role="status">{{ recovery.status.value }}</p>
+  <section v-if="recovery.supported.value" class="design-recovery" :aria-label="t('Tab design recovery')">
+    <div><b>{{ t("Keep unsaved changes in this tab") }}</b><p>{{ t("Optional recovery through reload and re-sign-in, for this account in this tab. Save before closing the tab.") }}</p></div>
+    <p class="recovery-status" role="status">{{ t(recovery.status.value) }}</p>
     <div v-if="recovery.available.value" class="recovery-candidate">
-      <b>{{ recovery.available.value.title || 'Untitled design' }}</b>
-      <span>{{ new Date(recovery.available.value.savedAt).toLocaleString() }} · {{ recovery.available.value.snapshot.pages.length }} pages<span v-if="recovery.available.value.source"> · source revision {{ recovery.available.value.source.revision }}</span></span>
-      <button type="button" class="quiet-button" :disabled="disabled" @click="recovery.restore">Restore as new copy</button>
+      <b>{{ recovery.available.value.title || t("Untitled design") }}</b>
+      <span>{{ new Date(recovery.available.value.savedAt).toLocaleString() }} · {{ recovery.available.value.snapshot.pages.length }} {{ t("pages") }}<span v-if="recovery.available.value.source"> {{ t("· source revision") }} {{ recovery.available.value.source.revision }}</span></span>
+      <button type="button" class="quiet-button" :disabled="disabled" @click="recovery.restore">{{ t("Restore as new copy") }}</button>
     </div>
-    <div class="recovery-actions"><button v-if="!recovery.enabled.value" type="button" class="quiet-button" :disabled="disabled" @click="recovery.enable">Enable tab recovery</button><button v-else type="button" class="quiet-button" :disabled="disabled" @click="recovery.disable">Stop keeping new changes</button><button v-if="recovery.hasStored.value" type="button" class="quiet-button" :disabled="disabled" @click="recovery.discard">Discard tab recovery</button></div>
-    <p v-if="recovery.error.value" role="alert">{{ recovery.error.value }}</p>
+    <div class="recovery-actions"><button v-if="!recovery.enabled.value" type="button" class="quiet-button" :disabled="disabled" @click="recovery.enable">{{ t("Enable tab recovery") }}</button><button v-else type="button" class="quiet-button" :disabled="disabled" @click="recovery.disable">{{ t("Stop keeping new changes") }}</button><button v-if="recovery.hasStored.value" type="button" class="quiet-button" :disabled="disabled" @click="recovery.discard">{{ t("Discard tab recovery") }}</button></div>
+    <p v-if="recovery.error.value" role="alert">{{ t(recovery.error.value) }}</p>
   </section>
 </template>
 

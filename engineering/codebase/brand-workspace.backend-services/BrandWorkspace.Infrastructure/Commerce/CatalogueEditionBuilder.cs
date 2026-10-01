@@ -20,7 +20,13 @@ public static class CatalogueEditionBuilder
         var snapshot=design.Snapshot;
         CommerceRules.Require(snapshot.ValueKind==JsonValueKind.Object && Text(snapshot,"kind")=="catalogue", "Saved catalogue data is invalid.");
         var locale=Text(snapshot,"locale");
-        CommerceRules.Require(locale is "uz" or "ru" or "en","Choose a supported catalogue language.");
+        CommerceRules.Require(CatalogueLanguages.Supported(locale),"Choose a supported catalogue language.");
+        // Connected original layouts store their canonical brand at document level.
+        // Older designs retain the existing per-page source checks below.
+        if(snapshot.TryGetProperty("catalogueSettings",out var settings) && settings.ValueKind==JsonValueKind.Object
+            && settings.TryGetProperty("brandId",out _))
+            CommerceRules.Require(Guid.TryParse(Text(settings,"brandId"),out var settingsBrand) && settingsBrand==brandId,
+                "The saved catalogue belongs to another brand.");
         var templateId=Text(snapshot,"templateId");
         CommerceRules.Require(templateId.Length is >0 and <=120,"Saved catalogue template is invalid.");
         CommerceRules.Require(snapshot.TryGetProperty("pages",out var sourcePages) && sourcePages.ValueKind==JsonValueKind.Array && sourcePages.GetArrayLength() is >0 and <=100,"Saved catalogue needs 1 to 100 pages.");

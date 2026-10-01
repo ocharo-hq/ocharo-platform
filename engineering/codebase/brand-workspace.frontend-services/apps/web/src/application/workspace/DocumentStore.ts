@@ -1,3 +1,4 @@
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { cloneSnapshot, validateSnapshot, type DesignDocument, type DesignKind, type DesignSnapshot, type DesignSummary } from '@/domain/workspace/EditorModels';
 import { useDesignRecovery } from './UseDesignRecovery';
@@ -6,6 +7,7 @@ import { failureMessage, type AccessControls } from './UseAccess';
 
 /** Owns immutable edits, bounded history, and server-confirmed revision saves. */
 export function useDesignDocument(access: AccessControls, organizationId: string, kind: DesignKind) {
+  const { t } = useUiLocale();
   const snapshot = shallowRef<DesignSnapshot | null>(null);
   const title = ref('');
   const record = shallowRef<DesignDocument | null>(null);
@@ -53,7 +55,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
   }
   function create(next: DesignSnapshot, name: string): boolean {
     if (busy.value || loading.value || access.busy.value) return false;
-    if (dirty.value && !window.confirm('Discard unsaved changes and create a new design?')) return false;
+    if (dirty.value && !window.confirm(t('Discard unsaved changes and create a new design?'))) return false;
     const checked = validateSnapshot(next);
     if (checked.kind !== kind) { error.value = 'This file belongs in the other editor.'; return false; }
     recovery.preserve(); changing = true; recoveryOrigin = null;
@@ -66,7 +68,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
   }
   async function load(id: string): Promise<boolean> {
     if (loading.value || busy.value || access.busy.value) return false;
-    if (dirty.value && !window.confirm('Discard unsaved changes and open this saved design?')) return false;
+    if (dirty.value && !window.confirm(t('Discard unsaved changes and open this saved design?'))) return false;
     loading.value = true; error.value = '';
     const result = await access.api.getDesign(organizationId, id, controller.signal);
     if (result.ok && result.value.kind === kind) {
@@ -75,7 +77,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
       snapshot.value = cloneSnapshot(result.value.snapshot);
       title.value = result.value.title;
       baseline.value = serialize(); history.value = []; future.value = [];
-      status.value = `Saved revision ${result.value.revision}`; changing = false;
+      status.value = t('Saved revision {revision}',{revision:result.value.revision}); changing = false;
     } else if (!result.ok) error.value = failureMessage(result.failure);
     else error.value = 'This design belongs in the other editor.';
     loading.value = false;
@@ -94,7 +96,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
         record.value = result.value;
         title.value = result.value.title;
         snapshot.value = cloneSnapshot(result.value.snapshot);
-        baseline.value = serialize(); status.value = `Saved revision ${result.value.revision}`;
+        baseline.value = serialize(); status.value = t('Saved revision {revision}',{revision:result.value.revision});
         changing = false; recovery.saved(recoveryToken);
         await list();
       } else error.value = result.failure.status === 409

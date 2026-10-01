@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed } from 'vue';
 import type { DesignSnapshot } from '@/domain/workspace/EditorModels';
 import { moveCatalogueProduct, setCataloguePrice } from '@/domain/workspace/CatalogueLayout';
 import { catalogueProducts } from '@/domain/workspace/Templates';
+
+const { t } = useUiLocale();
 
 defineOptions({ name: 'CatalogueTools' });
 const props = defineProps<{ snapshot: DesignSnapshot; pageId: string; selectedId: string | null }>();
@@ -15,7 +18,7 @@ const photos = computed(() => page.value?.elements.filter((element) => element.r
 function name(id: string): string {
   if (page.value?.catalogueSource?.productId === id) return page.value.elements.find(item => item.role === 'title')?.text || id;
   const product = catalogueProducts.find((item) => item.id === id);
-  return `${product?.locales[props.snapshot.locale].name ?? id} · ${id.split('-v')[1] ?? ''}`;
+  return `${product?.locales[props.snapshot.locale as 'en'|'ru'|'uz']?.name ?? id} · ${id.split('-v')[1] ?? ''}`;
 }
 function selectProduct(event: Event): void {
   const product = (event.target as HTMLSelectElement).value;
@@ -33,16 +36,16 @@ function reorder(direction: -1|1): void {
 
 <template>
   <section class="template-tools">
-    <h3>Catalogue tools</h3>
+    <h3>{{ t("Catalogue tools") }}</h3>
     <template v-if="page?.productIds?.length">
-      <label class="field-label">Garment on this page<select :value="selectedProduct" @change="selectProduct"><option v-for="product in page.productIds" :key="product" :value="product">{{ name(product) }}</option></select></label>
-      <div class="template-tool-actions"><button type="button" :disabled="productIndex <= 0" @click="reorder(-1)">← Earlier</button><button type="button" :disabled="productIndex >= page.productIds.length - 1" @click="reorder(1)">Later →</button></div>
-      <label v-for="item in prices" :key="item.id" class="field-label">{{ page?.catalogueSource ? `${item.priceLabel ?? 'Edition price'} · ${page.catalogueSource.currency ?? ''}` : item.tier === 'bulk' ? '10+ pieces · UZS each' : '1 piece · UZS' }}<input type="number" min="0" max="999999999" :step="page?.catalogueSource ? 0.01 : 1000" :value="Number(item.text?.replaceAll(' ', ''))" @change="price(item.id, $event)"></label>
-      <p v-if="!page?.catalogueSource" class="template-help">Pricing for 2–9 pieces remains unspecified. Each garment moves with its specifications and prices.</p>
+      <label class="field-label">{{ t("Garment on this page") }}<select :value="selectedProduct" @change="selectProduct"><option v-for="product in page.productIds" :key="product" :value="product">{{ name(product) }}</option></select></label>
+      <div class="template-tool-actions"><button type="button" :disabled="productIndex <= 0" @click="reorder(-1)">{{ t("← Earlier") }}</button><button type="button" :disabled="productIndex >= page.productIds.length - 1" @click="reorder(1)">{{ t("Later →") }}</button></div>
+      <label v-for="item in prices.filter(price=>!price.binding)" :key="item.id" class="field-label">{{ page?.catalogueSource ? `${item.priceLabel ?? t("Edition price")} · ${page.catalogueSource.currency ?? ''}` : item.tier === 'bulk' ? t('10+ pieces · UZS each') : t('1 piece · UZS') }}<input type="number" min="0" max="999999999" :step="page?.catalogueSource ? 0.01 : 1000" :value="Number(item.text?.replaceAll(' ', ''))" @change="price(item.id, $event)"></label>
+      <p v-if="!page?.catalogueSource" class="template-help">{{ t("Pricing for 2–9 pieces remains unspecified. Each garment moves with its specifications and prices.") }}</p>
     </template>
-    <label v-if="photos.length" class="field-label">Photo frames<select :value="selectedId ?? ''" @change="emit('update:selectedId', ($event.target as HTMLSelectElement).value)"><option value="" disabled>Select a photo</option><option v-for="photo in photos" :key="photo.id" :value="photo.id">{{ photo.label }}</option></select></label>
-    <p v-if="!page?.productIds?.length" class="template-help">Select a photo to change its crop, size, or position. Drag its corner to resize.</p>
-    <p v-if="page?.catalogueSource" class="template-source">Source draft revision {{ page.catalogueSource.revision }} · product revision {{ page.catalogueSource.productRevision }}. Edition prices are independent of canonical prices.</p><p v-else class="template-source">Based on Ocharo journal v22 · {{ snapshot.locale.toUpperCase() }}</p>
+    <label v-if="photos.length" class="field-label">{{ t("Photo frames") }}<select :value="selectedId ?? ''" @change="emit('update:selectedId', ($event.target as HTMLSelectElement).value)"><option value="" disabled>{{ t("Select a photo") }}</option><option v-for="photo in photos" :key="photo.id" :value="photo.id">{{ photo.label }}</option></select></label>
+    <p v-if="!page?.productIds?.length" class="template-help">{{ t("Select a photo to change its crop, size, or position. Drag its corner to resize.") }}</p>
+    <p v-if="page?.catalogueSource" class="template-source">{{ t("Source draft revision") }} {{ page.catalogueSource.revision }} {{ t("· product revision") }} {{ page.catalogueSource.productRevision }}{{ t(". Connected values update when you refresh saved product values.") }}</p><p v-else class="template-source">{{ t("Based on Ocharo journal v22 ·") }} {{ snapshot.locale.toUpperCase() }}</p>
   </section>
 </template>
 

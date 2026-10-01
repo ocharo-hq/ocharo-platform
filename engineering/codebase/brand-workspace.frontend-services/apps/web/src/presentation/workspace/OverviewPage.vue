@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onMounted, ref, watch } from 'vue';
 
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 
 import './OverviewPage.css';
+
+const { t, uiLocale } = useUiLocale();
 
 /** Connects the organization's actual creative and preparation records in three personal views. */
 defineOptions({ name: 'OverviewPage' });
@@ -25,7 +28,7 @@ const designError = ref(false);
 const refreshRevision = ref(0);
 const preferenceKey = 'brand-workspace.overview-view.v1';
 const organization = computed(() => props.workspace.organization.value);
-const organizationName = computed(() => organization.value?.name ?? 'Your workspace');
+const organizationName = computed(() => organization.value?.name ?? t('Your workspace'));
 const draftCount = computed(() => props.workspace.drafts.value?.length ?? 0);
 const mediaCount = computed(() => props.workspace.media.value?.length ?? 0);
 const brandCount = computed(() => props.workspace.brands.value?.length ?? 0);
@@ -44,12 +47,12 @@ const nodes = computed(() => [
 ]);
 const attentionItems = computed(() => {
   const items: { id: string; title: string; detail: string; destination: OverviewDestination; label: string; tone: string }[] = [];
-  if (reviewCount.value > 0) items.push({ id: 'review', title: `${reviewCount.value} ${reviewCount.value === 1 ? 'draft is' : 'drafts are'} ready for review`, detail: 'Read the exact revision before it is approved.', destination: 'content', label: 'Review content', tone: 'review' });
+  if (reviewCount.value > 0) items.push({ id: 'review', title: t('{count} drafts ready for review', {count:reviewCount.value}), detail: 'Read the exact revision before it is approved.', destination: 'content', label: 'Review content', tone: 'review' });
   if (catalogueCount.value === 0) items.push({ id: 'catalogue', title: 'Your first catalogue is waiting', detail: 'Start with a layout, bring in your products, and save an edition.', destination: 'catalogue', label: 'Explore catalogue', tone: 'start' });
   if (cardCount.value === 0) items.push({ id: 'cards', title: 'Make an introduction to keep', detail: 'Choose a business-card direction and make it your own.', destination: 'business-cards', label: 'Explore business cards', tone: 'start' });
   if (brandCount.value === 0) items.push({ id: 'brand', title: 'Give your work a brand home', detail: 'A brand keeps your content and its identity together.', destination: 'brands', label: 'Open brands', tone: 'start' });
   if (mediaCount.value === 0) items.push({ id: 'media', title: 'Bring in your original images', detail: 'Keep source photographs and their provenance together.', destination: 'media', label: 'Open media library', tone: 'start' });
-  if (workingCount.value > 0) items.push({ id: 'drafts', title: `${workingCount.value} ${workingCount.value === 1 ? 'draft' : 'drafts'} in the making`, detail: 'Pick up an unfinished piece when you are ready.', destination: 'content', label: 'Continue content', tone: 'work' });
+  if (workingCount.value > 0) items.push({ id: 'drafts', title: t('{count} drafts in the making', {count:workingCount.value}), detail: 'Pick up an unfinished piece when you are ready.', destination: 'content', label: 'Continue content', tone: 'work' });
   return items;
 });
 const leadingAttention = computed(() => attentionItems.value[0]);
@@ -112,7 +115,7 @@ function open(destination: OverviewDestination): void {
 }
 
 function metric(value: number | null): string {
-  return value === null ? '—' : value.toLocaleString();
+  return value === null ? '—' : value.toLocaleString(uiLocale.value);
 }
 
 function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
@@ -124,35 +127,35 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
   <section class="business-overview" :class="`business-overview--${variation}`" aria-labelledby="overview-title">
     <header class="overview-intro">
       <div class="overview-intro-copy">
-        <p class="overview-kicker"><span aria-hidden="true"></span> Your business, in view</p>
-        <h1 id="overview-title">The work,<br /><em>connected.</em></h1>
-        <p class="overview-intro-description">A place for {{ organizationName }} to take shape.<br class="overview-desktop-break" /> From the collection to the next conversation.</p>
+        <p class="overview-kicker"><span aria-hidden="true"></span> {{ t("Your business, in view") }}</p>
+        <h1 id="overview-title">{{ t("The work,") }}<br /><em>{{ t("connected.") }}</em></h1>
+        <p class="overview-intro-description">{{ t("A place for {name} to take shape.", {name:organizationName}) }}<br class="overview-desktop-break" /> {{ t("From the collection to the next conversation.") }}</p>
       </div>
       <div class="overview-view-picker">
-        <span class="overview-view-label">Make the space yours</span>
-        <div class="overview-variations" role="group" aria-label="Overview view">
-          <button v-for="item in variations" :key="item.id" type="button" :aria-pressed="variation === item.id" :title="item.description" @click="selectVariation(item.id)">
+        <span class="overview-view-label">{{ t("Make the space yours") }}</span>
+        <div class="overview-variations" role="group" :aria-label="t('Overview view')">
+          <button v-for="item in variations" :key="item.id" type="button" :aria-pressed="variation === item.id" :title="t(item.description)" @click="selectVariation(item.id)">
             <svg v-if="item.id === 'map'" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 10H3V4h6v3M13 10h4v6h-6v-3" /><rect x="7" y="7" width="6" height="6" rx="1.5" /></svg>
             <svg v-else-if="item.id === 'attention'" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="6" height="14" rx="1.5" /><rect x="12" y="3" width="5" height="8" rx="1.5" /><path d="M12 14h5M12 17h5" /></svg>
             <svg v-else viewBox="0 0 20 20" aria-hidden="true"><path d="M7 5h10M7 10h10M7 15h10M3 5h.1M3 10h.1M3 15h.1" /></svg>
-            <span>{{ item.label }}</span>
+            <span>{{ t(item.label) }}</span>
           </button>
         </div>
-        <p class="overview-view-caption"><span>{{ currentVariation.number }}</span> {{ currentVariation.description }}</p>
-        <p v-if="preferenceMessage" class="overview-preference-message" role="status">{{ preferenceMessage }}</p>
+        <p class="overview-view-caption"><span>{{ currentVariation.number }}</span> {{ t(currentVariation.description) }}</p>
+        <p v-if="preferenceMessage" class="overview-preference-message" role="status">{{ t(preferenceMessage) }}</p>
       </div>
     </header>
 
     <div v-if="designError" class="overview-data-notice" role="status">
-      <p>Saved design totals are unavailable. Content and media still show their own records.</p>
-      <button type="button" :disabled="designLoading || access.busy.value" @click="refreshRevision += 1">Retry totals</button>
+      <p>{{ t("Saved design totals are unavailable. Content and media still show their own records.") }}</p>
+      <button type="button" :disabled="designLoading || access.busy.value" @click="refreshRevision += 1">{{ t("Retry totals") }}</button>
     </div>
 
     <template v-if="variation === 'map'">
       <section class="overview-map-panel" aria-labelledby="work-map-title">
         <div class="overview-panel-heading">
-          <div><span class="overview-section-number">01 / THE WORK MAP</span><h2 id="work-map-title">Every piece has a place.</h2></div>
-          <span class="overview-map-legend"><span aria-hidden="true"></span> Your connected workflow</span>
+          <div><span class="overview-section-number">{{ t("01 / THE WORK MAP") }}</span><h2 id="work-map-title">{{ t("Every piece has a place.") }}</h2></div>
+          <span class="overview-map-legend"><span aria-hidden="true"></span> {{ t("Your connected workflow") }}</span>
         </div>
         <div class="overview-map">
           <svg class="overview-map-connections" viewBox="0 0 1000 490" preserveAspectRatio="none" aria-hidden="true">
@@ -162,11 +165,11 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
           <div class="overview-map-hub">
             <span class="overview-hub-topline">{{ organizationName }}</span>
             <span class="overview-hub-monogram" aria-hidden="true">{{ organizationName.slice(0, 1) }}<i>·</i></span>
-            <h3>Your collection</h3>
-            <p>{{ metric(savedDesignCount) }} saved designs</p>
-            <span class="overview-hub-footnote">The starting point for what comes next</span>
+            <h3>{{ t("Your collection") }}</h3>
+            <p>{{ metric(savedDesignCount) }} {{ t("saved designs") }}</p>
+            <span class="overview-hub-footnote">{{ t("The starting point for what comes next") }}</span>
           </div>
-          <button v-for="node in nodes" :key="node.id" type="button" class="overview-map-node" :class="`overview-map-node--${node.id}`" :disabled="access.busy.value" :aria-label="`${node.action}, ${node.value === null ? 'total unavailable' : `${node.value} ${node.unit}`}`" @click="open(node.destination)">
+          <button v-for="node in nodes" :key="node.id" type="button" class="overview-map-node" :class="`overview-map-node--${node.id}`" :disabled="access.busy.value" :aria-label="`${t(node.action)}, ${node.value === null ? t('Total unavailable') : `${metric(node.value)} ${t(node.unit)}`}`" @click="open(node.destination)">
             <span class="overview-node-top"><span class="overview-node-icon" aria-hidden="true">
               <svg v-if="node.icon === 'book'" viewBox="0 0 24 24"><path d="M12 6v15M12 6C9 4 5 4 3 5v14c3-1 6-1 9 2 3-3 6-3 9-2V5c-3-1-6-1-9 1Z" /></svg>
               <svg v-else-if="node.icon === 'card'" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 10h3M7 14h7M17 9v6" /></svg>
@@ -174,67 +177,67 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
               <svg v-else-if="node.icon === 'content'" viewBox="0 0 24 24"><path d="M14 3H5v18h14V8Zm0 0v5h5M8 12h8M8 16h6" /></svg>
               <svg v-else viewBox="0 0 24 24"><path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3Z" /></svg>
             </span><span class="overview-node-arrow" aria-hidden="true">↗</span></span>
-            <span class="overview-node-title">{{ node.title }}</span>
-            <span class="overview-node-description">{{ node.eyebrow }}</span>
-            <span class="overview-node-metric"><b>{{ metric(node.value) }}</b> {{ node.unit }}</span>
+            <span class="overview-node-title">{{ t(node.title) }}</span>
+            <span class="overview-node-description">{{ t(node.eyebrow) }}</span>
+            <span class="overview-node-metric"><b>{{ metric(node.value) }}</b> {{ t(node.unit) }}</span>
           </button>
         </div>
-        <div class="overview-map-note"><span aria-hidden="true">↳</span> The map shows how your work fits together. Moving content between apps is intentional.</div>
+        <div class="overview-map-note"><span aria-hidden="true">↳</span> {{ t("The map shows how your work fits together. Moving content between apps is intentional.") }}</div>
       </section>
       <div class="overview-below-map">
         <section class="overview-next-step" aria-labelledby="next-step-title">
-          <span class="overview-section-number">A LITTLE ATTENTION</span>
-          <h2 id="next-step-title">{{ leadingAttention?.title ?? 'Room for your next idea.' }}</h2>
-          <p>{{ leadingAttention?.detail ?? 'No drafts are waiting for review. Open your collection whenever inspiration returns.' }}</p>
-          <button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open(leadingAttention?.destination ?? 'catalogue')">{{ leadingAttention?.label ?? 'Open catalogue' }} <span aria-hidden="true">↗</span></button>
+          <span class="overview-section-number">{{ t("A LITTLE ATTENTION") }}</span>
+          <h2 id="next-step-title">{{ t(leadingAttention?.title ?? 'Room for your next idea.') }}</h2>
+          <p>{{ t(leadingAttention?.detail ?? 'No drafts are waiting for review. Open your collection whenever inspiration returns.') }}</p>
+          <button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open(leadingAttention?.destination ?? 'catalogue')">{{ t(leadingAttention?.label ?? 'Open catalogue') }} <span aria-hidden="true">↗</span></button>
         </section>
         <aside class="overview-studio" aria-labelledby="studio-title">
-          <span class="overview-section-number">THE CREATIVE COMPANION</span>
-          <h2 id="studio-title">Ocharo <em>Studio</em><span aria-hidden="true">✳</span></h2>
-          <p>Explore garments, textiles and colour. Bring a chosen design into the business as a deliberate export.</p>
-          <span class="overview-state-tag">Separate app · not connected here</span>
+          <span class="overview-section-number">{{ t("THE CREATIVE COMPANION") }}</span>
+          <h2 id="studio-title">Ocharo <em>{{ t("Studio") }}</em><span aria-hidden="true">✳</span></h2>
+          <p>{{ t("Explore garments, textiles and colour. Bring a chosen design into the business as a deliberate export.") }}</p>
+          <span class="overview-state-tag">{{ t("Separate app · not connected here") }}</span>
         </aside>
       </div>
     </template>
 
     <template v-else-if="variation === 'attention'">
-      <section class="overview-attention-summary" aria-label="Content preparation status">
-        <div><span class="overview-section-number">YOUR CONTENT, RIGHT NOW</span><h2>A clearer place<br />to pick up the thread.</h2></div>
-        <dl><div><dt>In the making</dt><dd>{{ workingCount }}</dd></div><div><dt>In review</dt><dd>{{ reviewCount }}</dd></div><div><dt>Approved</dt><dd>{{ approvedCount }}</dd></div></dl>
+      <section class="overview-attention-summary" :aria-label="t('Content preparation status')">
+        <div><span class="overview-section-number">{{ t("YOUR CONTENT, RIGHT NOW") }}</span><h2>{{ t("A clearer place") }}<br />{{ t("to pick up the thread.") }}</h2></div>
+        <dl><div><dt>{{ t("In the making") }}</dt><dd>{{ workingCount }}</dd></div><div><dt>{{ t("In review") }}</dt><dd>{{ reviewCount }}</dd></div><div><dt>{{ t("Approved") }}</dt><dd>{{ approvedCount }}</dd></div></dl>
       </section>
-      <section class="overview-attention-board" aria-label="Things to pick up">
+      <section class="overview-attention-board" :aria-label="t('Things to pick up')">
         <article v-for="(item, index) in attentionItems" :key="item.id" class="overview-attention-card" :class="`overview-attention-card--${item.tone}`">
-          <div class="overview-attention-card-top"><span>{{ String(index + 1).padStart(2, '0') }}</span><span>{{ item.tone === 'review' ? 'Ready for review' : item.tone === 'work' ? 'In progress' : 'A place to begin' }}</span></div>
-          <h2>{{ item.title }}</h2><p>{{ item.detail }}</p>
-          <button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open(item.destination)">{{ item.label }} <span aria-hidden="true">↗</span></button>
+          <div class="overview-attention-card-top"><span>{{ String(index + 1).padStart(2, '0') }}</span><span>{{ t(item.tone === 'review' ? 'Ready for review' : item.tone === 'work' ? 'In progress' : 'A place to begin') }}</span></div>
+          <h2>{{ t(item.title) }}</h2><p>{{ t(item.detail) }}</p>
+          <button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open(item.destination)">{{ t(item.label) }} <span aria-hidden="true">↗</span></button>
         </article>
         <article v-if="attentionItems.length === 0" class="overview-attention-card overview-attention-card--quiet">
-          <span class="overview-section-number">A QUIETER MOMENT</span><h2>Nothing waiting for review.</h2><p>Your saved work is here whenever you want to return to it.</p>
-          <button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open('catalogue')">Open catalogue <span aria-hidden="true">↗</span></button>
+          <span class="overview-section-number">{{ t("A QUIETER MOMENT") }}</span><h2>{{ t("Nothing waiting for review.") }}</h2><p>{{ t("Your saved work is here whenever you want to return to it.") }}</p>
+          <button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open('catalogue')">{{ t("Open catalogue") }} <span aria-hidden="true">↗</span></button>
         </article>
       </section>
-      <section class="overview-shortcuts" aria-labelledby="attention-shortcuts-title"><h2 id="attention-shortcuts-title">Everything has its place</h2><div><button v-for="node in nodes" :key="node.id" type="button" :disabled="access.busy.value" @click="open(node.destination)"><span>{{ node.title }}</span><span>{{ metric(node.value) }} <i aria-hidden="true">↗</i></span></button></div></section>
+      <section class="overview-shortcuts" aria-labelledby="attention-shortcuts-title"><h2 id="attention-shortcuts-title">{{ t("Everything has its place") }}</h2><div><button v-for="node in nodes" :key="node.id" type="button" :disabled="access.busy.value" @click="open(node.destination)"><span>{{ t(node.title) }}</span><span>{{ metric(node.value) }} <i aria-hidden="true">↗</i></span></button></div></section>
     </template>
 
     <template v-else>
       <div class="overview-compact-layout">
         <section class="overview-compact-panel" aria-labelledby="compact-title">
-          <div class="overview-panel-heading"><div><span class="overview-section-number">THE ESSENTIALS</span><h2 id="compact-title">Your working collection.</h2></div><span class="overview-compact-mark" aria-hidden="true">{{ organizationName.slice(0, 1) }}·</span></div>
-          <button v-for="(node, index) in nodes" :key="node.id" type="button" class="overview-compact-row" :disabled="access.busy.value" @click="open(node.destination)"><span class="overview-row-number">{{ String(index + 1).padStart(2, '0') }}</span><span class="overview-row-title"><b>{{ node.title }}</b><span>{{ node.eyebrow }}</span></span><span class="overview-row-count"><b>{{ metric(node.value) }}</b><span>{{ node.unit }}</span></span><span class="overview-row-arrow" aria-hidden="true">↗</span></button>
+          <div class="overview-panel-heading"><div><span class="overview-section-number">{{ t("THE ESSENTIALS") }}</span><h2 id="compact-title">{{ t("Your working collection.") }}</h2></div><span class="overview-compact-mark" aria-hidden="true">{{ organizationName.slice(0, 1) }}·</span></div>
+          <button v-for="(node, index) in nodes" :key="node.id" type="button" class="overview-compact-row" :disabled="access.busy.value" @click="open(node.destination)"><span class="overview-row-number">{{ String(index + 1).padStart(2, '0') }}</span><span class="overview-row-title"><b>{{ t(node.title) }}</b><span>{{ t(node.eyebrow) }}</span></span><span class="overview-row-count"><b>{{ metric(node.value) }}</b><span>{{ t(node.unit) }}</span></span><span class="overview-row-arrow" aria-hidden="true">↗</span></button>
         </section>
-        <aside class="overview-compact-attention"><span class="overview-section-number">PICK UP THE THREAD</span><span class="overview-compact-symbol" aria-hidden="true">↳</span><h2>{{ leadingAttention?.title ?? 'The next idea is yours.' }}</h2><p>{{ leadingAttention?.detail ?? 'Open a saved design or begin a new direction.' }}</p><button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open(leadingAttention?.destination ?? 'catalogue')">{{ leadingAttention?.label ?? 'Open catalogue' }} <span aria-hidden="true">↗</span></button><div class="overview-compact-status"><span>Ready for review <b>{{ reviewCount }}</b></span><span>Approved content <b>{{ approvedCount }}</b></span></div></aside>
+        <aside class="overview-compact-attention"><span class="overview-section-number">{{ t("PICK UP THE THREAD") }}</span><span class="overview-compact-symbol" aria-hidden="true">↳</span><h2>{{ t(leadingAttention?.title ?? 'The next idea is yours.') }}</h2><p>{{ t(leadingAttention?.detail ?? 'Open a saved design or begin a new direction.') }}</p><button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open(leadingAttention?.destination ?? 'catalogue')">{{ t(leadingAttention?.label ?? 'Open catalogue') }} <span aria-hidden="true">↗</span></button><div class="overview-compact-status"><span>{{ t("Ready for review") }} <b>{{ reviewCount }}</b></span><span>{{ t("Approved content") }} <b>{{ approvedCount }}</b></span></div></aside>
       </div>
     </template>
 
     <section v-if="recentDrafts.length" class="overview-recent" aria-labelledby="overview-recent-title">
-      <div class="overview-recent-heading"><div><span class="overview-section-number">ON YOUR DESK</span><h2 id="overview-recent-title">Recent content</h2></div><button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open('content')">All content <span aria-hidden="true">↗</span></button></div>
-      <ul><li v-for="draft in recentDrafts" :key="draft.id"><button type="button" :disabled="access.busy.value" @click="access.navigate(`/organizations/${organization?.id}/drafts/${draft.id}`)"><span><b>{{ draft.title || 'Untitled draft' }}</b><small>Revision {{ draft.revision }}</small></span><span class="overview-draft-status" :class="`overview-draft-status--${draft.status}`">{{ draftStatus(draft.status) }}</span><span aria-hidden="true">↗</span></button></li></ul>
+      <div class="overview-recent-heading"><div><span class="overview-section-number">{{ t("ON YOUR DESK") }}</span><h2 id="overview-recent-title">{{ t("Recent content") }}</h2></div><button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open('content')">{{ t("All content") }} <span aria-hidden="true">↗</span></button></div>
+      <ul><li v-for="draft in recentDrafts" :key="draft.id"><button type="button" :disabled="access.busy.value" @click="access.navigate(`/organizations/${organization?.id}/drafts/${draft.id}`)"><span><b>{{ draft.title || t('Untitled draft') }}</b><small>{{ t("Revision") }} {{ draft.revision }}</small></span><span class="overview-draft-status" :class="`overview-draft-status--${draft.status}`">{{ t(draftStatus(draft.status)) }}</span><span aria-hidden="true">↗</span></button></li></ul>
     </section>
 
-    <footer class="overview-horizon" aria-label="Future connections">
-      <div><span class="overview-section-number">BEYOND THE WORKSPACE</span><p>More of the business, when it is ready.</p></div>
-      <ul><li><span aria-hidden="true">○</span> Marketing <small>Planned</small></li><li><span aria-hidden="true">○</span> Journal <small>Not connected</small></li><li><span aria-hidden="true">○</span> Scheduling <small>Planned</small></li><li v-if="variation !== 'map'"><span aria-hidden="true">○</span> Studio <small>Separate app</small></li></ul>
+    <footer class="overview-horizon" :aria-label="t('Future connections')">
+      <div><span class="overview-section-number">{{ t("BEYOND THE WORKSPACE") }}</span><p>{{ t("More of the business, when it is ready.") }}</p></div>
+      <ul><li><span aria-hidden="true">○</span> {{ t("Marketing") }} <small>{{ t("Planned") }}</small></li><li><span aria-hidden="true">○</span> {{ t("Journal") }} <small>{{ t("Not connected") }}</small></li><li><span aria-hidden="true">○</span> {{ t("Scheduling") }} <small>{{ t("Planned") }}</small></li><li v-if="variation !== 'map'"><span aria-hidden="true">○</span> {{ t("Studio") }} <small>{{ t("Separate app") }}</small></li></ul>
     </footer>
-    <p v-if="designLoading" class="overview-loading-note" role="status">Loading saved design totals…</p>
+    <p v-if="designLoading" class="overview-loading-note" role="status">{{ t("Loading saved design totals…") }}</p>
   </section>
 </template>

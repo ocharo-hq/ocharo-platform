@@ -16,7 +16,18 @@ public sealed record CommerceSnapshot
     public IReadOnlyList<CatalogueEdition> CatalogueEditions { get; init; } = [];
     public IReadOnlyList<SourceEvidence> Sources { get; init; } = [];
 }
-public sealed record CommerceProduct(ProductDocument Document, int Revision = 1, int? SourceRevision = null);
+/// <summary>Canonical product details plus additional translations and reusable media selections.</summary>
+public sealed record CommerceProduct(ProductDocument Document, int Revision = 1, int? SourceRevision = null)
+{
+    /// <summary>Additional languages; Uzbek, Russian and English stay in the original document.</summary>
+    public IReadOnlyDictionary<string, ProductLocale>? Translations { get; init; }
+
+    /// <summary>Named photo sets whose members refer to this product's attached media.</summary>
+    public IReadOnlyList<ProductMediaGroup>? MediaGroups { get; init; }
+}
+
+/// <summary>A product-owned image group; category allows switching matching sets across a catalogue.</summary>
+public sealed record ProductMediaGroup(string Id, string Label, string Category, IReadOnlyList<string> MediaIds);
 public sealed record MediaApproval(string Kind, bool ApprovedForPublication, string? SourceUrl = null, string? Credit = null, string? Rights = null);
 public sealed record SourceEvidence(string Kind, string Id, int Revision, string Sha256);
 public sealed record CommerceDraft(Guid BrandId, int Revision, CommerceSnapshot Snapshot, DateTimeOffset UpdatedAt);

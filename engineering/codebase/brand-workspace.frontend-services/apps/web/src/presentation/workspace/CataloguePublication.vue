@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
@@ -10,6 +11,8 @@ import { useCommerce } from '@/application/workspace/UseCommerce';
 import { renderCatalogueBundle } from '@/application/workspace/ExportDocument';
 import type { CommerceDraft } from '@/domain/workspace/Commerce';
 import type { DesignDocument } from '@/domain/workspace/EditorModels';
+
+const { t } = useUiLocale();
 
 defineOptions({ name: 'CataloguePublication' });
 const props = defineProps<{ access: AccessControls; workspace: WorkspaceControls; document: DesignDocument | null; dirty: boolean; disabled: boolean }>();
@@ -43,7 +46,7 @@ async function upload(): Promise<void> {
   try {
     message.value = 'Checking all edition pages…';
     if (!await preflight.check(saved.snapshot, { actionLabel: 'Prepare buyer edition' })) { message.value = 'Edition preparation cancelled. Your saved design is unchanged.'; return; }
-    const bundle = await renderCatalogueBundle(saved.snapshot, saved.title, (page, total) => { message.value = `Preparing page ${page} of ${total}…`; }, controller.signal);
+    const bundle = await renderCatalogueBundle(saved.snapshot, saved.title, (page, total) => { message.value = t('Preparing page {page} of {total}…',{page,total}); }, controller.signal);
     const body = new FormData(); body.append('metadata', JSON.stringify({ expectedRevision, sourceDesignId: saved.id, sourceRevision: saved.revision }));
     body.append('pdf', bundle.pdf, 'pdf');
     for (const page of bundle.pages) { body.append(`page-${page.id}.png`, page.png, `page-${page.id}.png`); body.append(`page-${page.id}.pdf`, page.pdf, `page-${page.id}.pdf`); }
@@ -61,26 +64,26 @@ async function publish(): Promise<void> {
     const result = await props.access.write(signal => api.publishEdition(props.workspace.organization.value!.id, brandId.value,
       props.document!.snapshot.locale, current.value!.revision, note.value.trim(), signal), controller.signal);
     if (!result.ok) { error.value = failureMessage(result.failure); return; }
-    await load(); message.value = `Catalogue edition published in release ${result.value.revision}. Buyers receive these exact saved pages.`;
+    await load(); message.value = t('Catalogue edition published in release {revision}. Buyers receive these exact saved pages.',{revision:result.value.revision});
   } finally { busy.value = false; }
 }
 </script>
 
 <template>
-  <section class="catalogue-publication" aria-label="Buyer catalogue edition">
-    <div><p class="eyebrow">Buyer catalogue</p><h2>Publish this exact edition.</h2><p>Buyers see the same pages and can download the complete PDF or individual pages.</p></div>
-    <label class="field-label">Publication brand<select v-model="brandId" aria-label="Publication brand" :disabled="busy || loading"><option value="">Choose brand</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
-    <p v-if="!document || dirty" class="edition-notice">Save this design before preparing its buyer edition.</p>
-    <p v-else-if="!current" class="edition-notice">Save the brand’s products in Products &amp; releases before attaching an edition.</p>
-    <div class="edition-actions"><Button variant="outline" :is-disabled="blocked || !current || !workspace.canEdit.value" @click="upload">{{ busy ? 'Working…' : 'Prepare buyer edition' }}</Button><button type="button" class="quiet-button" :disabled="busy || loading" @click="load">Reload edition status</button></div>
-    <p v-if="edition">Saved edition: {{ edition.title }} · design revision {{ edition.sourceRevision }} · {{ edition.pages.length }} pages · {{ edition.approvedForPublication ? 'approved' : 'awaiting review' }}</p>
+  <section class="catalogue-publication" :aria-label="t('Buyer catalogue edition')">
+    <div><p class="eyebrow">{{ t("Buyer catalogue") }}</p><h2>{{ t("Publish this exact edition.") }}</h2><p>{{ t("Buyers see the same pages and can download the complete PDF or individual pages.") }}</p></div>
+    <label class="field-label">{{ t("Publication brand") }}<select v-model="brandId" :aria-label="t('Publication brand')" :disabled="busy || loading"><option value="">{{ t("Choose brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
+    <p v-if="!document || dirty" class="edition-notice">{{ t("Save this design before preparing its buyer edition.") }}</p>
+    <p v-else-if="!current" class="edition-notice">{{ t("Save the brand’s products in Products & releases before attaching an edition.") }}</p>
+    <div class="edition-actions"><Button variant="outline" :is-disabled="blocked || !current || !workspace.canEdit.value" @click="upload">{{ busy ? t("Working…") : t("Prepare buyer edition") }}</Button><button type="button" class="quiet-button" :disabled="busy || loading" @click="load">{{ t("Reload edition status") }}</button></div>
+    <p v-if="edition">{{ t("Saved edition:") }} {{ edition.title }} {{ t("· design revision") }} {{ edition.sourceRevision }} · {{ edition.pages.length }} {{ t("pages ·") }} {{ edition.approvedForPublication ? 'approved' : t("awaiting review") }}</p>
     <div v-if="matching && workspace.canApprove.value" class="edition-review">
-      <label class="edition-confirm"><input v-model="confirmed" type="checkbox" :disabled="blocked"> I reviewed these exact pages, images, contact details and all quantity prices for public download.</label>
-      <label class="field-label">Publication note<textarea v-model="note" aria-label="Catalogue publication note" rows="2" maxlength="1000" :disabled="blocked" /></label>
-      <Button :is-disabled="blocked || !confirmed || !note.trim()" @click="publish">Publish buyer edition</Button>
+      <label class="edition-confirm"><input v-model="confirmed" type="checkbox" :disabled="blocked"> {{ t("I reviewed these exact pages, images, contact details and all quantity prices for public download.") }}</label>
+      <label class="field-label">{{ t("Publication note") }}<textarea v-model="note" :aria-label="t('Catalogue publication note')" rows="2" maxlength="1000" :disabled="blocked" /></label>
+      <Button :is-disabled="blocked || !confirmed || !note.trim()" @click="publish">{{ t("Publish buyer edition") }}</Button>
     </div>
     <DesignPreflightReview v-if="preflight.review.value" :review="preflight.review.value" @resolve="preflight.resolve" @inspect="emit('inspect', $event)" />
-    <p v-if="message" role="status">{{ message }}</p><p v-if="error" role="alert" class="editor-alert">{{ error }}</p>
+    <p v-if="message" role="status">{{ t(message) }}</p><p v-if="error" role="alert" class="editor-alert">{{ t(error) }}</p>
   </section>
 </template>
 

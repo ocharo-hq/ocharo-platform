@@ -6,6 +6,9 @@ import { DefaultRetryPolicy } from '@wow-two-beta/ui-vue/foundation/resilience';
 import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
 
 import AppRoot from './AppRoot.vue';
+import { initializeUiLocale } from '@/application/shared/UseUiLocale';
+
+initializeUiLocale();
 
 const queryClient = createQueryClient({ retry: { ...DefaultRetryPolicy, maxRetries: 0 } });
 const app = createApp(AppRoot).use(queryPlugin(queryClient));

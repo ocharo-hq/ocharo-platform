@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import BuildIdentity from '../common/BuildIdentity.vue';
+import { useUiLocale } from '@/application/shared/UseUiLocale';
+import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
+import BuildIdentity from '../shared/BuildIdentity.vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
 import { AppShell, AppShellContent, AppShellHeader, AppShellMain } from '@wow-two-beta/ui-vue/presentation/layout';
@@ -18,6 +20,8 @@ import DraftEditorPage from './DraftEditorPage.vue';
 import DraftListPage from './DraftListPage.vue';
 import MediaPage from './MediaPage.vue';
 import OrganizationPage from './OrganizationPage.vue';
+
+const { t } = useUiLocale();
 
 /** Composes real organization context with the preparation pages. */
 defineOptions({ name: 'WorkspacePage' });
@@ -42,13 +46,14 @@ function changeOrganization(event: Event): void {
         <div class="flex items-center gap-3">
           <span class="brand-mark" aria-hidden="true">O</span
           ><span
-            ><b class="block text-sm">Ocharo workspace <BuildIdentity /></b
-            ><span class="text-xs text-muted-foreground">Your creative business</span></span
+            ><b class="block text-sm">{{ t("Ocharo workspace") }} <BuildIdentity /></b
+            ><span class="text-xs text-muted-foreground">{{ t("Your creative business") }}</span></span
           >
         </div>
         <div class="flex flex-wrap items-center gap-3">
+          <UiLanguagePicker />
           <span class="text-sm text-muted-foreground">{{ access.session.value?.user?.displayName }}</span
-          ><Button variant="ghost" size="sm" :is-disabled="access.busy.value" @click="access.logout">Sign out</Button>
+          ><Button variant="ghost" size="sm" :is-disabled="access.busy.value" @click="access.logout">{{ t("Sign out") }}</Button>
         </div>
       </div>
     </AppShellHeader>
@@ -56,23 +61,21 @@ function changeOrganization(event: Event): void {
       <AppShellContent class="mx-auto w-full max-w-[1600px] px-5 pb-12 sm:px-9">
         <div class="my-6 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
           <label class="flex min-w-0 flex-wrap items-center gap-3 text-sm"
-            ><span class="text-muted-foreground">Organization</span
+            ><span class="text-muted-foreground">{{ t("Organization") }}</span
             ><select
-              aria-label="Organization"
+              :aria-label="t('Organization')"
               class="native-select w-auto max-w-full"
               :value="location.organizationId ?? ''"
               :disabled="access.busy.value || workspace.loading.value"
               @change="changeOrganization"
             >
-              <option value="">All organizations</option>
+              <option value="">{{ t("All organizations") }}</option>
               <option v-for="org in workspace.organizations.value" :key="org.id" :value="org.id">
                 {{ org.name }}
               </option></select
-            ><Badge v-if="workspace.organization.value" variant="outline">{{
-              workspace.organization.value.role
-            }}</Badge></label
+            ><Badge v-if="workspace.organization.value" variant="outline">{{ t(workspace.organization.value.role) }}</Badge></label
           >
-          <nav aria-label="Workspace sections" class="flex flex-wrap gap-1">
+          <nav :aria-label="t('Workspace sections')" class="flex flex-wrap gap-1">
             <template v-if="location.organizationId"
               ><Button
                 v-for="section in ['overview', 'products', 'catalogue', 'business-cards', 'content', 'media', 'brands', 'integrations'] as const"
@@ -86,27 +89,27 @@ function changeOrganization(event: Event): void {
                     `/organizations/${location.organizationId}${section === 'overview' ? '' : `/${section}`}`,
                   )
                 "
-                >{{ ({overview:'Overview',products:'Products & releases',integrations:'Connected apps',catalogue:'Catalogue designer','business-cards':'Business cards',content:'Content',media:'Media',brands:'Brands'})[section] }}</Button
+                >{{ t(({overview:'Overview',products:'Products & releases',integrations:'Connected apps',catalogue:'Catalogue designer','business-cards':'Business cards',content:'Content',media:'Media',brands:'Brands'})[section]) }}</Button
               ></template
             >
             <Button size="sm" variant="ghost" :is-disabled="access.busy.value" @click="access.navigate('/system')"
-              >System</Button
+              >{{ t("System") }}</Button
             >
           </nav>
         </div>
-        <p v-if="workspace.refreshError.value && !workspace.error.value" role="status" class="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">Some workspace information could not refresh. Your design remains open. <button class="underline" @click="access.navigate(currentPath)">Reload workspace</button></p>
+        <p v-if="workspace.refreshError.value && !workspace.error.value" role="status" class="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">{{ t("Some workspace information could not refresh. Your design remains open.") }} <button class="underline" @click="access.navigate(currentPath)">{{ t("Reload workspace") }}</button></p>
         <div>
-          <p v-if="workspace.loading.value" role="status" class="empty-state">Loading your workspace…</p>
+          <p v-if="workspace.loading.value" role="status" class="empty-state">{{ t("Loading your workspace…") }}</p>
           <section v-else-if="workspace.error.value" role="alert" class="workspace-card p-6">
-            <h1 class="text-xl font-semibold">Workspace unavailable</h1>
-            <p class="mt-3 text-sm">{{ failureMessage(workspace.error.value) }}</p>
-            <Button class="mt-5" variant="outline" @click="access.navigate(currentPath)">Reload workspace</Button>
+            <h1 class="text-xl font-semibold">{{ t("Workspace unavailable") }}</h1>
+            <p class="mt-3 text-sm">{{ t(failureMessage(workspace.error.value)) }}</p>
+            <Button class="mt-5" variant="outline" @click="access.navigate(currentPath)">{{ t("Reload workspace") }}</Button>
           </section>
           <slot v-else-if="location.section === 'system'" name="diagnostics" />
           <OrganizationPage v-else-if="!location.organizationId" :access="access" :workspace="workspace" :catalogue-entry="location.section === 'catalogue'" />
           <section v-else-if="!workspace.organization.value" role="alert" class="workspace-card p-6">
-            <h1 class="text-xl font-semibold">Organization unavailable</h1>
-            <p class="mt-3 text-sm text-muted-foreground">Choose one of your current memberships.</p>
+            <h1 class="text-xl font-semibold">{{ t("Organization unavailable") }}</h1>
+            <p class="mt-3 text-sm text-muted-foreground">{{ t("Choose one of your current memberships.") }}</p>
           </section>
           <OverviewPage v-else-if="location.section === 'overview'" :access="access" :workspace="workspace" />
           <DesignEditorPage v-else-if="location.section === 'catalogue' || location.section === 'business-cards'" :access="access" :workspace="workspace" :kind="location.section === 'catalogue' ? 'catalogue' : 'business-card'" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" />
@@ -122,7 +125,7 @@ function changeOrganization(event: Event): void {
           <DraftListPage v-else :access="access" :workspace="workspace" />
         </div>
         <footer class="mt-12 border-t border-border pt-5 text-xs leading-5 text-muted-foreground">
-          Ocharo · A place for your collection, identity, and stories. Social publishing is not connected.
+          {{ t("Ocharo · A place for your collection, identity, and stories. Social publishing is not connected.") }}
         </footer>
       </AppShellContent>
     </AppShellMain>

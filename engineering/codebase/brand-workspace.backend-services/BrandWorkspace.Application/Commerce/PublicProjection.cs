@@ -20,24 +20,25 @@ public static class PublicProjection
     };
     public static object Catalogue(CommerceRelease r, string locale)
     {
-        CommerceRules.Require(locale is "uz" or "ru" or "en", "Supported locales are uz, ru and en.");
-        var allowed = r.Snapshot.Products.Where(p => p.Document.Status == "active" && p.Document.Locales.For(locale).Status == "approved"
+        CommerceRules.Require(CatalogueLanguages.Supported(locale), "Choose a supported catalogue language.");
+        var allowed = r.Snapshot.Products.Where(p => p.Document.Status == "active" && CatalogueLanguages.Copy(p, locale).Status == "approved"
             && p.Document.Issues.All(i => i.Status != "open")).ToArray();
         return new {
             schemaVersion = 1, brandId = r.BrandId, slug = r.Snapshot.Slug, release = Release(r), locale,
+            availableLocales = r.Snapshot.CatalogueEditions.Where(e => e.ApprovedForPublication && CatalogueLanguages.Supported(e.Locale)).Select(e => e.Locale).Distinct(),
             edition = Edition(r,locale),
             products = allowed.OrderBy(p => p.Document.SortOrder).ThenBy(p => p.Document.Id).Select(p => {
-                var d = p.Document; var copy = d.Locales.For(locale);
+                var d = p.Document; var copy = CatalogueLanguages.Copy(p, locale);
                 return new { id = d.Id, slug = d.Id, revision = p.Revision, title = copy.Name, description = copy.Description,
                     fabric = copy.Fabric, decoration = copy.Decoration, category = d.GarmentType,
                     collectionIds = r.Snapshot.Collections.Where(c => c.IsPublished && c.ProductIds.Contains(d.Id)).Select(c => c.Id),
                     sizes = d.Sizes, availability = d.Availability,
                     images = d.Media.Where(m => m.Role != "reference" && r.Snapshot.MediaApprovals.GetValueOrDefault(m.Sha256)?.ApprovedForPublication == true)
-                        .Select(m => new { url = MediaUrl(r,m.Sha256), alt = m.Alt ?? copy.Name ?? "", sha256 = m.Sha256, role = m.Role, provenance = r.Snapshot.MediaApprovals[m.Sha256] }),
+                        .Select(m => new { url = MediaUrl(r,m.Sha256), alt = m.Alt ?? copy.Name ?? "", sha256 = m.Sha256, role = m.Role, groupIds = (p.MediaGroups ?? []).Where(g => g.MediaIds.Contains(m.Id)).Select(g => g.Id), provenance = r.Snapshot.MediaApprovals[m.Sha256] }),
                     price = d.Pricing is { Status: "confirmed", RetailPrice: {} price } ? new { amount = price, currency = d.Pricing.Currency } : null
                 };
             }),
-            collections = r.Snapshot.Collections.Where(c => c.IsPublished).OrderBy(c => c.SortOrder).Select(c => new {
+            collections = r.Snapshot.Collections.Where(c => c.IsPublished && CatalogueLanguages.Core(locale)).OrderBy(c => c.SortOrder).Select(c => new {
                 id = c.Id, title = locale switch { "ru" => c.Names.Ru ?? c.Names.Uz, "en" => c.Names.En ?? c.Names.Uz, _ => c.Names.Uz },
                 description = c.Description, productIds = c.ProductIds.Where(id => allowed.Any(p => p.Document.Id == id)) })
         };

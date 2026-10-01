@@ -15,6 +15,7 @@ export function setCataloguePrice(snapshot: DesignSnapshot, pageId: string, elem
   const next = cloneSnapshot(snapshot), page = next.pages.find((item) => item.id === pageId);
   const element = page?.elements.find((item) => item.id === elementId && item.role === 'price');
   if (!page || !element || !Number.isFinite(amount) || amount < 0 || amount > 999999999) return next;
+  if (element.binding?.kind === 'product') throw new Error('Edit canonical prices in Products, then refresh the catalogue.');
   element.text = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount).replaceAll(',', ' ');
   if (page.catalogueSource) return next;
   const photo = page.elements.find((item) => item.productId === element.productId && item.role === 'photo');

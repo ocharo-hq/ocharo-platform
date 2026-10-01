@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { provideLocale } from '@wow-two-beta/ui-vue/foundation/i18n';
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { AuthProvider } from '@wow-two-beta/ui-vue/auth';
 
 import { useAccess } from '@/application/workspace/UseAccess';
@@ -7,6 +9,8 @@ import SessionGate from '@/presentation/workspace/SessionGate.vue';
 
 /** Composes the cookie session boundary and the authenticated preparation workspace. */
 defineOptions({ name: 'AppRoot' });
+const { uiLocale } = useUiLocale();
+provideLocale(uiLocale);
 const access = useAccess();
 </script>
 

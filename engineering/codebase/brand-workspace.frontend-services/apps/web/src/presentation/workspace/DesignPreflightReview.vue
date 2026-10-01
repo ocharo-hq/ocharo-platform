@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { translateDesignerNotice } from '@/domain/shared/DesignerUiMessages';
+import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, nextTick, onMounted, onScopeDispose, ref } from 'vue';
 import type { DesignPreflightReview } from '@/application/workspace/UseDesignPreflight';
 import type { DesignPreflightIssue } from '@/domain/workspace/DesignPreflight';
+
+const { t } = useUiLocale();
 
 defineOptions({ name: 'DesignPreflightReview' });
 const props = defineProps<{ review: DesignPreflightReview }>();
@@ -17,20 +21,20 @@ function inspect(issue: DesignPreflightIssue): void { emit('resolve', false); em
 
 <template>
   <dialog ref="dialog" class="preflight-dialog" aria-labelledby="preflight-heading" @cancel.prevent="emit('resolve', false)">
-    <div class="preflight-heading"><div><p class="eyebrow">Export check</p><h2 id="preflight-heading">{{ hasErrors ? 'Fix the missing images.' : review.report.issues.length ? 'Review these page details.' : 'Pages checked.' }}</h2></div><button class="quiet-button" aria-label="Close export check" @click="emit('resolve', false)">Close</button></div>
-    <p>{{ review.report.pageCount }} {{ review.report.pageCount === 1 ? 'page' : 'pages' }} checked against the PDF renderer.</p>
-    <p v-if="review.unsaved" class="preflight-warning">This download includes unsaved edits. Save your design to keep this version.</p>
-    <p v-if="!review.report.issues.length" role="status">Images are available. No page-edge or text-frame overflow was detected.</p>
+    <div class="preflight-heading"><div><p class="eyebrow">{{ t("Export check") }}</p><h2 id="preflight-heading">{{ hasErrors ? t("Fix the missing details.") : review.report.issues.length ? t("Review these page details.") : t("Pages checked.") }}</h2></div><button class="quiet-button" :aria-label="t('Close export check')" @click="emit('resolve', false)">{{ t("Close") }}</button></div>
+    <p>{{ review.report.pageCount }} {{ review.report.pageCount === 1 ? t("page") : t("pages") }} {{ t("checked against the PDF renderer.") }}</p>
+    <p v-if="review.unsaved" class="preflight-warning">{{ t("This download includes unsaved edits. Save your design to keep this version.") }}</p>
+    <p v-if="!review.report.issues.length" role="status">{{ t("Images are available. No page-edge or text-frame overflow was detected.") }}</p>
     <ul v-if="review.report.issues.length" class="preflight-issues">
       <li v-for="(issue,index) in review.report.issues" :key="`${issue.pageId}-${issue.elementId}-${issue.code}`" :class="{'preflight-error':issue.severity === 'error'}">
-        <b>{{ issue.severity === 'error' ? 'Fix required' : 'Review layout' }} · Page {{ issue.pageNumber }} · {{ issue.pageTitle }}</b>
-        <span>{{ issue.elementLabel }} — {{ issue.message }}</span>
-        <button class="quiet-button" :aria-label="`Inspect issue ${index + 1}: ${issue.elementLabel} on page ${issue.pageNumber}`" @click="inspect(issue)">Show element →</button>
+        <b>{{ issue.severity === 'error' ? t("Fix required") : t("Review layout") }} {{ t("· Page") }} {{ issue.pageNumber }} · {{ issue.pageTitle }}</b>
+        <span>{{ issue.elementLabel }} — {{ translateDesignerNotice(issue.message,t) }}</span>
+        <button class="quiet-button" :aria-label="t('Inspect issue {index}: {element} on page {page}', {index:index+1,element:issue.elementLabel,page:issue.pageNumber})" @click="inspect(issue)">{{ t("Show element →") }}</button>
       </li>
     </ul>
-    <p v-if="!hasErrors && review.report.issues.length">Intentional crops and backgrounds may extend beyond the page. Confirm their appearance in PDF preview.</p>
-    <label v-if="needsApproval && !hasErrors && !review.inspectionOnly" class="preflight-acknowledge"><input v-model="acknowledged" type="checkbox"> I reviewed these details and want to continue with this exact version.</label>
-    <footer><button class="quiet-button" @click="emit('resolve', false)">{{ review.inspectionOnly ? 'Done' : 'Return to editing' }}</button><button v-if="!review.inspectionOnly && !hasErrors" class="preflight-continue" :disabled="needsApproval && !acknowledged" @click="emit('resolve', true)">{{ review.actionLabel }}</button></footer>
+    <p v-if="!hasErrors && review.report.issues.length">{{ t("Intentional crops and backgrounds may extend beyond the page. Confirm their appearance in PDF preview.") }}</p>
+    <label v-if="needsApproval && !hasErrors && !review.inspectionOnly" class="preflight-acknowledge"><input v-model="acknowledged" type="checkbox"> {{ t("I reviewed these details and want to continue with this exact version.") }}</label>
+    <footer><button class="quiet-button" @click="emit('resolve', false)">{{ review.inspectionOnly ? t("Done") : t("Return to editing") }}</button><button v-if="!review.inspectionOnly && !hasErrors" class="preflight-continue" :disabled="needsApproval && !acknowledged" @click="emit('resolve', true)">{{ t(review.actionLabel) }}</button></footer>
   </dialog>
 </template>
 

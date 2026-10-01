@@ -37,19 +37,36 @@ public static partial class CommerceRules
             Require(p.Locales?.Uz is not null && p.Locales.Ru is not null && p.Locales.En is not null, "All three locales are required.");
             Require(p.Sizes is not null && p.Media is not null && p.Issues is not null && p.GarmentType is { Length: > 0 and <= 100 } && p.VariantCode is { Length: > 0 and <= 100 }, "Product fields are incomplete.");
             Require(p.Sizes.Count <= 100 && p.Sizes.All(s => !string.IsNullOrWhiteSpace(s) && s.Length <= 40) && p.Sizes.Distinct().Count() == p.Sizes.Count, "Sizes must be distinct labels.");
-            foreach (var locale in new[] { p.Locales!.Uz, p.Locales.Ru, p.Locales.En })
-                Require(locale.Status is "draft" or "approved" && (locale.Status != "approved" || !string.IsNullOrWhiteSpace(locale.Name)), "Approved copy needs a title.");
+            Require(item.Translations is null || item.Translations.Count <= CatalogueLanguages.Codes.Count - 3
+                && item.Translations.All(entry => CatalogueLanguages.Supported(entry.Key) && !CatalogueLanguages.Core(entry.Key) && entry.Value is not null),
+                "Additional product translations must use supported non-core languages.");
+            foreach (var locale in new[] { p.Locales!.Uz, p.Locales.Ru, p.Locales.En }.Concat(item.Translations?.Values ?? []))
+                Require(locale.Status is "draft" or "approved" && (locale.Status != "approved" || !string.IsNullOrWhiteSpace(locale.Name))
+                    && (locale.Name?.Length ?? 0) <= 300 && (locale.Fabric?.Length ?? 0) <= 1000
+                    && (locale.Decoration?.Length ?? 0) <= 1000 && (locale.Description?.Length ?? 0) <= 10000,
+                    "Product copy exceeds supported limits or approved copy is missing a title.");
             Require(p.Media.All(m => m is not null && Hash(m.Sha256) && m.ContentType is "image/png" or "image/jpeg" or "image/webp"), "Product images need valid hashes and supported image types.");
+            Require(p.Media.Select(m => m.Id).Distinct().Count() == p.Media.Count && p.Media.All(m => !string.IsNullOrWhiteSpace(m.Id) && m.Id.Length <= 120), "Product image IDs must be distinct.");
+            Require(item.MediaGroups is null || item.MediaGroups.Count <= 100 && item.MediaGroups.All(g => g is not null)
+                && item.MediaGroups.Select(g => g.Id).Distinct().Count() == item.MediaGroups.Count, "Media group IDs must be distinct.");
+            foreach (var group in item.MediaGroups ?? [])
+                Require(group.Id is { Length: > 0 and <= 100 } && SlugPattern().IsMatch(group.Id)
+                    && !string.IsNullOrWhiteSpace(group.Label) && group.Label.Length <= 120
+                    && group.Category is "model" or "product" or "detail" or "fabric"
+                    && group.MediaIds is not null && group.MediaIds.Count <= 500
+                    && group.MediaIds.Distinct().Count() == group.MediaIds.Count
+                    && group.MediaIds.All(id => p.Media.Any(m => m.Id == id && m.Role != "reference")),
+                    "Media groups must reference distinct non-reference images attached to the same product.");
             Require(p.Stock is null || p.Stock.All(s => p.Sizes.Contains(s.Key) && s.Value >= 0), "Stock must use known sizes and nonnegative counts.");
             if (p.Pricing is { } price)
                 Require(price.Status is "draft" or "confirmed" && price.Currency is { Length: 3 } && price.Currency.All(char.IsAsciiLetterUpper)
                     && price.Tiers is not null && price.Tiers.All(t => t.MinimumQuantity > 0 && t.UnitPrice >= 0 && (t.MaximumQuantity is null || t.MaximumQuantity >= t.MinimumQuantity))
                     && price.Tiers.Count(t => t.MinimumQuantity == 1) <= 1, "Pricing must use a currency and valid nonnegative tiers.");
         }
-        Require(snapshot.CatalogueEditions is not null && snapshot.CatalogueEditions.Count <= 3 && snapshot.CatalogueEditions.Select(e=>e.Locale).Distinct().Count()==snapshot.CatalogueEditions.Count, "Catalogue editions must have distinct supported languages.");
+        Require(snapshot.CatalogueEditions is not null && snapshot.CatalogueEditions.Count <= CatalogueLanguages.Codes.Count && snapshot.CatalogueEditions.Select(e=>e.Locale).Distinct().Count()==snapshot.CatalogueEditions.Count, "Catalogue editions must have distinct supported languages.");
         foreach(var e in snapshot.CatalogueEditions)
         {
-            Require(e.Id!=Guid.Empty && e.SourceDesignId!=Guid.Empty && e.SourceRevision>0 && e.Locale is "uz" or "ru" or "en" && !string.IsNullOrWhiteSpace(e.Title) && e.Title.Length<=160 && e.TemplateId.Length<=120 && Hash(e.PdfSha256), "Catalogue edition metadata is invalid.");
+            Require(e.Id!=Guid.Empty && e.SourceDesignId!=Guid.Empty && e.SourceRevision>0 && CatalogueLanguages.Supported(e.Locale) && !string.IsNullOrWhiteSpace(e.Title) && e.Title.Length<=160 && e.TemplateId.Length<=120 && Hash(e.PdfSha256), "Catalogue edition metadata is invalid.");
             Require(e.Pages.Count is >0 and <=100 && e.Pages.Select(p=>p.Id).Distinct().Count()==e.Pages.Count, "Catalogue edition pages must be distinct.");
             Require(e.Pages.All(p=>p.Id.Length is >0 and <=100 && p.Id.All(c=>char.IsAsciiLetterOrDigit(c)||c is '-' or '_') && p.Title.Length<=160 && double.IsFinite(p.WidthMm) && double.IsFinite(p.HeightMm) && p.WidthMm is >0 and <=2000 && p.HeightMm is >0 and <=2000 && Hash(p.PngSha256) && Hash(p.PdfSha256) && p.ProductIds.Count<=1000), "Catalogue edition page metadata is invalid.");
         }
@@ -75,7 +92,8 @@ public static partial class CommerceRules
                 Locales = new(Locale(item.Document.Locales.Uz, old?.Locales.Uz), Locale(item.Document.Locales.Ru, old?.Locales.Ru), Locale(item.Document.Locales.En, old?.Locales.En)),
                 Pricing = item.Document.Pricing == old?.Pricing ? item.Document.Pricing : item.Document.Pricing is {} price ? price with { Status = "draft" } : null
             };
-            return item with { Document = doc };
+            return item with { Document = doc, Translations = item.Translations?.ToDictionary(entry => entry.Key,
+                entry => Locale(entry.Value, previous?.Products.FirstOrDefault(p => p.Document.Id == item.Document.Id)?.Translations?.GetValueOrDefault(entry.Key))) };
         }).ToArray();
         var links = next.Identity.Links.Where(link => previous?.Identity.Links.Contains(link) == true && previous.VerifiedLinkKeys.Contains(link.Key)).Select(l => l.Key).ToArray();
         return next with { Products = products, VerifiedLinkKeys = links,

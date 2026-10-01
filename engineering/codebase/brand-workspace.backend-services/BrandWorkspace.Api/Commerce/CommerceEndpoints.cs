@@ -73,7 +73,7 @@ public static class CommerceEndpoints
             return CommerceOk(new{data=saved});
         });
         scoped.MapPost("/brands/{brandId:guid}/commerce/catalogue-editions/{locale}/publish",async(Guid organizationId,Guid brandId,string locale,ReleaseRequest request,HttpContext h,ICommerceRepository repository,CancellationToken token)=>{
-            Owner(h);CommerceRules.Require(locale is "uz" or "ru" or "en","Choose a supported catalogue language.");
+            Owner(h);CommerceRules.Require(CatalogueLanguages.Supported(locale),"Choose a supported catalogue language.");
             return CommerceOk(new{data=await repository.PublishCatalogueEditionAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,request.ExpectedRevision,locale,request.Note,token)});
         });
         scoped.MapGet("/brands/{brandId:guid}/commerce/releases",async(Guid organizationId,Guid brandId,ICommerceRepository repository,CancellationToken token)=>CommerceOk(new {data=await repository.ReleasesAsync(organizationId,brandId,token)}));
