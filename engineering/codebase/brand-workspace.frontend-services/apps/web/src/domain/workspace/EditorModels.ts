@@ -50,7 +50,19 @@ export interface DesignElement {
   radius?: number;
   role?: 'photo' | 'logo' | 'title' | 'price' | 'caption' | 'decoration' | 'page-number';
 }
+export interface CatalogueWebPage {
+  id: string; title: string; layout: 'spread'|'grid'|'collage'; isActive: boolean; productIds: string[];
+}
+export interface CatalogueMetadata {
+  slug: string; description: string; isActive: boolean; outputs: {web: boolean; pdf: boolean};
+  web: {theme: 'editorial'|'grid'; pages: CatalogueWebPage[]};
+}
+export interface CatalogueSummary {
+  slug: string; description: string; isActive: boolean; outputs: {web: boolean; pdf: boolean};
+  web: {theme: 'editorial'|'grid'; pageCount: number}; pdfPageCount: number;
+}
 export interface DesignPage {
+  isActive?: boolean;
   id: string; title: string; width: number; height: number; background: string;
   elements: DesignElement[];
   productIds?: string[];
@@ -62,9 +74,11 @@ export interface DesignSnapshot {
   templateId: string;
   locale: CatalogueLocale;
   catalogueSettings?: CatalogueSettings;
+  catalogue?: CatalogueMetadata;
   pages: DesignPage[];
 }
 export interface DesignSummary {
+  locale?: CatalogueLocale | null; catalogue?: CatalogueSummary | null;
   id: string; organizationId: string; kind: DesignKind; title: string;
   revision: number; archived: boolean; createdAtUtc: string; updatedAtUtc: string;
 }
@@ -72,6 +86,8 @@ export interface DesignDocument extends DesignSummary { snapshot: DesignSnapshot
 export function cloneSnapshot(snapshot: DesignSnapshot): DesignSnapshot {
   return JSON.parse(JSON.stringify(snapshot)) as DesignSnapshot;
 }
+const reservedCatalogueSlugs = new Set(['api','admin','edit','new','pages','editions','collections','products','catalogue','catalogues','assets','media','download','downloads','settings','login','logout']);
+export const validCatalogueSlug = (value:string):boolean => value.length>0 && value.length<=100 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && !reservedCatalogueSlugs.has(value);
 /** Bounds imported files before they become CSS or canvas instructions. */
 export function validateSnapshot(value: unknown): DesignSnapshot {
   const d = value as DesignSnapshot;
@@ -79,7 +95,16 @@ export function validateSnapshot(value: unknown): DesignSnapshot {
   const color = (v: unknown): v is string => typeof v === 'string' && /^#[\da-f]{6}$/i.test(v);
   if (!d || d.schemaVersion !== 1 || !['catalogue', 'business-card'].includes(d.kind) ||
       !catalogueLocales.some(item => item.code === d.locale) || !metadata(d.templateId) ||
-      !Array.isArray(d.pages) || d.pages.length < 1 || d.pages.length > 100) throw new Error('Unsupported design file.');
+      !Array.isArray(d.pages) || d.pages.length > 100 || (d.pages.length < 1 && !(d.kind === 'catalogue' && d.catalogue))) throw new Error('Unsupported design file.');
+  if (d.catalogue !== undefined) {
+    const c=d.catalogue;
+    if (d.kind!=='catalogue'||!c||typeof c.slug!=='string'||!validCatalogueSlug(c.slug)||typeof c.description!=='string'||c.description.length>2000||typeof c.isActive!=='boolean'||!c.outputs||typeof c.outputs.web!=='boolean'||typeof c.outputs.pdf!=='boolean'||(!c.outputs.web&&!c.outputs.pdf)||!c.web||!['editorial','grid'].includes(c.web.theme)||!Array.isArray(c.web.pages)||c.web.pages.length>100) throw new Error('Invalid catalogue metadata.');
+    const webIds=new Set<string>();
+    for(const page of c.web.pages){
+      if(!page||!metadata(page.id,100)||!/^[a-zA-Z0-9_-]+$/.test(page.id)||webIds.has(page.id)||!metadata(page.title,160)||!['spread','grid','collage'].includes(page.layout)||typeof page.isActive!=='boolean'||!Array.isArray(page.productIds)||page.productIds.length>1000||!page.productIds.every(id=>metadata(id,120)&&/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))||new Set(page.productIds).size!==page.productIds.length) throw new Error('Invalid web catalogue page.');
+      webIds.add(page.id);
+    }
+  }
   const groups = ['all', 'model', 'product', 'detail', 'fabric'];
   const copyFields = ['collection', 'coverNote', 'header', 'footer', 'sizes', 'pieces', 'priceOnRequest', 'prices', 'materials', 'decoration'];
   if (d.catalogueSettings !== undefined) {
@@ -96,7 +121,7 @@ export function validateSnapshot(value: unknown): DesignSnapshot {
   const ids = new Set<string>();
   const number = (n: unknown, min: number, max: number) => typeof n === 'number' && Number.isFinite(n) && n >= min && n <= max;
   for (const p of d.pages) {
-    if (!p || !metadata(p.id) || ids.has(p.id) || !metadata(p.title, 160) ||
+    if (!p || (p.isActive !== undefined && typeof p.isActive !== 'boolean') || !metadata(p.id) || ids.has(p.id) || !metadata(p.title, 160) ||
         !number(p.width, 10, 1000) || !number(p.height, 10, 1000) || !color(p.background) ||
         (p.productIds !== undefined && (!Array.isArray(p.productIds) || p.productIds.length > 300 ||
           !p.productIds.every((id) => metadata(id)) || new Set(p.productIds).size !== p.productIds.length)) ||

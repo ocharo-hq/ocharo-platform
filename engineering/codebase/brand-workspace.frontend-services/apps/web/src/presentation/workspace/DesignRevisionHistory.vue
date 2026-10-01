@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useErrorToast } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef, useId, watch } from 'vue';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
@@ -15,7 +17,8 @@ const panelId = useId(), pageId = useId();
 const expanded = ref(false), loading = ref(false), previewLoading = ref(false);
 const revisions = ref<DesignRevision[]>([]), preview = shallowRef<DesignDocument | null>(null);
 const selected = ref<number | null>(null), pageIndex = ref(0), hasMore = ref(false);
-const listError = ref(''), previewError = ref('');
+const listError = ref<string | null>(null), previewError = ref<string | null>(null);
+useErrorToast(listError); useErrorToast(previewError);
 const locked = computed(() => !!props.disabled || props.access.busy.value);
 const page = computed(() => preview.value?.snapshot.pages[pageIndex.value]);
 const metadata = computed(() => revisions.value.find(item => item.revision === preview.value?.revision));
@@ -100,10 +103,11 @@ function date(value: string): string { return new Date(value).toLocaleString(); 
     <p v-if="!document" class="history-hint">{{ t("Save a design to start its revision history.") }}</p>
     <div v-if="expanded" :id="panelId" class="history-content">
       <p class="history-hint">{{ t("Inspect earlier saved pages. Restoring creates a separate unsaved copy for editing.") }}</p>
-      <div class="history-actions"><button type="button" class="quiet-button" :disabled="locked || loading" @click="load()">{{ t("Refresh history") }}</button><span v-if="loading" role="status">{{ t("Loading revisions…") }}</span></div>
-      <p v-if="listError" role="alert" class="editor-alert">{{ t(listError) }}</p>
+      <div class="history-actions"><button type="button" class="quiet-button" :disabled="locked || loading" @click="load()">{{ t("Refresh history") }}</button></div>
+      <ContentSkeleton v-if="loading" label="Loading revisions…" :cards="1" />
+      <p v-else-if="listError" class="history-hint">{{ t("Saved revision history is unavailable. Refresh to retry.") }}</p>
       <p v-if="!loading && !listError && !revisions.length">{{ t("No saved revisions were returned. Refresh to try again.") }}</p>
-      <div class="history-layout">
+      <div v-if="!loading" class="history-layout">
         <div class="history-list">
           <ol :aria-label="t('Saved revisions')">
             <li v-for="revision in revisions" :key="revision.revision">
@@ -118,8 +122,8 @@ function date(value: string): string { return new Date(value).toLocaleString(); 
           <button v-if="hasMore" type="button" class="quiet-button" :disabled="locked || loading" @click="load(true)">{{ t("Load older revisions") }}</button>
         </div>
         <div class="history-preview" :aria-busy="previewLoading">
-          <p v-if="previewLoading" role="status">{{ t("Loading revision") }} {{ selected }}…</p>
-          <div v-if="previewError"><p role="alert" class="editor-alert">{{ t(previewError) }}</p><button v-if="selected" type="button" class="quiet-button" :disabled="locked" @click="inspect(selected)">{{ t("Retry revision") }}</button></div>
+          <ContentSkeleton v-if="previewLoading" label="Loading revision" :cards="1" />
+          <div v-if="previewError"><p class="history-hint">{{ t("Preview unavailable") }}</p><button v-if="selected" type="button" class="quiet-button" :disabled="locked" @click="inspect(selected)">{{ t("Retry revision") }}</button></div>
           <template v-if="preview">
             <h3>{{ preview.title }}</h3>
             <p>{{ t("Revision") }} {{ preview.revision }} · {{ preview.snapshot.locale.toUpperCase() }} · {{ preview.snapshot.pages.length }} {{ t("pages") }}</p>

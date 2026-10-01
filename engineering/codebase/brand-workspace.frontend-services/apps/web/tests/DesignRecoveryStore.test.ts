@@ -6,10 +6,12 @@ import { useDesignDocument } from '@/application/workspace/DocumentStore';
 import { createDesignRecoveryStorage } from '@/integration/workspace/DesignRecoveryStorage';
 import { createCardTemplate } from '@/domain/workspace/Templates';
 import type { DesignDocument } from '@/domain/workspace/EditorModels';
+const feedback=vi.hoisted(()=>({requestConfirmation:vi.fn(),notifyError:vi.fn(),resolveConfirmation:vi.fn()}));
+vi.mock('@/application/shared/UseFeedback',()=>feedback);
 const user = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', organization = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', document = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
 const identity = { userId: user, organizationId: organization, kind: 'business-card' as const };
 const scopes: ReturnType<typeof effectScope>[] = [];
-beforeEach(() => { sessionStorage.clear(); vi.spyOn(window, 'confirm').mockReturnValue(true); });
+beforeEach(() => { sessionStorage.clear(); feedback.requestConfirmation.mockResolvedValue(true); });
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); vi.restoreAllMocks(); sessionStorage.clear(); });
 function setup() {
   const scope = effectScope(); scopes.push(scope);
@@ -31,7 +33,7 @@ describe('design recovery lifecycle', () => {
     const persisted = createDesignRecoveryStorage(identity).read(); expect(persisted).toMatchObject({ title: 'Unsaved latest title', source: { documentId: document, revision: 3 } });
     expect(JSON.stringify(persisted)).not.toContain('must-not-persist');
     const second = setup(); expect(second.store.recovery.available.value?.title).toBe('Unsaved latest title');
-    second.store.recovery.restore(); expect(second.store.record.value).toBeNull(); expect(second.store.dirty.value).toBe(true); expect(second.store.snapshot.value).toEqual(changed);
+    await second.store.recovery.restore(); expect(second.store.record.value).toBeNull(); expect(second.store.dirty.value).toBe(true); expect(second.store.snapshot.value).toEqual(changed);
     const save = vi.spyOn(second.access.api, 'saveDesign').mockResolvedValue(ResultExtensions.ok({ ...saved(), id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', snapshot: changed }));
     await second.store.save(); expect(save.mock.calls[0]?.[1]).toBeNull(); expect(save.mock.calls[0]?.[2].expectedRevision).toBeNull();
     expect(createDesignRecoveryStorage(identity).read()).toBeNull();
@@ -45,18 +47,18 @@ describe('design recovery lifecycle', () => {
     expect(store.recovery.status.value).toContain('No unsaved edits remain');
   });
   it('preserves old recovery when another saved design is opened, then blocks automatic replacement', async () => {
-    const { store, access } = setup(); store.create(createCardTemplate(), 'Unsaved first'); store.recovery.enable();
+    const { store, access } = setup(); await store.create(createCardTemplate(), 'Unsaved first'); store.recovery.enable();
     vi.spyOn(access.api, 'getDesign').mockResolvedValue(ResultExtensions.ok(saved())); await store.load(document);
     store.title.value = 'Second design edit'; expect(store.recovery.available.value?.title).toBe('Unsaved first');
     expect(createDesignRecoveryStorage(identity).read()).toMatchObject({ title: 'Unsaved first' });
     store.recovery.discard(); expect(store.title.value).toBe('Second design edit'); expect(store.dirty.value).toBe(true);
   });
   it('returns false for cancelled navigation or locked editing without altering input', async () => {
-    const { store, access } = setup(); store.create(createCardTemplate(), 'Keep this');
-    vi.mocked(window.confirm).mockReturnValue(false); expect(store.create(createCardTemplate(), 'Other')).toBe(false); expect(await store.load(document)).toBe(false);
-    store.loading.value = true; expect(store.create(createCardTemplate(), 'Other')).toBe(false);
+    const { store, access } = setup(); await store.create(createCardTemplate(), 'Keep this');
+    feedback.requestConfirmation.mockResolvedValue(false); expect(await store.create(createCardTemplate(), 'Other')).toBe(false); expect(await store.load(document)).toBe(false);
+    store.loading.value = true; expect(await store.create(createCardTemplate(), 'Other')).toBe(false);
     const changed = createCardTemplate(); changed.pages[0]!.background = '#abcdef'; store.replace(changed);
     expect(store.title.value).toBe('Keep this'); expect(store.snapshot.value?.pages[0]?.background).not.toBe('#abcdef');
-    store.loading.value = false; access.invalidated.value = true; expect(store.create(changed, 'Other')).toBe(false);
+    store.loading.value = false; access.invalidated.value = true; expect(await store.create(changed, 'Other')).toBe(false);
   });
 });

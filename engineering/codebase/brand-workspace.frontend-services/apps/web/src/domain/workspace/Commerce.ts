@@ -5,7 +5,7 @@ export interface CommerceImage { id:string;role:string;fileName:string;contentTy
 export interface Copy {status:'draft'|'approved';name:string|null;fabric:string|null;decoration:string|null;description:string|null}
 export interface Product {translations?:Partial<Record<CatalogueLocale,Copy>>|null;mediaGroups?:ProductMediaGroup[]|null;document:{id:string;garmentType:string;variantCode:string;status:'draft'|'active'|'archived';sortOrder:number;sizes:string[];fabricCodes:string[];decorationCodes:string[];tags:string[];locales:Record<Locale,Copy>;pricing:{currency:string;status:'draft'|'confirmed';tiers:{minimumQuantity:number;maximumQuantity:number|null;unitPrice:number}[];wording:string|null}|null;media:CommerceImage[];issues:{id:string;field:string;status:string;question:string}[];notes:string|null;stock:Record<string,number>|null;madeToOrder:boolean;[key:string]:unknown};revision:number;sourceRevision:number|null}
 export interface Collection {id:string;names:Words;description:string|null;productIds:string[];isPublished:boolean;sortOrder:number}
-export interface CatalogueEdition {id:string;sourceDesignId:string;sourceRevision:number;title:string;locale:CatalogueLocale;templateId:string;pages:{id:string;title:string;widthMm:number;heightMm:number;productIds:string[];pngSha256:string;pdfSha256:string}[];pdfSha256:string;approvedForPublication:boolean;createdAt:string}
+export interface CatalogueEdition {slug?:string|null;description?:string;isActive?:boolean;updatedAt?:string|null;web?:{mediaGroup?:ProductMediaSelection;priceDisplay?:{show:boolean;showCurrency:boolean;showQuantity:boolean;showRetail:boolean;showWholesale:boolean};copy?:Record<string,string>;productMedia?:Record<string,string[]>;theme:'editorial'|'grid';pages:{id:string;title:string;layout:'spread'|'grid'|'collage';productIds:string[];isActive?:boolean}[]}|null;id:string;sourceDesignId:string;sourceRevision:number;title:string;locale:CatalogueLocale;templateId:string;pages:{id:string;title:string;widthMm:number;heightMm:number;productIds:string[];pngSha256:string;pdfSha256:string}[];pdfSha256:string|null;approvedForPublication:boolean;createdAt:string}
 export interface CommerceSnapshot {catalogueEditions?:CatalogueEdition[];slug:string;identity:{name:string;tagline:Words;descriptor:Words;palette:{key:string;name:string;hex:string;role:string}[];links:{key:string;label:string;handle:string|null;url:string}[];[key:string]:unknown};logos:Record<string,CommerceImage & {slot:string;status:string;uploadedAt:string}>;products:Product[];collections:Collection[];mediaApprovals:Record<string,Provenance>;verifiedLinkKeys:string[];sources:unknown[]}
 export interface CommerceDraft {brandId:string;revision:number;snapshot:CommerceSnapshot;updatedAt:string}
 export interface CommerceRelease {id:string;brandId:string;revision:number;sourceRevision:number;publishedAt:string;note:string;withdrawnAt:string|null;snapshot:CommerceSnapshot}
@@ -62,4 +62,9 @@ export function productMediaForGroup(product:Product,category:ProductMediaSelect
   if(!product.mediaGroups?.length)return media.filter(image=>productMediaCategory(image)===category);
   const ids=[...new Set(product.mediaGroups.filter(group=>group.category===category).flatMap(group=>group.mediaIds))];
   return ids.flatMap(id=>{const image=media.find(item=>item.id===id);return image?[image]:[];});
+}
+
+/** Exact-language publication eligibility shared with the backend; prices have their own confirmation. */
+export function productEligibleForCatalogue(product:Product,locale:CatalogueLocale):boolean {
+ return product.document.status==='active' && productCopy(product,locale).status==='approved' && product.document.issues.every(issue=>issue.status!=='open');
 }

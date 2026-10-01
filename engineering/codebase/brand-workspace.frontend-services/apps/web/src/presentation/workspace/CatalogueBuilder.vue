@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useErrorToast } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
@@ -8,7 +10,6 @@ import type { CommerceDraft, CommerceRelease, CatalogueLocale } from '@/domain/w
 import type { DesignPage } from '@/domain/workspace/EditorModels';
 import { catalogueMedia, catalogueMediaGroups } from '@/domain/workspace/CatalogueEditing';
 import type { CatalogueMediaGroup } from '@/domain/workspace/EditorModels';
-import { translateDesignerNotice } from '@/domain/shared/DesignerUiMessages';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { catalogueLayouts, composeCataloguePages, productName, type CataloguePageLayout } from '@/domain/workspace/CatalogueComposer';
 
@@ -20,7 +21,8 @@ const emit = defineEmits<{ pages: [pages: DesignPage[], brandName: string]; clos
 const api = useCommerce(props.access), controller = new AbortController();
 const brandId = ref(props.initialBrandId ?? ''), releaseId = ref('draft'), query = ref(''), layout = ref<CataloguePageLayout>('product');
 const draft = ref<CommerceDraft | null>(null), releases = ref<CommerceRelease[]>([]);
-const images = ref<Record<string, string[]>>({}), loading = ref(false), error = ref('');
+const images = ref<Record<string, string[]>>({}), loading = ref(false), error = ref(''), validation = ref('');
+useErrorToast(error);
 let sequence = 0;
 const source = computed<CommerceDraft | null>(() => {
   if (releaseId.value === 'draft') return draft.value;
@@ -66,11 +68,12 @@ function toggleImage(id: string, hash: string): void {
 }
 function add(): void {
   if (!source.value || props.disabled || loading.value) return;
+  validation.value = '';
   try {
     const pages = composeCataloguePages(props.workspace.organization.value!.id, source.value,
       selected.value.map(item => ({ productId: item.document.id, imageHashes: images.value[item.document.id] ?? [], mediaGroup: mediaGroup.value })), layout.value, props.locale);
     emit('pages', pages, source.value.snapshot.identity.name);
-  } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Unable to compose pages.'; }
+  } catch (cause) { validation.value = cause instanceof Error ? cause.message : 'Unable to compose pages.'; }
 }
 </script>
 
@@ -84,7 +87,7 @@ function add(): void {
     </div>
     <label class="field-label">{{ t('Photo group for all products') }}<select v-model="mediaGroup"><option v-for="group in catalogueMediaGroups" :key="group" :value="group">{{ t(group) }}</option></select></label>
     <fieldset class="layout-picker" :disabled="disabled"><legend>{{ t("Page template") }}</legend><label v-for="option in catalogueLayouts" :key="option.id" :class="{ chosen: layout === option.id }"><input v-model="layout" type="radio" name="catalogue-layout" :value="option.id"><strong>{{ t(option.title) }}</strong><span>{{ t(option.description) }}</span></label></fieldset>
-    <p v-if="error" role="alert" class="editor-alert">{{ translateDesignerNotice(error,t) }}</p><p v-if="loading" role="status">{{ t("Loading saved products…") }}</p>
+    <ContentSkeleton v-if="loading" :cards="2" :label="t('Loading saved products…')"/><Button v-else-if="error&&!source" variant="outline" @click="load">{{t('Retry')}}</Button>
     <p v-else-if="!source">{{ t("Create and save products in Products & releases to start your catalogue.") }}</p>
     <div v-else class="builder-products">
       <article v-for="product in visible" :key="product.document.id" :class="{ chosen: Object.hasOwn(images, product.document.id) }">
@@ -94,6 +97,7 @@ function add(): void {
       </article>
       <p v-if="!visible.length">{{ t("No products match this search.") }}</p>
     </div>
+    <p v-if="validation" role="alert" class="review-warning">{{ t(validation) }}</p>
     <footer><div><p>{{ selected.length }} {{ t("products selected · up to") }} {{ capacity }} {{ t("images per page") }}</p><p v-if="warnings" class="review-warning">{{ warnings }} {{ t("chosen images need publication review. This edition remains a private working design.") }}</p><p class="template-help">{{ t('Prices come from Products. Catalogue settings control which price details appear.') }}</p></div><Button :is-disabled="disabled || loading || !selected.length" @click="add">{{ hasDocument ? t("Insert selected pages") : t("Create catalogue") }}</Button></footer>
   </section>
 </template>

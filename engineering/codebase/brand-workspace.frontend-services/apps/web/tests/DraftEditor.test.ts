@@ -1,6 +1,7 @@
+import { feedbackBus } from '@/application/shared/UseFeedback';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
@@ -26,6 +27,8 @@ const draft: Draft = {
   requestedReviewRevision: null,
   approval: null,
 };
+const notices = vi.fn();
+beforeEach(() => { notices.mockClear(); vi.spyOn(feedbackBus, 'notify').mockImplementation(notices); });
 let wrapper: VueWrapper;
 afterEach(() => wrapper?.unmount());
 
@@ -83,7 +86,8 @@ describe('revision editing', () => {
       3,
       expect.any(AbortSignal),
     );
-    expect(wrapper.text()).toContain(status ? 'This record changed' : 'could not complete');
+    expect(notices).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining(status ? 'This record changed' : 'could not complete') }));
+    expect(notices).toHaveBeenCalledTimes(1);
   });
 
   it('requests review for the exact saved revision', async () => {
@@ -142,7 +146,8 @@ describe('revision editing', () => {
     await button('Prepare ZIP').trigger('click');
     await flushPromises();
     expect(wrapper.find('a').exists()).toBe(false);
-    expect(wrapper.text()).toContain('unexpected download location');
+    expect(notices).toHaveBeenCalledWith(expect.objectContaining({ description: 'The service returned an unexpected download location.' }));
+    expect(wrapper.text()).toContain('Download unavailable');
   });
 
   it('keeps viewer controls read-only', () => {

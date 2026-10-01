@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { onScopeDispose, watch } from 'vue';
 
@@ -6,7 +7,7 @@ import { useAppForm } from '@wow-two-beta/ui-vue/forms-engine/house';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Field, TextInput } from '@wow-two-beta/ui-vue/presentation/forms';
 
-import type { AccessControls } from '@/application/workspace/UseAccess';
+import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 
 const { t } = useUiLocale();
@@ -20,6 +21,7 @@ const form = useAppForm(() => ({
   onSubmit: async (values, { signal }) => {
     const result = await props.workspace.createBrand(values, signal);
     if (result.ok) form.reset();
+    if (!result.ok && result.failure.code !== 'cancelled') notifyError(failureMessage(result.failure));
     return result;
   },
 }));
@@ -60,7 +62,6 @@ onScopeDispose(() => {
         ><Field :label="t('Time zone')" :helper="t('For example Asia/Tashkent or UTC.')"
           ><TextInput v-model="f.value" required :maxlength="100" @blur="f.onBlur" /></Field
       ></form.Field>
-      <p v-if="form.state.submitError" role="alert" class="form-error">{{ t(form.state.submitError.message ?? '') }}</p>
       <Button type="submit" :is-loading="form.state.isSubmitting" :is-disabled="access.busy.value">{{ t("Create brand") }}</Button>
     </form>
   </div>

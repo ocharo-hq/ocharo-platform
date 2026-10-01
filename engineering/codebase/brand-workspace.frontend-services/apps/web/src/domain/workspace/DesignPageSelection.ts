@@ -3,6 +3,11 @@ import { cloneSnapshot, validateSnapshot, type DesignSnapshot } from './EditorMo
 /** Selects existing pages in edition order without changing their physical dimensions or printed folios. */
 export function selectDesignPages(snapshot: DesignSnapshot, pageIds?: readonly string[]): DesignSnapshot {
   const checked = validateSnapshot(snapshot);
+  if (checked.kind === 'catalogue') {
+    if (checked.catalogue && !checked.catalogue.outputs.pdf) throw new Error('PDF output is disabled for this catalogue.');
+    checked.pages = checked.pages.filter(page => page.isActive !== false);
+    if (!checked.pages.length) throw new Error('Activate at least one PDF page before exporting.');
+  }
   if (pageIds === undefined) return checked;
   if (!pageIds.length) throw new Error('Select at least one page to export.');
   const ids = new Set(pageIds);

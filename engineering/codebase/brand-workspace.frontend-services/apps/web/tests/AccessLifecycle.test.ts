@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
 
+import { resolveConfirmation } from '@/application/shared/UseFeedback';
 import { useAccess, type AccessControls } from '@/application/workspace/UseAccess';
 
 const channel = vi.hoisted(() => ({
@@ -46,6 +47,7 @@ beforeEach(() => {
   access.session.value = session;
 });
 afterEach(() => {
+  resolveConfirmation(false);
   wrapper.unmount();
   vi.unstubAllGlobals();
 });
@@ -74,11 +76,11 @@ describe('document session boundary', () => {
     finish();
     await pending;
     access.dirty.value = true;
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-    access.navigate('/');
+    const cancelled = access.navigate('/');
+    resolveConfirmation(false); await cancelled;
     expect(navigation.assign).not.toHaveBeenCalled();
-    vi.mocked(window.confirm).mockReturnValue(true);
-    access.navigate('/');
+    const accepted = access.navigate('/');
+    resolveConfirmation(true); await accepted;
     expect(navigation.assign).toHaveBeenCalledWith('/');
   });
 

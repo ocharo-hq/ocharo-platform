@@ -6,7 +6,7 @@ import type { AccessControls } from './UseAccess';
 
 /** Opt-in, account-scoped recovery of unsaved input; restoration never overwrites its source document. */
 export function useDesignRecovery(access: AccessControls, organizationId: string, kind: DesignKind,
-  current: () => DesignRecoveryInput | null, restoreCopy: (value: DesignRecoveryRecord) => boolean,
+  current: () => DesignRecoveryInput | null, restoreCopy: (value: DesignRecoveryRecord) => boolean | Promise<boolean>,
   factory: (scope: DesignRecoveryScope) => DesignRecoveryStorage = createDesignRecoveryStorage) {
   const scope: DesignRecoveryScope = { userId: access.session.value?.user?.id ?? '', organizationId, kind };
   const authorized = () => access.session.value?.authenticated === true && access.session.value.user?.id === scope.userId && !access.invalidated.value;
@@ -59,12 +59,12 @@ export function useDesignRecovery(access: AccessControls, organizationId: string
       status.value = 'Tab recovery removed. The open design is unchanged.';
     } catch (cause) { fail(cause); }
   }
-  function restore(): void {
+  async function restore(): Promise<void> {
     if (!storage || !supported.value || !available.value || disposed) return;
     try {
       if (JSON.stringify(storage.read()) !== JSON.stringify(observed)) { refresh(); return; }
       const candidate = validateRecovery(available.value, scope);
-      if (!restoreCopy(candidate)) return;
+      if (!await restoreCopy(candidate) || disposed) return;
       ownedToken = candidate.token; pending = false; available.value = null; error.value = '';
       status.value = 'Recovered as a new unsaved copy. Save it to keep a server revision.';
       capture();

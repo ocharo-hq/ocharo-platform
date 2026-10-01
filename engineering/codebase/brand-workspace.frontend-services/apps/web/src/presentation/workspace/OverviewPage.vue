@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { notifyError } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onMounted, ref, watch } from 'vue';
 
@@ -25,6 +27,7 @@ const catalogueCount = ref<number | null>(null);
 const cardCount = ref<number | null>(null);
 const designLoading = ref(false);
 const designError = ref(false);
+watch(designError, value => { if(value) notifyError('Saved design totals are unavailable. Content and media still show their own records.'); });
 const refreshRevision = ref(0);
 const preferenceKey = 'brand-workspace.overview-view.v1';
 const organization = computed(() => props.workspace.organization.value);
@@ -147,7 +150,6 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
     </header>
 
     <div v-if="designError" class="overview-data-notice" role="status">
-      <p>{{ t("Saved design totals are unavailable. Content and media still show their own records.") }}</p>
       <button type="button" :disabled="designLoading || access.busy.value" @click="refreshRevision += 1">{{ t("Retry totals") }}</button>
     </div>
 
@@ -238,6 +240,6 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
       <div><span class="overview-section-number">{{ t("BEYOND THE WORKSPACE") }}</span><p>{{ t("More of the business, when it is ready.") }}</p></div>
       <ul><li><span aria-hidden="true">○</span> {{ t("Marketing") }} <small>{{ t("Planned") }}</small></li><li><span aria-hidden="true">○</span> {{ t("Journal") }} <small>{{ t("Not connected") }}</small></li><li><span aria-hidden="true">○</span> {{ t("Scheduling") }} <small>{{ t("Planned") }}</small></li><li v-if="variation !== 'map'"><span aria-hidden="true">○</span> {{ t("Studio") }} <small>{{ t("Separate app") }}</small></li></ul>
     </footer>
-    <p v-if="designLoading" class="overview-loading-note" role="status">{{ t("Loading saved design totals…") }}</p>
+    <ContentSkeleton v-if="designLoading" :cards="1" :label="t('Loading saved design totals…')"/>
   </section>
 </template>

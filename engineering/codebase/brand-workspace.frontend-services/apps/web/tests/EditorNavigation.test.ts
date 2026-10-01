@@ -10,7 +10,7 @@ describe('authenticated catalogue destinations', () => {
   it('retains the organization, saved design and encoded page through a sign-in return', () => {
     const url = designEditorUrl(organization, 'catalogue', design, 'a page & detail');
     expect(safeWorkspaceDestination(url + '&return=https://outside.example&token=secret')).toBe(url);
-    expect(readDesignTarget(url.slice(url.indexOf('?')))).toEqual({ documentId: design, pageId: 'a page & detail', error: null });
+    expect(readDesignTarget(url.slice(url.indexOf('?')))).toEqual({ documentId: design, pageId: 'a page & detail', mode: null, error: null });
   });
   it('recognizes the catalogue entry without assigning an organization', () => {
     expect(readWorkspaceLocation('/catalogue')).toEqual({ organizationId: null, section: 'catalogue', draftId: null });
@@ -31,4 +31,8 @@ describe('authenticated catalogue destinations', () => {
     expect(designEditorUrl(organization, 'business-card')).toBe(`/organizations/${organization}/business-cards`);
     expect(() => designEditorUrl('outside.example', 'catalogue', design)).toThrow();
   });
+  it('preserves a web designer deep link and rejects unknown or orphaned modes',()=>{
+    const target=designEditorUrl(organization,'catalogue',design,undefined,'web');expect(safeWorkspaceDestination(target)).toBe(target);expect(readDesignTarget(target.slice(target.indexOf('?'))).mode).toBe('web');expect(readDesignTarget('?mode=web').error).toBeTruthy();expect(readDesignTarget(`?design=${design}&mode=unknown`).error).toBeTruthy();
+  });
+
 });

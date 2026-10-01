@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { notifyError, useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 
@@ -17,7 +18,8 @@ const { t, uiLocale } = useUiLocale();
 defineOptions({ name: 'DraftEditorPage' });
 const props = defineProps<{ access: AccessControls; workspace: WorkspaceControls }>();
 const saved = shallowRef<Draft | null>(props.workspace.draft.value ?? null);
-const actionError = ref('');
+const actionError = ref<string | null>(null);
+useErrorToast(actionError);
 const actionName = ref('');
 const conflicted = ref(false);
 const revokeReason = ref('');
@@ -91,6 +93,12 @@ const downloadUrl = computed(() => {
   } catch {
     return null;
   }
+});
+watch(() => form.state.submitError, error => {
+  if (error && !actionError.value) notifyError('The service could not complete this request. Your edits are still here; try again.');
+});
+watch(prepared, value => {
+  if (value && !downloadUrl.value) notifyError('The service returned an unexpected download location.', 'draft-export-location');
 });
 watch(
   () => form.state.isDirty || revokeReason.value.length > 0,
@@ -240,8 +248,6 @@ async function prepareExport(): Promise<void> {
           {{ form.values.mediaIds.length }} {{ t("selected ·") }} {{ (selectedBytes / 1024 / 1024).toFixed(2) }} MiB
         </p>
       </fieldset>
-      <p v-if="actionError" role="alert" class="form-error">{{ t(actionError) }}</p>
-      <p v-else-if="form.state.submitError" role="alert" class="form-error">{{ t(form.state.submitError.message ?? '') }}</p>
       <div class="flex flex-wrap gap-3">
         <Button
           v-if="workspace.canEdit.value"
@@ -356,7 +362,7 @@ async function prepareExport(): Promise<void> {
           <Button v-if="downloadUrl" as-child variant="outline" class="mt-3" :is-disabled="access.busy.value"
             ><a :href="downloadUrl">{{ t("Download approved ZIP") }}</a></Button
           >
-          <p v-else role="alert" class="form-error mt-3">{{ t("The service returned an unexpected download location.") }}</p>
+          <p v-else class="mt-3 text-sm text-muted-foreground">{{ t("Download unavailable. Prepare the package again to retry.") }}</p>
           <p class="mt-3 text-xs text-muted-foreground">
             {{ t("Publication remains unverified. Prepared copies cannot be recalled.") }}
           </p>

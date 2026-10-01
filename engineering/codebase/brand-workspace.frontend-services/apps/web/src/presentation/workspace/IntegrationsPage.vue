@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { requestConfirmation, useErrorToast } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
@@ -16,6 +18,7 @@ const api = useCommerce(props.access);
 const controller = new AbortController();
 const apps = connectedApps(window.location.origin);
 const error = ref('');
+useErrorToast(error);
 const errorDetail = ref('');
 const connecting = ref('');
 const brandId = ref('');
@@ -37,9 +40,9 @@ watch(() => props.workspace.brands.value, brands => {
 }, { immediate: true });
 watch(brandId, () => void loadImports(), { immediate: true });
 async function connect(app: ConnectedApp): Promise<void> {
-  if ((manifestFile.value || imageFile.value) && !window.confirm(t('Discard the selected import files and open this app?'))) return;
+  if ((manifestFile.value || imageFile.value) && !await requestConfirmation(t('Discard the selected import files and open this app?'), {confirmLabel:t('Discard changes')})) return;
   const organization = props.workspace.organization.value?.id;
-  if (!organization || blocked.value) return;
+  if (!organization || blocked.value || controller.signal.aborted) return;
   error.value = '';
   errorDetail.value = '';
   connecting.value = app.id;
@@ -96,7 +99,7 @@ async function importFiles(): Promise<void> {
 <template>
   <section class="space-y-7">
     <header class="space-y-2"><p class="eyebrow">{{ t("Your creative workspace") }}</p><h1 class="page-title">{{ t("Connected apps") }}</h1><p class="max-w-2xl text-muted-foreground">{{ t("Open an app with your current organization. Access lasts five minutes; reconnect here when it expires.") }}</p></header>
-    <p v-if="error" role="alert" class="form-error">{{ t(error) }} {{ t(errorDetail) }}</p>
+    <p v-if="errorDetail" class="text-sm text-muted-foreground">{{ t(errorDetail) }}</p>
     <p v-if="message" role="status" class="rounded-lg bg-muted p-4 text-sm">{{ t(message) }}</p>
     <div class="grid gap-5 lg:grid-cols-3">
       <article v-for="app in apps" :key="app.id" class="workspace-card flex flex-col gap-4 p-6">
@@ -117,7 +120,8 @@ async function importFiles(): Promise<void> {
         <div class="flex items-end"><Button type="submit" :is-disabled="blocked || !manifestFile || !imageFile">{{ t(importing ? 'Importing…' : 'Import Studio image') }}</Button></div>
         <p class="text-xs text-muted-foreground sm:col-span-2">{{ t("Choose both files downloaded by Studio. The image fingerprint must match. Studio's author submission does not approve catalogue publication.") }}</p>
       </form>
-      <p v-if="loading" role="status">{{ t("Loading creative imports…") }}</p>
+      <ContentSkeleton v-if="loading" :cards="2" :label="t('Loading creative imports…')"/>
+      <Button v-else-if="error&&!imports.length" variant="outline" @click="loadImports">{{t('Retry')}}</Button>
       <p v-else-if="!imports.length" class="empty-state">{{ t("No Studio renders have been imported for this brand.") }}</p>
       <div v-else class="grid gap-4 sm:grid-cols-2"><article v-for="item in imports" :key="item.id" class="workspace-card space-y-3 p-5">
         <img :src="`/api/organizations/${workspace.organization.value!.id}/media/${item.input.derivative.mediaId}/content`" :alt="t('Unreviewed Studio visualization')" class="h-48 w-full rounded-lg bg-muted object-contain"/>

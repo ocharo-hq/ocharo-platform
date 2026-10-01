@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { watch } from 'vue';
+import { notifyError } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
+import CatalogueWorkspacePage from './CatalogueWorkspacePage.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
 import BuildIdentity from '../shared/BuildIdentity.vue';
@@ -31,6 +35,8 @@ const currentPath = window.location.pathname;
 const location = readWorkspaceLocation(currentPath);
 const designTarget = readDesignTarget(window.location.search);
 const workspace = useWorkspace(props.access, location);
+watch(workspace.error, failure => { if (failure) notifyError(failureMessage(failure), 'workspace-load'); });
+watch(workspace.refreshError, failure => { if (failure) notifyError('Some workspace information could not refresh. Your design remains open.', 'workspace-refresh'); });
 function changeOrganization(event: Event): void {
   const select = event.target as HTMLSelectElement;
   const id = select.value;
@@ -46,7 +52,7 @@ function changeOrganization(event: Event): void {
         <div class="flex items-center gap-3">
           <span class="brand-mark" aria-hidden="true">O</span
           ><span
-            ><b class="block text-sm">{{ t("Ocharo workspace") }} <BuildIdentity /></b
+            ><b class="block text-sm">{{ t("Ocharo workspace") }}</b
             ><span class="text-xs text-muted-foreground">{{ t("Your creative business") }}</span></span
           >
         </div>
@@ -89,7 +95,7 @@ function changeOrganization(event: Event): void {
                     `/organizations/${location.organizationId}${section === 'overview' ? '' : `/${section}`}`,
                   )
                 "
-                >{{ t(({overview:'Overview',products:'Products & releases',integrations:'Connected apps',catalogue:'Catalogue designer','business-cards':'Business cards',content:'Content',media:'Media',brands:'Brands'})[section]) }}</Button
+                >{{ t(({overview:'Overview',products:'Products & releases',integrations:'Connected apps',catalogue:'Catalogues','business-cards':'Business cards',content:'Content',media:'Media',brands:'Brands'})[section]) }}</Button
               ></template
             >
             <Button size="sm" variant="ghost" :is-disabled="access.busy.value" @click="access.navigate('/system')"
@@ -97,12 +103,10 @@ function changeOrganization(event: Event): void {
             >
           </nav>
         </div>
-        <p v-if="workspace.refreshError.value && !workspace.error.value" role="status" class="mb-4 rounded-lg border border-border bg-card p-3 text-sm text-muted-foreground">{{ t("Some workspace information could not refresh. Your design remains open.") }} <button class="underline" @click="access.navigate(currentPath)">{{ t("Reload workspace") }}</button></p>
         <div>
-          <p v-if="workspace.loading.value" role="status" class="empty-state">{{ t("Loading your workspace…") }}</p>
+          <ContentSkeleton v-if="workspace.loading.value" :label="t('Loading your workspace…')" />
           <section v-else-if="workspace.error.value" role="alert" class="workspace-card p-6">
             <h1 class="text-xl font-semibold">{{ t("Workspace unavailable") }}</h1>
-            <p class="mt-3 text-sm">{{ t(failureMessage(workspace.error.value)) }}</p>
             <Button class="mt-5" variant="outline" @click="access.navigate(currentPath)">{{ t("Reload workspace") }}</Button>
           </section>
           <slot v-else-if="location.section === 'system'" name="diagnostics" />
@@ -112,7 +116,8 @@ function changeOrganization(event: Event): void {
             <p class="mt-3 text-sm text-muted-foreground">{{ t("Choose one of your current memberships.") }}</p>
           </section>
           <OverviewPage v-else-if="location.section === 'overview'" :access="access" :workspace="workspace" />
-          <DesignEditorPage v-else-if="location.section === 'catalogue' || location.section === 'business-cards'" :access="access" :workspace="workspace" :kind="location.section === 'catalogue' ? 'catalogue' : 'business-card'" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" />
+          <CatalogueWorkspacePage v-else-if="location.section === 'catalogue'" :access="access" :workspace="workspace" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" :initial-mode="designTarget.mode" />
+          <DesignEditorPage v-else-if="location.section === 'business-cards'" :access="access" :workspace="workspace" kind="business-card" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" />
           <CommercePage v-else-if="location.section === 'products'" :access="access" :workspace="workspace" />
           <IntegrationsPage v-else-if="location.section === 'integrations'" :access="access" :workspace="workspace" />
           <BrandsPage v-else-if="location.section === 'brands'" :access="access" :workspace="workspace" />
@@ -126,6 +131,7 @@ function changeOrganization(event: Event): void {
         </div>
         <footer class="mt-12 border-t border-border pt-5 text-xs leading-5 text-muted-foreground">
           {{ t("Ocharo · A place for your collection, identity, and stories. Social publishing is not connected.") }}
+          <div class="mt-3"><span class="mr-2">{{ t("About this app") }}</span><BuildIdentity /></div>
         </footer>
       </AppShellContent>
     </AppShellMain>

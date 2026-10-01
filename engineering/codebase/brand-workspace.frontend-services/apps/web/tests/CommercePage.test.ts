@@ -6,6 +6,7 @@ import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 import { initialCommerce } from '@/domain/workspace/Commerce';
+import { feedbackBus } from '@/application/shared/UseFeedback';
 import CommercePage from '@/presentation/workspace/CommercePage.vue';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), releases: vi.fn(), save: vi.fn(), image: vi.fn(), publish: vi.fn() }));
@@ -30,6 +31,7 @@ describe('commerce draft safety', () => {
     expect(wrapper.text()).toContain('Draft 3');
   });
   it('keeps the dirty buffer on conflicts and blocks brand changes', async () => {
+    const notification = vi.spyOn(feedbackBus, 'notify');
     const {access} = page(); await flushPromises();
     await button('Brand identity').trigger('click');
     await wrapper.findAll('input')[0]!.setValue('Edited brand');
@@ -39,7 +41,8 @@ describe('commerce draft safety', () => {
     await button('Save draft').trigger('click');await flushPromises();
     expect((wrapper.findAll('input')[0]!.element as HTMLInputElement).value).toBe('Edited brand');
     expect(wrapper.text()).toContain('Unsaved changes');
-    expect(wrapper.text()).toContain('This record changed');
+    expect(notification).toHaveBeenCalledWith(expect.objectContaining({tone:'danger',description:expect.stringContaining('This record changed')}));
+    notification.mockRestore();
   });
   it('publishes only a saved revision with an owner note', async () => {
     page();await flushPromises();

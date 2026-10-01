@@ -21,6 +21,11 @@ import DesignPrintPreview from './DesignPrintPreview.vue';
 import CataloguePublication from './CataloguePublication.vue';
 import CatalogueTools from './CatalogueTools.vue';
 import CatalogueSettingsPanel from './CatalogueSettingsPanel.vue';
+import { requestConfirmation } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
+import { useCommerce } from '@/application/workspace/UseCommerce';
+import { eligibleCataloguePdf } from '@/domain/workspace/CatalogueDocuments';
+import type { CommerceDraft } from '@/domain/workspace/Commerce';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import CatalogueBuilder from './CatalogueBuilder.vue';
 import { appendCataloguePages, createCatalogueCover, removeCataloguePage } from '@/domain/workspace/CatalogueComposer';
@@ -32,6 +37,8 @@ const { t } = useUiLocale();
 const props = defineProps<{ access: AccessControls; workspace: WorkspaceControls; kind: DesignKind; initialDocumentId?: string | null; initialPageId?: string | null; navigationError?: string | null }>();
 const store = useDesignDocument(props.access, props.workspace.organization.value!.id, props.kind);
 const preflight = useDesignPreflight();
+const catalogueApi=useCommerce(props.access);
+const exportExclusions=ref<string[]>([]);
 const pageId = ref('');
 const selectedId = ref<string | null>(null);
 const locale = ref<'uz'|'ru'|'en'>('uz');
@@ -82,13 +89,13 @@ onMounted(async () => {
         if (store.snapshot.value?.pages.some(item => item.id === props.initialPageId)) pageId.value = props.initialPageId;
         else navigationNotice.value = 'This page is no longer in the saved design. The first page is open.';
       }
-    }
+    } else navigationNotice.value = 'This catalogue is unavailable.';
   }
   routeReady.value = true;
 });
 watch([() => store.record.value?.id, () => page.value?.id, routeReady], () => {
   if (!routeReady.value || !store.snapshot.value) return;
-  const path = designEditorUrl(props.workspace.organization.value!.id, props.kind, store.record.value?.id, page.value?.id);
+  const path = designEditorUrl(props.workspace.organization.value!.id, props.kind, store.record.value?.id, page.value?.id, props.kind==='catalogue'?'pdf':null);
   window.history.replaceState(window.history.state, '', path);
 }, { flush: 'post' });
 async function openDesignFromLink(event: MouseEvent, id: string): Promise<void> {
@@ -97,37 +104,37 @@ async function openDesignFromLink(event: MouseEvent, id: string): Promise<void> 
   event.preventDefault();
   if (await store.load(id)) { library.value = false; selectedId.value = null; pageId.value = store.snapshot.value?.pages[0]?.id ?? ''; navigationNotice.value = ''; }
 }
-function restoreRevision(value: { snapshot: DesignSnapshot; title: string; revision: number }): void {
+async function restoreRevision(value: { snapshot: DesignSnapshot; title: string; revision: number }): Promise<void> {
   if (disabled.value) return;
-  if (store.create(value.snapshot, `${value.title} · restored revision ${value.revision}`.slice(0, 160))) {
+  if (await store.create(value.snapshot, `${value.title} · restored revision ${value.revision}`.slice(0, 160))) {
     selectedId.value = null; pageId.value = store.snapshot.value?.pages[0]?.id ?? ''; library.value = false;
     navigationNotice.value = t('Revision {revision} opened as a new unsaved copy. Save design to keep it.', {revision:value.revision});
   }
 }
-function connectCatalogueCopy(snapshot: DesignSnapshot): void {
+async function connectCatalogueCopy(snapshot: DesignSnapshot): Promise<void> {
   if (disabled.value) return;
-  if (store.create(snapshot, `${store.title.value || 'Ocharo catalogue'} · connected`.slice(0, 160))) {
+  if (await store.create(snapshot, `${store.title.value || 'Ocharo catalogue'} · connected`.slice(0, 160))) {
     library.value = false;
     navigationNotice.value = t('Connected as a new unsaved copy. Save design to keep it.');
   }
 }
 function updateSnapshot(next: DesignSnapshot): void { if (!disabled.value) store.replace(next); }
-function create(): void {
+async function create(): Promise<void> {
   if (disabled.value) return;
-  store.create(props.kind === 'catalogue' ? createCatalogueTemplate(locale.value) : createCardTemplate('labelled', locale.value), props.kind === 'catalogue' ? `Ocharo · 2026 collection · ${locale.value.toUpperCase()}` : 'Ocharo · business card');
+  await store.create(props.kind === 'catalogue' ? createCatalogueTemplate(locale.value) : createCardTemplate('labelled', locale.value), props.kind === 'catalogue' ? `Ocharo · 2026 collection · ${locale.value.toUpperCase()}` : 'Ocharo · business card');
   pageId.value = store.snapshot.value?.pages[0]?.id ?? ''; selectedId.value = null;
 }
-function insertPages(pages: DesignPage[], brandName: string): void {
+async function insertPages(pages: DesignPage[], brandName: string): Promise<void> {
   if (disabled.value) return;
   try {
     if (store.snapshot.value) store.replace(appendCataloguePages(store.snapshot.value, pages, page.value?.id));
-    else store.create(appendCataloguePages(createCatalogueCover(locale.value, brandName), pages), `${brandName} · catalogue · ${locale.value.toUpperCase()}`);
+    else await store.create(appendCataloguePages(createCatalogueCover(locale.value, brandName), pages), `${brandName} · catalogue · ${locale.value.toUpperCase()}`);
     pageId.value = pages[0]?.id ?? ''; selectedId.value = null; builder.value = false;
   } catch (cause) { store.error.value = cause instanceof Error ? cause.message : 'Unable to add pages.'; }
 }
-function removePage(): void {
+async function removePage(): Promise<void> {
   if (!store.snapshot.value || !page.value || disabled.value) return;
-  if (!window.confirm(t('Remove “{title}” from this edition? You can undo this change.', {title:page.value.title}))) return;
+  if (!await requestConfirmation(t('Remove “{title}” from this edition? You can undo this change.', {title:page.value.title}))) return;
   try { store.replace(removeCataloguePage(store.snapshot.value, page.value.id)); selectedId.value = null; }
   catch (cause) { store.error.value = cause instanceof Error ? cause.message : 'Unable to remove page.'; }
 }
@@ -205,7 +212,7 @@ async function importFile(event: Event): Promise<void> {
     const data = JSON.parse(await file.text()) as { title?: string; snapshot?: unknown };
     const snapshot = validateSnapshot(data.snapshot ?? data);
     if (snapshot.kind !== props.kind) throw new Error('Open this file in the other editor.');
-    store.create(snapshot, data.title?.slice(0,160) || 'Imported design');
+    await store.create(snapshot, data.title?.slice(0,160) || 'Imported design');
   } catch (error) { store.error.value = error instanceof Error ? error.message : 'Unable to import this design.'; }
 }
 function exportEditable(): void {
@@ -214,18 +221,31 @@ function exportEditable(): void {
 function inspectIssue(issue: DesignPreflightIssue): void {
   pageId.value = issue.pageId; selectedId.value = issue.elementId; printPreview.value = false;
 }
+async function exportSnapshot(source:DesignSnapshot):Promise<DesignSnapshot>{
+  if(source.kind!=='catalogue')return source;
+  const brands=[...new Set([source.catalogueSettings?.brandId,...source.pages.map(page=>page.catalogueSource?.brandId)].filter((id):id is string=>!!id))];
+  const drafts:CommerceDraft[]=[];
+  for(const brand of brands){const result=await catalogueApi.get(props.workspace.organization.value!.id,brand,new AbortController().signal);if(!result.ok)throw new Error(failureMessage(result.failure));if(result.value)drafts.push(result.value);}
+  const result=eligibleCataloguePdf(source,drafts);exportExclusions.value=result.excluded.map(item=>item.title);
+  if(!result.snapshot.pages.length)throw new Error(t('No active, eligible PDF pages are available.'));
+  return result.snapshot;
+}
+function togglePage():void{if(!page.value||!store.snapshot.value||disabled.value)return;const next=cloneSnapshot(store.snapshot.value),target=next.pages.find(item=>item.id===page.value!.id)!;target.isActive=target.isActive===false;store.replace(next);}
 async function checkPages(): Promise<void> {
   if (!store.snapshot.value || exporting.value || preflight.busy.value) return;
-  try { await preflight.check(store.snapshot.value, { actionLabel: 'Done', inspectionOnly: true }); }
+  try { await preflight.check(await exportSnapshot(store.snapshot.value), { actionLabel: 'Done', inspectionOnly: true }); }
   catch (cause) { store.error.value = cause instanceof Error ? cause.message : 'Unable to check pages.'; }
 }
 async function exportFile(format: 'pdf'|'png'): Promise<void> {
   if (!store.snapshot.value || !page.value || exporting.value || preparingEdition.value || preflight.busy.value) return;
-  const snapshot = cloneSnapshot(store.snapshot.value), title = store.title.value, currentPage = snapshot.pages.find(item => item.id === page.value!.id)!;
-  const ids = format === 'png' || pdfScope.value === 'current' ? [currentPage.id] : pdfScope.value === 'selected' ? [...selectedPages.value] : undefined;
+  let snapshot = cloneSnapshot(store.snapshot.value); const title = store.title.value, currentPage = snapshot.pages.find(item => item.id === page.value!.id)!;
+  let ids = format === 'png' || pdfScope.value === 'current' ? [currentPage.id] : pdfScope.value === 'selected' ? [...selectedPages.value] : undefined;
   const unsaved = store.dirty.value;
   exporting.value = true; store.error.value = ''; exportStatus.value = 'Checking export pages…';
   try {
+    snapshot=await exportSnapshot(snapshot);
+    if(ids){ids=ids.filter(id=>snapshot.pages.some(page=>page.id===id));if(!ids.length)throw new Error(t('The selected pages are inactive or unavailable in this language.'));}
+    if(exportExclusions.value.length&&!await requestConfirmation(t('These pages will be excluded: {pages}. Continue with the remaining pages?',{pages:exportExclusions.value.join(', ')})))return;
     const allowed = await preflight.check(snapshot, { ...(ids ? { pageIds: ids } : {}), actionLabel: t('Download {format}',{format:format.toUpperCase()}), unsaved });
     if (!allowed) { exportStatus.value = 'Export cancelled. Your edits are retained.'; return; }
     if (format === 'pdf') await exportDesignPdf(snapshot, title, (current,total) => { exportStatus.value = t('Rendering page {current} of {total}…',{current,total}); }, ids);
@@ -241,13 +261,12 @@ async function exportFile(format: 'pdf'|'png'): Promise<void> {
     <header class="design-heading"><div><p class="eyebrow">{{ t("Ocharo / design atelier") }}</p><h1>{{ t(appName) }}</h1><p class="design-subtitle">{{ kind === 'catalogue' ? t("Shape the collection. Keep every detail yours.") : t("A small introduction, beautifully yours.") }}</p></div><button class="quiet-button" @click="library = !library">{{ library ? t("Hide") : t("Saved") }} {{ t("designs") }} <span>{{ store.documents.value.length }}</span></button></header>
     <div v-if="kind === 'catalogue'" class="flex flex-wrap gap-3"><Button variant="outline" :is-disabled="disabled" @click="builder = !builder">{{ builder ? t("Hide product builder") : t("Build from products") }}</Button><span class="template-note">{{ t("Product pages · continuation pages · photo collages") }}</span></div>
     <CatalogueBuilder v-if="kind === 'catalogue' && builder" :access="access" :workspace="workspace" :locale="store.snapshot.value?.locale ?? locale" :disabled="disabled" :has-document="!!store.snapshot.value" :initial-brand-id="page?.catalogueSource?.brandId ?? ''" @pages="insertPages" @close="builder = false" />
-    <div v-if="store.error.value" class="editor-alert" role="alert">{{ t(store.error.value) }}</div>
     <p v-if="navigationNotice" class="editor-alert" role="status">{{ t(navigationNotice) }}</p>
     <DesignRecovery :recovery="store.recovery" :disabled="disabled" />
     <section v-if="library" class="saved-library catalogue-library" :aria-label="t('Saved designs')">
       <div class="library-heading"><div><h2>{{ t("Saved") }} {{ kind === 'catalogue' ? t('catalogues') : t("business cards") }}</h2><p>{{ t("Continue a saved design, or create a new one below.") }}</p></div><label class="field-label">{{ t("Find a saved design") }}<input v-model="librarySearch" type="search" :placeholder="t('Search by name')" maxlength="160"></label></div>
-      <p v-if="store.loading.value" role="status">{{ t("Loading saved designs…") }}</p>
-      <p v-else-if="!savedDesigns.length">{{ librarySearch ? t("No saved designs match this name.") : t("No saved designs yet.") }}</p>
+      <ContentSkeleton v-if="store.loading.value" :cards="3" :label="t('Loading saved designs…')"/>
+      <p v-else-if="!savedDesigns.length&&!store.error.value">{{ librarySearch ? t("No saved designs match this name.") : t("No saved designs yet.") }}</p>
       <a v-for="doc in savedDesigns" :key="doc.id" class="saved-design" :href="designEditorUrl(workspace.organization.value!.id, kind, doc.id)" :aria-disabled="navigationLocked || undefined" @click="openDesignFromLink($event, doc.id)"><b>{{ doc.title }}</b><small>{{ t("Revision") }} {{ doc.revision }} · {{ new Date(doc.updatedAtUtc).toLocaleDateString() }}</small><span>{{ t("Open in editor →") }}</span></a>
     </section>
     <div v-if="!store.snapshot.value" class="template-launch">
@@ -258,8 +277,8 @@ async function exportFile(format: 'pdf'|'png'): Promise<void> {
       <div class="design-toolbar"><div class="design-name"><input v-model="store.title.value" :aria-label="t('Design name')" maxlength="160" :disabled="disabled"><span :class="{'unsaved':store.dirty.value}" role="status">{{ store.dirty.value ? t("Unsaved changes") : t(store.status.value) || t("Saved") }}</span></div><div class="toolbar-actions"><button class="quiet-button" :disabled="disabled || !store.history.value.length" @click="store.undo">{{ t("Undo") }}</button><button class="quiet-button" :disabled="disabled || !store.future.value.length" @click="store.redo">{{ t("Redo") }}</button><Button variant="outline" :is-disabled="disabled" @click="store.save(true)">{{ t("Save copy") }}</Button><Button :is-disabled="disabled || !store.dirty.value" @click="store.save()">{{ store.busy.value ? t("Saving…") : t("Save design") }}</Button></div></div>
       <CatalogueSettingsPanel v-if="kind === 'catalogue'" :access="access" :workspace="workspace" :snapshot="store.snapshot.value" :page-id="pageId" :selected-id="selectedId" :disabled="disabled" @change="updateSnapshot" @connect="connectCatalogueCopy" />
       <div class="editor-layout">
-        <aside class="page-rail"><div class="rail-heading"><h2>{{ kind === 'catalogue' ? t("Pages") : t("Sides") }}</h2><span>{{ store.snapshot.value.pages.length }}</span></div><div v-for="(item,index) in store.snapshot.value.pages" :key="item.id" class="page-entry"><button class="page-tile" :class="{active:item.id === page?.id}" :aria-current="item.id === page?.id ? 'page' : undefined" @click="pageId = item.id; selectedId = null"><span class="page-number">{{ String(index+1).padStart(2,'0') }}</span><div class="page-miniature" :lang="store.snapshot.value.locale"><DesignCanvas :page="item" :editable="false" /></div><span>{{ item.title }}</span></button><label class="page-export-choice"><input v-model="selectedPages" type="checkbox" :value="item.id" :aria-label="t('Select page {page} for PDF', {page:index+1})"> {{ t("Export page") }} {{ index + 1 }}</label></div><div class="page-rail-actions"><button class="quiet-button" :disabled="disabled" @click="reorderPage(-1)">{{ t("Move up") }}</button><button class="quiet-button" :disabled="disabled" @click="reorderPage(1)">{{ t("Move down") }}</button><button class="quiet-button" :disabled="disabled || store.snapshot.value.pages.length >= 100" @click="duplicatePage">{{ t("Duplicate page") }}</button><button v-if="kind === 'catalogue'" class="quiet-button" :disabled="disabled || store.snapshot.value.pages.length < 2" @click="removePage">{{ t("Remove page") }}</button></div></aside>
-        <section class="design-stage" :aria-label="t('Design canvas and export')"><div class="stage-toolbar"><span>{{ page?.title }}</span><button type="button" class="preview-toggle" :aria-pressed="printPreview" @click="printPreview = !printPreview">{{ printPreview ? t("Edit page") : t("PDF preview") }}</button><label>{{ t("Zoom") }} <select v-model.number="zoom" :aria-label="t('Canvas zoom')"><option :value="65">65%</option><option :value="85">85%</option><option :value="100">{{ t("Fit") }}</option><option :value="125">125%</option><option :value="150">150%</option></select></label></div><div ref="stageSurface" class="design-artboard-scroll"><div class="design-artboard" :lang="store.snapshot.value.locale" :style="{width: `${artboardWidth}px`}"><DesignPrintPreview v-if="page && printPreview" :page="page" /><DesignCanvas v-else-if="page" :page="page" :selected-id="selectedId" :editable="!disabled" @select="selectedId = $event" @change="changeElements" /></div></div><p class="canvas-hint">{{ printPreview ? t("Exact PDF renderer · fixed page proportions · zoom never reflows content") : t("Select any element · Drag to move · Use the corner to resize") }}</p><div class="export-tray"><div><b>{{ t("Ready to share?") }}</b><span>{{ Number(page?.width.toFixed(3)) }} × {{ Number(page?.height.toFixed(3)) }} mm · {{ pdfScope === 'all' ? (kind === 'catalogue' ? t("Whole catalogue PDF") : t("Two-sided card PDF")) : pdfScope === 'current' ? t("Current page PDF") : t('{count} selected pages',{count:selectedPages.length}) }}</span></div><label class="pdf-scope">{{ t("PDF pages") }}<select v-model="pdfScope" :aria-label="t('PDF export scope')" :disabled="exporting"><option value="all">{{ t("Whole edition") }}</option><option value="current">{{ t("Current page") }}</option><option value="selected">{{ t("Selected pages (") }}{{ selectedPages.length }})</option></select></label><button class="quiet-button" :disabled="exporting || preparingEdition || preflight.busy.value" @click="checkPages">{{ t("Check pages") }}</button><button class="quiet-button" :disabled="exporting || preparingEdition || preflight.busy.value" @click="exportEditable">{{ t("Editable file") }}</button><button class="quiet-button" :disabled="exporting || preparingEdition || preflight.busy.value" @click="exportFile('png')">{{ t("Page PNG") }}</button><Button variant="outline" :is-disabled="exporting || preparingEdition || preflight.busy.value || (pdfScope === 'selected' && !selectedPages.length)" @click="exportFile('pdf')">{{ exporting ? t("Exporting…") : t("Export PDF") }}</Button></div><p v-if="exportStatus" class="export-status" role="status">{{ t(exportStatus) }}</p></section>
+        <aside class="page-rail"><div class="rail-heading"><h2>{{ kind === 'catalogue' ? t("Pages") : t("Sides") }}</h2><span>{{ store.snapshot.value.pages.length }}</span></div><div v-for="(item,index) in store.snapshot.value.pages" :key="item.id" class="page-entry"><button class="page-tile" :class="{active:item.id === page?.id}" :aria-current="item.id === page?.id ? 'page' : undefined" @click="pageId = item.id; selectedId = null"><span class="page-number">{{ String(index+1).padStart(2,'0') }}</span><div class="page-miniature" :lang="store.snapshot.value.locale"><DesignCanvas :page="item" :editable="false" /></div><span>{{ item.title }}{{item.isActive===false?` · ${t('Inactive')}`:''}}</span></button><label class="page-export-choice"><input v-model="selectedPages" type="checkbox" :value="item.id" :aria-label="t('Select page {page} for PDF', {page:index+1})"> {{ t("Export page") }} {{ index + 1 }}</label></div><div class="page-rail-actions"><button class="quiet-button" :disabled="disabled" @click="reorderPage(-1)">{{ t("Move up") }}</button><button class="quiet-button" :disabled="disabled" @click="reorderPage(1)">{{ t("Move down") }}</button><button class="quiet-button" :disabled="disabled || store.snapshot.value.pages.length >= 100" @click="duplicatePage">{{ t("Duplicate page") }}</button><button v-if="kind === 'catalogue'" class="quiet-button" :disabled="disabled || store.snapshot.value.pages.length < 2" @click="removePage">{{ t("Remove page") }}</button></div></aside>
+        <section class="design-stage" :aria-label="t('Design canvas and export')"><div class="stage-toolbar"><span>{{ page?.title }}</span><label v-if="kind==='catalogue'&&page"><input type="checkbox" :checked="page.isActive!==false" :disabled="disabled" @change="togglePage">{{t('Active page')}}</label><button type="button" class="preview-toggle" :aria-pressed="printPreview" @click="printPreview = !printPreview">{{ printPreview ? t("Edit page") : t("PDF preview") }}</button><label>{{ t("Zoom") }} <select v-model.number="zoom" :aria-label="t('Canvas zoom')"><option :value="65">65%</option><option :value="85">85%</option><option :value="100">{{ t("Fit") }}</option><option :value="125">125%</option><option :value="150">150%</option></select></label></div><div ref="stageSurface" class="design-artboard-scroll"><div class="design-artboard" :lang="store.snapshot.value.locale" :style="{width: `${artboardWidth}px`}"><DesignPrintPreview v-if="page && printPreview" :page="page" /><DesignCanvas v-else-if="page" :page="page" :selected-id="selectedId" :editable="!disabled" @select="selectedId = $event" @change="changeElements" /></div></div><p class="canvas-hint">{{ printPreview ? t("Exact PDF renderer · fixed page proportions · zoom never reflows content") : t("Select any element · Drag to move · Use the corner to resize") }}</p><div class="export-tray"><div><b>{{ t("Ready to share?") }}</b><span>{{ Number(page?.width.toFixed(3)) }} × {{ Number(page?.height.toFixed(3)) }} mm · {{ pdfScope === 'all' ? (kind === 'catalogue' ? t("Whole catalogue PDF") : t("Two-sided card PDF")) : pdfScope === 'current' ? t("Current page PDF") : t('{count} selected pages',{count:selectedPages.length}) }}</span></div><label class="pdf-scope">{{ t("PDF pages") }}<select v-model="pdfScope" :aria-label="t('PDF export scope')" :disabled="exporting"><option value="all">{{ t("Whole edition") }}</option><option value="current">{{ t("Current page") }}</option><option value="selected">{{ t("Selected pages (") }}{{ selectedPages.length }})</option></select></label><button class="quiet-button" :disabled="exporting || preparingEdition || preflight.busy.value" @click="checkPages">{{ t("Check pages") }}</button><button class="quiet-button" :disabled="exporting || preparingEdition || preflight.busy.value" @click="exportEditable">{{ t("Editable file") }}</button><button class="quiet-button" :disabled="exporting || preparingEdition || preflight.busy.value" @click="exportFile('png')">{{ t("Page PNG") }}</button><Button variant="outline" :is-disabled="exporting || preparingEdition || preflight.busy.value || (pdfScope === 'selected' && !selectedPages.length)" @click="exportFile('pdf')">{{ exporting ? t("Exporting…") : t("Export PDF") }}</Button></div><p v-if="exportExclusions.length" class="edition-notice">{{t('Pages excluded from export:')}} {{exportExclusions.join(', ')}}</p><p v-if="exportStatus" class="export-status" role="status">{{ t(exportStatus) }}</p></section>
         <aside class="design-inspector"><fieldset :disabled="disabled"><label class="field-label">{{ t("Select element") }}<select :aria-label="t('Select page element')" :value="selectedId ?? ''" @change="selectedId = text($event) || null"><option value="">{{ t("Page settings") }}</option><option v-for="element in page?.elements" :key="element.id" :value="element.id">{{ element.label }} · {{ element.type }}</option></select></label><div class="inspector-heading"><p class="eyebrow">{{ selected ? t("Selected element") : t("Page settings") }}</p><h2>{{ selected?.label || page?.title }}</h2></div><template v-if="selected"><label v-if="selected.type === 'text'" class="field-label">{{ t("Text") }}<textarea :value="selected.text" :readonly="!!selected.binding" rows="4" @change="patchElement({text:text($event)})" /></label><p v-if="selected.binding" class="inspector-help">{{ t(selected.binding.kind === 'product' ? 'Edit this value in Products, then refresh saved product values.' : 'Edit this value in Shared text and prices.') }}</p><div class="geometry-grid"><label v-for="key in ['x','y','width','height'] as const" :key="key" class="field-label">{{ t(key) }} (mm)<input type="number" step="0.5" :min="key === 'width' || key === 'height' ? 0.5 : -1000" max="1000" :value="Number(selected[key].toFixed(2))" @change="numeric($event,key)"></label></div><template v-if="selected.type === 'text'"><div class="geometry-grid"><label class="field-label">{{ t("Size (mm)") }}<input type="number" min="0.5" max="200" step="0.25" :value="selected.fontSize ?? 3" @change="numeric($event,'fontSize')"></label><label class="field-label">{{ t("Text color") }}<input type="color" :value="selected.color ?? '#282820'" @input="patchElement({color:text($event)})"></label></div><label class="field-label">{{ t("Typeface") }}<select :value="selected.fontFamily ?? 'sans'" @change="patchElement({fontFamily:text($event) as 'serif'|'sans'})"><option value="serif">{{ t("Georgia · editorial") }}</option><option value="sans">{{ t("Arial · simple") }}</option></select></label><label class="field-label">{{ t("Alignment") }}<select :value="selected.align ?? 'left'" @change="patchElement({align:text($event) as 'left'|'center'|'right'})"><option value="left">{{ t("left") }}</option><option value="center">{{ t("center") }}</option><option value="right">{{ t("right") }}</option></select></label></template><template v-if="selected.type === 'image'"><button v-if="!selected.productId" class="inspector-action" @click="photoInput?.click()">{{ t("Replace photo") }}</button><p v-else class="inspector-help">{{ t('Choose another product image in Page photographs.') }}</p><label class="field-label">{{ t("Fit") }}<select :value="selected.fit ?? 'cover'" @change="patchElement({fit:text($event) as 'cover'|'contain'})"><option value="cover">{{ t("Fill frame") }}</option><option value="contain">{{ t("Show whole image") }}</option></select></label><label class="field-label">{{ t("Crop horizontally") }}<input type="range" min="0" max="100" :value="selected.cropX ?? 50" @change="numeric($event,'cropX')"></label><label class="field-label">{{ t("Crop vertically") }}<input type="range" min="0" max="100" :value="selected.cropY ?? 50" @change="numeric($event,'cropY')"></label><label class="field-label">{{ t("Photo zoom") }}<input type="range" min="1" max="5" step="0.05" :value="selected.zoom ?? 1" @change="numeric($event,'zoom')"></label></template><label v-if="selected.type === 'shape'" class="field-label">{{ t("Fill") }}<input type="color" :value="selected.background ?? selected.color ?? '#ffffff'" @input="patchElement({background:text($event)})"></label><div class="inspector-actions"><button @click="moveLayer(-1)">{{ t("Send backward") }}</button><button @click="moveLayer(1)">{{ t("Bring forward") }}</button><button @click="removeElement">{{ t("Remove element") }}</button></div></template><template v-else><p class="inspector-help">{{ t("Click a photo, price, or text on the page to edit it.") }}</p><label v-if="page" class="field-label">{{ t("Page name") }}<input :value="page.title" maxlength="160" @change="renamePage"></label><label v-if="page" class="field-label">{{ t("Page background") }}<input type="color" :value="page.background" @input="updateSnapshot({...store.snapshot.value,pages:store.snapshot.value.pages.map(p=>p.id === page?.id ? {...p,background:text($event)} : p)})"></label></template><div class="inspector-add"><button class="inspector-action" @click="addText">{{ t("+ Add text") }}</button><button class="inspector-action" @click="selectedId = null; photoInput?.click()">{{ t("+ Add photo") }}</button></div><CatalogueTools v-if="kind === 'catalogue'" :snapshot="store.snapshot.value" :page-id="pageId" :selected-id="selectedId" @update:snapshot="updateSnapshot" @update:page-id="pageId = $event" @update:selected-id="selectedId = $event" /><CardTools v-else :snapshot="store.snapshot.value" :page-id="pageId" :selected-id="selectedId" @update:snapshot="updateSnapshot" @update:page-id="pageId = $event" @update:selected-id="selectedId = $event" /></fieldset><div class="inspector-footer"><button class="quiet-button" :disabled="disabled" @click="create">{{ t("New from template") }}</button><button class="quiet-button" :disabled="disabled" @click="fileInput?.click()">{{ t("Import design") }}</button></div></aside>
       </div>
     </template>

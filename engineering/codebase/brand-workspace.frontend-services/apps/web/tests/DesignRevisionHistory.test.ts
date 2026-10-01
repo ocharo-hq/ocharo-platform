@@ -1,3 +1,4 @@
+import { feedbackBus } from '@/application/shared/UseFeedback';
 import { ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +10,7 @@ import type { DesignRevisionCopy } from '@/domain/workspace/DesignRevisions';
 import { createCatalogueTemplate } from '@/domain/workspace/Templates';
 import DesignRevisionHistory from '@/presentation/workspace/DesignRevisionHistory.vue';
 
+const notices = vi.fn();
 const getRevisions = vi.fn(), getRevision = vi.fn();
 const busy = ref(false), invalidated = ref(false);
 const source: DesignDocument = {
@@ -22,7 +24,7 @@ const access = { api: { getDesignRevisions: getRevisions, getDesignRevision: get
 let wrapper: VueWrapper;
 afterEach(() => wrapper?.unmount());
 beforeEach(() => {
-  vi.clearAllMocks(); busy.value = false; invalidated.value = false;
+  vi.clearAllMocks(); vi.spyOn(feedbackBus, 'notify').mockImplementation(notices); busy.value = false; invalidated.value = false;
   getRevisions.mockResolvedValue(ResultExtensions.ok([metadata(3), metadata(2), metadata(1)]));
   getRevision.mockImplementation((_org: string, _id: string, revision: number) => Promise.resolve(ResultExtensions.ok(historical(revision))));
 });
@@ -108,20 +110,33 @@ describe('saved revision review and separate unsaved restoration', () => {
   it('retains the editor on load failures and offers a retry without emitting restoration', async () => {
     getRevision.mockResolvedValueOnce(ResultExtensions.fail(ApiFailureFactory.create('http', new Response(null, { status: 404 }))));
     setup(); await expand(); await inspect(2);
-    expect(wrapper.get('[role=alert]').text()).toContain('unavailable'); expect(button('Restore as new unsaved copy')).toBeUndefined();
+    expect(notices).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining('unavailable') }));
+    expect(wrapper.text()).toContain('Preview unavailable'); expect(button('Restore as new unsaved copy')).toBeUndefined();
     await button('Retry revision').trigger('click'); await flushPromises(); expect(wrapper.text()).toContain('Revision 2 · EN');
     expect(source.revision).toBe(3); expect(wrapper.emitted('restore')).toBeUndefined();
   });
   it('rejects mismatched revision identity before exposing a restore action', async () => {
     getRevision.mockResolvedValueOnce(ResultExtensions.ok({ ...historical(1), organizationId: 'another-organization' }));
     setup(); await expand(); await inspect(1);
-    expect(wrapper.get('[role=alert]').text()).toContain('different revision'); expect(button('Restore as new unsaved copy')).toBeUndefined();
+    expect(notices).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining('different revision') })); expect(button('Restore as new unsaved copy')).toBeUndefined();
   });
   it('reports rejected requests safely and permits a history retry', async () => {
     getRevisions.mockRejectedValueOnce(new Error('private server details'));
-    setup(); await expand(); expect(wrapper.get('[role=alert]').text()).toContain('Unable to load saved revisions');
+    setup(); await expand(); expect(notices).toHaveBeenCalledWith(expect.objectContaining({ description: expect.stringContaining('Unable to load saved revisions') }));
+    expect(wrapper.text()).toContain('Saved revision history is unavailable');
     expect(wrapper.text()).not.toContain('private server details');
     await button('Refresh history').trigger('click'); await flushPromises(); expect(wrapper.findAll('.revision-choice')).toHaveLength(3);
+  });
+  it('announces a pending revision list once and keeps its skeleton until completion', async () => {
+    const request = pending<ReturnType<typeof ResultExtensions.ok<ReturnType<typeof metadata>[]>>>();
+    getRevisions.mockImplementationOnce(() => request.promise); setup();
+    await wrapper.get('.history-toggle').trigger('click'); await flushPromises();
+    expect(wrapper.findAll('[role=status]')).toHaveLength(1);
+    expect(wrapper.get('[role=status]').classes()).toContain('sr-only');
+    expect(wrapper.find('.history-layout').exists()).toBe(false);
+    request.resolve(ResultExtensions.ok([metadata(3)])); await flushPromises();
+    expect(wrapper.findAll('[role=status]')).toHaveLength(0);
+    expect(wrapper.findAll('.revision-choice')).toHaveLength(1);
   });
   it('cannot request revision history for an unsaved design', async () => {
     setup(); await wrapper.setProps({ document: null }); expect(wrapper.get('.history-toggle').attributes('disabled')).toBeDefined();

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useErrorToast } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { onScopeDispose, ref, watch } from 'vue';
 import { renderDesignPage } from '@/application/workspace/ExportDocument';
@@ -9,9 +11,11 @@ const { t } = useUiLocale();
 defineOptions({ name: 'DesignPrintPreview' });
 const props = defineProps<{ page: DesignPage }>();
 const holder = ref<HTMLElement>();
-const busy = ref(false), error = ref('');
+const busy = ref(false), error = ref<string | null>(null);
+useErrorToast(error);
 let sequence = 0;
-watch(() => props.page, async page => {
+async function render(): Promise<void> {
+  const page = props.page;
   const request = ++sequence; busy.value = true; error.value = '';
   try {
     const canvas = await renderDesignPage(page, 240);
@@ -20,17 +24,21 @@ watch(() => props.page, async page => {
     canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', `${page.title} exact PDF preview`);
     const old = holder.value?.querySelector('canvas'); if (old) { old.width = 0; old.height = 0; }
     holder.value?.replaceChildren(canvas);
-  } catch (cause) { if (request === sequence) error.value = cause instanceof Error ? cause.message : 'Unable to render this page.'; }
+  } catch { if (request === sequence) error.value = 'Unable to render this page.'; }
   finally { if (request === sequence) busy.value = false; }
-}, { immediate: true });
+}
+watch(() => props.page, render, { immediate: true });
 onScopeDispose(() => { sequence++; const canvas = holder.value?.querySelector('canvas'); if (canvas) { canvas.width = 0; canvas.height = 0; } });
 </script>
 
 <template>
   <div class="print-preview" :style="{ aspectRatio: `${page.width} / ${page.height}`, background: page.background }" :aria-busy="busy">
-    <div ref="holder" class="print-preview-canvas" />
-    <p v-if="busy" class="preview-message" role="status">{{ t("Rendering PDF preview…") }}</p>
-    <p v-if="error" class="preview-message preview-error" role="alert">{{ t(error) }}</p>
+    <div ref="holder" v-show="!busy && !error" class="print-preview-canvas" />
+    <ContentSkeleton v-if="busy" class="preview-message" label="Rendering PDF preview…" :cards="1" />
+    <div v-if="error" class="preview-message">
+      <p>{{ t("Preview unavailable") }}</p>
+      <button type="button" class="quiet-button" @click="render">{{ t("Retry preview") }}</button>
+    </div>
   </div>
 </template>
 

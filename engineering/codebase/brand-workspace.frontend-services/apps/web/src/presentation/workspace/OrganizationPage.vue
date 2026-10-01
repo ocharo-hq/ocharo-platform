@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { watch, onScopeDispose } from 'vue';
 
@@ -7,7 +8,7 @@ import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
 import { Field, TextInput } from '@wow-two-beta/ui-vue/presentation/forms';
 
-import type { AccessControls } from '@/application/workspace/UseAccess';
+import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 
 const { t } = useUiLocale();
@@ -26,6 +27,7 @@ const form = useAppForm(() => ({
       props.access.setDirty(false);
       props.access.navigate(organizationPath(result.value.id));
     }
+    if (!result.ok && result.failure.code !== 'cancelled') notifyError(failureMessage(result.failure));
     return result;
   },
 }));
@@ -80,7 +82,6 @@ onScopeDispose(() => {
             :maxlength="64"
             @blur="f.onBlur" /></Field
       ></form.Field>
-      <p v-if="form.state.submitError" role="alert" class="form-error">{{ t(form.state.submitError.message ?? '') }}</p>
       <Button type="submit" :is-loading="form.state.isSubmitting" :is-disabled="access.busy.value"
         >{{ t("Create organization") }}</Button
       >

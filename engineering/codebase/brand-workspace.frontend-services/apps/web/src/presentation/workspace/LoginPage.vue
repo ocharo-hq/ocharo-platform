@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
 import BuildIdentity from '../shared/BuildIdentity.vue';
@@ -6,7 +7,7 @@ import { useAppForm } from '@wow-two-beta/ui-vue/forms-engine/house';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Field, EmailInput, PasswordInput } from '@wow-two-beta/ui-vue/presentation/forms';
 
-import type { AccessControls } from '@/application/workspace/UseAccess';
+import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 
 const { t } = useUiLocale();
 
@@ -20,6 +21,10 @@ const form = useAppForm(() => ({
     const result = await props.access.login(values, signal);
     form.setValue('password', '');
     if (result.ok) props.access.authenticated(window.location.pathname + window.location.search);
+    if (!result.ok && result.failure.code !== 'cancelled') notifyError(
+      result.failure.status === 401 || result.failure.status === 400
+        ? 'Sign-in was not completed. Check your credentials and retry; repeated failures may temporarily lock the account.'
+        : failureMessage(result.failure), 'operator-sign-in');
     return result;
   },
 }));
@@ -58,9 +63,6 @@ const form = useAppForm(() => ({
           ><Field :label="t('Password')"
             ><PasswordInput v-model="f.value" autocomplete="current-password" required @blur="f.onBlur" /></Field
         ></form.Field>
-        <p v-if="form.state.submitError" role="alert" class="text-sm text-destructive">
-          {{ t("Sign-in was not completed. Check your credentials and retry; repeated failures may temporarily lock the account.") }}
-        </p>
         <Button type="submit" :is-loading="form.state.isSubmitting" :is-disabled="access.busy.value" is-full-width
           >{{ t("Sign in") }}</Button
         >

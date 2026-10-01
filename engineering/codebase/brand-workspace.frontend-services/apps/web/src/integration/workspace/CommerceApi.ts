@@ -25,6 +25,7 @@ export function createCommerceApi(csrf:()=>string,unauthorized:()=>void){
   imports:(o:string,b:string,signal:AbortSignal)=>client.get(`${org(o)}/brands/${encodeURIComponent(b)}/creative-imports`,{signal,decode:decode((v):v is CreativeImport[]=>Array.isArray(v)&&v.every(creative))}),
   uploadEdition:(o:string,b:string,body:FormData,signal:AbortSignal)=>client.post(`${path(o,b)}/catalogue-editions`,{...write(signal),body,decode:decode(draft)}),
   publishEdition:(o:string,b:string,locale:string,expectedRevision:number,note:string,signal:AbortSignal)=>client.post(`${path(o,b)}/catalogue-editions/${encodeURIComponent(locale)}/publish`,{...write(signal),body:{expectedRevision,note},decode:decode(release)}),
+  publishEditionById:(o:string,b:string,editionId:string,expectedRevision:number,note:string,signal:AbortSignal)=>client.post(`${path(o,b)}/catalogue-editions/${encodeURIComponent(editionId)}/publish`,{...write(signal),body:{expectedRevision,note},decode:decode(release)}),
   image:(o:string,b:string,sha:string)=>`${path(o,b)}/media/${encodeURIComponent(sha)}`,
  };
 }

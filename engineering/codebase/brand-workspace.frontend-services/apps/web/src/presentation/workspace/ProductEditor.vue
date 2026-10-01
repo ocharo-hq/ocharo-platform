@@ -7,6 +7,8 @@ import {
   type CatalogueLocale, type Copy, type Product, type ProductMediaCategory,
 } from '@/domain/workspace/Commerce';
 
+import { canConfirmProductPrices, hasFixedSomPricing, productBandPrice, updateProductBandPrice } from '@/domain/workspace/ProductReview';
+
 const { t } = useUiLocale();
 
 const props = defineProps<{ product: Product; canApprove: boolean; imageUrl: (sha: string) => string }>();
@@ -33,17 +35,9 @@ function editCopy(field: keyof Copy, value: string | null) {
 }
 function text(event: Event) { return (event.target as HTMLInputElement).value; }
 function labels(event: Event) { return [...new Set(text(event).split(',').map(value => value.trim()).filter(Boolean))]; }
-function addPrice() {
-  product.value.document.pricing = { currency: 'UZS', status: 'draft', tiers: [{ minimumQuantity: 1, maximumQuantity: null, unitPrice: 0 }], wording: null };
-}
-function addTier() {
-  const pricing = product.value.document.pricing;
-  if (!pricing) return;
-  const last = pricing.tiers.at(-1);
-  const minimum = last ? (last.maximumQuantity ?? last.minimumQuantity) + 1 : 1;
-  if (last && last.maximumQuantity === null) last.maximumQuantity = minimum - 1;
-  pricing.tiers.push({ minimumQuantity: minimum, maximumQuantity: null, unitPrice: 0 });
-  pricing.status = 'draft';
+function addPrice() { updateProductBandPrice(product.value, 1, 0); }
+function setBandPrice(quantity: 1 | 10, event: Event) {
+  updateProductBandPrice(product.value, quantity, Number(text(event)));
 }
 function addGroup() {
   (product.value.mediaGroups ??= []).push({ id: `group-${crypto.randomUUID().slice(0, 8)}`, label: t('New image group'), category: 'model', mediaIds: [] });
@@ -68,7 +62,12 @@ function roleChanged(id: string) {
     <section class="space-y-4" aria-labelledby="product-copy-title">
       <div class="flex flex-wrap items-end justify-between gap-4">
         <div><h3 id="product-copy-title" class="font-semibold">{{ t('Product translations') }}</h3><p class="text-sm text-muted-foreground">{{ t('Product wording appears in every catalogue using this product.') }}</p></div>
-        <label>{{ t('Content language') }}<select v-model="locale" class="native-select mt-2" :aria-label="t('Product content language')"><option v-for="language in catalogueLocales" :key="language.code" :value="language.code">{{ language.name }} · {{ language.code }}</option></select></label>
+        <label>{{ t('Content language') }}<select v-model="locale" class="native-select mt-2" :aria-label="t('Product content language')"><option v-for="language in catalogueLocales" :key="language.code" :value="language.code">{{ language.name }} · {{ t(productCopy(product,language.code).status==='approved'?'Confirmed':'Unconfirmed') }}</option></select></label>
+      </div>
+      <div class="rounded-lg border border-border bg-muted/40 p-3">
+        <label v-if="canApprove" class="flex items-center gap-2"><input type="checkbox" :checked="copy.status==='approved'" :disabled="!copy.name?.trim()" @change="editCopy('status',($event.target as HTMLInputElement).checked?'approved':'draft')"/>{{ catalogueLocales.find(item=>item.code===locale)?.name }} · {{ t('Approve this language for publication') }}</label>
+        <p v-else class="font-medium">{{ t(copy.status==='approved'?'Confirmed':'Unconfirmed') }}</p>
+        <p class="mt-2 text-xs text-muted-foreground">{{ t('Unconfirmed wording excludes this product from web and PDF catalogues in this language. Editing wording resets its confirmation.') }}</p>
       </div>
       <p v-if="!hasProductTranslation(product,locale)" class="rounded-lg bg-muted p-3 text-sm">{{ t('This translation is empty. Add wording before approving it.') }}</p>
       <label class="block">{{ t('Product name') }}<input :value="copy.name??''" :dir="direction" maxlength="300" class="native-input mt-2" @input="editCopy('name',text($event))" /></label>
@@ -77,7 +76,7 @@ function roleChanged(id: string) {
         <label>{{ t('Decoration') }}<input :value="copy.decoration??''" :dir="direction" maxlength="1000" class="native-input mt-2" @input="editCopy('decoration',text($event))" /></label>
       </div>
       <label class="block">{{ t('Description') }}<textarea :value="copy.description??''" :dir="direction" rows="4" maxlength="10000" class="native-input mt-2" @input="editCopy('description',text($event))" /></label>
-      <label v-if="canApprove" class="flex gap-2"><input type="checkbox" :checked="copy.status==='approved'" :disabled="!copy.name?.trim()" @change="editCopy('status',($event.target as HTMLInputElement).checked?'approved':'draft')"/>{{ t('Approve this language for publication') }}</label>
+
     </section>
     <div class="grid gap-4 sm:grid-cols-2">
       <label>{{ t('Material codes, separated by commas') }}<input :value="product.document.fabricCodes.join(', ')" class="native-input mt-2" @change="product.document.fabricCodes=labels($event)" /></label>
@@ -87,15 +86,14 @@ function roleChanged(id: string) {
     <section class="space-y-4 rounded-lg border border-border p-4" aria-labelledby="product-prices-title">
       <div class="flex justify-between gap-3"><div><h3 id="product-prices-title" class="font-semibold">{{ t('Product prices') }}</h3><p class="text-sm text-muted-foreground">{{ t('Edit amounts here. The catalogue controls which price rows appear.') }}</p></div><Button v-if="!product.document.pricing" size="sm" variant="outline" @click="addPrice">{{ t('Add price') }}</Button></div>
       <template v-if="product.document.pricing">
-        <label class="block max-w-xs">{{ t('Currency') }}<input v-model="product.document.pricing.currency" maxlength="3" pattern="[A-Z]{3}" class="native-input mt-2" @input="product.document.pricing.status='draft'"/></label>
-        <div v-for="(tier,index) in product.document.pricing.tiers" :key="index" class="grid items-end gap-3 sm:grid-cols-[1fr_1fr_1fr_auto]">
-          <label>{{ t('Minimum quantity') }}<input v-model.number="tier.minimumQuantity" type="number" min="1" step="1" class="native-input mt-2" @input="product.document.pricing.status='draft'"/></label>
-          <label>{{ t('Maximum quantity') }}<input :value="tier.maximumQuantity??''" type="number" :min="tier.minimumQuantity" step="1" :placeholder="t('No maximum')" class="native-input mt-2" @input="tier.maximumQuantity=text($event)===''?null:Number(text($event));product.document.pricing.status='draft'"/></label>
-          <label>{{ t('Price per piece') }}<input v-model.number="tier.unitPrice" type="number" min="0" step="1" class="native-input mt-2" @input="product.document.pricing.status='draft'"/></label>
-          <Button size="sm" variant="ghost" @click="product.document.pricing.tiers.splice(index,1);product.document.pricing.status='draft'">{{ t('Remove') }}</Button>
+        <p class="text-sm text-muted-foreground">{{ t('Prices are per piece in UZS for every catalogue language.') }}</p>
+        <p v-if="!hasFixedSomPricing(product)" class="rounded-lg bg-muted p-3 text-sm">{{ t('Saved pricing uses older bands or currency. Enter both UZS amounts to replace it; no automatic conversion occurs.') }}</p>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label>{{ t('1–9 pieces · UZS per piece') }}<input :value="productBandPrice(product,1)||''" type="number" min="0" step="1" inputmode="numeric" class="native-input mt-2" @input="setBandPrice(1,$event)"/></label>
+          <label>{{ t('10+ pieces · UZS per piece') }}<input :value="productBandPrice(product,10)||''" type="number" min="0" step="1" inputmode="numeric" class="native-input mt-2" @input="setBandPrice(10,$event)"/></label>
         </div>
-        <Button size="sm" variant="outline" @click="addTier">{{ t('Add quantity price') }}</Button>
-        <label v-if="canApprove" class="flex gap-2"><input type="checkbox" :checked="product.document.pricing.status==='confirmed'" @change="product.document.pricing.status=($event.target as HTMLInputElement).checked?'confirmed':'draft'"/>{{ t('Confirm prices for publication') }}</label>
+        <p v-if="!canConfirmProductPrices(product)" class="text-sm text-muted-foreground">{{ t('Enter both UZS amounts greater than zero before confirming prices.') }}</p>
+        <label v-if="canApprove" class="flex gap-2"><input type="checkbox" :checked="product.document.pricing.status==='confirmed'" :disabled="!canConfirmProductPrices(product)" @change="product.document.pricing.status=($event.target as HTMLInputElement).checked?'confirmed':'draft'"/>{{ t('Confirm prices for publication') }}</label>
       </template>
     </section>
     <section class="space-y-4" aria-labelledby="product-images-title">

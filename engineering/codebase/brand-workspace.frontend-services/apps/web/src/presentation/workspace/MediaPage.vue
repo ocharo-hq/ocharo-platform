@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { onScopeDispose, ref, watch } from 'vue';
 
@@ -7,7 +8,7 @@ import { useAppForm } from '@wow-two-beta/ui-vue/forms-engine/house';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Field, FileUploadPicker, TextAreaInput } from '@wow-two-beta/ui-vue/presentation/forms';
 
-import type { AccessControls } from '@/application/workspace/UseAccess';
+import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 
 const { t } = useUiLocale();
@@ -32,6 +33,7 @@ const form = useAppForm(() => ({
       selectedFile.value = null;
       uploaded.value = true;
     }
+    if (!result.ok && result.failure.code !== 'cancelled') notifyError(failureMessage(result.failure));
     return result;
   },
 }));
@@ -79,7 +81,6 @@ function selectFile(files: readonly File[], rejected: readonly unknown[]): void 
           :helper="t('Record the creator and source, and whether this is a photograph or a visualization.')"
           ><TextAreaInput v-model="f.value" required :maxlength="2000" :rows="4" @blur="f.onBlur" /></Field
       ></form.Field>
-      <p v-if="form.state.submitError" role="alert" class="form-error">{{ t(form.state.submitError.message ?? '') }}</p>
       <p v-if="uploaded" role="status" class="text-sm text-success-soft-foreground">{{ t("Image added.") }}</p>
       <Button type="submit" :is-loading="form.state.isSubmitting" :is-disabled="access.busy.value || !selectedFile"
         >{{ t("Upload image") }}</Button

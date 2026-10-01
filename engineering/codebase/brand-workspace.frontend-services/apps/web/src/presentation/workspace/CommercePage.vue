@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import {computed,onScopeDispose,ref,watch} from 'vue';
+import { useErrorToast } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
+import { productReviewIssueCount, unconfirmedProductLocales } from '@/domain/workspace/ProductReview';
 import ProductEditor from './ProductEditor.vue';
 import {Button} from '@wow-two-beta/ui-vue/presentation/actions';
 import {failureMessage,type AccessControls} from '@/application/workspace/UseAccess';
@@ -17,6 +20,7 @@ const org=()=>props.workspace.organization.value!.id;
 const newKey=()=>crypto.randomUUID();
 const brandId=ref('');const current=ref<CommerceDraft|null>(null);const snapshot=ref<CommerceSnapshot|null>(null);
 const baseline=ref('');const releases=ref<CommerceRelease[]>([]);const message=ref('');const error=ref('');const loading=ref(false);
+useErrorToast(error);
 const tab=ref('products');const productId=ref('');const newId=ref('');const note=ref('');const libraryId=ref('');const logoSlot=ref('master');
 const controller=new AbortController();let loadSequence=0;const dirty=computed(()=>snapshot.value!==null&&JSON.stringify(snapshot.value)!==baseline.value);
 const selected=computed(()=>snapshot.value?.products.find(p=>p.document.id===productId.value));
@@ -63,8 +67,9 @@ async function withdraw(release:CommerceRelease){if(dirty.value||!note.value.tri
 <section class="space-y-6">
  <div class="flex flex-wrap items-end justify-between gap-4"><div><p class="eyebrow">{{ t("Brand authority") }}</p><h1 class="page-title">{{ t("Products & releases") }}</h1><p class="text-muted-foreground">{{ t("Manage your products, identity and the catalogue your customers see.") }}</p></div>
  <label>{{ t("Brand") }}<select v-model="brandId" class="native-select mt-2" :disabled="dirty||blocked"><option value="">{{ t("Choose a brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{brand.name}}</option></select></label></div>
- <p v-if="error" role="alert" class="form-error">{{ t(error) }}</p><p v-if="message" role="status" class="rounded-lg bg-muted p-3 text-sm">{{ t(message) }}</p>
- <p v-if="!brandId" class="empty-state">{{ t("Create a brand in Brands to begin.") }}</p><p v-else-if="loading" role="status">{{ t("Loading brand records…") }}</p>
+<p v-if="message" role="status" class="rounded-lg bg-muted p-3 text-sm">{{ t(message) }}</p>
+ <p v-if="!brandId" class="empty-state">{{ t("Create a brand in Brands to begin.") }}</p><ContentSkeleton v-else-if="loading" :label="t('Loading brand records…')" />
+ <section v-else-if="error&&!snapshot" class="workspace-card p-6"><h2 class="font-semibold">{{ t("Product library unavailable") }}</h2><Button class="mt-4" variant="outline" @click="load">{{ t("Retry") }}</Button></section>
  <section v-else-if="!snapshot" class="workspace-card space-y-4 p-7"><h2 class="text-xl font-semibold">{{ t("Start this brand’s product library") }}</h2><p>{{ t("Records remain private until an owner publishes a release.") }}</p><div v-if="workspace.canEdit.value" class="flex flex-wrap gap-3"><Button @click="start">{{ t("Start an empty draft") }}</Button><Button v-if="workspace.canApprove.value" variant="outline" :is-disabled="blocked" @click="adopt">{{ t("Adopt preserved Ocharo records") }}</Button></div><p class="text-sm text-muted-foreground">{{ t("Adoption preserves original product IDs, copy, prices, collections and image hashes. Every image starts awaiting publication review.") }}</p></section>
  <template v-else>
   <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-muted p-4"><div><b>{{snapshot.products.length}}</b> {{ t("products ·") }} <b>{{snapshot.collections.length}}</b> {{ t("collections · Draft") }} {{current?.revision??t('unsaved')}} <span v-if="dirty">{{ t("· Unsaved changes") }}</span></div><Button v-if="workspace.canEdit.value" :is-disabled="blocked||!dirty" @click="save">{{ t("Save draft") }}</Button></div>
@@ -72,13 +77,13 @@ async function withdraw(release:CommerceRelease){if(dirty.value||!note.value.tri
   <fieldset :disabled="blocked||!workspace.canEdit.value" class="min-w-0">
   <div v-if="tab==='products'" class="grid gap-6 lg:grid-cols-[260px_1fr]">
    <aside class="space-y-3"><label class="sr-only" for="new-product">{{ t("New product ID") }}</label><input id="new-product" v-model="newId" class="native-input" :placeholder="t('e.g. nimcha-v08')" pattern="[a-z0-9-]+"/><Button variant="outline" size="sm" :is-disabled="!newId" @click="addProduct">{{ t("Add product") }}</Button>
-    <button v-for="item in snapshot.products" :key="item.document.id" class="block w-full rounded-xl border p-4 text-left" :class="productId===item.document.id?'border-primary bg-muted':'border-border'" @click="productId=item.document.id"><b class="block">{{item.document.locales.en.name||item.document.locales.uz.name||item.document.id}}</b><span class="text-xs text-muted-foreground">{{item.document.id}} · {{ t(item.document.status) }}</span></button>
+    <button v-for="item in snapshot.products" :key="item.document.id" class="block w-full rounded-xl border p-4 text-left" :class="productId===item.document.id?'border-primary bg-muted':'border-border'" @click="productId=item.document.id"><b class="block">{{item.document.locales.en.name||item.document.locales.uz.name||item.document.id}}</b><span class="text-xs text-muted-foreground">{{item.document.id}} · {{ t(item.document.status) }}</span><span v-if="productReviewIssueCount(item)" class="mt-2 block text-xs font-medium text-destructive">{{ t('{count} review issues',{count:productReviewIssueCount(item)}) }}</span><span v-if="unconfirmedProductLocales(item).length" class="mt-1 block text-xs text-muted-foreground">{{ t('Unconfirmed') }}: {{unconfirmedProductLocales(item).join(', ')}}</span></button>
    </aside>
    <article v-if="selected" class="workspace-card space-y-5 p-6"><header><h2 class="text-xl font-semibold">{{selected.document.id}}</h2><p class="text-xs text-muted-foreground">{{ t("Stable ID · Product revision") }} {{selected.revision}}<span v-if="selected.sourceRevision"> {{ t("· Imported source revision") }} {{selected.sourceRevision}}</span></p></header>
     <ProductEditor :product="selected" @update:product="updateProduct" :can-approve="workspace.canApprove.value" :image-url="sha=>api.image(org(),brandId,sha)" />
     <div class="flex flex-wrap items-center gap-3"><select v-model="libraryId" :aria-label="t('Image from media library')" class="native-select max-w-sm"><option value="">{{ t("Choose an uploaded image") }}</option><option v-for="media in workspace.media.value" :key="media.id" :value="media.id">{{media.fileName}}</option></select><Button size="sm" variant="outline" :is-disabled="!libraryId" @click="attach(false)">{{ t("Attach image") }}</Button></div>
     <label class="block">{{ t("Private notes") }}<textarea v-model="selected.document.notes" rows="2" class="native-input mt-2" /></label>
-    <section v-if="selected.document.issues.length" class="space-y-2"><h3 class="font-semibold">{{ t("Review questions") }}</h3><label v-for="issue in selected.document.issues" :key="issue.id" class="flex gap-2"><input type="checkbox" :checked="issue.status==='resolved'" @change="issue.status=($event.target as HTMLInputElement).checked?'resolved':'open'"/>{{issue.question}}</label><p class="text-xs text-muted-foreground">{{ t("Products with open questions are excluded from public releases.") }}</p></section>
+    <section v-if="selected.document.issues.length" class="space-y-2"><h3 class="font-semibold">{{ t("Product checks") }}</h3><label v-for="issue in selected.document.issues" :key="issue.id" class="flex gap-2"><input type="checkbox" :checked="issue.status==='resolved'" @change="issue.status=($event.target as HTMLInputElement).checked?'resolved':'open'"/>{{issue.question}}</label><p class="text-xs text-muted-foreground">{{ t("These are unresolved product facts, not customer FAQs. Resolve them before publication.") }}</p></section>
    </article><p v-else class="empty-state">{{ t("Select a product or add its stable ID.") }}</p>
   </div>
   <div v-else-if="tab==='identity'" class="workspace-card space-y-5 p-6">

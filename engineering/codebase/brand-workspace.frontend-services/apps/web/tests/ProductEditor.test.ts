@@ -29,10 +29,20 @@ describe('canonical product editing',()=>{
   expect(product.document.locales.uz.name).toBe('Nimcha');
  });
  it('uses one canonical price across content language changes',async()=>{
-  const product=open();await label('Price per piece').get('input').setValue('400000');
+  const product=open();await label('1–9 pieces · UZS per piece').get('input').setValue('400000');
   await wrapper.get('select[aria-label="Product content language"]').setValue('fr');
   expect(product.document.pricing?.tiers[0]?.unitPrice).toBe(400000);expect(product.document.pricing?.status).toBe('draft');
-  expect((label('Price per piece').get('input').element as HTMLInputElement).value).toBe('400000');
+  expect((label('1–9 pieces · UZS per piece').get('input').element as HTMLInputElement).value).toBe('400000');
+ });
+ it('confirms each language independently at the top and resets only edited wording',async()=>{
+  const product=open();
+  const approval=()=>wrapper.findAll('label').find(item=>item.text().includes('Approve this language for publication'))!;
+  await approval().get('input').setValue(true);expect(productCopy(product,'en').status).toBe('approved');
+  await wrapper.get('select[aria-label="Product content language"]').setValue('uz');
+  await approval().get('input').setValue(true);expect(productCopy(product,'uz').status).toBe('approved');
+  await label('Material / fabric name').get('input').setValue('Atlas');
+  expect(productCopy(product,'uz').status).toBe('draft');expect(productCopy(product,'en').status).toBe('approved');
+  const elements=wrapper.findAll('input').map(item=>item.element);expect(elements.indexOf(approval().get('input').element)).toBeLessThan(elements.indexOf(label('Product name').get('input').element));
  });
  it('builds named media selections and removes detached references',async()=>{
   const product=open();await button('Add image group').trigger('click');

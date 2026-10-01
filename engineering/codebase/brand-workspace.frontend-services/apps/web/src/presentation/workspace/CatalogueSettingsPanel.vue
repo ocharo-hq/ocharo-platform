@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { notifyError } from '@/application/shared/UseFeedback';
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { useCommerce } from '@/application/workspace/UseCommerce';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
@@ -27,6 +29,7 @@ const unlinkedText = computed(() => props.snapshot.pages.flatMap(item => item.el
 const productFields = ['name','fabric','decoration','description','details','notes','sizes','price','price-label','currency'] as const;
 const copyLabels: Record<keyof CatalogueCopy,string> = {collection:'Collection heading',coverNote:'Cover note',header:'Page header',footer:'Page footer',sizes:'Sizes label',pieces:'Quantity unit',priceOnRequest:'Price on request',prices:'Prices heading',materials:'Fabric label',decoration:'Decoration label'};
 const priceLabels: Record<keyof CatalogueSettings['priceDisplay'],string> = {show:'Show price block',showCurrency:'Show currency',showQuantity:'Show quantity ranges',showRetail:'Show retail prices',showWholesale:'Show wholesale prices'};
+watch(errors, values => { for (const value of values) notifyError(translateDesignerNotice(value,t)); });
 let sequence = 0;
 watch(() => props.workspace.brands.value, brands => { if (!brandId.value) brandId.value = props.snapshot.catalogueSettings?.brandId ?? brands?.[0]?.id ?? ''; }, {immediate:true});
 watch(() => [brandId.value, ...props.snapshot.pages.map(item => item.catalogueSource?.brandId ?? '')].join('|'), () => { void load(); }, {immediate:true});
@@ -132,7 +135,7 @@ function photo(elementId:string,event:Event):void {
         <p v-else>{{ t('Select a text or photo frame on the canvas to connect it manually.') }}</p>
       </details>
     </fieldset>
-    <p v-if="loading" role="status">{{ t('Loading saved products…') }}</p>
+    <ContentSkeleton v-if="loading" :cards="1" :label="t('Loading saved products…')"/>
     <p v-for="error in errors" :key="error" class="editor-alert" role="alert">{{ translateDesignerNotice(error,t) }}</p>
     <details v-if="warnings.length" open class="catalogue-warnings"><summary>{{ warnings.length }} {{ t('items need review') }}</summary><ul><li v-for="warning in warnings" :key="warning">{{ translateDesignerNotice(warning,t) }}</li></ul></details>
   </section>

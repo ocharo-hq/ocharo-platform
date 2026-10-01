@@ -8,20 +8,22 @@ export function readDesignTarget(search: string) {
   const query = new URLSearchParams(search);
   const documentId = query.get('design');
   const pageId = query.get('page');
-  const invalid = query.getAll('design').length > 1 || query.getAll('page').length > 1
+  const mode = query.get('mode');
+  const invalid = query.getAll('design').length > 1 || query.getAll('page').length > 1 || query.getAll('mode').length > 1 || (mode !== null && (!documentId || !['web','pdf'].includes(mode)))
     || (documentId !== null && !identifier.test(documentId))
     || (pageId !== null && (!documentId || !pageId || pageId.length > 120 || /[\u0000-\u001f\u007f]/.test(pageId)));
   return invalid
-    ? { documentId: null, pageId: null, error: 'This saved-design link is invalid. Choose a design from the library.' }
-    : { documentId, pageId, error: null };
+    ? { documentId: null, pageId: null, mode: null, error: 'This saved-design link is invalid. Choose a design from the library.' }
+    : { documentId, pageId, mode: mode as 'web'|'pdf'|null, error: null };
 }
 
 /** Builds the address of an organization-owned editor and its current saved page. */
-export function designEditorUrl(organizationId: string, kind: DesignKind, documentId?: string | null, pageId?: string | null): string {
+export function designEditorUrl(organizationId: string, kind: DesignKind, documentId?: string | null, pageId?: string | null, mode?: 'web'|'pdf'|null): string {
   if (!identifier.test(organizationId)) throw new Error('Invalid workspace destination.');
   const query = new URLSearchParams();
   if (documentId) query.set('design', documentId);
   if (documentId && pageId) query.set('page', pageId);
+  if (documentId && mode) query.set('mode', mode);
   if (readDesignTarget(query.toString()).error) throw new Error('Invalid saved-design destination.');
   return `/organizations/${organizationId}/${kind === 'catalogue' ? 'catalogue' : 'business-cards'}${query.size ? '?' + query : ''}`;
 }
@@ -50,5 +52,6 @@ export function safeWorkspaceDestination(path: string): string {
   const query = new URLSearchParams();
   if (target.documentId) query.set('design', target.documentId);
   if (target.pageId) query.set('page', target.pageId);
+  if (target.mode) query.set('mode', target.mode);
   return pathname + (query.size ? '?' + query : '');
 }

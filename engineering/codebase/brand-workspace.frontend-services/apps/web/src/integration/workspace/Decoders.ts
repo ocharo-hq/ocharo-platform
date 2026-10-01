@@ -77,9 +77,13 @@ export function listDecoder<T>(guard: (value: unknown) => value is T): ApiDecode
 }
 export const loginDecoder = decoder((v): v is { authenticated: true } => record(v) && v.authenticated === true);
 
+function catalogueSummary(value:unknown):boolean {
+  if(value===undefined||value===null)return true;
+  return record(value)&&strings(value,['slug','description'])&&typeof value.isActive==='boolean'&&record(value.outputs)&&typeof value.outputs.web==='boolean'&&typeof value.outputs.pdf==='boolean'&&record(value.web)&&['editorial','grid'].includes(String(value.web.theme))&&Number.isSafeInteger(value.web.pageCount)&&Number(value.web.pageCount)>=0&&Number.isSafeInteger(value.pdfPageCount)&&Number(value.pdfPageCount)>=0;
+}
 export function isDesignSummary(value: unknown): value is DesignSummary {
   return record(value) && strings(value, ['id', 'organizationId', 'title', 'createdAtUtc', 'updatedAtUtc']) &&
-    ['catalogue', 'business-card'].includes(String(value.kind)) && revision(value.revision) && typeof value.archived === 'boolean';
+    ['catalogue', 'business-card'].includes(String(value.kind)) && revision(value.revision) && typeof value.archived === 'boolean' && catalogueSummary(value.catalogue) && (value.locale === undefined || value.locale === null || typeof value.locale === 'string');
 }
 export function isDesignDocument(value: unknown): value is DesignDocument {
   if (!isDesignSummary(value) || !record(value)) return false;

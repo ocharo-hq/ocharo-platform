@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { useAuth } from '@wow-two-beta/ui-vue/auth';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
@@ -20,20 +21,18 @@ const auth = useAuth<Session>();
 
 <template>
   <main v-if="auth.isPending || access.invalidated.value" class="mx-auto max-w-xl px-6 py-24" aria-busy="true">
-    <p role="status">{{ t("Checking your session…") }}</p>
+    <ContentSkeleton :label="t('Checking your session…')" :cards="1" />
   </main>
   <main v-else-if="!auth.isAuthenticated && access.sessionError.value" class="mx-auto max-w-xl px-6 py-24">
     <h1 class="text-2xl font-semibold">{{ t("Session unavailable") }}</h1>
-    <p role="alert" class="mt-5 leading-7">{{ t(access.sessionError.value ?? '') }}</p>
     <Button class="mt-6" @click="auth.refresh">{{ t("Retry session") }}</Button>
   </main>
   <LoginPage v-else-if="!auth.isAuthenticated" :access="access" />
   <template v-else>
     <section v-if="access.checking.value || access.sessionError.value" class="mx-auto max-w-xl px-6 py-24">
-      <p v-if="access.checking.value" role="status">{{ t("Rechecking your session…") }}</p>
+      <ContentSkeleton v-if="access.checking.value" :label="t('Rechecking your session…')" :cards="1" />
       <template v-else
         ><h1 class="text-2xl font-semibold">{{ t("Verify your session to continue") }}</h1>
-        <p role="alert" class="mt-5">{{ t(access.sessionError.value ?? '') }}</p>
         <p class="mt-3 text-sm text-muted-foreground">
           {{ t("This page keeps your unsaved edits while the session is checked.") }}
         </p>

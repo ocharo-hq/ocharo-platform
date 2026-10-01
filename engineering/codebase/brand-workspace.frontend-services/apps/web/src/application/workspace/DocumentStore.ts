@@ -1,3 +1,4 @@
+import { requestConfirmation, notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { cloneSnapshot, validateSnapshot, type DesignDocument, type DesignKind, type DesignSnapshot, type DesignSummary } from '@/domain/workspace/EditorModels';
@@ -27,12 +28,13 @@ export function useDesignDocument(access: AccessControls, organizationId: string
   const recovery = useDesignRecovery(access, organizationId, kind,
     () => snapshot.value && dirty.value ? { title: title.value, snapshot: snapshot.value,
       source: record.value ? { documentId: record.value.id, revision: record.value.revision } : recoveryOrigin } : null,
-    candidate => {
-      if (!create(candidate.snapshot, `${candidate.title || 'Untitled design'} · recovered copy`.slice(0, 160))) return false;
+    async candidate => {
+      if (!await create(candidate.snapshot, `${candidate.title || 'Untitled design'} · recovered copy`.slice(0, 160))) return false;
       recoveryOrigin = candidate.source; return true;
     });
   watch([snapshot, title], () => { if (!changing) recovery.capture(); }, { flush: 'sync' });
   watch(dirty, (value) => access.setDirty(value));
+  watch(error, value => { if(value) notifyError(value); });
   onScopeDispose(() => { controller.abort(); access.setDirty(false); });
   async function list(): Promise<void> {
     loading.value = true;
@@ -53,9 +55,9 @@ export function useDesignDocument(access: AccessControls, organizationId: string
     future.value = [];
     status.value = ''; error.value = '';
   }
-  function create(next: DesignSnapshot, name: string): boolean {
+  async function create(next: DesignSnapshot, name: string): Promise<boolean> {
     if (busy.value || loading.value || access.busy.value) return false;
-    if (dirty.value && !window.confirm(t('Discard unsaved changes and create a new design?'))) return false;
+    if (dirty.value && !await requestConfirmation(t('Discard unsaved changes and create a new design?'))) return false;
     const checked = validateSnapshot(next);
     if (checked.kind !== kind) { error.value = 'This file belongs in the other editor.'; return false; }
     recovery.preserve(); changing = true; recoveryOrigin = null;
@@ -68,7 +70,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
   }
   async function load(id: string): Promise<boolean> {
     if (loading.value || busy.value || access.busy.value) return false;
-    if (dirty.value && !window.confirm(t('Discard unsaved changes and open this saved design?'))) return false;
+    if (dirty.value && !await requestConfirmation(t('Discard unsaved changes and open this saved design?'))) return false;
     loading.value = true; error.value = '';
     const result = await access.api.getDesign(organizationId, id, controller.signal);
     if (result.ok && result.value.kind === kind) {

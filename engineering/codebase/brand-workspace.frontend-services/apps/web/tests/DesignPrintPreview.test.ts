@@ -1,3 +1,4 @@
+import { feedbackBus } from '@/application/shared/UseFeedback';
 import { flushPromises, mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
 import DesignPrintPreview from '@/presentation/workspace/DesignPrintPreview.vue';
@@ -13,7 +14,12 @@ describe('fixed PDF preview',()=>{
   expect(old.width).toBe(0);expect(wrapper.attributes('style')).toContain('aspect-ratio: 210 / 297');wrapper.unmount();
  });
  it('surfaces unavailable source images instead of presenting an export-ready preview',async()=>{
-  render.mockRejectedValueOnce(new Error('An image is unavailable.'));const wrapper=mount(DesignPrintPreview,{props:{page:page('missing')}});await flushPromises();
-  expect(wrapper.get('[role=alert]').text()).toContain('unavailable');expect(wrapper.find('canvas').exists()).toBe(false);wrapper.unmount();
+  const notices=vi.spyOn(feedbackBus,'notify');
+  render.mockRejectedValueOnce(new Error('Private source path unavailable.'));const wrapper=mount(DesignPrintPreview,{props:{page:page('missing')}});await flushPromises();
+  expect(notices).toHaveBeenCalledWith(expect.objectContaining({description:'Unable to render this page.'}));
+  expect(wrapper.text()).toContain('Preview unavailable');expect(wrapper.text()).not.toContain('Private source');
+  expect(wrapper.find('canvas').exists()).toBe(false);
+  render.mockResolvedValueOnce(document.createElement('canvas'));await wrapper.get('button').trigger('click');await flushPromises();
+  expect(wrapper.find('canvas').exists()).toBe(true);expect(wrapper.text()).not.toContain('Preview unavailable');wrapper.unmount();notices.mockRestore();
  });
 });

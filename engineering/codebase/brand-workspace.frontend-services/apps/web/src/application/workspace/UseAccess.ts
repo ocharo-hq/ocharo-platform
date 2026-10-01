@@ -1,3 +1,4 @@
+import { requestConfirmation, resolveConfirmation, notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef } from 'vue';
 
@@ -64,6 +65,7 @@ export function useAccess(
       const result = await api.getSession(signal);
       if (!result.ok) {
         sessionError.value = failureMessage(result.failure);
+        if (result.failure.code !== 'cancelled') notifyError(sessionError.value);
         return result;
       }
       session.value = result.value;
@@ -73,15 +75,17 @@ export function useAccess(
 
   /** Invalidates visible private state before replacing the document. */
   function invalidate(): void {
+    resolveConfirmation(false);
     invalidated.value = true;
     dirty.value = false;
     controller.abort();
     navigation.reload();
   }
   /** Prevents accidental loss of edits and switches context only with no pending writes. */
-  function navigate(path: string): void {
+  async function navigate(path: string): Promise<void> {
     if (busy.value || !path.startsWith('/') || path.startsWith('//')) return;
-    if (dirty.value && !window.confirm(t('Discard unsaved changes and leave this page?'))) return;
+    if (dirty.value && !await requestConfirmation(t('Discard unsaved changes and leave this page?'), {confirmLabel:t('Discard changes')})) return;
+    if (busy.value || disposed) return;
     dirty.value = false;
     navigation.assign(path);
   }
@@ -108,10 +112,11 @@ export function useAccess(
   }
   /** Confirms the server logout before replacing the current document. */
   async function logout(): Promise<void> {
-    if (busy.value || (dirty.value && !window.confirm(t('Discard unsaved changes and sign out?')))) return;
+    if (busy.value || (dirty.value && !await requestConfirmation(t('Discard unsaved changes and sign out?'), {confirmLabel:t('Discard changes')}))) return;
+    if (busy.value || disposed) return;
     const result = await write((signal) => api.logout(signal));
     if (result.ok) authenticated();
-    else sessionError.value = failureMessage(result.failure);
+    else { sessionError.value = failureMessage(result.failure); notifyError(sessionError.value); }
   }
   /** Revalidates cookies after tab resumption while preventing writes with unchecked authority. */
   async function recheck(): Promise<void> {
@@ -122,6 +127,7 @@ export function useAccess(
     checking.value = false;
     if (!result.ok) {
       sessionError.value = 'Session verification is unavailable. Retry before continuing.';
+      if (result.failure.code !== 'cancelled') notifyError(sessionError.value);
       return;
     }
     if (
@@ -154,6 +160,7 @@ export function useAccess(
   document.addEventListener('visibilitychange', visibility);
   window.addEventListener('focus', recheck);
   onScopeDispose(() => {
+    resolveConfirmation(false);
     disposed = true;
     controller.abort();
     unsubscribe();
