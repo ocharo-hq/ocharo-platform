@@ -14,7 +14,7 @@ export default [
   ...vue.configs['flat/recommended'],
   {
     files: ['**/*.{ts,vue}'],
-    languageOptions: { globals: globals.browser, parserOptions: { parser: tseslint.parser } },
+    languageOptions: { globals: { ...globals.browser, __APP_VERSION__: 'readonly' }, parserOptions: { parser: tseslint.parser } },
     rules: {
       // Prettier owns formatting; keep eslint-plugin-vue to correctness rules.
       'vue/max-attributes-per-line': 'off',

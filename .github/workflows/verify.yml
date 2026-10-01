@@ -1,15 +1,30 @@
-name: Verify Brand Workspace
+name: Verify Ocharo Platform
 
 on: [push, pull_request]
 
 permissions:
   contents: read
 
+concurrency:
+  group: platform-verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  verify:
+  frontend:
+    name: Frontend (${{ matrix.app }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [brand-workspace, ocharo-brand, ocharo-catalogue]
+    defaults:
+      run:
+        working-directory: engineering/codebase/${{ matrix.app }}.frontend-services
     steps:
       - uses: actions/checkout@v6
+        with:
+          lfs: true
       - uses: pnpm/action-setup@v4
         with:
           version: 10.33.2
@@ -17,23 +32,129 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-          cache-dependency-path: engineering/codebase/brand-workspace.frontend-services/pnpm-lock.yaml
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.300
+          cache-dependency-path: engineering/codebase/${{ matrix.app }}.frontend-services/pnpm-lock.yaml
+      - name: Install locked frontend dependencies
+        run: pnpm install --frozen-lockfile
       - name: Verify frontend
-        working-directory: engineering/codebase/brand-workspace.frontend-services
         run: |
-          pnpm install --frozen-lockfile
           pnpm lint
           pnpm typecheck
           pnpm test
+          pnpm build
+
+  backend:
+    name: Backend (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: brand-workspace
+            solution: BrandWorkspace.BackendServices.slnx
+          - app: ocharo-brand
+            solution: OcharoBrand.BackendServices.slnx
+          - app: ocharo-catalogue
+            solution: OcharoCatalogue.BackendServices.slnx
+    defaults:
+      run:
+        working-directory: engineering/codebase/${{ matrix.app }}.backend-services
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - uses: pnpm/action-setup@v4
+        if: matrix.app == 'brand-workspace'
+        with:
+          version: 10.33.2
+      - uses: actions/setup-node@v4
+        if: matrix.app == 'brand-workspace'
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.300
       - name: Verify backend and generated frontend
-        working-directory: engineering/codebase/brand-workspace.backend-services
+        env:
+          SOLUTION: ${{ matrix.solution }}
         run: |
-          dotnet restore BrandWorkspace.BackendServices.slnx --locked-mode
-          dotnet build BrandWorkspace.BackendServices.slnx -c Release --no-restore
-          dotnet test BrandWorkspace.BackendServices.slnx -c Release --no-build
-      - name: Build deployment images
+          dotnet restore "$SOLUTION" --locked-mode
+          dotnet build "$SOLUTION" -c Release --no-restore
+          dotnet test "$SOLUTION" -c Release --no-build
+
+  image-worker:
+    name: Image worker tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: engineering/codebase/ocharo-image.backend-services
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: engineering/codebase/ocharo-image.backend-services/requirements*.txt
+      - run: python -m pip install -r requirements-test.txt
+      - run: python -m pytest -q
+
+  images:
+    name: Container (${{ matrix.name }})
+    # Keep image builds off the test runners: .NET restore plus concurrent images
+    # exhausted the hosted runner disk. Each unique image gets a fresh runner.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: desk
+            context: engineering/codebase
+            dockerfile: engineering/deployment/Dockerfile
+          - name: jobs
+            context: engineering/codebase
+            dockerfile: engineering/deployment/Dockerfile.worker
+          - name: brand
+            context: engineering/codebase
+            dockerfile: engineering/deployment/brand/Dockerfile
+          - name: catalogue
+            context: engineering/codebase
+            dockerfile: engineering/deployment/catalogue/Dockerfile
+          - name: image-worker
+            context: engineering/codebase/ocharo-image.backend-services
+            dockerfile: engineering/codebase/ocharo-image.backend-services/Dockerfile
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          lfs: true
+      - name: Validate deployment composition
+        if: matrix.name == 'desk'
         working-directory: engineering/deployment
-        run: docker compose --env-file .env.example build
+        run: docker compose --env-file .env.example config --quiet
+      - name: Build image without publishing
+        env:
+          IMAGE_NAME: ${{ matrix.name }}
+          BUILD_CONTEXT: ${{ matrix.context }}
+          DOCKERFILE: ${{ matrix.dockerfile }}
+        run: docker build --file "$DOCKERFILE" --tag "ocharo-ci:$IMAGE_NAME" --build-arg "VCS_REF=$GITHUB_SHA" "$BUILD_CONTEXT"
+      - name: Report disk usage
+        if: always()
+        run: df -h
+
+  verify:
+    name: verify
+    if: always()
+    needs: [frontend, backend, image-worker, images]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every verification job
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          results = json.loads(os.environ['RESULTS'])
+          if not results or any(result != 'success' for result in results):
+              raise SystemExit(f'Verification jobs did not all pass: {results}')
+          PY

@@ -25,16 +25,17 @@ COPY ocharo-brand.frontend-services/apps/web/tests/ ./apps/web/tests/
 RUN pnpm build
 
 # ---- Stage 2: publish the .NET API (no Node here; the SPA arrives from stage 1) ----
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
 WORKDIR /src
 COPY ocharo-brand.backend-services/ ./
 # the built SPA lands in wwwroot so `dotnet publish` bundles it into the output.
 COPY --from=spa /spa/apps/web/dist ./OcharoBrand.Api/wwwroot
-RUN dotnet publish OcharoBrand.Api/OcharoBrand.Api.csproj -c Release -o /app
+RUN dotnet publish OcharoBrand.Api/OcharoBrand.Api.csproj -c Release -o /app -p:RestoreLockedMode=true -p:UseAppHost=false
 
 # ---- Stage 3: runtime ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+RUN apt-get update && apt-get install --yes --no-install-recommends libfontconfig1 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app ./
 
 # SQLite store on a volume so data survives container replacement.

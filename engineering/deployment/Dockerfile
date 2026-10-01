@@ -14,6 +14,9 @@ ARG APP_VERSION
 ARG VCS_REF
 WORKDIR /src/brand-workspace.backend-services
 COPY brand-workspace.backend-services/ ./
+# Shared domain projects are referenced by the adopted Commerce services.
+COPY ocharo-brand.backend-services/ /src/ocharo-brand.backend-services/
+COPY ocharo-catalogue.backend-services/ /src/ocharo-catalogue.backend-services/
 COPY --from=spa /src/brand-workspace.backend-services/BrandWorkspace.Api/wwwroot/ ./BrandWorkspace.Api/wwwroot/
 RUN dotnet publish BrandWorkspace.Api/BrandWorkspace.Api.csproj \
     --configuration Release --output /app/publish \

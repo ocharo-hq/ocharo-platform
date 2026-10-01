@@ -19,22 +19,24 @@ COPY ocharo-catalogue.frontend-services/apps/web/package.json ./apps/web/
 RUN pnpm install --frozen-lockfile
 # Copy authored inputs explicitly; host node_modules and generated output stay out.
 COPY ocharo-catalogue.frontend-services/apps/web/index.html ocharo-catalogue.frontend-services/apps/web/vite.config.ts ocharo-catalogue.frontend-services/apps/web/vitest.config.ts ocharo-catalogue.frontend-services/apps/web/tsconfig*.json ./apps/web/
+COPY ocharo-catalogue.frontend-services/apps/web/public/ ./apps/web/public/
 COPY ocharo-catalogue.frontend-services/apps/web/src/ ./apps/web/src/
 COPY ocharo-catalogue.frontend-services/apps/web/scripts/ ./apps/web/scripts/
 COPY ocharo-catalogue.frontend-services/apps/web/tests/ ./apps/web/tests/
 RUN pnpm build
 
 # ---- Stage 2: publish the .NET API (no Node here; the SPA arrives from stage 1) ----
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
 WORKDIR /src
 COPY ocharo-catalogue.backend-services/ ./
 # the built SPA lands in wwwroot so `dotnet publish` bundles it into the output.
 COPY --from=spa /spa/apps/web/dist ./OcharoCatalogue.Api/wwwroot
-RUN dotnet publish OcharoCatalogue.Api/OcharoCatalogue.Api.csproj -c Release -o /app
+RUN dotnet publish OcharoCatalogue.Api/OcharoCatalogue.Api.csproj -c Release -o /app -p:RestoreLockedMode=true -p:UseAppHost=false
 
 # ---- Stage 3: runtime ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+RUN apt-get update && apt-get install --yes --no-install-recommends libfontconfig1 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app ./
 
 # SQLite store on a volume so data survives container replacement.
