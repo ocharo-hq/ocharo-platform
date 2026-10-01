@@ -1,0 +1,82 @@
+{
+  "browser": "154.0.8037.58",
+  "report": {
+    "pageCount": 3,
+    "issues": []
+  },
+  "layouts": [
+    {
+      "locale": "ar",
+      "body": {
+        "lines": [
+          "هذا القماش من الحرير الطبيعي. زخارف جميلة وألوان مستوحاة من سمرقند وبخارى. السعر",
+          "١٢٥٬٠٠٠ سوم."
+        ],
+        "anchor": 1190.5511811023623,
+        "baseline": 44.472440944881896,
+        "lineHeight": 60.94488188976379,
+        "overflow": false
+      },
+      "narrow": {
+        "lines": [
+          "هذا القماش من الحرير الطبيعي. زخارف جميلة وألوان",
+          "مستوحاة من سمرقند وبخارى. السعر ١٢٥٬٠٠٠ سوم."
+        ],
+        "anchor": 661.4173228346457,
+        "baseline": 34.6496062992126,
+        "lineHeight": 46.2992125984252,
+        "overflow": false
+      }
+    },
+    {
+      "locale": "zh-Hans",
+      "body": {
+        "lines": [
+          "这件服装采用乌兹别克斯坦丝绸制作，图案灵感来自布哈拉和撒马",
+          "尔罕。柔软的面料适合日常穿着。尺寸：S、M、L。"
+        ],
+        "anchor": 0,
+        "baseline": 44.472440944881896,
+        "lineHeight": 60.94488188976379,
+        "overflow": false
+      },
+      "narrow": {
+        "lines": [
+          "这件服装采用乌兹别克斯坦丝绸制作，图案",
+          "灵感来自布哈拉和撒马尔罕。柔软的面料适",
+          "合日常穿着。尺寸：S、M、L。"
+        ],
+        "anchor": 0,
+        "baseline": 34.6496062992126,
+        "lineHeight": 46.2992125984252,
+        "overflow": false
+      }
+    },
+    {
+      "locale": "uz",
+      "body": {
+        "lines": [
+          "Buxoro ipak matosi — шёлк Бухары. O‘lchamlar: S, M, L. Qo‘lda",
+          "ishlangan bezak; naqsh, rang, mato. Размеры и состав ткани.",
+          "Narx: 125 000 so‘m."
+        ],
+        "anchor": 0,
+        "baseline": 44.472440944881896,
+        "lineHeight": 60.94488188976379,
+        "overflow": false
+      },
+      "narrow": {
+        "lines": [
+          "Buxoro ipak matosi — шёлк Бухары.",
+          "O‘lchamlar: S, M, L. Qo‘lda ishlangan bezak;",
+          "naqsh, rang, mato. Размеры и состав ткани.",
+          "Narx: 125 000 so‘m."
+        ],
+        "anchor": 0,
+        "baseline": 34.6496062992126,
+        "lineHeight": 46.2992125984252,
+        "overflow": false
+      }
+    }
+  ]
+}
