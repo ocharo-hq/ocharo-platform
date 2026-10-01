@@ -1,0 +1,43 @@
+import { selectDesignPages } from '@/domain/workspace/DesignPageSelection';
+import { crossesPageEdge, type DesignPreflightIssue, type DesignPreflightReport } from '@/domain/workspace/DesignPreflight';
+import type { DesignSnapshot } from '@/domain/workspace/EditorModels';
+import { loadDesignImage } from './DesignExport';
+import { layoutDesignText } from './DesignTextLayout';
+
+/** Checks the selected export scope without mutating any original page or media. */
+export async function inspectDesign(snapshot: DesignSnapshot, pageIds?: readonly string[], signal?: AbortSignal,
+  imageLoader: typeof loadDesignImage = loadDesignImage): Promise<DesignPreflightReport> {
+  const checked = selectDesignPages(snapshot, pageIds);
+  signal?.throwIfAborted(); await document.fonts.ready; signal?.throwIfAborted();
+  const context = document.createElement('canvas').getContext('2d');
+  if (!context) throw new Error('Page checks are unavailable in this browser.');
+  const issues: DesignPreflightIssue[] = [], images = new Map<string, Promise<HTMLImageElement>>();
+  for (const page of checked.pages) {
+    const unit = Math.min((checked.kind === 'business-card' ? 600 : 240) / 25.4, 8192 / Math.max(page.width, page.height), Math.sqrt(12_000_000 / (page.width * page.height)));
+    for (const element of page.elements) {
+      signal?.throwIfAborted();
+      if (element.opacity === 0) continue;
+      const add = (code: DesignPreflightIssue['code'], severity: DesignPreflightIssue['severity'], message: string) => {
+        issues.push({ pageId: page.id, pageNumber: snapshot.pages.findIndex(item => item.id === page.id) + 1,
+          pageTitle: page.title, elementId: element.id, elementLabel: element.label, code, severity, message });
+      };
+      if (crossesPageEdge(element, page)) add('outside-page', 'warning', 'Extends beyond the page. That part will be cropped.');
+      if (element.type === 'text' && layoutDesignText(context, element, unit).overflow)
+        add('text-overflow', 'warning', 'Text extends beyond its frame and will be clipped. Enlarge the frame or shorten the text.');
+      if (element.type === 'image') {
+        if (!element.src) add('missing-image', 'error', 'No image is selected. Replace this photo before exporting.');
+        else {
+          try {
+            let loaded = images.get(element.src);
+            if (!loaded) { loaded = imageLoader(element.src, signal); images.set(element.src, loaded); }
+            await loaded;
+          } catch {
+            signal?.throwIfAborted();
+            add('missing-image', 'error', 'The image could not load. Check your connection or replace this photo.');
+          }
+        }
+      }
+    }
+  }
+  return { pageCount: checked.pages.length, issues };
+}

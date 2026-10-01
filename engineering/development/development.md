@@ -11,23 +11,27 @@ Studio remains independently owned. Shared package and solution changes have one
 
 Backend rules: [backend guidelines](backend-guidelines.md).
 Frontend rules: [frontend guidelines](frontend-guidelines.md).
-Execution: [scaffold track](../planning/rough-track/r0.1/r0.1.md).
+Execution: [scaffold track](../research/previous-work/rough-track/r0.1/r0.1.md).
 
 ## Toolchain and verification
 
-The repository `.nvmrc` pins Node `24.11.0`; the frontend pins npm `11.6.1`. Run `nvm use` at the
+The repository `.nvmrc` pins Node `24.11.0`; the frontend pins pnpm through `packageManager`. Run `nvm use` at the
 repository root before entering either code directory. The backend `global.json` selects .NET SDK
-`10.0.300` with patch roll-forward. The default API build invokes npm, so Node belongs on the backend
+`10.0.300` with patch roll-forward. The default API build invokes the frontend package manager, so Node belongs on the backend
 build process's PATH too.
 
 From `engineering/codebase/brand-workspace.frontend-services/`:
 
 ```bash
-npm ci
-npm run lint
-npm run typecheck
-npm test
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm typecheck
+pnpm test
 ```
+
+The root commands delegate to `@brand-workspace/web` in `apps/web/`; shared package extraction stays
+inside the frontend workspace. Dependency setup is also exposed by `bash ../../workspace.sh setup`
+from the product repository root. That command restores dependencies without starting runtimes.
 
 From `engineering/codebase/brand-workspace.backend-services/`:
 

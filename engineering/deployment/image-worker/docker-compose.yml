@@ -1,0 +1,22 @@
+services:
+  image-worker:
+    build: ../../codebase/ocharo-image.backend-services
+    ports:
+      - "127.0.0.1:8360:8080"
+    environment:
+      IMAGE_WORKER_KEY_FILE: /run/secrets/image-worker-key
+      IMAGE_WORKER_MODEL_DIRECTORY: /models
+    secrets:
+      - image-worker-key
+    volumes:
+      - ${OCHARO_IMAGE_MODEL_DIRECTORY:?Set the verified model directory}:/models:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 3g
+    cpus: 2
+secrets:
+  image-worker-key:
+    file: ${OCHARO_IMAGE_WORKER_KEY_FILE:?Set a private key file}

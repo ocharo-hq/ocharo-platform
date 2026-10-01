@@ -31,3 +31,6 @@ engineering/operations/secrets/
 .vs/
 .vscode/*
 .DS_Store
+
+# Adopted local pilot databases and content-addressed media.
+**/App_Data/

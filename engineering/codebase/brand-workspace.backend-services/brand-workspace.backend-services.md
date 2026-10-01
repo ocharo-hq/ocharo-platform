@@ -12,7 +12,7 @@ dotnet build BrandWorkspace.BackendServices.slnx --no-restore -m:1
 dotnet test BrandWorkspace.BackendServices.slnx --no-build
 ```
 
-The normal API build runs `npm ci` and `npm run build` in the sibling frontend.
+The normal API build runs `pnpm install --frozen-lockfile` and `pnpm build` in the sibling frontend workspace.
 Vite supplies generated API `wwwroot` files. `BuildSpa=false` is for backend-only
 verification or a container stage that already supplied the verified SPA output.
 Tests use the published SDK HTTP harness and an isolated PostgreSQL container;

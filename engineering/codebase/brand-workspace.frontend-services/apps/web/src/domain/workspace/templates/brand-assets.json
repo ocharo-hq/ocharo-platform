@@ -1,0 +1,11 @@
+{
+  "whiteLogo": "/templates/ocharo/och-logo-white-transparent-v1-b48efacc19-trim.png",
+  "blackLogo": "/templates/ocharo/och-logo-black-transparent-v1-13db2d2f47-trim.png",
+  "cardBackground": "/templates/ocharo/och-silhouettes-landscape-soft-blur-v1-1a2ee3a3c9.jpg",
+  "logoColors": {
+    "ivory": "/templates/ocharo/artwork-5846979b56c767a3.svg",
+    "charcoal": "/templates/ocharo/artwork-7b852cb044a96807.svg",
+    "olive": "/templates/ocharo/artwork-bf3fab1f1ef1ce9e.svg",
+    "clay": "/templates/ocharo/artwork-5cf84d536f5ab264.svg"
+  }
+}

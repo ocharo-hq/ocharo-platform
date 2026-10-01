@@ -1,0 +1,37 @@
+descriptor: 1
+product: ocharo-platform
+services:
+  desk:
+    build: { dockerfile: deployment/Dockerfile }
+    paths:
+      - codebase/brand-workspace.backend-services/**
+      - codebase/brand-workspace.frontend-services/**
+    health: /health/ready
+    needs: [postgres]
+    settings:
+      required: [ConnectionStrings:Database, DataProtection:KeysPath, DataProtection:ApplicationName]
+    volumes:
+      keys: /var/lib/brand-workspace/keys
+    sites:
+      app: { exposure: private }
+  jobs:
+    build: { dockerfile: deployment/Dockerfile.worker }
+    paths:
+      - codebase/brand-workspace.backend-services/**
+    health: { command: [sh, -c, 'kill -0 1'] }
+    needs: [postgres]
+    settings:
+      required: [ConnectionStrings:Database]
+  image-worker:
+    build:
+      dockerfile: codebase/ocharo-image.backend-services/Dockerfile
+      context: codebase/ocharo-image.backend-services
+    paths:
+      - codebase/ocharo-image.backend-services/**
+    health:
+      command: [python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live',timeout=2)"]
+    memory: 2g
+    settings:
+      required: [ImageWorker:Key]
+    volumes:
+      models: /models

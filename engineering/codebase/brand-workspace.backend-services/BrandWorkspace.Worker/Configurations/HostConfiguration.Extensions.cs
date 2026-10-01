@@ -22,6 +22,7 @@ public static partial class HostConfiguration
     {
         foreach (var source in builder.Configuration.Sources.OfType<EnvironmentVariablesConfigurationSource>().ToArray())
             builder.Configuration.Sources.Remove(source);
+        builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
         if (Environment.GetEnvironmentVariable("ConnectionStrings__Database") is { } connection)
             builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = connection });
         return builder;

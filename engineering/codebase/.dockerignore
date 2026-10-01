@@ -29,3 +29,6 @@
 **/.vscode/
 **/*.user
 **/.DS_Store
+
+# Adopted pilot data must never become a container build input.
+**/App_Data/

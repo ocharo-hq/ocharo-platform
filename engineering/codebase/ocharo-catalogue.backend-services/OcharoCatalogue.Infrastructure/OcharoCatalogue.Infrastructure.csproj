@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Kit: local blob storage (IBlobRepository). -->
+    <PackageReference Include="WoW2.Sdk.Backend.Beta" />
+    <PackageReference Include="SkiaSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OcharoCatalogue.Application\OcharoCatalogue.Application.csproj" />
+    <ProjectReference Include="..\OcharoCatalogue.Domain\OcharoCatalogue.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

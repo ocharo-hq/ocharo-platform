@@ -1,0 +1,23 @@
+{
+  "name": "ocharocatalogue-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Private frontend workspace for OcharoCatalogue.",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ocharocatalogue/web dev",
+    "dev:http": "pnpm --filter @ocharocatalogue/web dev:http",
+    "typecheck": "pnpm --filter @ocharocatalogue/web typecheck",
+    "build": "pnpm --filter @ocharocatalogue/web build",
+    "preview": "pnpm --filter @ocharocatalogue/web preview",
+    "test": "pnpm --filter @ocharocatalogue/web test",
+    "format": "pnpm --filter @ocharocatalogue/web format",
+    "format:check": "pnpm --filter @ocharocatalogue/web format:check",
+    "lint": "pnpm --filter @ocharocatalogue/web lint",
+    "deploy": "pnpm build && node scripts/deploy.mjs"
+  }
+}

@@ -1,2 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../ocharo-brand.backend-services/OcharoBrand.Domain/OcharoBrand.Domain.csproj" />
+    <ProjectReference Include="../../ocharo-catalogue.backend-services/OcharoCatalogue.Domain/OcharoCatalogue.Domain.csproj" />
+  </ItemGroup>
 </Project>

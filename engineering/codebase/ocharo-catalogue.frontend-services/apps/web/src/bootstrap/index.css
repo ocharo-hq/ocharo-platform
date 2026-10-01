@@ -1,0 +1,85 @@
+@import 'tailwindcss';
+@import '@wow-two-beta/ui-vue/styles.css';
+@source '../../node_modules/@wow-two-beta/ui-vue/dist';
+
+/* Shared Ocharo operator palette (same tokens as Ocharo Marketing). */
+@theme {
+  --color-background: #f5f2eb;
+  --color-foreground: #272924;
+  --color-card: #fffdf8;
+  --color-card-foreground: #272924;
+  --color-primary: #783e4c;
+  --color-primary-foreground: #fffdf8;
+  --color-primary-soft: #f3e7e9;
+  --color-primary-soft-foreground: #783e4c;
+  --color-secondary: #eeeae0;
+  --color-secondary-foreground: #494c43;
+  --color-muted: #efede6;
+  --color-muted-foreground: #76796e;
+  --color-border: #e6e2d8;
+  --color-ring: #783e4c;
+  --color-success: #426553;
+  --color-success-soft: #e9f0e9;
+  --color-success-soft-foreground: #426553;
+  --color-warning: #906623;
+  --color-warning-soft: #f8efdd;
+  --color-warning-soft-foreground: #906623;
+  --color-destructive: #a0443d;
+  --color-destructive-soft: #fae9e6;
+  --color-destructive-soft-foreground: #a0443d;
+  --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-editorial: Georgia, 'Times New Roman', serif;
+  --shadow-paper: 0 12px 35px #25292306;
+}
+
+html {
+  color: var(--color-foreground);
+  background: var(--color-background);
+  font-family: var(--font-sans);
+}
+body {
+  margin: 0;
+  min-width: 320px;
+}
+/* Operator form/button vocabulary as Tailwind v4 utilities (composable with @apply). */
+@utility field {
+  @apply w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15;
+}
+@utility label {
+  @apply mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
+}
+@utility panel {
+  @apply rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-paper)];
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-primary text-primary-foreground hover:bg-primary/90;
+}
+@utility btn-ghost {
+  @apply btn text-muted-foreground hover:bg-muted hover:text-foreground;
+}
+@utility btn-outline {
+  @apply btn border border-border bg-card hover:bg-muted;
+}
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: white;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    transition-duration: 0.01ms;
+  }
+}

@@ -1,0 +1,694 @@
+{
+  "schemaVersion": 1,
+  "templateIds": [
+    "ocharo-journal-v22",
+    "ocharo-charcoal-v5"
+  ],
+  "sourcesRemainCanonical": true,
+  "sources": {
+    "catalogue": "catalogue/studies/car-build-journal-v22.py",
+    "card": "output/pdf/och-business-cards-v5/och-card-manifest-v5.json"
+  },
+  "assets": [
+    {
+      "url": "/templates/ocharo/car-cover-abaya-v01-r01-120af778c7.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/catalogue/images/mock/car-cover-abaya-v01-r01.png",
+      "sourceSha256": "120af778c7b463557c9934c839840c90663518b2d840c58f00d1eb2ed151ec81",
+      "derivativeSha256": "4a1f7d291dc9e1e74d32e7753125b51ac60c93104377b9e2aa4e5cfdb5d66024",
+      "width": 1054,
+      "height": 1492,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/artwork-c12839c489ba5c1b.svg",
+      "derivativeSha256": "c12839c489ba5c1b3107edb1ad070e859d9652ef666759819b15ec5a7d35d2d3",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/och-logo-white-transparent-v1-b48efacc19-trim.png",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/logo/och-logo-white-transparent-v1.png",
+      "sourceSha256": "b48efacc19b66e727afd3a57c0fca9a98927344ef32f931251767b6e5b2afb2f",
+      "derivativeSha256": "d2a857ff389ca35e800b22734b5f4bf1fa810af86d1a37783e1567ceed3aa62d",
+      "width": 1251,
+      "height": 489,
+      "alphaCrop": [
+        141,
+        293,
+        1392,
+        782
+      ],
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/artwork-6fba90afba4dae6d.svg",
+      "derivativeSha256": "6fba90afba4dae6d68ecccacd01310d4e31ec704155417b73c2c4c9ea67df3dc",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/och-abaya-v01-product-three-quarter-r01-transparent-d593f9f568.png",
+      "source": "context/domains/external/work/career/designer/portfolio/products/abaya-v01/references/och-abaya-v01-product-three-quarter-r01-transparent.png",
+      "sourceSha256": "d593f9f568075dc47cb9b07bed213ac0d25e4b369e8554bc28994b6dee5b06bf",
+      "derivativeSha256": "b021fe710b8ab6841de5bcde8355adf6e88534287e04824780e16f7ec878d4f5",
+      "width": 1086,
+      "height": 1448,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-abaya-v01-model-03-r01-de285013d5.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/abaya-v01/models/och-abaya-v01-model-03-r01.png",
+      "sourceSha256": "de285013d5f4084e68e39b71ed55ad15a660b34a684efc5219cb703cd8f4e56e",
+      "derivativeSha256": "a590399816a99e0247d79eaf30b44c15eecff3a5153a3aaa0817f101c2e9104a",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/artwork-03389d5e9b62f9d8.svg",
+      "derivativeSha256": "03389d5e9b62f9d8eb65eb92d52773c220c358cd07d4ed821003271d14426002",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/artwork-dc4a3a450d3cc71c.svg",
+      "derivativeSha256": "dc4a3a450d3cc71c5287648774356b43a57b3ecc799dce60182284e3db89e2dc",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/artwork-530263fcacf1d017.svg",
+      "derivativeSha256": "530263fcacf1d0171c1c7008bc522989ed7c5a24ef523b2a54a6d8e68fd48573",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/artwork-2d4ab10c68634e7d.svg",
+      "derivativeSha256": "2d4ab10c68634e7da9ea685293ffcfa9b2cf04267bf1301f06cfeb185dabdd85",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/och-baska-v01-product-three-quarter-r01-transparent-df5b4f4a18.png",
+      "source": "context/domains/external/work/career/designer/portfolio/products/baska-v01/references/och-baska-v01-product-three-quarter-r01-transparent.png",
+      "sourceSha256": "df5b4f4a18bdd550eb522587cc50e8c07ac11f81d9950005299e1b5871935f30",
+      "derivativeSha256": "0b5bf8d5b013814eaeab009d0354e7fb8f1ecfecf80a646d6972517aa42f805c",
+      "width": 1086,
+      "height": 1448,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-baska-v01-model-02-r02-33c394b5f4.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/baska-v01/models/och-baska-v01-model-02-r02.png",
+      "sourceSha256": "33c394b5f43ab49e508abb1744deecba174beba6195296d6f636a9a7ad523552",
+      "derivativeSha256": "894b6e1876e625daff12c96fd4434ce3e73a01a12182018c3d9ea662d764a3ec",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-baska-v02-model-01-r02-18b3f40860.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/baska-v02/models/och-baska-v02-model-01-r02.png",
+      "sourceSha256": "18b3f4086064b451462f636454823769b297974426cf9836465d7ba563c0405b",
+      "derivativeSha256": "64ee3a77a404d3aa41e57e73e3ce434ae67ea97489f35ee5fae15bc3b0406fee",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-baska-v03-model-06-r02-aed0032cbb.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/baska-v03/models/och-baska-v03-model-06-r02.png",
+      "sourceSha256": "aed0032cbba38e77c01c5a6b1a4ce13bbdbbae9aac87bca78bf8334eab610f2c",
+      "derivativeSha256": "95b1431d5b19887fa0089e6ef2e933efc091158bc9a0e209f5a8828073ff6a0b",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-baska-v04-model-08-r03-854f9bc849.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/baska-v04/models/och-baska-v04-model-08-r03.png",
+      "sourceSha256": "854f9bc849bf326afcad86e5c0afde42189bcc109e539fda878369e556ad0f37",
+      "derivativeSha256": "c59879264e31d8312f55d4c817464c5bb3467c1e3427586c1cd6ef092061b0f6",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-baska-v05-model-04-r02-02892647ef.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/baska-v05/models/och-baska-v05-model-04-r02.png",
+      "sourceSha256": "02892647efae9a8b45e1e3520e2510a0b8d2fcd064eff93316705fa3dab70e11",
+      "derivativeSha256": "883dbf544ed8ab7d711fd9230e1cb214a055bf02ea40b3f2ceb2466eb76312b1",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-baska-v06-model-05-r02-87825ef5f6.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/baska-v06/models/och-baska-v06-model-05-r02.png",
+      "sourceSha256": "87825ef5f6782885b262482b74e4c8d5ab5a6a9a1224bc18061986769fc072d2",
+      "derivativeSha256": "e3bd0f9747372af5811b63d2cc8da2245a34a5e3c6a9b2aeced779c6b6b74550",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-korset-v01-product-three-quarter-r01-transparent-cd89fbcaf0.png",
+      "source": "context/domains/external/work/career/designer/portfolio/products/korset-v01/references/och-korset-v01-product-three-quarter-r01-transparent.png",
+      "sourceSha256": "cd89fbcaf08b1519845d111ed781fbde54d626cc490e2f927ce48a92435c4777",
+      "derivativeSha256": "feec9cb113310c812f4758aa0bf52af40718c2198ae4b9f5566d3e3f1d48742f",
+      "width": 1086,
+      "height": 1448,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-korset-v01-model-07-r01-64ce901a58.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/korset-v01/models/och-korset-v01-model-07-r01.png",
+      "sourceSha256": "64ce901a58bf87d2f09fe933ac4f69bf057bad21acb11f1ba9e4dcf2d299effa",
+      "derivativeSha256": "e12254c2e58822e7f5415a2c245243dff24e614bc9328a2a3fa6c47b532529d6",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-korset-v02-model-02-r01-d86052d4d8.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/korset-v02/models/och-korset-v02-model-02-r01.png",
+      "sourceSha256": "d86052d4d81476cc1ff9827b372a7d4fc264d05d7a5419d3db31528e15477344",
+      "derivativeSha256": "2951f0a56ccb669f7a298c0b61c4c657fb0d230f9b1bd73bc2c85a05f03d7258",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-kostyum-v01-product-three-quarter-r01-transparent-7dd26a1807.png",
+      "source": "context/domains/external/work/career/designer/portfolio/products/kostyum-v01/references/och-kostyum-v01-product-three-quarter-r01-transparent.png",
+      "sourceSha256": "7dd26a1807c995711ca216110b08bcda13625f105046c16ea4a280db2a4550ff",
+      "derivativeSha256": "8044ed3327433e7fb9bd0e5f87c69b8ae6215d8013f5f73feff0c49dca4f5616",
+      "width": 1086,
+      "height": 1448,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-kostyum-v01-model-01-r01-0ba941d6b5.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/kostyum-v01/models/och-kostyum-v01-model-01-r01.png",
+      "sourceSha256": "0ba941d6b5a01e325c227649fe995afb31e2cf1dc359c1644bf070897ce4d9b4",
+      "derivativeSha256": "1bd1e8c574f3828fc473df01a3259d6134bd223499b693423137332f9a3a62ae",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-kostyum-v02-model-03-r01-b250e4af95.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/kostyum-v02/models/och-kostyum-v02-model-03-r01.png",
+      "sourceSha256": "b250e4af95637962f5ee00687bd039ac16c7116a9850d7ac230b81983a0543cd",
+      "derivativeSha256": "b5ff02d24a6473060cfaa6ef5d9b0718d35e6289f1ec12e7012e26cc20e7b309",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-kostyum-v03-model-06-r01-880dd409fa.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/kostyum-v03/models/och-kostyum-v03-model-06-r01.png",
+      "sourceSha256": "880dd409fa84b379a1a4d7979ed37e9579a0d354f5812be97f282fc5680dea64",
+      "derivativeSha256": "2ec9b965d768a366a94a9845fa3b07820f7515180ec41597e246c049fda7467b",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-kostyum-v04-model-04-r01-0e950bbb30.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/kostyum-v04/models/och-kostyum-v04-model-04-r01.png",
+      "sourceSha256": "0e950bbb30b3be3deb43145a2447533a6414756ecd594525ddd4982eed5a594a",
+      "derivativeSha256": "dc584524a2bea48ba4121f5551f512a2569065de445700666c3f7c75c36af34a",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v01-product-three-quarter-r01-transparent-56d0f16fde.png",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v01/references/och-nimcha-v01-product-three-quarter-r01-transparent.png",
+      "sourceSha256": "56d0f16fde7e5756bab9a6e1f2cc13556155e2e24c38203b46b2839c4be86974",
+      "derivativeSha256": "8f8065deb1ff20c60439ca49a42e77d0722c2485f2d354a12ff653f93acd2d1b",
+      "width": 1086,
+      "height": 1448,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v01-model-02-r01-e7cc523057.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v01/models/och-nimcha-v01-model-02-r01.png",
+      "sourceSha256": "e7cc523057d7379ce2a057842a24f290f151719070a0e8ab307467b2dba94548",
+      "derivativeSha256": "1e8dcedce07d8b51fe59059141c1bef34b965eb90802b295954b3d219153a52c",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v02-model-05-r01-4e0b009ef0.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v02/models/och-nimcha-v02-model-05-r01.png",
+      "sourceSha256": "4e0b009ef05471e04583a24a8b7139ee8e0a8355b41fbd920f068a8c62069e38",
+      "derivativeSha256": "78c9e6232e9171eaed0636521b4c0bcdf858f253af8e90332bb526f2f974e929",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v03-model-04-r01-7782ef2142.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v03/models/och-nimcha-v03-model-04-r01.png",
+      "sourceSha256": "7782ef214210d9b89b8fbc7071a331e97f3d14fa9832807274bbd5da32f3346d",
+      "derivativeSha256": "d2ea2828926d65ff3d0fac8159a2dd88fcc20f34e38fbe7a2e2c894d5f330a30",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v04-model-08-r01-3283e5bb32.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v04/models/och-nimcha-v04-model-08-r01.png",
+      "sourceSha256": "3283e5bb3248aa3acc7859b708b37ff19bda76be942607ea122487a76ff6be19",
+      "derivativeSha256": "4522fe1192596180abc68a2853d5fcf5adb4177c5f19dccfcd873fca3c61148a",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v05-model-01-r01-3ec022e0a1.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v05/models/och-nimcha-v05-model-01-r01.png",
+      "sourceSha256": "3ec022e0a1ca8d47db8d700a7bfbdc4fccbb809c30b398d2c24e058ed791f699",
+      "derivativeSha256": "5d3ae39ceb3ee47b450b18d06227ad42f0dbcbd0b3625749340e9f02859dfe0d",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v06-model-06-r01-48a5433681.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v06/models/och-nimcha-v06-model-06-r01.png",
+      "sourceSha256": "48a5433681d6a8279658f93c75584a25f1b46b461eab0124d0966034a7a64a1a",
+      "derivativeSha256": "5cd5610eddf5b15c396618746340e230f40cbb9bf009fc110b267bfd450542f5",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v07-model-07-r01-5e5cda8610.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v07/models/och-nimcha-v07-model-07-r01.png",
+      "sourceSha256": "5e5cda86106d72b425e3a377edfec6c871fb4f62681c726a5d754e69425a0382",
+      "derivativeSha256": "c5e874b59c1431c491795f45f1e28eb4dfc3f1adea161efa01987a0bda4ff34e",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v08-model-03-r01-cbbdf210d8.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v08/models/och-nimcha-v08-model-03-r01.png",
+      "sourceSha256": "cbbdf210d8a3311130f4a928a2089cfe95e189de999c0e402f1e75ff1eb5a327",
+      "derivativeSha256": "b73a51b24b2c5bfd7297f3d38ae89e4f08b1827648cef85a1c4b44aa7a85c5f7",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v09-model-08-r01-62531ddc85.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v09/models/och-nimcha-v09-model-08-r01.png",
+      "sourceSha256": "62531ddc8595cbb1956780b9fd24665d44d4fec890bdb91523043b8ffe557cca",
+      "derivativeSha256": "f50f485c16fa717888c8688fbd0f2b452b5b9923fd75d363560040571ac97bee",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v10-model-06-r01-ec4a5fedd7.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v10/models/och-nimcha-v10-model-06-r01.png",
+      "sourceSha256": "ec4a5fedd7d1341b0d0dedd495da0917dc7714105c935685af32a3da61f63e68",
+      "derivativeSha256": "f8d45b07041a458ac413b1b83f4290724523c157c017f7c54ce97fe908598d51",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v11-model-02-r01-141362dd1c.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v11/models/och-nimcha-v11-model-02-r01.png",
+      "sourceSha256": "141362dd1c5dfdc09354fefa6817f8e0ecf3ace31dd125d68da7dd967f1a9ca9",
+      "derivativeSha256": "4c4269732399f9539aaede180a18a33b1e13a9ac9a33725a79a269bedffda59e",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v12-model-05-r01-22bf73cfc9.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v12/models/och-nimcha-v12-model-05-r01.png",
+      "sourceSha256": "22bf73cfc9ff5f42dad13d31a4408a8dc1184c664de0a1d91e2ea195ab4028b3",
+      "derivativeSha256": "0ea18c99ea47f16b2659fbce85530790899bd1af66a717c5e2b5b6d6c90ed0fe",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v13-model-01-r01-1315ae256f.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v13/models/och-nimcha-v13-model-01-r01.png",
+      "sourceSha256": "1315ae256fa52fea2fe8963129123b9b5dec08eebab6c2c2a6658eef9040fc0b",
+      "derivativeSha256": "ee356c970d5a60bfbf519215559455bee5a361437a8128fa4570035ae0859be1",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v14-model-07-r01-ab8d77231d.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v14/models/och-nimcha-v14-model-07-r01.png",
+      "sourceSha256": "ab8d77231d1e29422a17e8719dd2d029b94ff1bf6bad4107cabeecdc7808d3fb",
+      "derivativeSha256": "3c85d1f0bb070cc7fc118b194b42cda315b6d564bdcdb4a9e1320de0eaf13093",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v15-model-03-r01-c2a572560a.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v15/models/och-nimcha-v15-model-03-r01.png",
+      "sourceSha256": "c2a572560ae69d7898f16ef5e913060d2dd976a802082a4e4415ae701d9996c8",
+      "derivativeSha256": "ce51566171c270d67c7ed2cdde73da3cbe39f31b9a87e6f596c9622facce508d",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-nimcha-v16-model-04-r01-aebceb34a5.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/nimcha-v16/models/och-nimcha-v16-model-04-r01.png",
+      "sourceSha256": "aebceb34a56a42007f27965bb1383102d98bbeef72fef9a0bca0d4e5bb23197b",
+      "derivativeSha256": "5825910fbc1a07603c6d5bc14dfc3517c1e6762a51cbbf1c9a68ee460edbfaaa",
+      "width": 1024,
+      "height": 1536,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v05-pro-img_7696-edge-clean-f1de8deed1.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v05/media/cleaned/och-look-v05-pro-img_7696-edge-clean.jpg",
+      "sourceSha256": "f1de8deed1b96054a455f449ba2866635a8ba331c0454dd0340b86e380e36ade",
+      "derivativeSha256": "c7309be1eb365027753c0f9f28f2ab041bc62f7e484c348ff4aa44c138900ef9",
+      "width": 1800,
+      "height": 1003,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v05-pro-img_7708-edge-clean-4c3a103db6.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v05/media/cleaned/och-look-v05-pro-img_7708-edge-clean.jpg",
+      "sourceSha256": "4c3a103db6d74cbcd4f9335662f74859a7fb90f82dc105cee8003b96d9e17090",
+      "derivativeSha256": "f80191089a8a2188dcf6bd56694caf6dbc1cbf966bdc1243ba5cdff7c02ce6b8",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v05-pro-img_7705-edge-clean-1150593bd1.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v05/media/cleaned/och-look-v05-pro-img_7705-edge-clean.jpg",
+      "sourceSha256": "1150593bd1b89913eedea9d9e1ce553870d1f95b9bf8e3528d189eb87f45554b",
+      "derivativeSha256": "52aa3a14cd5d3a033d9f2641aa3e1035108e593cd61e7c38b7c3446db1c655cc",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v03-pro-img_7632-edge-clean-f7db27bf6d.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v03/media/cleaned/och-look-v03-pro-img_7632-edge-clean.jpg",
+      "sourceSha256": "f7db27bf6d4927a9244efb625a789e18b96b11b5acfd7a4fd561d92b84b23970",
+      "derivativeSha256": "9af4c96f98539db81e581f4b44fbfeecac83ea136b484709085867842e827089",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v03-pro-img_7631-edge-clean-c843a782bd.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v03/media/cleaned/och-look-v03-pro-img_7631-edge-clean.jpg",
+      "sourceSha256": "c843a782bde13cd39206ae410abef96828702566bbc349acc6274f6c1d054cb9",
+      "derivativeSha256": "8f01a3107fdef1279c5bd67f0b51ace29c30f842d275b1140723330b222d5eca",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v03-pro-img_7627-0868f06246.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v03/media/catalogue/och-look-v03-pro-img_7627.jpg",
+      "sourceSha256": "0868f0624634de17e9ce711fd919dfd73e14bc7387c8d7e3bfc081e5401ee59a",
+      "derivativeSha256": "75e6ae0b2eba8263cc25649d812f4a3f79287f01bf8438fb077e63761f264f27",
+      "width": 1013,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v03-pro-img_7635-edge-clean-d3239dfc13.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v03/media/cleaned/och-look-v03-pro-img_7635-edge-clean.jpg",
+      "sourceSha256": "d3239dfc13cc47335fa6614a2457c1437d769b5537290905f6cb7a603574eb20",
+      "derivativeSha256": "81d767802d282bfd36478d3abdc91117b435facd59646bc87f0cd24328b1f445",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v04-pro-img_7647-edge-clean-668db8d23d.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v04/media/cleaned/och-look-v04-pro-img_7647-edge-clean.jpg",
+      "sourceSha256": "668db8d23d81ea6f9dde72a2af0dbec45750ea2ba344d75d858b2461fff9beac",
+      "derivativeSha256": "78b77cad98b0167c8bbbea0ffb697fd2ce0b1172efaacf27b970cc1e97edf50d",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v04-pro-img_7646-edge-clean-abc6718057.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v04/media/cleaned/och-look-v04-pro-img_7646-edge-clean.jpg",
+      "sourceSha256": "abc67180576e1c7df9a9e3bc9040dff145923ac2df83a4b6c59e03b7c066499d",
+      "derivativeSha256": "eb6c27d68b7cefbddf06f851be0e31850c0a687a032ecaa6add896202723e45a",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v04-pro-img_7648-edge-clean-99b0f20960.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v04/media/cleaned/och-look-v04-pro-img_7648-edge-clean.jpg",
+      "sourceSha256": "99b0f209609ca3d483e3b88b30090019aadd3006b15801cccbda0855981b8625",
+      "derivativeSha256": "c5fc23aafee8d35e92be6fee6d58607ca6df690b77ea42d89489a4e11685a930",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v04-pro-img_7650-edge-clean-ca67b2dd30.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v04/media/cleaned/och-look-v04-pro-img_7650-edge-clean.jpg",
+      "sourceSha256": "ca67b2dd30710ded33fb48f59c6db18c1c1349e44412e02f40d49529310e3d58",
+      "derivativeSha256": "f4259cafd9325dfab8d8f583f0c27570e33d4b3a87206fc1c69401f5e1b27a2e",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v06-pro-img_7752-edge-clean-b40fcc0bd9.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v06/media/cleaned/och-look-v06-pro-img_7752-edge-clean.jpg",
+      "sourceSha256": "b40fcc0bd9e172bbc4bf0c72e6192fed619d806abffc9954f186de4d5446f78b",
+      "derivativeSha256": "e4d1814ae43819ab1cf46acbbffa8954e8599194e03c16f7e0c7ee0ab0951400",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v06-pro-img_7750-edge-clean-7b73b16fa9.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v06/media/cleaned/och-look-v06-pro-img_7750-edge-clean.jpg",
+      "sourceSha256": "7b73b16fa9f2e1bda10ec98a41e6e56c98116322978d0b1793de8b679175dfc5",
+      "derivativeSha256": "5335f1b8642df2cbfe1c8b4817ba9fa847bb7e058883ee7493ebb8d3ed4cbd96",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-look-v06-pro-img_7751-edge-clean-299746998a.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/products/look-v06/media/cleaned/och-look-v06-pro-img_7751-edge-clean.jpg",
+      "sourceSha256": "299746998a1a7eceda5fdbe44f08ae3185a6ef909d5ccd1d3f04a407d941e4fb",
+      "derivativeSha256": "2ecdebaa1cd5690ec649761c4300350d8d4b5f31c7a06579995188a28d28a1b9",
+      "width": 1003,
+      "height": 1800,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-maftuna-portrait-original-cc88e4158f.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/portraits/och-maftuna-portrait-original.jpg",
+      "sourceSha256": "cc88e4158f34d657586123b34c0c5f436ff802c6cc3d16d039969cf232a5552e",
+      "derivativeSha256": "94f83631521147541e1a9a9b5231fd6539316f84295e1d23858e65e49b6aaa90",
+      "width": 640,
+      "height": 640,
+      "alphaCrop": null,
+      "provenance": "source-photo"
+    },
+    {
+      "url": "/templates/ocharo/och-studio-six-nimchas-square-r06-7d8fbefea1.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/portraits/och-studio-six-nimchas-square-r06.png",
+      "sourceSha256": "7d8fbefea1f19ede6f26a73aa41760eede2d1dc7db7a6f54444b1d3e294ace67",
+      "derivativeSha256": "1baa72a69219a78c67e090d400830ca5d1b7e534e880168bf9e2577dede5dd2f",
+      "width": 1254,
+      "height": 1254,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/car-nimcha-mannequins-all-r01-97061576bb.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/catalogue/images/collection/car-nimcha-mannequins-all-r01.png",
+      "sourceSha256": "97061576bb4518f3e9988179d6d798c3f293c494a1f291e1a2a047180729038a",
+      "derivativeSha256": "38ccaa2b02a43a8cc2cb2db99c6469c597423d8e4c7ab6f1464ff98676115888",
+      "width": 1122,
+      "height": 1402,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/artwork-77ba0b25ae1ec3f6.svg",
+      "derivativeSha256": "77ba0b25ae1ec3f604a1f3693a5cbbdf67a1b64a5e995377c5cd6f7d0acb93d9",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/car-back-cover-room-v1-c55e4e5ec5.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/catalogue/images/mock/car-back-cover-room-v1.png",
+      "sourceSha256": "c55e4e5ec5529189e932693691898ae1a4148f30af3f272ea69a9bc39f1b369f",
+      "derivativeSha256": "145e975379d3549ebc7ced9a2021ced0ee6902934e51ce1347727d7fda94e80b",
+      "width": 745,
+      "height": 1055,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/artwork-829b3c742a301e24.svg",
+      "derivativeSha256": "829b3c742a301e243c20a59c9e6a95341b61d43cd76e1558a95a148cd852f516",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/artwork-c8b3c15e839ccca3.svg",
+      "derivativeSha256": "c8b3c15e839ccca393145c53743ba38ed8fcccccad85dd8071a36d58d15f012c",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/artwork-61bf92ff2a3301a7.svg",
+      "derivativeSha256": "61bf92ff2a3301a717a85c17c8d5f1a785116a8c8849ff69ab2c02b2ed006d33",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/artwork-6bec734711b5e8af.svg",
+      "derivativeSha256": "6bec734711b5e8af809a688543457422518dbff09790aaed69f304ac51daf3a4",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/och-silhouettes-landscape-soft-blur-v1-1a2ee3a3c9.jpg",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/backgrounds/och-silhouettes-landscape-soft-blur-v1.png",
+      "sourceSha256": "1a2ee3a3c90fb8153d1093147b57f8677052fa57953ef4d09aecc44df0dce973",
+      "derivativeSha256": "468f9edef3c126be250cf09a5251a1a539de923b52c50b15dd607a89f7da84ca",
+      "width": 1536,
+      "height": 1024,
+      "alphaCrop": null,
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/och-logo-black-transparent-v1-13db2d2f47-trim.png",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/logo/och-logo-black-transparent-v1.png",
+      "sourceSha256": "13db2d2f47ef9c74d9f769cafe17e09cdb4eacc7efb4dc44df4e65a7a074fd70",
+      "derivativeSha256": "948ae84acf568d6b8616a2a3afee28710ebc95f4f2af505a9d7a87f4b548cce7",
+      "width": 1432,
+      "height": 483,
+      "alphaCrop": [
+        69,
+        276,
+        1501,
+        759
+      ],
+      "provenance": "generated-or-authored-reference"
+    },
+    {
+      "url": "/templates/ocharo/artwork-5846979b56c767a3.svg",
+      "derivativeSha256": "5846979b56c767a3f62e0a8837f9927575d9373978a6b923c40b3fad0e7b2ffb",
+      "provenance": "editor-color-variant",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/logo/och-logo-white-transparent-v1.png",
+      "sourceSha256": "b48efacc19b66e727afd3a57c0fca9a98927344ef32f931251767b6e5b2afb2f",
+      "color": "#F6F0E5",
+      "width": 1251,
+      "height": 489
+    },
+    {
+      "url": "/templates/ocharo/artwork-7b852cb044a96807.svg",
+      "derivativeSha256": "7b852cb044a9680713a7a662655893a0e413b174625686718917ba9bb80dbb4d",
+      "provenance": "editor-color-variant",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/logo/och-logo-white-transparent-v1.png",
+      "sourceSha256": "b48efacc19b66e727afd3a57c0fca9a98927344ef32f931251767b6e5b2afb2f",
+      "color": "#302B25",
+      "width": 1251,
+      "height": 489
+    },
+    {
+      "url": "/templates/ocharo/artwork-bf3fab1f1ef1ce9e.svg",
+      "derivativeSha256": "bf3fab1f1ef1ce9e94501424b45a45c1108382d5289bc4a81c0f7f2e359a1142",
+      "provenance": "editor-color-variant",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/logo/och-logo-white-transparent-v1.png",
+      "sourceSha256": "b48efacc19b66e727afd3a57c0fca9a98927344ef32f931251767b6e5b2afb2f",
+      "color": "#5D6654",
+      "width": 1251,
+      "height": 489
+    },
+    {
+      "url": "/templates/ocharo/artwork-5cf84d536f5ab264.svg",
+      "derivativeSha256": "5cf84d536f5ab264e5af14e169c494f210b493f6edc848c42e10264cffefa733",
+      "provenance": "editor-color-variant",
+      "source": "context/domains/external/work/career/designer/portfolio/brand/logo/och-logo-white-transparent-v1.png",
+      "sourceSha256": "b48efacc19b66e727afd3a57c0fca9a98927344ef32f931251767b6e5b2afb2f",
+      "color": "#AA7560",
+      "width": 1251,
+      "height": 489
+    },
+    {
+      "url": "/templates/ocharo/artwork-2c73a3db6387f844.svg",
+      "derivativeSha256": "2c73a3db6387f844ceb695bf6e326ec8c47e51740c912aa90b175f8ef7c2503e",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/artwork-7d48792bfa37a48c.svg",
+      "derivativeSha256": "7d48792bfa37a48cb37b0678bf898b1417767e5ba47bbbf51766a8275617c944",
+      "provenance": "source-template-vector"
+    },
+    {
+      "url": "/templates/ocharo/artwork-58c83544feeaf4be.svg",
+      "derivativeSha256": "58c83544feeaf4be168ad14009259df669971772bea1bd1d7903a49c0e85877d",
+      "provenance": "source-template-vector"
+    }
+  ]
+}

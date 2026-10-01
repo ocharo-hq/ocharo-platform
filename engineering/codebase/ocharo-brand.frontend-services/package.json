@@ -1,0 +1,23 @@
+{
+  "name": "ocharobrand-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Private frontend workspace for OcharoBrand.",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ocharobrand/web dev",
+    "dev:http": "pnpm --filter @ocharobrand/web dev:http",
+    "typecheck": "pnpm --filter @ocharobrand/web typecheck",
+    "build": "pnpm --filter @ocharobrand/web build",
+    "preview": "pnpm --filter @ocharobrand/web preview",
+    "test": "pnpm --filter @ocharobrand/web test",
+    "format": "pnpm --filter @ocharobrand/web format",
+    "format:check": "pnpm --filter @ocharobrand/web format:check",
+    "lint": "pnpm --filter @ocharobrand/web lint",
+    "deploy": "pnpm build && node scripts/deploy.mjs"
+  }
+}

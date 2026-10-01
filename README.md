@@ -1,48 +1,102 @@
-# Brand Workspace
+# Ocharo Platform — Ocharo Desk
 
-*Last updated: 2026-09-26*
+*Last updated: 2026-09-29*
 
-A shared brand-operations platform for preparing, approving, publishing, and evaluating content.
-Content & Publishing is the first module. Ocharo is the first organization; garment-specific behavior
-belongs in optional apparel modules. **Brand Workspace is the working name.**
+**Ocharo Desk** is the authenticated operator workspace for brand identity, products, media review and
+content preparation. Platform owns canonical Brand/Product facts and immutable releases. Marketing
+consumes the released buyer projections and owns editorial publishing, distribution and enquiries.
+Studio remains an independent creative product with protected Platform access and file-based handoff.
 
-## Repository state
+## Repository and current build
 
-The developer committed the documentation baseline as `04a13f5` and established
-[the GitHub repository](https://github.com/sulton-max/ventures.brand-workspace).
-The adapted foundation is complete under [r0.1](engineering/planning/rough-track/r0.1/r0.1.md).
-Authenticated content preparation is the current increment under
-[r0.2](engineering/planning/rough-track/r0.2/r0.2.md).
+The canonical repository is [ocharo-hq/ocharo-platform](https://github.com/ocharo-hq/ocharo-platform),
+inside the [Ocharo workspace](../../README.md). The GitHub transfer is complete; existing history,
+record identities and private runtime data are preserved. The former mft checkout path remains a
+compatibility link for the existing process. [Repository setup](../../docs/repository-setup.md) records
+canonical identities and retained local origin aliases.
 
-The foundation uses a .NET 10 API serving a Vue 3 frontend, PostgreSQL persistence, and an
-independent worker. Shared wow-two libraries provide reusable capabilities. Template adaptations
-are recorded in the [audit](engineering/research/template-audit.md); executed results live in
-[verification](engineering/planning/verification.md).
+The current build provides:
 
-The preparation workflow supports provisioned operators, isolated organizations, brands, original
-image uploads, versioned drafts, review, approval, and manual ZIP packages. Ocharo remains user-entered
-tenant configuration. Scheduling and social-provider connections are later work.
+- Authenticated organizations, live membership checks, owner approvals and revision conflicts.
+- Canonical brand/product drafts, immutable releases, locale-specific buyer projections and withdrawal.
+- Private media previews, explicit publication provenance and unreviewed Studio derivative intake.
+- Five-minute audience-bound connections to Studio, Marketing and Editorial with revocation checks.
+- Content preparation, original image uploads, revisioned drafts, review and manual ZIP packages.
+- Editable catalogue/card templates and business overview layouts backed by workspace records.
+
+The foundation uses a .NET 10 API serving Vue 3, PostgreSQL persistence and an independent worker.
+Published WoW2 SDK packages provide shared capabilities. Preserved Brand/Catalogue companion apps
+remain separate source inputs; they do not replace the authenticated canonical Commerce module.
+
+Read the [local product review guide](../../docs/review-guide.md) for all running review entrypoints,
+operator access, synthetic fixtures and repeatable startup. The [workspace build record](../../docs/platform-build.md)
+and [Platform verification](engineering/research/previous-work/platform-build-verification.md) record executed tests,
+browser checks, integration contracts and remaining delivery inputs. Local verification does not mean
+production deployment, approved business content or an outbound campaign.
+
+## Prerequisites and local operation
+
+Use .NET 10, the Node version declared by each frontend's `.nvmrc`, pnpm and PostgreSQL according to
+[deployment](engineering/deployment/deployment.md). The workspace review guide describes isolated
+Docker storage and trusted local HTTPS without replacing the earlier Desk runtime.
+
+**Git LFS is required for the supplied PNG template assets.** Without Git LFS, a checkout contains LFS
+pointer text instead of usable PNG images. Set up Git LFS before cloning; after cloning or enabling it
+in an existing checkout, run `git lfs pull` to obtain the assets.
+
+Provisioned operator access is documented in [operator access](engineering/deployment/operator-access.md).
+Git operations follow persistent repository flags and the active native hook. The
+[workspace delivery record](../../docs/platform-build.md#repository-evidence) records the enabled flags
+and this chat's cross-workspace hook boundary; use the appropriate WoW2-rooted context for reviewed
+commits. Setup documents do not grant Git permission or change remote configuration.
 
 ## Start here
 
-- [Product definition](product/product.md): users, value, module boundaries, and evidence of usefulness.
-- [Current state](product/context.md): current milestone and unresolved external inputs.
-- [Architecture](engineering/architecture/architecture.md): runtime, data ownership, shared libraries, and Studio boundary.
-- [Engineering plan](engineering/planning/planning.md): scaffold sequence and later product milestones.
-- [Preparation track](engineering/planning/rough-track/r0.2/r0.2.md): the current usable workflow.
-- [Operator access](engineering/deployment/operator-access.md): provision an operator and run HTTPS locally.
-- [Template audit](engineering/research/template-audit.md): inspected source, drift, and adoption procedure.
+- [Product definition](product/product.md): users, value, module boundaries and evidence of usefulness.
+- [Current state](product/context.md): implemented product and remaining external inputs.
+- [Architecture](engineering/architecture/architecture.md): runtime, data ownership and independent Studio boundary.
+- [Engineering plan](engineering/research/previous-work/planning.md): delivery tracks and verification links.
+- [Current review](../../docs/review-guide.md): Desk and connected application workflows.
+- [Current verification](engineering/research/previous-work/platform-build-verification.md): releases, access, creative intake and browser evidence.
+- [Template audit](engineering/research/template-audit.md): inspected source, drift and adoption procedure.
+
+## Foundation and template history
+
+The original documentation baseline `04a13f5` and Brand Workspace history remain intact.
+The adapted foundation was completed under [r0.1](engineering/research/previous-work/rough-track/r0.1/r0.1.md),
+authenticated preparation under [r0.2](engineering/research/previous-work/rough-track/r0.2/r0.2.md), and catalogue/card
+editing and the overview under [r0.3](engineering/research/previous-work/rough-track/r0.3/r0.3.md).
+The [verification index](engineering/research/previous-work/verification.md) retains the milestone evidence.
+
+The v22 catalogue is an editable 16-page template in Uzbek, Russian and English. Prices, garment/page
+order, photographs, crop and frame geometry can be edited, saved, reopened and exported. The card
+editor preserves the wordmark, supports contact editing and color/background variants, and exports
+both 85×55mm faces. Three overview layouts use workspace counts. Historical variants, screenshots and
+export limitations remain in the [r0.3 review guide](engineering/research/previous-work/rough-track/r0.3/r0.3-review.md)
+and [r0.3 verification](engineering/research/previous-work/rough-track/r0.3/r0.3-verification.md).
+
+## Brand and Catalogue source adoption
+
+Brand identity/releases and Catalogue product/price/stock/print companion implementations live here
+with their service identifiers, independent SQLite data and operator frontends preserved. They remain
+loopback pilots. Desk's authenticated PostgreSQL Commerce module now owns canonical drafts, reviewed
+releases and public buyer projections; Marketing implements the separate buyer Catalogue experience.
+
+Preserved donor adoption is explicit and owner-only. `Commerce__AdoptionOrganizationId` must match
+the intended receiving organization before any donor file is read; missing or invalid configuration
+fails closed. Adoption retains source identifiers, revisions and hashes and does not approve images
+for publication. The isolated review does not enable real donor adoption.
+
+- [Adoption guide](engineering/research/adoption/adoption.md): source mapping, commands and historical boundaries.
+- [Brand product](product/brand/product.md) and [Brand development](engineering/development/brand/development.md).
+- [Catalogue product](product/catalogue/product.md) and [Catalogue development](engineering/development/catalogue/development.md).
+- [Adoption verification](engineering/research/previous-work/adoption-verification.md): checks at the consolidated source paths.
+- [Current Commerce contracts](engineering/research/previous-work/platform-build-verification.md#contracts): authenticated canonical integration.
 
 ## Canonical analysis
 
-The broader platform analysis remains in [Maftuna's Ocharo platform folder][analysis]. This repository
-owns adopted product requirements and engineering execution; it does not duplicate the business corpus.
-Ocharo Studio remains an independent creative product with optional export-based integration.
-
-## Git and runtime operations
-
-The developer's first commit is preserved. Ordinary commits follow the native repository switch;
-the human publishes. See [operations](engineering/operations/operations.md) for repository state and
-[deployment](engineering/deployment/deployment.md) for local commands.
+The broader business analysis remains in [Maftuna's Ocharo platform folder][analysis]. This repository
+owns adopted product requirements and engineering execution; it does not duplicate the private business
+corpus. Studio retains its own designs and optional review-package integration.
 
 [analysis]: /Users/max/Projects/10x-ws/workbench/fam/mft-10x-ws/context/domains/external/work/ventures/ocharo/platform/och-platform.md

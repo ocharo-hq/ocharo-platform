@@ -2,6 +2,8 @@
 
 # Build context: engineering/codebase/. No frontend is built for the worker.
 FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
+ARG APP_VERSION
+ARG VCS_REF
 WORKDIR /src/brand-workspace.backend-services
 COPY brand-workspace.backend-services/ ./
 RUN dotnet publish BrandWorkspace.Worker/BrandWorkspace.Worker.csproj \

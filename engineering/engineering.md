@@ -1,6 +1,6 @@
 # Engineering overview
 
-*Last updated: 2026-09-26*
+*Last updated: 2026-09-27 12:25 AM*
 
 ## Foundation stack
 
@@ -13,7 +13,7 @@
 | Hosting | API serves built frontend; separate worker executable/image | Implemented and locally verified |
 | Source | Existing product template, adapted to current conventions | Audited source adapted additively |
 
-Toolchain pins: .NET SDK `10.0.300`, Node `24.11.0`, npm `11.6.1`. Published SDK inputs are
+Toolchain pins: .NET SDK `10.0.300`, Node `24.11.0`, pnpm `10.33.2`. Published SDK inputs are
 `WoW2.Sdk.Backend.Beta` `10.0.58-beta` and `@wow-two-beta/ui-vue` `0.0.6`. Lockfiles record
 resolved dependency graphs. Runtime and test proof remains in the verification record.
 
@@ -21,6 +21,6 @@ resolved dependency graphs. Runtime and test proof remains in the verification r
 
 - [Architecture](architecture/architecture.md) owns system boundaries and invariants.
 - [Template audit](research/template-audit.md) owns source provenance and adaptation requirements.
-- [Scaffold track](planning/rough-track/r0.1/r0.1.md) owns the next implementation work.
-- [Verification](planning/verification.md) distinguishes inspections from executed checks.
+- [Scaffold track](research/previous-work/rough-track/r0.1/r0.1.md) owns the next implementation work.
+- [Verification](research/previous-work/verification.md) distinguishes inspections from executed checks.
 - [Deployment](deployment/deployment.md) and [operations](operations/operations.md) own runtime lifecycle.

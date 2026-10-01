@@ -1,0 +1,15 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/tests/">
+    <Project Path="tests/OcharoCatalogue.Tests/OcharoCatalogue.Tests.csproj" />
+  </Folder>
+  <Project Path="OcharoCatalogue.Api/OcharoCatalogue.Api.csproj" />
+  <Project Path="OcharoCatalogue.Application/OcharoCatalogue.Application.csproj" />
+  <Project Path="OcharoCatalogue.Domain/OcharoCatalogue.Domain.csproj" />
+  <Project Path="OcharoCatalogue.Infrastructure/OcharoCatalogue.Infrastructure.csproj" />
+  <Project Path="OcharoCatalogue.Persistence/OcharoCatalogue.Persistence.csproj" />
+</Solution>

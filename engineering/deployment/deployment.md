@@ -21,6 +21,43 @@ process replacement. Its image directory belongs to the unprivileged runtime use
 The checked-in `.env.example` contains a clearly labelled local demonstration password. Use a local
 ignored `.env` for any different credentials. The scaffold performs no social-provider requests.
 
+## Resume the existing local review
+
+From the repository root on this Mac:
+
+```bash
+python3 engineering/deployment/run-review.py
+```
+
+Open `https://localhost:8264`. Use `smoke@example.test` and the existing password in
+`.local/verification/operator-password.txt`; the launcher never displays or resets it.
+It requires Python 3.9+, the existing ignored `.local/verification/compose.env`, local Docker Desktop,
+the .NET 10 SDK, pnpm 10, and the exact Node version in `.nvmrc`. An existing matching
+NVM installation is selected automatically; no tools or certificate trust are installed.
+
+A healthy existing API returns its URL immediately. Otherwise the launcher builds the
+current API and locked frontend, explicitly applies migrations, and starts the API
+using the existing .NET development certificate and stable `host-keys` directory.
+HTTPS verification must succeed. `compose.env` is read as literal key/value data;
+shell substitutions and environment interpolation are never evaluated by the launcher.
+
+Keep the terminal open. Ctrl+C, terminal closure, and termination clean up its owned
+processes. PostgreSQL is reused when already running; otherwise an attached Compose
+child starts it. Cleanup records the container ID and start instance before stopping it;
+a replacement or externally restarted instance is preserved. Database volumes, credentials, and
+session keys are preserved. The launcher starts no worker and never provisions users.
+If another unready process occupies 8264/8265, stop its owning terminal before retrying.
+
+Run the launcher regression checks from the repository root:
+
+```bash
+python3 -B -m unittest discover -s engineering/deployment/tests -p 'test_*.py' -v
+```
+
+The 12 checks cover literal configuration, readiness, ownership, and shutdown behavior.
+They mock process, network, and signal boundaries, use temporary fixture credentials,
+and never start Docker or modify a running review. Live runtime acceptance is separate.
+
 ## Start the packaged stack
 
 Run from `engineering/deployment/`:
@@ -97,8 +134,8 @@ organization API boundary and requires current membership.
 | PostgreSQL | 8270, loopback only |
 | Worker | No HTTP listener |
 
-Use the shared [port ledger](../../../../../conventions/deployment/hosting/ports.md) when adding services.
-Default Vite uses mkcert; certificate trust stays user-controlled. `npm run dev:http` is an explicit
+Use the shared [port ledger](../../../../../../../../career/engineering/wow-two/wow-two-ws/conventions/deployment/hosting/ports.md) when adding services.
+Default Vite uses mkcert; certificate trust stays user-controlled. `pnpm dev:http` is an explicit
 diagnostic fallback; secure session cookies require the HTTPS frontend. Vite proxies `/api` to the
 HTTPS development API. Browser application and API requests remain same-origin.
 
@@ -106,8 +143,8 @@ HTTPS development API. Browser application and API requests remain same-origin.
 
 `verify.yml` runs frontend checks, locked backend restore, the default API/SPA build, backend tests,
 and both image builds. `publish-docker-image.yml` is the standard release marker. A human-published
-version release builds `ghcr.io/sulton-max/ventures.brand-workspace` and the corresponding
-`ventures.brand-workspace-worker` image, each tagged with the release tag and `latest`.
+version release builds `ghcr.io/ocharo-hq/ocharo-platform` and the corresponding
+`ocharo-platform-worker` image, each tagged with the release tag and `latest`.
 The main image remains the control plane's standard deployable; operating the separate worker and
 PostgreSQL still requires this product's topology. No release or remote deployment was created here.
 
@@ -118,4 +155,8 @@ explicit trusted-proxy configuration; arbitrary forwarded headers do not change 
 Production credentials, key encryption, backups, identity recovery, and operational acceptance remain
 separate work before storing real brand data. No real brand account is provisioned by scaffolding.
 
-Executed verification is recorded in [verification](../planning/verification.md).
+Executed verification is recorded in [verification](../research/previous-work/verification.md).
+
+## Convention adoption status
+
+The descriptor and local packaging are prepared; no target was deployed. The shared publisher v0.1.0 proposal was withdrawn because its checkout does not materialize required Git LFS assets. Existing Platform/Studio publishing workflows remain unchanged; Assets has no publisher. Current CI must be reviewed before claiming descriptor-driven versioned images. See `../research/convention-audit.md` for verified checks and remaining configuration boundaries.

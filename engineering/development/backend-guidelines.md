@@ -2,7 +2,7 @@
 
 *Last updated: 2026-09-26*
 
-Follow the [shared .NET conventions](../../../../../conventions/development/backend/dotnet/dotnet-conventions.md).
+Follow the [shared .NET conventions](../../../../../../../../career/engineering/wow-two/wow-two-ws/conventions/development/backend/dotnet/dotnet-conventions.md).
 Use the actual SDK contracts and verified package pins; older template prose is not an API guarantee.
 
 Use `BrandWorkspace.BackendServices.slnx`, central package management, and the prescribed Clean

@@ -1,0 +1,58 @@
+import { ref, shallowRef } from 'vue';
+import type {
+  CatalogueSettings,
+  ImportReport,
+  LocaleCode,
+  PublicCatalogue,
+} from '../../domain/catalogue/CatalogueModels';
+import { catalogueApi, catalogueExports, describeFailure } from '../../integration/catalogue';
+import { useCatalogueStore } from './CatalogueStore';
+
+/** Settings, workspace import and exports. */
+export function useCatalogueAdmin() {
+  const store = useCatalogueStore();
+  const busy = ref(false);
+  const report = shallowRef<ImportReport | null>(null);
+  return {
+    busy,
+    report,
+    exports: catalogueExports,
+    async saveSettings(settings: CatalogueSettings) {
+      busy.value = true;
+      const result = await catalogueApi.saveSettings(settings, store.settingsRevision.value);
+      busy.value = false;
+      if (!result.ok) return store.fail(describeFailure(result.failure));
+      store.settings.value = result.value.settings;
+      store.settingsRevision.value = result.value.revision;
+      store.succeed('Sozlamalar saqlandi.');
+    },
+    async importWorkspace(updateExisting: boolean, includeReferenceImages: boolean) {
+      busy.value = true;
+      const result = await catalogueApi.importWorkspace(updateExisting, includeReferenceImages);
+      busy.value = false;
+      if (!result.ok) return store.fail(describeFailure(result.failure));
+      report.value = result.value;
+      store.succeed(
+        `Import: ${result.value.created} yangi, ${result.value.updated} yangilandi, ${result.value.unchanged} o‘zgarishsiz.`,
+      );
+    },
+  };
+}
+
+/** The public feed, as the print/lookbook view and sibling apps see it. */
+export function usePublicCatalogue() {
+  const store = useCatalogueStore();
+  const catalogue = shallowRef<PublicCatalogue | null>(null);
+  const loading = ref(false);
+  return {
+    catalogue,
+    loading,
+    async load(locale: LocaleCode) {
+      loading.value = true;
+      const result = await catalogueApi.publicCatalogue(locale);
+      loading.value = false;
+      if (result.ok) catalogue.value = result.value;
+      else store.fail(describeFailure(result.failure));
+    },
+  };
+}

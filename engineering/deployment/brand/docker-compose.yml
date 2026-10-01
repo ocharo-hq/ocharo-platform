@@ -1,0 +1,20 @@
+# One OcharoBrand instance per environment. Bring up from engineering/deployment/brand/:
+#
+#   docker compose up -d --build
+#
+# The SQLite store lives on the named volume so data survives container replacement.
+services:
+  ocharobrand:
+    build:
+      context: ../../codebase
+      dockerfile: ../deployment/brand/Dockerfile
+    image: ocharobrand
+    container_name: ocharobrand
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8200:8080"
+    volumes:
+      - ocharobrand-data:/data
+
+volumes:
+  ocharobrand-data:

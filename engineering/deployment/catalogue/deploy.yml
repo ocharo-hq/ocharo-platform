@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=../../../../../../../../conventions/deployment/descriptor/deploy.schema.json
+# What this product deploys: its services, how each builds, what changes it and which sites it serves.
+# Format and rules: wow-two-ws/conventions/deployment/descriptor/deploy-descriptor.md. Hostnames, secrets and
+# environments live in Wheelhouse targets, never here. Paths are relative to engineering/.
+descriptor: 1
+product: ocharocatalogue
+shared:
+  - codebase/ocharo-catalogue.backend-services/Directory.*.props
+services:
+  ocharocatalogue:
+    build: { dockerfile: deployment/catalogue/Dockerfile }
+    paths:
+      - codebase/ocharo-catalogue.backend-services/**
+      - codebase/ocharo-catalogue.frontend-services/**
+    health: /health
+    volumes:
+      data: /data
+    sites:
+      app: {}

@@ -1,3 +1,7 @@
+using BrandWorkspace.Api.MediaProcessing;
+using BrandWorkspace.Api.Commerce;
+using BrandWorkspace.Api.Integrations;
+using BrandWorkspace.Api.DesignDocuments;
 using BrandWorkspace.Api.Access;
 using BrandWorkspace.Api.Foundation;
 using BrandWorkspace.Infrastructure.Preparation.Services;
@@ -33,12 +37,13 @@ public static partial class HostConfiguration
     {
         foreach (var source in builder.Configuration.Sources.OfType<EnvironmentVariablesConfigurationSource>().ToArray())
             builder.Configuration.Sources.Remove(source);
+        builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
         var values = new Dictionary<string, string?>();
         if (Environment.GetEnvironmentVariable("ConnectionStrings__Database") is { } connection)
             values["ConnectionStrings:Database"] = connection;
         if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is { } urls) values["urls"] = urls;
         if (Environment.GetEnvironmentVariable("AllowedHosts") is { } allowedHosts) values["AllowedHosts"] = allowedHosts;
-        foreach (var key in new[] { "DataProtection__KeysPath", "DataProtection__ApplicationName",
+        foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Integrations__SigningKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
                      "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password" })
             if (Environment.GetEnvironmentVariable(key) is { } value) values[key.Replace("__", ":")] = value;
         builder.Configuration.AddInMemoryCollection(values);
@@ -64,7 +69,7 @@ public static partial class HostConfiguration
         if (!migrate) return builder;
         builder.Services.AddDatabaseBespokeMigrations(typeof(FoundationRepository).Assembly, options =>
         {
-            options.Version = "r0.1";
+            options.Version = BuildIdentity.ProductVersion;
             options.AdvisoryLockId = 8_264_001;
         });
         builder.Services.AddHangfire(configuration => configuration.UsePostgreSqlStorage(
@@ -149,6 +154,10 @@ public static partial class HostConfiguration
     private static WebApplicationBuilder AddPreparation(this WebApplicationBuilder builder)
     {
         builder.Services.AddPreparationServices();
+        builder.Services.AddDesignDocumentServices();
+        builder.Services.AddSingleton<IntegrationTickets>();
+        builder.Services.AddCommerce();
+        builder.Services.AddMediaProcessing(builder.Configuration);
         return builder;
     }
 
@@ -216,6 +225,11 @@ public static partial class HostConfiguration
             await next(context);
         });
         app.UseAntiforgery();
+        app.MapGet("/api/system/version", (HttpContext context) =>
+        {
+            context.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(new { service = "BrandWorkspace", version = BuildIdentity.Version });
+        }).AllowAnonymous();
         app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).AllowAnonymous();
         app.MapGet("/health/ready", async (IFoundationRepository repository, CancellationToken token) =>
         {

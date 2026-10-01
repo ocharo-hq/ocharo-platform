@@ -2,13 +2,16 @@
 
 # Build context: engineering/codebase/.
 FROM node:24.11.0-bookworm-slim AS spa
+ARG APP_VERSION
+ARG VCS_REF
 WORKDIR /src/brand-workspace.frontend-services
-COPY brand-workspace.frontend-services/package.json brand-workspace.frontend-services/package-lock.json ./
-RUN npm install --global npm@11.6.1 && npm ci
 COPY brand-workspace.frontend-services/ ./
-RUN npm run build
+RUN npm install --global pnpm@10.33.2 && pnpm install --frozen-lockfile
+RUN pnpm build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
+ARG APP_VERSION
+ARG VCS_REF
 WORKDIR /src/brand-workspace.backend-services
 COPY brand-workspace.backend-services/ ./
 COPY --from=spa /src/brand-workspace.backend-services/BrandWorkspace.Api/wwwroot/ ./BrandWorkspace.Api/wwwroot/

@@ -1,3 +1,7 @@
+using BrandWorkspace.Api.MediaProcessing;
+using BrandWorkspace.Api.Commerce;
+using BrandWorkspace.Api.Integrations;
+using BrandWorkspace.Api.DesignDocuments;
 using BrandWorkspace.Api.Access;
 using BrandWorkspace.Api.Preparation;
 
@@ -12,5 +16,5 @@ public static partial class HostConfiguration
 
     /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>
     public static WebApplication Configure(this WebApplication app, bool serveHttp = true) =>
-        serveHttp ? app.AddFoundationEndpoints().MapAccessEndpoints().MapPreparationEndpoints() : app;
+        serveHttp ? app.AddFoundationEndpoints().MapAccessEndpoints().MapPreparationEndpoints().MapDesignDocumentEndpoints().MapIntegrationEndpoints().MapCommerceEndpoints().MapMediaProcessingEndpoints() : app;
 }

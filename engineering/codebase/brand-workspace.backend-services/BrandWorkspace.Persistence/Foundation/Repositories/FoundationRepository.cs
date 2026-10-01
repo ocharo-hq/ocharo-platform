@@ -61,6 +61,8 @@ public sealed class FoundationRepository(NpgsqlDataSource dataSource) : IFoundat
                 AND to_regclass('preparation.draft_media') IS NOT NULL
                 AND to_regclass('preparation.approvals') IS NOT NULL
                 AND to_regclass('preparation.exports') IS NOT NULL
+                AND to_regclass('design_documents.documents') IS NOT NULL
+                AND to_regclass('design_documents.revisions') IS NOT NULL
                 AND to_regclass('hangfire.job') IS NOT NULL
                 AND to_regclass('hangfire.jobqueue') IS NOT NULL
             FROM foundation.schema_version WHERE id = 1

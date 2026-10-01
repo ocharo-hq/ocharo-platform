@@ -1,0 +1,17 @@
+{
+  "preserved": true,
+  "results": [
+    {
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "method": "POST",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "status": 503
+    }
+  ]
+}

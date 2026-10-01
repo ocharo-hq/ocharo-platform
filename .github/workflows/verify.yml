@@ -10,23 +10,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: engineering/codebase/brand-workspace.frontend-services/package-lock.json
+          cache: pnpm
+          cache-dependency-path: engineering/codebase/brand-workspace.frontend-services/pnpm-lock.yaml
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.300
-      - name: Pin npm
-        run: npm install --global npm@11.6.1
       - name: Verify frontend
         working-directory: engineering/codebase/brand-workspace.frontend-services
         run: |
-          npm ci
-          npm run lint
-          npm run typecheck
-          npm test
+          pnpm install --frozen-lockfile
+          pnpm lint
+          pnpm typecheck
+          pnpm test
       - name: Verify backend and generated frontend
         working-directory: engineering/codebase/brand-workspace.backend-services
         run: |

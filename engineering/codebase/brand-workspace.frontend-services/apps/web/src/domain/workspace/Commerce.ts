@@ -1,0 +1,17 @@
+export type Locale = 'uz' | 'ru' | 'en';
+export interface Words { uz: string | null; ru: string | null; en: string | null }
+export interface Provenance { kind: 'unknown'|'photo'|'visualization'|'archival'; approvedForPublication: boolean; sourceUrl: string|null; credit: string|null; rights: string|null }
+export interface CommerceImage { id:string;role:string;fileName:string;contentType:string;byteLength:number;sha256:string;width:number|null;height:number|null;hasPreview:boolean;alt:string|null;sourcePath:string|null }
+export interface Copy {status:'draft'|'approved';name:string|null;fabric:string|null;decoration:string|null;description:string|null}
+export interface Product {document:{id:string;garmentType:string;variantCode:string;status:'draft'|'active'|'archived';sortOrder:number;sizes:string[];fabricCodes:string[];decorationCodes:string[];tags:string[];locales:Record<Locale,Copy>;pricing:{currency:string;status:'draft'|'confirmed';tiers:{minimumQuantity:number;maximumQuantity:number|null;unitPrice:number}[];wording:string|null}|null;media:CommerceImage[];issues:{id:string;field:string;status:string;question:string}[];notes:string|null;stock:Record<string,number>|null;madeToOrder:boolean;[key:string]:unknown};revision:number;sourceRevision:number|null}
+export interface Collection {id:string;names:Words;description:string|null;productIds:string[];isPublished:boolean;sortOrder:number}
+export interface CatalogueEdition {id:string;sourceDesignId:string;sourceRevision:number;title:string;locale:Locale;templateId:string;pages:{id:string;title:string;widthMm:number;heightMm:number;productIds:string[];pngSha256:string;pdfSha256:string}[];pdfSha256:string;approvedForPublication:boolean;createdAt:string}
+export interface CommerceSnapshot {catalogueEditions?:CatalogueEdition[];slug:string;identity:{name:string;tagline:Words;descriptor:Words;palette:{key:string;name:string;hex:string;role:string}[];links:{key:string;label:string;handle:string|null;url:string}[];[key:string]:unknown};logos:Record<string,CommerceImage & {slot:string;status:string;uploadedAt:string}>;products:Product[];collections:Collection[];mediaApprovals:Record<string,Provenance>;verifiedLinkKeys:string[];sources:unknown[]}
+export interface CommerceDraft {brandId:string;revision:number;snapshot:CommerceSnapshot;updatedAt:string}
+export interface CommerceRelease {id:string;brandId:string;revision:number;sourceRevision:number;publishedAt:string;note:string;withdrawnAt:string|null;snapshot:CommerceSnapshot}
+export interface IntegrationTicket {token:string;expiresAt:string}
+export interface CreativeInput {brandId:string;productId:string|null;source:{application:string;workspaceId:string;lookId:string;revision:number};assetReleases:{id:string;sha256:string}[];materials:{slot:string;source:string;materialId?:string;sha256?:string}[];derivative:{mediaId:string;sha256:string;mediaType:string};sourceApproval?:{status:string;note?:string}}
+export interface CreativeImport {id:string;createdAt:string;status:string;input:CreativeInput}
+export const words = ():Words => ({uz:null,ru:null,en:null});
+export const emptyCopy = ():Copy => ({status:'draft',name:null,fabric:null,decoration:null,description:null});
+export function initialCommerce(name:string,slug:string):CommerceSnapshot {return {slug,identity:{name,tagline:words(),descriptor:words(),palette:[],links:[]},logos:{},products:[],collections:[],mediaApprovals:{},verifiedLinkKeys:[],sources:[]};}

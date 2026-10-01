@@ -1,8 +1,9 @@
 <Project>
   <PropertyGroup><ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally></PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="WoW2.Sdk.Backend.Beta" Version="10.0.58-beta" />
-    <PackageVersion Include="WoW2.Sdk.Backend.Beta.Testing" Version="10.0.58-beta" />
+    <PackageVersion Include="WoW2.Sdk.Backend.Beta" Version="10.0.63-beta" />
+    <PackageVersion Include="WoW2.Sdk.Backend.Beta.Testing" Version="10.0.63-beta" />
+    <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.3" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.3" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageVersion Include="SkiaSharp" Version="4.152.1" />

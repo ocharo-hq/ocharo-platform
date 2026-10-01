@@ -9,4 +9,13 @@
     <RunSettingsFilePath>$(MSBuildThisFileDirectory)tests.runsettings</RunSettingsFilePath>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
+  <PropertyGroup>
+    <!-- CI supplies the product version. Local builds are explicitly unreleased. -->
+    <Version Condition="'$(APP_VERSION)' != ''">$(APP_VERSION)</Version>
+    <Version Condition="'$(APP_VERSION)' == ''">0.0.0</Version>
+    <InformationalVersion Condition="'$(APP_VERSION)' != ''">$(APP_VERSION)</InformationalVersion>
+    <InformationalVersion Condition="'$(APP_VERSION)' == ''">dev</InformationalVersion>
+    <SourceRevisionId Condition="'$(VCS_REF)' != ''">$(VCS_REF)</SourceRevisionId>
+    <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
 </Project>

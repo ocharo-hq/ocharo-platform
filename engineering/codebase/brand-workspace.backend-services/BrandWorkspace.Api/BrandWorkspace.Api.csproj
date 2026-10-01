@@ -9,9 +9,9 @@
   <PropertyGroup><SpaRoot>$(MSBuildProjectDirectory)/../../brand-workspace.frontend-services/</SpaRoot></PropertyGroup>
   <Target Name="BuildSpa" BeforeTargets="PrepareForBuild;ResolveProjectStaticWebAssets"
           Condition="'$(BuildSpa)' != 'false' and '$(DesignTimeBuild)' != 'true' and '$(NoBuild)' != 'true'">
-    <Error Condition="!Exists('$(SpaRoot)package-lock.json')" Text="The locked frontend dependency manifest is required." />
-    <Exec Command="npm ci" WorkingDirectory="$(SpaRoot)" />
-    <Exec Command="npm run build" WorkingDirectory="$(SpaRoot)" />
+    <Error Condition="!Exists('$(SpaRoot)pnpm-lock.yaml')" Text="The locked frontend dependency manifest is required." />
+    <Exec Command="pnpm install --frozen-lockfile" WorkingDirectory="$(SpaRoot)" />
+    <Exec Command="pnpm build" WorkingDirectory="$(SpaRoot)" />
     <ItemGroup>
       <Content Remove="@(Content)" Condition="$([System.String]::Copy('%(Content.Identity)').Replace('\', '/').StartsWith('wwwroot/'))" />
       <Content Include="wwwroot/**/*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
