@@ -1,0 +1,15 @@
+{
+  "fixtureOnly": true,
+  "appServicesStarted": false,
+  "checks": [
+    "gallery links",
+    "PDF editor page geometry and activation",
+    "mobile preview width390",
+    "unconfirmed product excluded",
+    "two UZS bands",
+    "styled discard warning retains edits",
+    "500 toast and retry"
+  ],
+  "nativeDialogs": [],
+  "consoleErrors": []
+}

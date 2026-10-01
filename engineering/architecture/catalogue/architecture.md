@@ -1,6 +1,11 @@
 # ventures.ocharo-catalogue — Architecture
 
-*Last updated: 2026-09-28*
+*Last updated: 2026-10-01*
+
+> Retained local-pilot architecture. Canonical authenticated authoring and named web/PDF editions
+> are documented in [Catalogue authoring and outputs](../catalogue-outputs.md). The pilot remains
+> preserved and offers an explicit Desk link; its local data is not a second canonical write path.
+> The older runtime examples below describe that retained implementation, not the current Desk entrypoint.
 
 ```mermaid
 flowchart LR

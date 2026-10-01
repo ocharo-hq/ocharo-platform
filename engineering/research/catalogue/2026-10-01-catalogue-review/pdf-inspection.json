@@ -1,0 +1,30 @@
+{
+  "pageCount": 1,
+  "pageSizePoints": [
+    595.2755905511812,
+    841.8897637795277
+  ],
+  "pageSizeMm": [
+    210.0,
+    297.00000000000006
+  ],
+  "title": "Autumn 2026",
+  "creator": "Ocharo Brand Workspace",
+  "embeddedImages": [
+    {
+      "width": 1984,
+      "height": 2806,
+      "mode": "RGB"
+    }
+  ],
+  "textExtraction": "",
+  "textExtractionNote": "The app intentionally embeds the rendered page as a high-resolution image; text is verified in the rendered page image, not a text layer.",
+  "visualReview": {
+    "renderedWith": "Poppler pdftoppm at 110 DPI",
+    "expectedText": "Ocharo autumn",
+    "observedText": "Ocharo autumn",
+    "clipping": false,
+    "overlap": false,
+    "blankOrCorruptPage": false
+  }
+}

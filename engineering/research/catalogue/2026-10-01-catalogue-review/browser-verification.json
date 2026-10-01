@@ -1,0 +1,24 @@
+{
+  "fixtureOnly": true,
+  "appServicesStarted": false,
+  "builtUi": true,
+  "route": "https://catalogue-review.test/organizations/11111111-1111-4111-8111-111111111111/catalogue?design=33333333-3333-4333-8333-333333333333&page=cover&mode=pdf",
+  "checks": [
+    "saved PDF designer loaded",
+    "active one-page fixture",
+    "actual Export PDF click",
+    "browser download completed",
+    "no native dialogs or JavaScript errors"
+  ],
+  "sourcePage": {
+    "widthMm": 210,
+    "heightMm": 297,
+    "title": "Cover",
+    "text": "Ocharo autumn"
+  },
+  "suggestedFilename": "Autumn-2026.pdf",
+  "pdfPath": "/tmp/ocharo-build-20261001/browser-pdf-review/catalogue-cover.pdf",
+  "pdfBytes": 60283,
+  "nativeDialogs": [],
+  "consoleErrors": []
+}

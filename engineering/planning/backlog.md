@@ -28,12 +28,20 @@
 
 ## Queued catalogue review — 2026-10-01
 
-The user explicitly queued this feedback for after the active translation/language batch.
-Do not treat this list as current implementation or as an approved final visual design.
-The screenshots show the retained Catalogue pilot, while canonical product editing and
-fixed-page editions belong to Ocharo Desk. Resolve that entrypoint before implementing the shell;
-do not introduce another writable canonical product store. The screenshot's HTTP 500 error
-also needs a runtime/API diagnosis when this review lane starts.
+The initial feedback was queued during the translation batch. The user subsequently activated
+canonical product review and named catalogue outputs. Their implementation and unchecked owner-review
+scenarios now live in [v0.1, iteration 5](version-track/v0.1/v0.1.md#iteration-5--named-catalogues-and-product-review),
+with [architecture and evidence](../architecture/catalogue-outputs.md).
+
+Promoted work includes combined product facts/translations/prices, per-language confirmation and
+review indicators, fixed UZS 1–9/10+ prices, the catalogue gallery, separate web/PDF designers and
+explicit retained-pilot entry into Desk. These are no longer future queue items. Existing legacy
+prices and immutable releases are preserved; no automatic currency conversion was introduced.
+
+The remaining list below is still queued and is not approved final visual design. The screenshots
+originated in the retained pilot. Continue from canonical Desk for the active owner review; do not
+create another writable product source. Any recurring pilot HTTP 500 requires its own runtime/API
+diagnosis; the new Desk entry link does not establish that the old runtime error is resolved.
 
 - [ ] Replace the text placeholder with the approved Ocharo logo; add a considered `Catalogue` subtitle.
       Reuse this brand/application lockup in fitting apps, including Studio.
@@ -46,13 +54,9 @@ also needs a runtime/API diagnosis when this review lane starts.
 - [ ] Evaluate account/settings placement consistently for guests and signed-in users. Proposed
       direction: one account button with sign-in/join and language/theme for guests, profile and
       language/theme after sign-in. This is an analysis recommendation, not reviewed UI approval.
-- [ ] Merge Products, Prices and per-product translations into one Products experience and edit form.
-      Include product facts, materials, prices, collections and translated copy (`Matnlar`).
 - [ ] Add product-image upload, removal and active/inactive controls. Require at least one active
       image when saving an editable product. Public product projection and designer eligibility
       must use the same active-media policy; preserve source media and existing immutable releases.
-- [ ] Accept prices in UZS only; every catalogue language shows those same UZS prices.
-      This supersedes the current multi-currency editor only when this queued lane is implemented.
 - [ ] Replace native dropdown menus with the styled, accessible published WoW2 frontend SDK controls.
 - [ ] Open product and collection forms as a focused modal with a blurred backdrop on desktop,
       and a full-screen form on tablet/mobile. Avoid placing the form beside/inside the listing grid.
