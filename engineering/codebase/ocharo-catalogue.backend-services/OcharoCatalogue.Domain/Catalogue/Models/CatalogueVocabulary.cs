@@ -53,5 +53,16 @@ public static class MediaRole
 /// <summary>Catalogue languages in display order.</summary>
 public static class CatalogueLocales
 {
-    public static readonly IReadOnlyList<string> All = ["uz", "ru", "en"];
+    public static readonly IReadOnlyList<string> All =
+        ["uz", "ru", "en", "tg", "kk", "ky", "tk", "tr", "az", "fr", "it", "de", "es", "pt", "pl", "uk", "ar", "fa", "ur", "zh-Hans", "ko", "ja", "id", "ms", "hi"];
+    public static bool Supported(string? locale) => locale is not null && All.Contains(locale, StringComparer.Ordinal);
+    public static string Direction(string locale) => locale is "ar" or "fa" or "ur" ? "rtl" : "ltr";
+}
+
+/// <summary>Image groups shared by catalogue page selection and product editing.</summary>
+public static class ProductMediaGroup
+{
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal) { "product", "model", "detail", "fabric" };
+    public static string For(ProductMedia image) => image.Group is not null && All.Contains(image.Group)
+        ? image.Group : image.Role switch { MediaRole.Model => "model", MediaRole.Detail => "detail", MediaRole.Fabric => "fabric", _ => "product" };
 }

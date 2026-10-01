@@ -8,6 +8,7 @@
     <!-- Kit: local blob storage (IBlobRepository). -->
     <PackageReference Include="WoW2.Sdk.Backend.Beta" />
     <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="PdfPig" />
   </ItemGroup>
 
   <ItemGroup>

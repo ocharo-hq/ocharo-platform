@@ -16,6 +16,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
     public async Task<IReadOnlyList<ProductSummary>> ListAsync(ProductFilter filter, CancellationToken ct)
     {
         var records = await repository.GetProductsAsync(ct);
+        var collections = (await repository.GetCollectionsAsync(ct)).Select(record => CatalogueJson.Read<CollectionDocument>(record.Json)).ToList();
         HashSet<string>? inCollection = null;
         if (!string.IsNullOrWhiteSpace(filter.Collection))
         {
@@ -33,7 +34,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             .Where(x => string.IsNullOrWhiteSpace(filter.Tag) || x.Document.Tags.Contains(filter.Tag))
             .Where(x => string.IsNullOrEmpty(query) || Matches(x.Document, query))
             .OrderBy(x => x.Record.SortOrder).ThenBy(x => x.Record.GarmentType).ThenBy(x => x.Record.Id, StringComparer.Ordinal)
-            .Select(x => Summarize(x.Document, x.Record))
+            .Select(x => Summarize(x.Document, x.Record, collections.Where(collection => collection.ProductIds.Contains(x.Record.Id)).Select(collection => collection.Id).ToList()))
             .ToList();
     }
 
@@ -65,7 +66,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         var record = await repository.FindProductAsync(id, ct) ?? throw CatalogueException.NotFound("Product");
         var current = CatalogueJson.Read<ProductDocument>(record.Json);
         var document = Normalize(input with { VariantCode = input.VariantCode ?? current.VariantCode }, id, await settings.GetAsync(ct),
-            current.Media, current.SourceVerbatim, current.Source);
+            current.Media, current.SourceVerbatim, current.Source, current.Locales, current.Pricing);
         var saved = await repository.UpdateProductAsync(ToRecord(document, expected + 1, record.CreatedAt, clock.UtcNow),
             expected, Summary(input.ChangeSummary, Describe(current, document)), ct);
         return await DetailAsync(saved, ct);
@@ -85,7 +86,10 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             Issues = [],
             Source = null,
             SourceVerbatim = null,
-            Locales = new ProductLocales(Draft(source.Locales.Uz), Draft(source.Locales.Ru), Draft(source.Locales.En)),
+            Locales = new ProductLocales(Draft(source.Locales.Uz), Draft(source.Locales.Ru), Draft(source.Locales.En))
+            {
+                Additional = (source.Locales.Additional ?? new Dictionary<string, ProductLocale>()).ToDictionary(entry => entry.Key, entry => Draft(entry.Value), StringComparer.Ordinal),
+            },
             Pricing = source.Pricing is null ? null : source.Pricing with { Status = PricingStatus.Draft },
         };
         var now = clock.UtcNow;
@@ -136,6 +140,8 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         var record = await repository.FindProductAsync(id, ct) ?? throw CatalogueException.NotFound("Product");
         var snapshot = await repository.FindRevisionAsync(id, revision, ct) ?? throw CatalogueException.NotFound("Revision");
         var document = CatalogueJson.Read<ProductDocument>(snapshot.Json);
+        var problem = ActivationProblem(document);
+        if (problem is not null) throw new CatalogueException($"Cannot restore an active product: {problem}.");
         var saved = await repository.UpdateProductAsync(ToRecord(document, expectedRevision + 1, record.CreatedAt, clock.UtcNow),
             expectedRevision, $"Restored revision {revision}", ct);
         return await DetailAsync(saved, ct);
@@ -177,6 +183,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             if (record is null) { skipped.Add($"{id}: not found"); continue; }
             var document = CatalogueJson.Read<ProductDocument>(record.Json);
             if (document.Pricing is not { Tiers.Count: > 0 } pricing) { skipped.Add($"{id}: no price recorded"); continue; }
+            if (!ProductPublicationEligibility.StandardBands(pricing.Tiers)) { skipped.Add($"{id}: confirm the 1–9 and 10+ price bands first"); continue; }
             var bulkStart = pricing.Tiers.Max(t => t.MinimumQuantity);
             var tiers = pricing.Tiers.Select(t =>
             {
@@ -191,6 +198,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
                 var rounded = (long)(Math.Round(raw / input.RoundTo, MidpointRounding.AwayFromZero) * input.RoundTo);
                 return t with { UnitPrice = Math.Max(0, rounded) };
             }).ToList();
+            if (!ProductPublicationEligibility.ValidTiers(tiers)) { skipped.Add($"{id}: adjusted price is out of range"); continue; }
             if (tiers.SequenceEqual(pricing.Tiers)) continue;
             var next = document with { Pricing = pricing with { Tiers = tiers, Status = PricingStatus.Draft } };
             await repository.UpdateProductAsync(ToRecord(next, record.Revision + 1, record.CreatedAt, clock.UtcNow),
@@ -214,48 +222,49 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             })
             .ToList();
 
-    /// <summary>Saves only the three-language copy; other fields keep their current values.</summary>
+    /// <summary>Saves localized copy; omitted additional languages retain their current values.</summary>
     public async Task<ProductCopyRow> UpdateCopyAsync(string id, CopyInput input, CancellationToken ct)
     {
         var record = await repository.FindProductAsync(id, ct) ?? throw CatalogueException.NotFound("Product");
         var current = CatalogueJson.Read<ProductDocument>(record.Json);
-        var locales = new ProductLocales(Locale(input.Locales.Uz, "uz"), Locale(input.Locales.Ru, "ru"), Locale(input.Locales.En, "en"));
+        var locales = NormalizeLocales(input.Locales, current.Locales);
         var next = current with { Locales = locales };
         var problem = ActivationProblem(next);
         if (problem is not null) throw new CatalogueException($"Cannot keep the product active: {problem}.");
-        var approved = new[] { locales.Uz, locales.Ru, locales.En }.Count(l => l.Status == LocaleStatus.Approved);
+        var approved = CatalogueLocales.All.Count(code => locales.For(code).Status == LocaleStatus.Approved);
         var saved = await repository.UpdateProductAsync(ToRecord(next, input.ExpectedRevision + 1, record.CreatedAt, clock.UtcNow),
-            input.ExpectedRevision, $"Edited copy ({approved}/3 approved)", ct);
+            input.ExpectedRevision, $"Edited copy ({approved}/{CatalogueLocales.All.Count} approved)", ct);
         var primary = PrimaryImage(next);
         return new ProductCopyRow(saved.Id, saved.GarmentType, saved.Status, saved.Revision,
             primary is null ? null : primary.HasPreview ? CatalogueUrls.Preview(primary.Sha256) : CatalogueUrls.Media(primary.Sha256), next.Locales);
     }
 
     /// <summary>Maps a stored product to its grid row.</summary>
-    public static ProductSummary Summarize(ProductDocument d, ProductRecord r)
+    public static ProductSummary Summarize(ProductDocument d, ProductRecord r, IReadOnlyList<string>? collectionIds = null)
     {
         var primary = PrimaryImage(d);
-        var approved = new[] { d.Locales.Uz, d.Locales.Ru, d.Locales.En }.Count(l => l.Status == LocaleStatus.Approved);
+        var languages = AuthoredLanguages(d.Locales);
+        var approved = languages.Count(code => d.Locales.For(code).Status == LocaleStatus.Approved && !string.IsNullOrWhiteSpace(d.Locales.For(code).Name));
         return new ProductSummary(d.Id, d.GarmentType, d.VariantCode, d.Status, d.SortOrder, d.Locales.Uz.Name, d.Locales.Ru.Name,
             d.Locales.En.Name, d.Pricing?.RetailPrice, d.Pricing?.WholesalePrice, d.Pricing?.Status, approved,
             d.Issues.Count(i => i.Status == IssueStatus.Open), d.Media.Count,
             primary is null ? null : CatalogueUrls.Media(primary.Sha256),
             primary is null ? null : primary.HasPreview ? CatalogueUrls.Preview(primary.Sha256) : CatalogueUrls.Media(primary.Sha256),
-            d.Tags, r.Revision, r.UpdatedAt, d.Availability, d.Stock?.Values.Sum());
+            d.Tags, r.Revision, r.UpdatedAt, d.Availability, d.Stock?.Values.Sum(), languages.Count, languages.Count - approved, collectionIds ?? []);
     }
 
     /// <summary>The first cutout, else the first model image, else the first image.</summary>
     public static ProductMedia? PrimaryImage(ProductDocument d) =>
-        d.Media.FirstOrDefault(m => m.Role == MediaRole.Cutout)
-        ?? d.Media.FirstOrDefault(m => m.Role == MediaRole.Model)
-        ?? d.Media.FirstOrDefault();
+        ProductPublicationEligibility.ActiveImages(d).FirstOrDefault(m => m.Role == MediaRole.Cutout)
+        ?? ProductPublicationEligibility.ActiveImages(d).FirstOrDefault(m => m.Role == MediaRole.Model)
+        ?? ProductPublicationEligibility.ActiveImages(d).FirstOrDefault();
 
     /// <summary>Why a document cannot be active, or null when it can.</summary>
     public static string? ActivationProblem(ProductDocument d)
     {
         if (d.Status != ProductStatus.Active) return null;
-        if (string.IsNullOrWhiteSpace(d.Locales.Uz.Name)) return "an active product needs an Uzbek name";
-        if (d.Media.Count == 0) return "an active product needs at least one image";
+        if (!CatalogueLocales.All.Any(code => !string.IsNullOrWhiteSpace(d.Locales.For(code).Name))) return "an active product needs a name";
+        if (ProductPublicationEligibility.ActiveImages(d).Count == 0) return "an active product needs at least one active image";
         return null;
     }
 
@@ -297,7 +306,8 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
     }
 
     private static ProductDocument Normalize(ProductInput input, string id, CatalogueSettings settings,
-        IReadOnlyList<ProductMedia> currentMedia, string? sourceVerbatim, ProductSource? source)
+        IReadOnlyList<ProductMedia> currentMedia, string? sourceVerbatim, ProductSource? source,
+        ProductLocales? currentLocales = null, ProductPricing? currentPricing = null)
     {
         if (!Slug().IsMatch(id) || id.Length > 64) throw new CatalogueException("Id must be lowercase letters, digits and single hyphens (max 64).");
         var garmentType = input.GarmentType.Trim();
@@ -307,7 +317,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         if (!Slug().IsMatch(variant) || variant.Length > 16) throw new CatalogueException("Variant code must be a short slug such as v07.");
         if (!ProductStatus.All.Contains(input.Status)) throw new CatalogueException("Unknown product status.");
 
-        var locales = input.Locales ?? ProductLocales.Empty();
+        var locales = input.Locales ?? currentLocales ?? ProductLocales.Empty();
         var document = new ProductDocument
         {
             Id = id,
@@ -320,8 +330,8 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             FabricCodes = Codes(input.FabricCodes, 40, 20, "fabric code"),
             DecorationCodes = Codes(input.DecorationCodes, 40, 20, "decoration code"),
             Tags = Codes(input.Tags, 40, 20, "tag"),
-            Locales = new ProductLocales(Locale(locales.Uz, "uz"), Locale(locales.Ru, "ru"), Locale(locales.En, "en")),
-            Pricing = Pricing(input.Pricing, settings.Currency),
+            Locales = NormalizeLocales(locales, currentLocales),
+            Pricing = Pricing(input.Pricing, settings.Currency, currentPricing),
             Media = Media(input.Media, currentMedia),
             Issues = Issues(input.Issues),
             SourceVerbatim = sourceVerbatim,
@@ -371,6 +381,24 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             d.Sizes, d.Stock, d.MadeToOrder, d.Availability);
     }
 
+    private static IReadOnlyList<string> AuthoredLanguages(ProductLocales locales) => CatalogueLocales.All.Where(code =>
+        code is "uz" or "ru" or "en" || locales.Additional?.ContainsKey(code) == true &&
+        (locales.For(code).Status == LocaleStatus.Approved || new[] { locales.For(code).Name, locales.For(code).Fabric, locales.For(code).Decoration, locales.For(code).Description }.Any(value => !string.IsNullOrWhiteSpace(value)))).ToList();
+
+    private static ProductLocales NormalizeLocales(ProductLocales locales, ProductLocales? previous = null)
+    {
+        var additional = new Dictionary<string, ProductLocale>(StringComparer.Ordinal);
+        if (previous?.Additional is { } retained)
+            foreach (var entry in retained) additional[entry.Key] = entry.Value;
+        foreach (var entry in locales.Additional ?? new Dictionary<string, ProductLocale>())
+        {
+            if (!CatalogueLocales.Supported(entry.Key) || entry.Key is "uz" or "ru" or "en")
+                throw new CatalogueException($"Unsupported additional catalogue language '{entry.Key}'.");
+            additional[entry.Key] = Locale(entry.Value, entry.Key);
+        }
+        return new ProductLocales(Locale(locales.Uz, "uz"), Locale(locales.Ru, "ru"), Locale(locales.En, "en")) { Additional = additional };
+    }
+
     private static ProductLocale Locale(ProductLocale? locale, string code)
     {
         locale ??= ProductLocale.Empty();
@@ -382,9 +410,10 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         return normalized;
     }
 
-    private static ProductPricing? Pricing(ProductPricing? pricing, string currency)
+    private static ProductPricing? Pricing(ProductPricing? pricing, string currency, ProductPricing? previous = null)
     {
         if (pricing is null || pricing.Tiers.Count == 0) return null;
+        if (pricing.Tiers.Count > 100) throw new CatalogueException("Too many price tiers.");
         if (!PricingStatus.All.Contains(pricing.Status)) throw new CatalogueException("Unknown pricing status.");
         if (!string.Equals(pricing.Currency, currency, StringComparison.Ordinal)) throw new CatalogueException($"Prices are recorded in {currency}.");
         var tiers = pricing.Tiers.OrderBy(t => t.MinimumQuantity).ToList();
@@ -402,6 +431,8 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             }
         }
 
+        if (!ProductPublicationEligibility.StandardBands(tiers) && (previous is null || !SamePricing(previous, pricing)))
+            throw new CatalogueException("Use the two price bands: 1–9 pieces and 10+ pieces.");
         return new ProductPricing(currency, pricing.Status, tiers, Clean(pricing.Wording, MaxText));
     }
 
@@ -415,7 +446,9 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             if (!byId.TryGetValue(item.Id, out var existing)) throw new CatalogueException("Upload images before referencing them.");
             if (!MediaRole.All.Contains(item.Role)) throw new CatalogueException("Choose a recognised image role.");
             if (result.Any(m => m.Id == item.Id)) throw new CatalogueException("An image is listed twice.");
-            result.Add(existing with { Role = item.Role, Alt = Clean(item.Alt, 300) });
+            var group = item.Group is null ? existing.Group : Clean(item.Group, 30);
+            if (group is not null && !ProductMediaGroup.All.Contains(group)) throw new CatalogueException("Choose a recognised image group.");
+            result.Add(existing with { Role = item.Role, Alt = Clean(item.Alt, 300), IsActive = item.IsActive ?? existing.IsActive, Group = group });
         }
 
         return result;
@@ -447,7 +480,8 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
     }
 
     private static bool Matches(ProductDocument d, string query) =>
-        new[] { d.Id, d.Locales.Uz.Name, d.Locales.Ru.Name, d.Locales.En.Name, d.Locales.Uz.Fabric, d.Locales.En.Fabric, d.Notes }
+        new[] { d.Id, d.Notes }
+            .Concat(CatalogueLocales.All.SelectMany(code => new[] { d.Locales.For(code).Name, d.Locales.For(code).Fabric }))
             .Concat(d.Tags)
             .Any(v => v?.Contains(query, StringComparison.OrdinalIgnoreCase) == true);
 
@@ -467,7 +501,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
     private static bool SamePricing(ProductPricing? a, ProductPricing? b) =>
         a is null || b is null
             ? a is null && b is null
-            : a.Status == b.Status && a.Wording == b.Wording && a.Tiers.SequenceEqual(b.Tiers);
+            : a.Currency == b.Currency && a.Status == b.Status && a.Wording == b.Wording && a.Tiers.SequenceEqual(b.Tiers);
 
     private static string Summary(string? requested, string fallback) =>
         string.IsNullOrWhiteSpace(requested) ? fallback : requested.Trim()[..Math.Min(200, requested.Trim().Length)];

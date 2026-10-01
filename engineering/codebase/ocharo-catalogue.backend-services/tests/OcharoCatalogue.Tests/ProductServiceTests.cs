@@ -12,7 +12,7 @@ public sealed class ProductServiceTests
         GarmentType = garment,
         Locales = new ProductLocales(new ProductLocale(LocaleStatus.Draft, "Nimcha", "Atlas", null, null), ProductLocale.Empty(), ProductLocale.Empty()),
         Sizes = ["S", "M", "M", " L "],
-        Pricing = new ProductPricing("UZS", PricingStatus.Draft, [new PriceTier(1, 1, 130_000), new PriceTier(10, null, 100_000)], null),
+        Pricing = new ProductPricing("UZS", PricingStatus.Draft, [new PriceTier(1, 9, 130_000), new PriceTier(10, null, 100_000)], null),
     };
 
     [Fact]
@@ -49,7 +49,7 @@ public sealed class ProductServiceTests
     }
 
     [Fact]
-    public async Task Activation_needs_an_uzbek_name_and_an_image()
+    public async Task Activation_needs_a_name_and_an_active_image()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
         var products = harness.Get<ProductService>();
@@ -120,7 +120,7 @@ public sealed class ProductServiceTests
         var products = harness.Get<ProductService>();
         var created = await products.CreateAsync(Draft() with
         {
-            Pricing = new ProductPricing("UZS", PricingStatus.Confirmed, [new PriceTier(1, 1, 130_000), new PriceTier(10, null, 100_000)], null),
+            Pricing = new ProductPricing("UZS", PricingStatus.Confirmed, [new PriceTier(1, 9, 130_000), new PriceTier(10, null, 100_000)], null),
         }, CancellationToken.None);
 
         var result = await products.AdjustPricesAsync(new BulkPricingInput([created.Document.Id, "missing"], "percent", 7.5m, 5000, "retail"), CancellationToken.None);
@@ -178,7 +178,7 @@ public sealed class ProductServiceTests
         var products = harness.Get<ProductService>();
         var created = await products.CreateAsync(Draft(), CancellationToken.None);
         var withImage = await products.AddMediaAsync(created.Document.Id, CatalogueHarness.Png(33), "f.png", MediaRole.Cutout, 1, CancellationToken.None);
-        await products.UpdateAsync(created.Document.Id, Draft() with { ExpectedRevision = withImage.Revision, Status = ProductStatus.Active }, CancellationToken.None);
+        await products.UpdateAsync(created.Document.Id, Draft() with { ExpectedRevision = withImage.Revision, Status = ProductStatus.Active, Locales = new ProductLocales(new ProductLocale(LocaleStatus.Approved, "Nimcha", "Atlas", null, null), ProductLocale.Empty(), ProductLocale.Empty()) }, CancellationToken.None);
 
         var untracked = (await harness.Get<PublicCatalogueService>().BuildAsync("uz", CancellationToken.None)).Products.Single();
         var tracked = await products.UpdateStockAsync(created.Document.Id, new StockInput(3, new Dictionary<string, int> { ["S"] = 2, ["L"] = 0 }, false), CancellationToken.None);

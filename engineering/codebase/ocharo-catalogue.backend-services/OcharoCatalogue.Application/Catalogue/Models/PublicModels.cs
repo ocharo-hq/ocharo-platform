@@ -41,4 +41,4 @@ public sealed record PublicProduct(
 public sealed record PublicPricing(string Currency, string Status, long? Retail, long? Wholesale, IReadOnlyList<PriceTier> Tiers, string? Wording);
 
 /// <summary>A public image with absolute-path URLs and integrity hash.</summary>
-public sealed record PublicImage(string Role, string Url, string? PreviewUrl, int? Width, int? Height, string? Alt, string Sha256);
+public sealed record PublicImage(string Role, string Url, string? PreviewUrl, int? Width, int? Height, string? Alt, string Sha256, string? Group = null, bool IsActive = true);

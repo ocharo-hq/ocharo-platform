@@ -24,7 +24,10 @@ public sealed record ProductSummary(
     int Revision,
     DateTimeOffset UpdatedAt,
     string Availability = "unknown",
-    int? StockTotal = null);
+    int? StockTotal = null,
+    int LanguagesTotal = 3,
+    int UnconfirmedTranslations = 3,
+    IReadOnlyList<string>? CollectionIds = null);
 
 /// <summary>A full product with its revision stamp and resolved media URLs.</summary>
 public sealed record ProductDetail(
@@ -70,7 +73,7 @@ public sealed record StockRow(string Id, string GarmentType, string Status, int 
 public sealed record StockInput(int ExpectedRevision, IReadOnlyDictionary<string, int>? Stock, bool MadeToOrder);
 
 /// <summary>Reorders/relabels an existing media item; order in the list is display order.</summary>
-public sealed record MediaInput(string Id, string Role, string? Alt);
+public sealed record MediaInput(string Id, string Role, string? Alt, bool? IsActive = null, string? Group = null);
 
 /// <summary>Grid filters.</summary>
 public sealed record ProductFilter(string? Query, string? GarmentType, string? Status, string? Collection, string? Tag);

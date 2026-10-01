@@ -16,6 +16,8 @@ public static class DependencyInjection
         services.AddScoped<CollectionService>();
         services.AddScoped<PublicCatalogueService>();
         services.AddScoped<CatalogueExportService>();
+        services.AddScoped<CatalogueDesignService>();
+        services.AddScoped<CatalogueReleaseService>();
         return services;
     }
 }

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -50,7 +51,19 @@ public sealed class CatalogueApiTests
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
         Assert.Equal("application/problem+json", stale.Content.Headers.ContentType?.MediaType);
-        Assert.Equal("Vest", feed.GetProperty("products")[0].GetProperty("name").GetString());
+        Assert.Equal(0, feed.GetProperty("products").GetArrayLength());
+        var approvedCopy = JsonNode.Parse(document.GetProperty("locales").GetRawText())!;
+        approvedCopy["en"]!["status"] = "approved";
+        var reviewedIssues = JsonNode.Parse(document.GetProperty("issues").GetRawText())!.AsArray();
+        foreach (var issue in reviewedIssues) issue!["status"] = "resolved";
+        edit["expectedRevision"] = 2;
+        edit["locales"] = approvedCopy;
+        edit["issues"] = reviewedIssues;
+        var approved = await client.PutAsJsonAsync("/api/catalogue/products/abaya-v01", edit);
+        Assert.Equal(HttpStatusCode.OK, approved.StatusCode);
+        var published = await client.GetFromJsonAsync<JsonElement>("/api/public/catalogue?locale=en");
+        Assert.Equal("Vest", published.GetProperty("products")[0].GetProperty("name").GetString());
+        Assert.Equal("approved", published.GetProperty("products")[0].GetProperty("localeStatus").GetString());
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
     }
 
@@ -108,7 +121,7 @@ public sealed class CatalogueApiTests
         var feed = await client.GetFromJsonAsync<JsonElement>("/api/public/catalogue");
 
         Assert.True(products.GetArrayLength() >= 30, $"imported {products.GetArrayLength()}");
-        Assert.True(feed.GetProperty("products").GetArrayLength() >= 25);
-        Console.WriteLine($"REAL IMPORT: {products.GetArrayLength()} products, {feed.GetProperty("products").GetArrayLength()} active");
+        Assert.All(feed.GetProperty("products").EnumerateArray(), product => Assert.Equal("approved", product.GetProperty("localeStatus").GetString()));
+        Console.WriteLine($"REAL IMPORT: {products.GetArrayLength()} products, {feed.GetProperty("products").GetArrayLength()} approved and eligible");
     }
 }

@@ -36,7 +36,7 @@ public sealed record ProductDocument
     /// <summary>Operator tags used for filtering and collections.</summary>
     public IReadOnlyList<string> Tags { get; init; } = [];
 
-    /// <summary>Localized copy for Uzbek, Russian and English.</summary>
+    /// <summary>Localized copy, retaining the original Uzbek, Russian and English fields.</summary>
     public required ProductLocales Locales { get; init; }
 
     /// <summary>Quantity-tier pricing; null when no price is recorded.</summary>
@@ -77,18 +77,20 @@ public sealed record ProductDocument
         MadeToOrder ? Sizes : Stock is null ? [] : Sizes.Where(s => Stock.GetValueOrDefault(s) > 0).ToList();
 }
 
-/// <summary>The three catalogue languages.</summary>
+/// <summary>Catalogue copy: original fields remain wire compatible; further languages use Additional.</summary>
 public sealed record ProductLocales(ProductLocale Uz, ProductLocale Ru, ProductLocale En)
 {
-    /// <summary>Returns the copy for a locale code, falling back to Uzbek.</summary>
+    public IReadOnlyDictionary<string, ProductLocale> Additional { get; init; } = new Dictionary<string, ProductLocale>(StringComparer.Ordinal);
+
+    /// <summary>Returns exact-language copy; an absent translation is an empty draft, never another language.</summary>
     public ProductLocale For(string? locale) => locale switch
     {
-        "ru" => Ru,
-        "en" => En,
-        _ => Uz,
+        null or "uz" => Uz ?? ProductLocale.Empty(),
+        "ru" => Ru ?? ProductLocale.Empty(),
+        "en" => En ?? ProductLocale.Empty(),
+        _ => Additional?.GetValueOrDefault(locale) ?? ProductLocale.Empty(),
     };
 
-    /// <summary>An empty draft locale set.</summary>
     public static ProductLocales Empty() => new(ProductLocale.Empty(), ProductLocale.Empty(), ProductLocale.Empty());
 }
 
@@ -124,7 +126,9 @@ public sealed record ProductMedia(
     int? Height,
     bool HasPreview,
     string? Alt,
-    string? SourcePath);
+    string? SourcePath,
+    bool IsActive = true,
+    string? Group = null);
 
 /// <summary>A review question about one field; resolved issues stay as evidence.</summary>
 public sealed record ReviewIssue(string Id, string Field, string Status, string Question);

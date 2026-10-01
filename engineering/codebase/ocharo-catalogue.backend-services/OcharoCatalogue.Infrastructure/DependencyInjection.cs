@@ -27,6 +27,7 @@ public static class DependencyInjection
         });
         services.AddScoped<IMediaStore, MediaStore>();
         services.AddScoped<WorkspaceCatalogueImporter>();
+        services.AddSingleton<IDesignArtifactValidator, DesignArtifactValidator>();
         return services;
     }
 }

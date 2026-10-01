@@ -30,6 +30,7 @@ public static class DependencyInjection
             options.UseSqlite(builder.ToString());
         });
         services.AddScoped<ICatalogueRepository, CatalogueRepository>();
+        services.AddScoped<IDesignRepository, CatalogueDesignRepository>();
         return services;
     }
 
@@ -42,6 +43,7 @@ public static class DependencyInjection
         if (!string.IsNullOrEmpty(source) && source != ":memory:" && Path.GetDirectoryName(Path.GetFullPath(source)) is { } folder)
             Directory.CreateDirectory(folder);
         await db.Database.EnsureCreatedAsync();
+        await CatalogueDesignSchema.EnsureAsync(db);
         await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
     }
 }

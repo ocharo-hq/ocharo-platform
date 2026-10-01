@@ -46,6 +46,15 @@ public sealed class ImportExportTests
         await using var harness = await CatalogueHarness.CreateAsync(source);
         await harness.Get<WorkspaceCatalogueImporter>().ImportAsync(new ImportInput(null), CancellationToken.None);
         var products = harness.Get<ProductService>();
+        var imported = await products.GetAsync("nimcha-v06", CancellationToken.None);
+        await products.UpdateAsync(imported.Document.Id, new ProductInput
+        {
+            ExpectedRevision = imported.Revision, GarmentType = imported.Document.GarmentType,
+            VariantCode = imported.Document.VariantCode, Status = ProductStatus.Active,
+            Locales = imported.Document.Locales with { Ru = imported.Document.Locales.Ru with { Status = LocaleStatus.Approved } },
+            Pricing = imported.Document.Pricing,
+            Issues = imported.Document.Issues.Select(issue => issue with { Status = IssueStatus.Resolved }).ToList(),
+        }, CancellationToken.None);
         var draft = await products.CreateAsync(new ProductInput { GarmentType = "korset" }, CancellationToken.None);
         var collections = harness.Get<CollectionService>();
         await collections.SaveAsync(null, new CollectionInput(null, "kuz-2026", new CollectionNames("Kuz 2026", "Осень 2026", null), null,

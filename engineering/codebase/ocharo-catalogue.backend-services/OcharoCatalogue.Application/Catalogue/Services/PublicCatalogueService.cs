@@ -10,13 +10,15 @@ public sealed class PublicCatalogueService(ICatalogueRepository repository, Sett
 {
     public async Task<PublicCatalogue> BuildAsync(string? locale, CancellationToken ct)
     {
-        var code = locale is "ru" or "en" ? locale : "uz";
+        var code = locale ?? "uz";
+        if (!CatalogueLocales.Supported(code)) throw new CatalogueException("Unsupported catalogue language.");
         var current = await settings.GetAsync(ct);
         var garments = current.GarmentTypes.ToDictionary(g => g.Key);
         var products = (await repository.GetProductsAsync(ct))
             .Where(r => r.Status == ProductStatus.Active)
             .OrderBy(r => r.SortOrder).ThenBy(r => r.GarmentType).ThenBy(r => r.Id, StringComparer.Ordinal)
             .Select(r => (Record: r, Document: CatalogueJson.Read<ProductDocument>(r.Json)))
+            .Where(x => ProductPublicationEligibility.Eligible(x.Document, code))
             .Select(x => ToPublic(x.Document, x.Record.Revision, x.Record.UpdatedAt, code, garments))
             .ToList();
         var active = products.Select(p => p.Id).ToHashSet();
@@ -32,17 +34,28 @@ public sealed class PublicCatalogueService(ICatalogueRepository repository, Sett
     public static PublicProduct ToPublic(ProductDocument d, int revision, DateTimeOffset updatedAt, string locale,
         IReadOnlyDictionary<string, GarmentTypeDefinition> garments)
     {
+        if (!ProductPublicationEligibility.Eligible(d, locale))
+            throw new CatalogueException("Product is not approved for this catalogue language.");
         var copy = d.Locales.For(locale);
-        var garment = garments.TryGetValue(d.GarmentType, out var g) ? g.For(locale) : d.GarmentType;
-        var images = d.Media
-            .OrderBy(m => m.Role == MediaRole.Cutout ? 0 : m.Role == MediaRole.Model ? 1 : 2)
+        var garment = (locale is "uz" or "ru" or "en") && garments.TryGetValue(d.GarmentType, out var g) ? g.For(locale) : d.GarmentType;
+        var images = ProductPublicationEligibility.ActiveImages(d)
             .Select(m => new PublicImage(m.Role, CatalogueUrls.Media(m.Sha256), m.HasPreview ? CatalogueUrls.Preview(m.Sha256) : null,
-                m.Width, m.Height, m.Alt ?? $"{copy.Name ?? garment} — {m.Role}", m.Sha256))
+                m.Width, m.Height, m.Alt ?? $"{copy.Name ?? garment} — {m.Role}", m.Sha256, ProductPublicationEligibility.MediaGroup(m)))
             .ToList();
-        var pricing = d.Pricing is null
+        var pricing = !ProductPublicationEligibility.PublicPricing(d.Pricing)
             ? null
-            : new PublicPricing(d.Pricing.Currency, d.Pricing.Status, d.Pricing.RetailPrice, d.Pricing.WholesalePrice, d.Pricing.Tiers, d.Pricing.Wording);
+            : new PublicPricing(d.Pricing!.Currency, d.Pricing.Status, d.Pricing.RetailPrice, d.Pricing.WholesalePrice, d.Pricing.Tiers, d.Pricing.Wording);
         return new PublicProduct(d.Id, d.GarmentType, garment, d.VariantCode, copy.Name ?? garment, copy.Fabric, copy.Decoration,
-            copy.Description, copy.Status, d.Locales, d.Sizes, pricing, images, d.Tags, revision, updatedAt, d.Availability, d.AvailableSizes);
+            copy.Description, copy.Status, ApprovedLocales(d.Locales), d.Sizes, pricing, images, d.Tags, revision, updatedAt, d.Availability, d.AvailableSizes);
+    }
+    private static ProductLocales ApprovedLocales(ProductLocales source)
+    {
+        static ProductLocale Approved(ProductLocale locale) => locale.Status == LocaleStatus.Approved && !string.IsNullOrWhiteSpace(locale.Name) ? locale : ProductLocale.Empty();
+        return new ProductLocales(Approved(source.For("uz")), Approved(source.For("ru")), Approved(source.For("en")))
+        {
+            Additional = CatalogueLocales.All.Where(code => code is not ("uz" or "ru" or "en"))
+                .Where(code => source.For(code).Status == LocaleStatus.Approved && !string.IsNullOrWhiteSpace(source.For(code).Name))
+                .ToDictionary(code => code, code => source.For(code), StringComparer.Ordinal),
+        };
     }
 }

@@ -26,6 +26,7 @@
   <ItemGroup>
     <!-- Image decode + web previews (same version as Ocharo Marketing). -->
     <PackageVersion Include="SkiaSharp" Version="3.119.2" />
+    <PackageVersion Include="PdfPig" Version="0.1.16" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.3" />
   </ItemGroup>
 
