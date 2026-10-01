@@ -47,6 +47,25 @@ public sealed record ImportedCommerce(CommerceSnapshot Snapshot, IReadOnlyList<C
 
 /// <summary>Backend-owned artifacts from one saved immutable editor revision; approval covers these exact bytes.</summary>
 public sealed record CatalogueEdition(Guid Id, Guid SourceDesignId, int SourceRevision, string Title, string Locale,
-    string TemplateId, IReadOnlyList<CatalogueEditionPage> Pages, string PdfSha256, bool ApprovedForPublication, DateTimeOffset CreatedAt);
+    string TemplateId, IReadOnlyList<CatalogueEditionPage> Pages, string? PdfSha256, bool ApprovedForPublication, DateTimeOffset CreatedAt)
+{
+    public string? Slug { get; init; }
+    public string Description { get; init; } = "";
+    public bool IsActive { get; init; } = true;
+    public CatalogueWebVersion? Web { get; init; }
+    public DateTimeOffset? UpdatedAt { get; init; }
+}
+public sealed record CatalogueWebVersion(string Theme, IReadOnlyList<CatalogueWebPage> Pages)
+{
+    public string MediaGroup { get; init; } = "all";
+    public CataloguePriceDisplay PriceDisplay { get; init; } = new(true,true,true,true,true);
+    public IReadOnlyDictionary<string,string> Copy { get; init; } = new Dictionary<string,string>();
+    public IReadOnlyDictionary<string,IReadOnlyList<string>> ProductMedia { get; init; } = new Dictionary<string,IReadOnlyList<string>>();
+}
+public sealed record CataloguePriceDisplay(bool Show,bool ShowCurrency,bool ShowQuantity,bool ShowRetail,bool ShowWholesale);
+public sealed record CatalogueWebPage(string Id, string Title, string Layout, IReadOnlyList<string> ProductIds)
+{
+    public bool IsActive { get; init; } = true;
+}
 public sealed record CatalogueEditionPage(string Id, string Title, double WidthMm, double HeightMm,
     IReadOnlyList<string> ProductIds, string PngSha256, string PdfSha256);

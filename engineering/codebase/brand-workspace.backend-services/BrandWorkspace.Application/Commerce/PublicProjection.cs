@@ -21,12 +21,20 @@ public static class PublicProjection
     public static object Catalogue(CommerceRelease r, string locale)
     {
         CommerceRules.Require(CatalogueLanguages.Supported(locale), "Choose a supported catalogue language.");
-        var allowed = r.Snapshot.Products.Where(p => p.Document.Status == "active" && CatalogueLanguages.Copy(p, locale).Status == "approved"
-            && p.Document.Issues.All(i => i.Status != "open")).ToArray();
+        var allowed = r.Snapshot.Products.Where(p => ProductPublicationEligibility.Eligible(p,locale)).ToArray();
+        var visibleEditions = r.Snapshot.CatalogueEditions.Where(e => e.ApprovedForPublication && CommerceRules.EditionEligible(e,r.Snapshot)).ToArray();
         return new {
             schemaVersion = 1, brandId = r.BrandId, slug = r.Snapshot.Slug, release = Release(r), locale,
-            availableLocales = r.Snapshot.CatalogueEditions.Where(e => e.ApprovedForPublication && CatalogueLanguages.Supported(e.Locale)).Select(e => e.Locale).Distinct(),
-            edition = Edition(r,locale),
+            availableLocales = visibleEditions.Select(e => e.Locale).Distinct(),
+            edition = Edition(r,visibleEditions.FirstOrDefault(e=>e.Slug is null && e.Locale==locale)),
+            catalogues = visibleEditions.Where(e=>e.Slug is not null && e.Locale==locale).Select(e=>new {
+                id=e.Id,slug=e.Slug,title=e.Title,description=e.Description,locale=e.Locale,updatedAt=e.UpdatedAt ?? e.CreatedAt,
+                availableLocales=visibleEditions.Where(version=>version.Slug==e.Slug).Select(version=>version.Locale).Distinct(),
+                web=e.Web is null?null:new {theme=e.Web.Theme,mediaGroup=e.Web.MediaGroup,priceDisplay=e.Web.PriceDisplay,copy=e.Web.Copy,
+                    productMedia=e.Web.ProductMedia.Where(entry=>allowed.Any(product=>product.Document.Id==entry.Key)).ToDictionary(entry=>entry.Key,entry=>entry.Value.Where(hash=>r.Snapshot.MediaApprovals.GetValueOrDefault(hash)?.ApprovedForPublication==true && allowed.Any(product=>product.Document.Id==entry.Key && product.Document.Media.Any(image=>image.Sha256==hash && image.Role!="reference")))),pages=e.Web.Pages.Where(page=>page.IsActive).Select(page=>page with {ProductIds=page.ProductIds.Where(id=>allowed.Any(product=>product.Document.Id==id)).ToArray()}).Where(page=>page.ProductIds.Count>0)
+                    .Select(page=>new {id=page.Id,title=page.Title,layout=page.Layout,productIds=page.ProductIds})},
+                pdf=Edition(r,e)
+            }),
             products = allowed.OrderBy(p => p.Document.SortOrder).ThenBy(p => p.Document.Id).Select(p => {
                 var d = p.Document; var copy = CatalogueLanguages.Copy(p, locale);
                 return new { id = d.Id, slug = d.Id, revision = p.Revision, title = copy.Name, description = copy.Description,
@@ -35,6 +43,7 @@ public static class PublicProjection
                     sizes = d.Sizes, availability = d.Availability,
                     images = d.Media.Where(m => m.Role != "reference" && r.Snapshot.MediaApprovals.GetValueOrDefault(m.Sha256)?.ApprovedForPublication == true)
                         .Select(m => new { url = MediaUrl(r,m.Sha256), alt = m.Alt ?? copy.Name ?? "", sha256 = m.Sha256, role = m.Role, groupIds = (p.MediaGroups ?? []).Where(g => g.MediaIds.Contains(m.Id)).Select(g => g.Id), provenance = r.Snapshot.MediaApprovals[m.Sha256] }),
+                    pricing = d.Pricing is { Status: "confirmed" } confirmed ? new {currency=confirmed.Currency,tiers=confirmed.Tiers.Select(tier=>new{minimumQuantity=tier.MinimumQuantity,maximumQuantity=tier.MaximumQuantity,unitPrice=tier.UnitPrice})} : null,
                     price = d.Pricing is { Status: "confirmed", RetailPrice: {} price } ? new { amount = price, currency = d.Pricing.Currency } : null
                 };
             }),
@@ -43,10 +52,9 @@ public static class PublicProjection
                 description = c.Description, productIds = c.ProductIds.Where(id => allowed.Any(p => p.Document.Id == id)) })
         };
     }
-    private static object? Edition(CommerceRelease release,string locale)
+    private static object? Edition(CommerceRelease release,CatalogueEdition? edition)
     {
-        var edition=release.Snapshot.CatalogueEditions.SingleOrDefault(e=>e.Locale==locale && e.ApprovedForPublication);
-        if(edition is null)return null;
+        if(edition is null || !CommerceRules.PdfEligible(edition,release.Snapshot))return null;
         string Url(string asset)=>$"/api/public/v1/brands/{Uri.EscapeDataString(release.Snapshot.Slug)}/catalogue-editions/{edition.Id:D}/{Uri.EscapeDataString(asset)}?release={release.Id:D}";
         return new {id=edition.Id,brandId=release.BrandId,sourceDesignId=edition.SourceDesignId,sourceRevision=edition.SourceRevision,
             title=edition.Title,locale=edition.Locale,templateId=edition.TemplateId,pageCount=edition.Pages.Count,releasedAt=release.PublishedAt,

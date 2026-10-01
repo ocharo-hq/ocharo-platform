@@ -44,7 +44,7 @@ public static class CommerceEndpoints
             var root=config["Commerce:SourceRoot"];
             if(string.IsNullOrWhiteSpace(root)){if(!env.IsDevelopment())throw new PreparationException("validation","Preserved source storage is not configured.");root=Path.GetFullPath(Path.Combine(env.ContentRootPath,"../.."));}
             var imported=await reader.ReadAsync(root,request.Slug,token);
-            return CommerceOk(new {data=await repository.SaveAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,0,imported.Snapshot,imported.Blobs,true,token)});
+            return CommerceOk(new {data=await repository.SaveAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,0,imported.Snapshot,imported.Blobs,true,token,preserveImportedPrices:true)});
         });
         scoped.MapPost("/brands/{brandId:guid}/commerce/media",async(Guid organizationId,Guid brandId,AttachMediaRequest request,HttpContext h,ICommerceRepository repository,IPreparationRepository preparation,CancellationToken token)=>{
             Editor(h);var a=OrganizationAccessFilter.GetAccess(h);var draft=await repository.GetAsync(organizationId,brandId,token)??throw new PreparationException("not-found","Save a brand draft first.");
@@ -68,9 +68,12 @@ public static class CommerceEndpoints
             var draft=await repository.GetAsync(organizationId,brandId,token)??throw new PreparationException("not-found","Save the brand draft first.");
             if(draft.Revision!=metadata.ExpectedRevision)throw new PreparationException("conflict","The draft changed. Reload before attaching the edition.");
             var design=await designs.GetDocumentAsync(organizationId,metadata.SourceDesignId,metadata.SourceRevision,token);
-            var built=CatalogueEditionBuilder.Build(design,brandId,metadataAndFiles.Files,time.GetUtcNow());
+            var built=CatalogueEditionBuilder.Build(design,brandId,metadataAndFiles.Files,time.GetUtcNow(),draft.Snapshot);
             var saved=await repository.AttachCatalogueEditionAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,metadata.ExpectedRevision,built.Edition,built.Blobs,token);
             return CommerceOk(new{data=saved});
+        });
+        scoped.MapPost("/brands/{brandId:guid}/commerce/catalogue-editions/{editionId:guid}/publish",async(Guid organizationId,Guid brandId,Guid editionId,ReleaseRequest request,HttpContext h,ICommerceRepository repository,CancellationToken token)=>{
+            Owner(h);return CommerceOk(new{data=await repository.PublishCatalogueEditionByIdAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,request.ExpectedRevision,editionId,request.Note,token)});
         });
         scoped.MapPost("/brands/{brandId:guid}/commerce/catalogue-editions/{locale}/publish",async(Guid organizationId,Guid brandId,string locale,ReleaseRequest request,HttpContext h,ICommerceRepository repository,CancellationToken token)=>{
             Owner(h);CommerceRules.Require(CatalogueLanguages.Supported(locale),"Choose a supported catalogue language.");
@@ -104,7 +107,7 @@ public static class CommerceEndpoints
             if(release is null)return Results.NotFound();
             var published=await repository.PublicAsync(slug,release,token);
             var edition=published?.Snapshot.CatalogueEditions.SingleOrDefault(e=>e.Id==editionId && e.ApprovedForPublication);
-            if(published is null || edition is null)return Results.NotFound();
+            if(published is null || edition is null || !CommerceRules.PdfEligible(edition,published.Snapshot))return Results.NotFound();
             string? hash=null;string? contentType=null;
             if(asset=="catalogue.pdf"){hash=edition.PdfSha256;contentType="application/pdf";}
             else foreach(var page in edition.Pages)
@@ -135,7 +138,7 @@ public static class CommerceEndpoints
         try{form=await h.Request.ReadFormAsync(new FormOptions{MultipartBodyLengthLimit=CatalogueEditionBuilder.MaximumPdfBytes,MultipartHeadersLengthLimit=8192,MultipartBoundaryLengthLimit=128,ValueCountLimit=202,ValueLengthLimit=2000},token);}
         catch(InvalidDataException){throw new PreparationException("validation","The catalogue form is malformed or exceeds its limits.");}
         catch(IOException)when(!token.IsCancellationRequested&&!h.RequestAborted.IsCancellationRequested){throw new PreparationException("validation","The catalogue form ended before its final boundary.");}
-        CommerceRules.Require(form.Count==1 && form["metadata"].Count==1 && form.Files.Count is >=3 and <=201,"Send metadata and the exact catalogue file set.");
+        CommerceRules.Require(form.Count==1 && form["metadata"].Count==1 && form.Files.Count<=201,"Send metadata and the exact catalogue file set.");
         CatalogueEditionUpload metadata;
         try {
             using var json=JsonDocument.Parse(form["metadata"].ToString());var value=json.RootElement;

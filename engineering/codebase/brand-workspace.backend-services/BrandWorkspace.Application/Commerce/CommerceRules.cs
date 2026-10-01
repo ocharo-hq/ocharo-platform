@@ -63,12 +63,22 @@ public static partial class CommerceRules
                     && price.Tiers is not null && price.Tiers.All(t => t.MinimumQuantity > 0 && t.UnitPrice >= 0 && (t.MaximumQuantity is null || t.MaximumQuantity >= t.MinimumQuantity))
                     && price.Tiers.Count(t => t.MinimumQuantity == 1) <= 1, "Pricing must use a currency and valid nonnegative tiers.");
         }
-        Require(snapshot.CatalogueEditions is not null && snapshot.CatalogueEditions.Count <= CatalogueLanguages.Codes.Count && snapshot.CatalogueEditions.Select(e=>e.Locale).Distinct().Count()==snapshot.CatalogueEditions.Count, "Catalogue editions must have distinct supported languages.");
+        Require(snapshot.CatalogueEditions is not null && snapshot.CatalogueEditions.Count <= 200 && snapshot.CatalogueEditions.Select(e=>(e.Slug,e.Locale)).Distinct().Count()==snapshot.CatalogueEditions.Count, "Catalogue editions must have distinct names and languages (maximum 200).");
         foreach(var e in snapshot.CatalogueEditions)
         {
-            Require(e.Id!=Guid.Empty && e.SourceDesignId!=Guid.Empty && e.SourceRevision>0 && CatalogueLanguages.Supported(e.Locale) && !string.IsNullOrWhiteSpace(e.Title) && e.Title.Length<=160 && e.TemplateId.Length<=120 && Hash(e.PdfSha256), "Catalogue edition metadata is invalid.");
-            Require(e.Pages.Count is >0 and <=100 && e.Pages.Select(p=>p.Id).Distinct().Count()==e.Pages.Count, "Catalogue edition pages must be distinct.");
+            Require(e.Id!=Guid.Empty && e.SourceDesignId!=Guid.Empty && e.SourceRevision>0 && CatalogueLanguages.Supported(e.Locale) && !string.IsNullOrWhiteSpace(e.Title) && e.Title.Length<=160 && e.TemplateId.Length<=120 && (e.Slug is null || CatalogueDefinition.ValidSlug(e.Slug)) && e.Description.Length<=2000 && (e.PdfSha256 is null || Hash(e.PdfSha256)), "Catalogue edition metadata is invalid.");
+            Require(e.Pages.Count<=100 && (e.Pages.Count>0)==(e.PdfSha256 is not null) && e.Pages.Select(p=>p.Id).Distinct().Count()==e.Pages.Count, "Catalogue edition pages must be distinct.");
             Require(e.Pages.All(p=>p.Id.Length is >0 and <=100 && p.Id.All(c=>char.IsAsciiLetterOrDigit(c)||c is '-' or '_') && p.Title.Length<=160 && double.IsFinite(p.WidthMm) && double.IsFinite(p.HeightMm) && p.WidthMm is >0 and <=2000 && p.HeightMm is >0 and <=2000 && Hash(p.PngSha256) && Hash(p.PdfSha256) && p.ProductIds.Count<=1000), "Catalogue edition page metadata is invalid.");
+            Require(e.Pages.SelectMany(page=>page.ProductIds).All(id=>snapshot.Products.Any(product=>product.Document.Id==id)), "Catalogue pages must reference products in this brand.");
+            if(e.Web is {} web)
+            {
+                Require(web.MediaGroup is "all" or "model" or "product" or "detail" or "fabric" && web.PriceDisplay is not null && web.Copy is not null
+                    && web.Copy.Count<=10 && web.Copy.All(copy=>CatalogueWebSettings.CopyKeys.Contains(copy.Key) && copy.Value is not null && copy.Value.Length<=1000)
+                    && web.ProductMedia is not null && web.ProductMedia.All(entry=>snapshot.Products.Any(product=>product.Document.Id==entry.Key) && entry.Value.Count<=500 && entry.Value.All(Hash)),"Web catalogue presentation settings are invalid.");
+                Require(web.Theme is "editorial" or "grid" && web.Pages.Count<=100 && web.Pages.Select(page=>page.Id).Distinct().Count()==web.Pages.Count,"Web catalogue metadata is invalid.");
+                Require(web.Pages.All(page=>page.Id.Length is >0 and <=100 && page.Title.Length is >0 and <=160 && page.Layout is "spread" or "grid" or "collage" && page.ProductIds.Count<=1000 && page.ProductIds.All(id=>snapshot.Products.Any(product=>product.Document.Id==id))),"Web catalogue pages must reference products in this brand.");
+            }
+            Require(e.PdfSha256 is not null || e.Web?.Pages.Any(page=>page.IsActive && page.ProductIds.Count>0)==true,"Catalogue needs a PDF or web output.");
         }
         Require(snapshot.Collections.All(c => c is not null && c.Names is not null && c.ProductIds is not null && c.ProductIds.All(id => snapshot.Products.Any(p => p.Document.Id == id))), "Collections must refer to existing products.");
         Require(snapshot.Collections.Select(c => c.Id).Distinct().Count() == snapshot.Collections.Count, "Collection IDs must be unique.");
@@ -76,6 +86,26 @@ public static partial class CommerceRules
         Require(snapshot.MediaApprovals.All(m => Hash(m.Key) && m.Value is not null && m.Value.Kind is "unknown" or "photo" or "visualization" or "archival"
             && (!m.Value.ApprovedForPublication || m.Value.Kind != "unknown") && (m.Value.SourceUrl is null || Https(m.Value.SourceUrl))), "Approved media requires a known provenance kind and safe source URL.");
     }
+    public static void ValidateEditedPrices(CommerceSnapshot next, CommerceSnapshot? previous)
+    {
+        foreach(var product in next.Products)
+        {
+            var price=product.Document.Pricing;
+            var prior=previous?.Products.FirstOrDefault(item=>item.Document.Id==product.Document.Id)?.Document.Pricing;
+            if(price is null || JsonSerializer.Serialize(price)==JsonSerializer.Serialize(prior))continue;
+            Require(price.Currency=="UZS" && price.Tiers.Count==2
+                && price.Tiers[0].MinimumQuantity==1 && price.Tiers[0].MaximumQuantity==9
+                && price.Tiers[1].MinimumQuantity==10 && price.Tiers[1].MaximumQuantity is null,
+                "Edited prices must use UZS with two tiers: 1–9 pieces and 10+ pieces.");
+        }
+    }
+    public static bool EditionEligible(CatalogueEdition edition, CommerceSnapshot snapshot)
+    {
+        bool Eligible(string id)=>snapshot.Products.Any(product=>product.Document.Id==id && ProductPublicationEligibility.Eligible(product,edition.Locale));
+        return edition.IsActive && (PdfEligible(edition,snapshot) || edition.Web?.Pages.Any(page=>page.IsActive && page.ProductIds.Any(Eligible))==true);
+    }
+    public static bool PdfEligible(CatalogueEdition edition, CommerceSnapshot snapshot) => edition.IsActive && edition.PdfSha256 is not null
+        && edition.Pages.SelectMany(page=>page.ProductIds).All(id=>snapshot.Products.Any(product=>product.Document.Id==id && ProductPublicationEligibility.Eligible(product,edition.Locale)));
     public static void ValidateCreativeInput(CreativeImportInput request)
     {
         Require(request.Source is {Application:"ocharo-studio",Revision:>=0} && !string.IsNullOrWhiteSpace(request.Source.WorkspaceId) && !string.IsNullOrWhiteSpace(request.Source.LookId),"Studio source identity is required.");

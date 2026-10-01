@@ -118,4 +118,59 @@ public sealed class CommerceLocalizationTests
         json.GetProperty("availableLocales").EnumerateArray().Select(item => item.GetString()).Should().Equal("fr", "uz");
     }
 
+    [Fact]
+    public void FixedPrices_ValidateEditsWhilePreservingUnchangedLegacyPrices()
+    {
+        var product=Product();
+        var legacy=product with {Document=product.Document with {Pricing=new("USD","confirmed",[new(1,null,25)],null)}};
+        Action unchanged=()=>CommerceRules.ValidateEditedPrices(Snapshot(legacy),Snapshot(legacy));
+        unchanged.Should().NotThrow();
+        Action createLegacy=()=>CommerceRules.ValidateEditedPrices(Snapshot(legacy),null);
+        createLegacy.Should().Throw<PreparationException>();
+        var fixedPrice=product with {Document=product.Document with {Pricing=new("UZS","draft",[new(1,9,130000),new(10,null,100000)],null)}};
+        Action edited=()=>CommerceRules.ValidateEditedPrices(Snapshot(fixedPrice),Snapshot(legacy));
+        edited.Should().NotThrow();
+        var wrongBounds=fixedPrice with {Document=fixedPrice.Document with {Pricing=fixedPrice.Document.Pricing! with {Tiers=[new(1,1,130000),new(10,null,100000)]}}};
+        Action wrong=()=>CommerceRules.ValidateEditedPrices(Snapshot(wrongBounds),Snapshot(legacy));
+        wrong.Should().Throw<PreparationException>();
+    }
+    [Fact]
+    public void NamedCatalogues_CoexistInOneLocale_AndFilterWebProductsWithoutLeakingCopy()
+    {
+        var product=Product(); var draft=product with {Document=product.Document with {Id="draft-vest",Locales=ProductLocales.Empty()}};
+        var edition=new CatalogueEdition(Guid.NewGuid(),Guid.NewGuid(),1,"Summer","en","catalogue",[],null,true,DateTimeOffset.UtcNow)
+        {Slug="summer",Web=new("grid",[new("one","Looks","grid",[product.Document.Id,draft.Document.Id]),new("empty","Hidden","grid",[draft.Document.Id]),new("inactive","Inactive","grid",[product.Document.Id]){IsActive=false}])};
+        var snapshot=Snapshot(product) with {Products=[product,draft],CatalogueEditions=[edition,edition with {Id=Guid.NewGuid(),Slug="winter"},edition with {Id=Guid.NewGuid(),Slug="private",IsActive=false}]};
+        CommerceRules.Validate(snapshot);
+        var json=JsonSerializer.SerializeToElement(PublicProjection.Catalogue(Release(product) with {Snapshot=snapshot},"en"));
+        json.GetProperty("edition").ValueKind.Should().Be(JsonValueKind.Null);
+        var named=json.GetProperty("catalogues");named.GetArrayLength().Should().Be(2);
+        var pages=named[0].GetProperty("web").GetProperty("pages");pages.GetArrayLength().Should().Be(1);
+        pages[0].GetProperty("productIds").EnumerateArray().Select(id=>id.GetString()).Should().Equal(product.Document.Id);
+        named[0].GetProperty("pdf").ValueKind.Should().Be(JsonValueKind.Null);
+        var missing=JsonSerializer.SerializeToElement(PublicProjection.Catalogue(Release(product) with {Snapshot=snapshot},"fr"));
+        missing.GetProperty("catalogues").GetArrayLength().Should().Be(0);
+    }
+    [Fact]
+    public void StalePdf_DoesNotHideEligibleWebSiblings_AndNeverExposesUnconfirmedPdf()
+    {
+        var product=Product();var draft=product with {Document=product.Document with {Id="draft-vest",Locales=ProductLocales.Empty()}};var hash=new string('a',64);
+        var edition=new CatalogueEdition(Guid.NewGuid(),Guid.NewGuid(),1,"Summer","en","catalogue",[new("mixed","Mixed",210,297,[product.Document.Id,draft.Document.Id],hash,hash)],hash,true,DateTimeOffset.UtcNow)
+        {Slug="summer",Web=new("grid",[new("one","Looks","grid",[product.Document.Id,draft.Document.Id])])};
+        var snapshot=Snapshot(product) with {Products=[product,draft],CatalogueEditions=[edition]};
+        var json=JsonSerializer.SerializeToElement(PublicProjection.Catalogue(Release(product) with {Snapshot=snapshot},"en"));
+        var named=json.GetProperty("catalogues");named.GetArrayLength().Should().Be(1);named[0].GetProperty("pdf").ValueKind.Should().Be(JsonValueKind.Null);
+        named[0].GetProperty("web").GetProperty("pages")[0].GetProperty("productIds").EnumerateArray().Select(id=>id.GetString()).Should().Equal(product.Document.Id);
+        CommerceRules.PdfEligible(edition,snapshot).Should().BeFalse();
+    }
+    [Theory]
+    [InlineData("api")]
+    [InlineData("../summer")]
+    [InlineData("Summer")]
+    [InlineData("summer--looks")]
+    public void NamedCatalogue_RejectsReservedOrUnsafeSlug(string slug)
+    {
+        CatalogueDefinition.ValidSlug(slug).Should().BeFalse();
+    }
+
 }

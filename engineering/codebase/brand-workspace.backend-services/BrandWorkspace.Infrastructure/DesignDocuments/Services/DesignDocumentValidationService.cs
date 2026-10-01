@@ -76,6 +76,13 @@ public sealed class DesignDocumentValidationService
         var catalogue = snapshot.TryGetProperty("kind", out var kind) && String(kind, out var name) && name == "catalogue";
         if (catalogue && snapshot.TryGetProperty("locale", out var locale) && (!String(locale, out var code) || !CatalogueLanguages.Supported(code)))
             throw Invalid("Choose a supported catalogue language.");
+        if (snapshot.TryGetProperty("catalogue", out _))
+        {
+            if (!catalogue) throw Invalid("Catalogue metadata belongs to catalogue documents.");
+            _ = CatalogueDefinition.Read(snapshot);
+            if (!snapshot.TryGetProperty("pages", out var outputPages) || outputPages.ValueKind != JsonValueKind.Array || outputPages.GetArrayLength() > 100)
+                throw Invalid("Catalogue PDF pages must be an array of up to 100 pages.");
+        }
         if (snapshot.TryGetProperty("catalogueSettings", out var settings))
         {
             if (!catalogue || settings.ValueKind != JsonValueKind.Object)
@@ -104,6 +111,7 @@ public sealed class DesignDocumentValidationService
         foreach (var page in pages.EnumerateArray())
         {
             if (page.ValueKind != JsonValueKind.Object) continue;
+            if (page.TryGetProperty("isActive", out var active) && active.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw Invalid("Page activity must be a boolean.");
             if (page.TryGetProperty("catalogueSource", out var source) && source.ValueKind == JsonValueKind.Object
                 && source.TryGetProperty("mediaGroup", out var selected) && !Group(selected))
                 throw Invalid("Choose a known page image group.");

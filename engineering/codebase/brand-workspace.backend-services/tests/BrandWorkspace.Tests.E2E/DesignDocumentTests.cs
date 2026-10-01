@@ -242,7 +242,7 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     {
         return new DesignDocumentService(
             new DesignDocumentRepository(fixture.DataSource, TimeProvider.System),
-            new DesignDocumentValidationService());
+            new DesignDocumentValidationService(), new BrandWorkspace.Persistence.Commerce.CommerceRepository(fixture.DataSource, TimeProvider.System));
     }
 
     private static string Path(OrganizationAccess owner)

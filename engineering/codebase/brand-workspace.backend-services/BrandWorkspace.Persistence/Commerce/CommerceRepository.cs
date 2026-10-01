@@ -35,7 +35,7 @@ public sealed class CommerceRepository(NpgsqlDataSource source, TimeProvider tim
         await using var c=await source.OpenConnectionAsync(token); await Brand(c,null,organizationId,brandId,false,token);
         return await Read(c,null,organizationId,brandId,token);
     }
-    public async Task<CommerceDraft> SaveAsync(Guid organizationId, string actor, Guid brandId, int expectedRevision, CommerceSnapshot snapshot, IReadOnlyList<CommerceBlob> blobs, bool owner, CancellationToken token)
+    public async Task<CommerceDraft> SaveAsync(Guid organizationId, string actor, Guid brandId, int expectedRevision, CommerceSnapshot snapshot, IReadOnlyList<CommerceBlob> blobs, bool owner, CancellationToken token, bool preserveImportedPrices = false)
     {
         CommerceRules.Require(snapshot is not null,"Brand identity is required.");
         // Generic edits cannot create, replace, approve, or erase server-owned artifacts.
@@ -51,6 +51,7 @@ public sealed class CommerceRepository(NpgsqlDataSource source, TimeProvider tim
             var old = previous?.Snapshot.Products.FirstOrDefault(p => p.Document.Id == item.Document.Id);
             return item with { Translations = item.Translations ?? old?.Translations, MediaGroups = item.MediaGroups ?? old?.MediaGroups };
         }).ToArray() };
+        if(!preserveImportedPrices) CommerceRules.ValidateEditedPrices(snapshot,previous?.Snapshot);
         if(!owner) snapshot=CommerceRules.RestrictEditorApprovals(snapshot,previous?.Snapshot);
         snapshot=snapshot with { Products=snapshot.Products.Select(p => {
             var old=previous?.Snapshot.Products.FirstOrDefault(x=>x.Document.Id==p.Document.Id);
@@ -83,24 +84,31 @@ public sealed class CommerceRepository(NpgsqlDataSource source, TimeProvider tim
         var draft=await Read(c,tx,organizationId,brandId,token) ?? throw new PreparationException("not-found","Save the brand draft first.");
         if(draft.Revision!=expectedRevision) throw new PreparationException("conflict","The draft changed. Reload before attaching the edition.");
         CommerceRules.Require(edition.Pages.SelectMany(p=>p.ProductIds).All(id=>draft.Snapshot.Products.Any(p=>p.Document.Id==id)), "Catalogue pages must refer to products in this brand.");
+        CommerceRules.Require(CommerceRules.EditionEligible(edition,draft.Snapshot) || !edition.IsActive,"Catalogue products changed approval. Prepare the catalogue again.");
         var expectedHashes=EditionHashes(edition).ToHashSet();
         CommerceRules.Require(blobs.Select(b=>b.Sha256).ToHashSet().SetEquals(expectedHashes),"Provide every catalogue artifact and no extra files.");
-        var existing=draft.Snapshot.CatalogueEditions.FirstOrDefault(e=>e.Locale==edition.Locale);
+        var existing=draft.Snapshot.CatalogueEditions.FirstOrDefault(e=>e.Locale==edition.Locale && e.Slug==edition.Slug);
+        CommerceRules.Require(edition.Slug is null || existing is null || existing.SourceDesignId==edition.SourceDesignId, "This catalogue name and language already belong to another saved document. Choose a different slug.");
         if(existing is not null && existing.SourceDesignId==edition.SourceDesignId && existing.SourceRevision==edition.SourceRevision &&
-            existing.PdfSha256==edition.PdfSha256 && JsonSerializer.Serialize(existing.Pages,Json)==JsonSerializer.Serialize(edition.Pages,Json))
+            existing.PdfSha256==edition.PdfSha256 && JsonSerializer.Serialize(existing.Pages,Json)==JsonSerializer.Serialize(edition.Pages,Json) && JsonSerializer.Serialize(existing.Web,Json)==JsonSerializer.Serialize(edition.Web,Json) && existing.IsActive==edition.IsActive && existing.Description==edition.Description)
             return draft;
-        var snapshot=draft.Snapshot with {CatalogueEditions=draft.Snapshot.CatalogueEditions.Where(e=>e.Locale!=edition.Locale).Append(edition).ToArray()};
+        var snapshot=draft.Snapshot with {CatalogueEditions=draft.Snapshot.CatalogueEditions.Where(e=>(e.Locale!=edition.Locale || e.Slug!=edition.Slug) && (edition.Slug is null || e.SourceDesignId!=edition.SourceDesignId)).Append(edition).ToArray()};
         var result=await WriteDraft(c,tx,organizationId,actor,brandId,expectedRevision,snapshot,blobs,token,64*1024*1024);
         await tx.CommitAsync(token);return result;
     }
-    private static IEnumerable<string> EditionHashes(CatalogueEdition e) => new[]{e.PdfSha256}.Concat(e.Pages.SelectMany(p=>new[]{p.PngSha256,p.PdfSha256}));
-    public async Task<CommerceRelease> PublishCatalogueEditionAsync(Guid organizationId,string actor,Guid brandId,int expectedRevision,string locale,string note,CancellationToken token)
+    private static IEnumerable<string> EditionHashes(CatalogueEdition e) => (e.PdfSha256 is {} hash ? new[]{hash} : []).Concat(e.Pages.SelectMany(p=>new[]{p.PngSha256,p.PdfSha256}));
+    public Task<CommerceRelease> PublishCatalogueEditionAsync(Guid organizationId,string actor,Guid brandId,int expectedRevision,string locale,string note,CancellationToken token)
+        => PublishEdition(organizationId,actor,brandId,expectedRevision,locale,null,note,token);
+    public Task<CommerceRelease> PublishCatalogueEditionByIdAsync(Guid organizationId,string actor,Guid brandId,int expectedRevision,Guid editionId,string note,CancellationToken token)
+        => PublishEdition(organizationId,actor,brandId,expectedRevision,null,editionId,note,token);
+    private async Task<CommerceRelease> PublishEdition(Guid organizationId,string actor,Guid brandId,int expectedRevision,string? locale,Guid? editionId,string note,CancellationToken token)
     {
         await using var c=await source.OpenConnectionAsync(token);await using var tx=await c.BeginTransactionAsync(token);
         await Brand(c,tx,organizationId,brandId,true,token);
         var draft=await Read(c,tx,organizationId,brandId,token)??throw new PreparationException("not-found","Save the brand draft first.");
         if(draft.Revision!=expectedRevision)throw new PreparationException("conflict","The draft changed. Review the latest revision.");
-        var edition=draft.Snapshot.CatalogueEditions.SingleOrDefault(e=>e.Locale==locale)??throw new PreparationException("not-found","Attach a saved catalogue edition for this language first.");
+        var edition=draft.Snapshot.CatalogueEditions.SingleOrDefault(e=>editionId is not null ? e.Id==editionId : e.Locale==locale && e.Slug is null)??throw new PreparationException("not-found","Attach a saved catalogue edition for this language first.");
+        CommerceRules.Require(CommerceRules.EditionEligible(edition,draft.Snapshot) && (edition.PdfSha256 is null || CommerceRules.PdfEligible(edition,draft.Snapshot)),"This edition contains inactive or unconfirmed products. Prepare a new edition after reviewing its language.");
         if(!edition.ApprovedForPublication)
             draft=await WriteDraft(c,tx,organizationId,actor,brandId,expectedRevision,draft.Snapshot with {
                 CatalogueEditions=draft.Snapshot.CatalogueEditions.Select(e=>e.Id==edition.Id?e with {ApprovedForPublication=true}:e).ToArray()

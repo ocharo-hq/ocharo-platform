@@ -14,7 +14,7 @@ public static class CatalogueEditionBuilder
     public const int MaximumPageBytes=15*1024*1024;
     public const int MaximumTotalBytes=256*1024*1024;
     public static (CatalogueEdition Edition,IReadOnlyList<CommerceBlob> Blobs) Build(DesignDocument design,Guid brandId,
-        IReadOnlyDictionary<string,byte[]> files,DateTimeOffset now)
+        IReadOnlyDictionary<string,byte[]> files,DateTimeOffset now,CommerceSnapshot? commerce=null)
     {
         CommerceRules.Require(design.Kind=="catalogue" && !design.Archived && design.Revision>0,"Choose a saved catalogue revision.");
         var snapshot=design.Snapshot;
@@ -27,31 +27,50 @@ public static class CatalogueEditionBuilder
             && settings.TryGetProperty("brandId",out _))
             CommerceRules.Require(Guid.TryParse(Text(settings,"brandId"),out var settingsBrand) && settingsBrand==brandId,
                 "The saved catalogue belongs to another brand.");
+        var definition=CatalogueDefinition.Read(snapshot);
+        var pdfEnabled=definition?.PdfEnabled ?? true;
+        var productIds=CatalogueDefinition.ProductIdsForSnapshot(snapshot);
+        if(commerce is not null) CommerceRules.Require(productIds.All(id=>commerce.Products.Any(p=>p.Document.Id==id)),"Catalogue pages must refer to products in this brand.");
+        bool Eligible(string id)=>commerce is null || commerce.Products.Any(p=>p.Document.Id==id && ProductPublicationEligibility.Eligible(p,locale));
         var templateId=Text(snapshot,"templateId");
         CommerceRules.Require(templateId.Length is >0 and <=120,"Saved catalogue template is invalid.");
-        CommerceRules.Require(snapshot.TryGetProperty("pages",out var sourcePages) && sourcePages.ValueKind==JsonValueKind.Array && sourcePages.GetArrayLength() is >0 and <=100,"Saved catalogue needs 1 to 100 pages.");
+        CommerceRules.Require(snapshot.TryGetProperty("pages",out var sourcePages) && sourcePages.ValueKind==JsonValueKind.Array && sourcePages.GetArrayLength()<=100 && (!pdfEnabled || sourcePages.GetArrayLength()>0),"Saved PDF catalogue needs 1 to 100 pages.");
         CommerceRules.Require(files.Values.Sum(b=>(long)b.Length)<=MaximumTotalBytes,"Catalogue artifacts exceed the total upload limit.");
-        var expected=new HashSet<string>(StringComparer.Ordinal){"pdf"};
-        var pages=new List<CatalogueEditionPage>();var blobs=new List<CommerceBlob>();
+        var expected=new HashSet<string>(StringComparer.Ordinal);
+        if(pdfEnabled)expected.Add("pdf");
+        var pages=new List<CatalogueEditionPage>();var blobs=new List<CommerceBlob>();var seenPageIds=new HashSet<string>(StringComparer.Ordinal);
         foreach(var page in sourcePages.EnumerateArray())
         {
             var id=Text(page,"id");var title=Text(page,"title");
-            CommerceRules.Require(id.Length is >0 and <=100 && id.All(c=>char.IsAsciiLetterOrDigit(c)||c is '-' or '_') && title.Length<=160 && !pages.Any(p=>p.Id==id),"Catalogue page identifiers must be safe and distinct.");
+            CommerceRules.Require(id.Length is >0 and <=100 && id.All(c=>char.IsAsciiLetterOrDigit(c)||c is '-' or '_') && title.Length<=160 && seenPageIds.Add(id),"Catalogue page identifiers must be safe and distinct.");
             var width=Number(page,"width");var height=Number(page,"height");
             CommerceRules.Require(width is >0 and <=2000 && height is >0 and <=2000,"Catalogue page dimensions are invalid.");
             var hasProducts=page.TryGetProperty("productIds",out var products);
             CommerceRules.Require(!hasProducts || products.ValueKind==JsonValueKind.Array && products.GetArrayLength()<=1000 && products.EnumerateArray().All(v=>v.ValueKind==JsonValueKind.String && v.GetString()!.Length is >0 and <=120),"Catalogue page product references are invalid.");
             if(page.TryGetProperty("catalogueSource",out var origin) && origin.ValueKind!=JsonValueKind.Null)
                 CommerceRules.Require(Guid.TryParse(Text(origin,"brandId"),out var originBrand) && originBrand==brandId,"The saved page belongs to another brand.");
+            var references=CatalogueDefinition.ProductIds(page);
+            if(!pdfEnabled || !CatalogueDefinition.Active(page) || references.Any(id=>!Eligible(id)))continue;
             var pngName=$"page-{id}.png";var pdfName=$"page-{id}.pdf";expected.Add(pngName);expected.Add(pdfName);
             var png=File(files,pngName,MaximumPageBytes);var pdf=File(files,pdfName,MaximumPageBytes);
             ValidatePng(png,width/height);ValidatePdf(pdf);
             var pngHash=Hash(png);var pdfHash=Hash(pdf);blobs.Add(new(pngHash,"image/png",png));blobs.Add(new(pdfHash,"application/pdf",pdf));
-            pages.Add(new(id,title,width,height,hasProducts?products.EnumerateArray().Select(v=>v.GetString()!).Distinct().ToArray():[],pngHash,pdfHash));
+            pages.Add(new(id,title,width,height,references,pngHash,pdfHash));
         }
         CommerceRules.Require(expected.SetEquals(files.Keys),"Upload the full PDF and exactly one PNG and PDF for every saved page.");
-        var fullPdf=File(files,"pdf",MaximumPdfBytes);ValidatePdf(fullPdf);var fullHash=Hash(fullPdf);blobs.Add(new(fullHash,"application/pdf",fullPdf));
-        return (new(Guid.NewGuid(),design.Id,design.Revision,design.Title,locale,templateId,pages,fullHash,false,now),blobs);
+        string? fullHash=null;
+        if(pdfEnabled)
+        {
+            CommerceRules.Require(pages.Count>0,"No active PDF pages contain confirmed products for this language.");
+            var fullPdf=File(files,"pdf",MaximumPdfBytes);ValidatePdf(fullPdf);fullHash=Hash(fullPdf);blobs.Add(new(fullHash,"application/pdf",fullPdf));
+        }
+        CatalogueWebVersion? web=definition?.WebEnabled==true ? new(definition.Web.Theme,definition.Web.Pages.Where(page=>page.IsActive)
+            .Select(page=>page with {ProductIds=page.ProductIds.Where(Eligible).ToArray()}).Where(page=>page.ProductIds.Count>0).ToArray()) : null;
+        if(web is not null)web=CatalogueWebSettings.Apply(web,snapshot,locale,commerce);
+        CommerceRules.Require(pages.Count>0 || web?.Pages.Count>0,"The catalogue needs an active page with confirmed products in its selected language.");
+        return (new CatalogueEdition(Guid.NewGuid(),design.Id,design.Revision,design.Title,locale,templateId,pages,fullHash,false,now) {
+            Slug=definition?.Slug,Description=definition?.Description ?? "",IsActive=definition?.IsActive ?? true,Web=web,UpdatedAt=design.UpdatedAtUtc
+        },blobs);
     }
     private static string Text(JsonElement value,string name)
     {

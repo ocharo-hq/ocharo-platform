@@ -9,6 +9,7 @@ using BrandWorkspace.Application.Access;
 using BrandWorkspace.Domain.Commerce;
 using BrandWorkspace.Persistence.Commerce;
 using OcharoBrand.Domain.Brand;
+using OcharoCatalogue.Domain.Catalogue.Models;
 using SkiaSharp;
 using Xunit;
 
@@ -220,6 +221,63 @@ public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : 
         current.GetProperty("revision").GetInt32().Should().Be(3);
         current.GetProperty("snapshot").GetProperty("catalogueEditions")[0].GetProperty("approvedForPublication").GetBoolean().Should().Be(responses[0].IsSuccessStatusCode);
         foreach(var response in responses)response.Dispose();
+    }
+
+
+    [Fact]
+    public async Task NamedWebCatalogue_ListsSummary_PublishesById_AndKeepsSiblingCatalogues()
+    {
+        var x=await Create();using var client=x.Client;
+        var draft=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        var products=new[]{new CommerceProduct(new ProductDocument {Id="vest",GarmentType="vest",VariantCode="v01",Status="active",Locales=new(ProductLocale.Empty(),ProductLocale.Empty(),new("approved","Vest","Silk",null,null))}),new CommerceProduct(new ProductDocument {Id="unconfirmed",GarmentType="vest",VariantCode="v02",Status="active",Locales=ProductLocales.Empty()})};
+        var snapshot=JsonSerializer.Deserialize<CommerceSnapshot>(draft.GetProperty("snapshot"),new JsonSerializerOptions(JsonSerializerDefaults.Web))! with {Products=products};
+        using var saved=await client.PutAsJsonAsync(x.Path,new{expectedRevision=1,snapshot});saved.StatusCode.Should().Be(HttpStatusCode.OK,await saved.Content.ReadAsStringAsync());
+        int revision=2;Guid summer=Guid.Empty;
+        foreach(var slug in new[]{"summer","winter"})
+        {
+            using var created=await client.PostAsJsonAsync($"/api/organizations/{x.Owner.OrganizationId}/design-documents",new{kind="catalogue",title=slug,snapshot=new{
+                schemaVersion=1,kind="catalogue",locale="en",templateId="catalogue",pages=Array.Empty<object>(),
+                catalogueSettings=new{brandId=x.Brand,mediaGroup="all",priceDisplay=new{show=true,showCurrency=true,showQuantity=true,showRetail=true,showWholesale=true},copyByLocale=new{}},
+                catalogue=new{slug,description="Season collection",isActive=true,outputs=new{web=true,pdf=false},web=new{theme="grid",pages=new[]{new{id="looks",title="Looks",layout="grid",isActive=true,productIds=new[]{"vest","unconfirmed"}},new{id="hidden",title="Hidden",layout="collage",isActive=false,productIds=new[]{"vest"}}}}}}});
+            created.StatusCode.Should().Be(HttpStatusCode.OK,await created.Content.ReadAsStringAsync());var design=(await Data(created)).GetProperty("id").GetGuid();
+            using var bundle=new MultipartFormDataContent();bundle.Add(new StringContent(JsonSerializer.Serialize(new{expectedRevision=revision,sourceDesignId=design,sourceRevision=1})),"metadata");
+            using var attached=await client.PostAsync(x.Path+"/catalogue-editions",bundle);attached.StatusCode.Should().Be(HttpStatusCode.OK,await attached.Content.ReadAsStringAsync());
+            var attachedData=await Data(attached);revision=attachedData.GetProperty("revision").GetInt32();var edition=attachedData.GetProperty("snapshot").GetProperty("catalogueEditions").EnumerateArray().Single(e=>e.GetProperty("slug").GetString()==slug);
+            edition.GetProperty("pdfSha256").ValueKind.Should().Be(JsonValueKind.Null);edition.GetProperty("pages").GetArrayLength().Should().Be(0);
+            edition.GetProperty("web").GetProperty("pages")[0].GetProperty("productIds").EnumerateArray().Select(p=>p.GetString()).Should().Equal("vest");
+            var id=edition.GetProperty("id").GetGuid();if(slug=="summer")summer=id;
+            using var published=await client.PostAsJsonAsync(x.Path+$"/catalogue-editions/{id}/publish",new{expectedRevision=revision,note="Reviewed web catalogue"});published.StatusCode.Should().Be(HttpStatusCode.OK,await published.Content.ReadAsStringAsync());revision++;
+        }
+        var summaries=(await client.GetFromJsonAsync<JsonElement>($"/api/organizations/{x.Owner.OrganizationId}/design-documents?kind=catalogue")).GetProperty("data");
+        var summary=summaries.EnumerateArray().Single(item=>item.GetProperty("title").GetString()=="summer");
+        summary.GetProperty("locale").GetString().Should().Be("en");summary.TryGetProperty("snapshot",out _).Should().BeFalse();
+        summary.GetProperty("catalogue").GetProperty("web").GetProperty("pageCount").GetInt32().Should().Be(1);
+        using var anonymous=fixture.Factory.CreateClient();var json=await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale=en");
+        json.GetProperty("catalogues").GetArrayLength().Should().Be(2);json.GetProperty("edition").ValueKind.Should().Be(JsonValueKind.Null);
+        var release=json.GetProperty("release").GetProperty("id").GetGuid();
+        (await anonymous.GetAsync($"/api/public/v1/brands/{x.Slug}/catalogue-editions/{summer}/catalogue.pdf?release={release}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        // A stale prepared web edition cannot expose unconfirmed translated data.
+        var current=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");var changed=JsonNode.Parse(current.GetProperty("snapshot").GetRawText())!;
+        changed["products"]![0]!["document"]!["locales"]!["en"]!["status"]="draft";
+        using var edited=await client.PutAsJsonAsync(x.Path,new{expectedRevision=revision,snapshot=changed});edited.StatusCode.Should().Be(HttpStatusCode.OK);revision++;
+        using var rejected=await client.PostAsJsonAsync(x.Path+$"/catalogue-editions/{summer}/publish",new{expectedRevision=revision,note="Should reject stale approval"});rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task NamedCatalogueSave_RejectsUnknownProductOrForeignBrand(bool foreignBrand)
+    {
+        var x=await Create();using var client=x.Client;var selectedBrand=x.Brand;
+        if(foreignBrand){var other=await Create();other.Client.Dispose();selectedBrand=other.Brand;}
+        using var response=await client.PostAsJsonAsync($"/api/organizations/{x.Owner.OrganizationId}/design-documents",new{kind="catalogue",title="Foreign",snapshot=new{
+            schemaVersion=1,kind="catalogue",locale="en",templateId="catalogue",pages=Array.Empty<object>(),
+            catalogueSettings=new{brandId=selectedBrand,mediaGroup="all",priceDisplay=new{show=true,showCurrency=true,showQuantity=true,showRetail=true,showWholesale=true},copyByLocale=new{}},
+            catalogue=new{slug="summer",description="",isActive=true,outputs=new{web=true,pdf=false},web=new{theme="grid",pages=new[]{new{id="looks",title="Looks",layout="grid",isActive=true,productIds=new[]{"foreign-product"}}}}}
+        }});
+        response.StatusCode.Should().Be(foreignBrand?HttpStatusCode.NotFound:HttpStatusCode.BadRequest,await response.Content.ReadAsStringAsync());
+        var summaries=(await client.GetFromJsonAsync<JsonElement>($"/api/organizations/{x.Owner.OrganizationId}/design-documents?kind=catalogue")).GetProperty("data");
+        summaries.GetArrayLength().Should().Be(1,"invalid named catalogues must not create saved design records");
     }
 
     private async Task<Setup> Create(object? sourcePage=null,string locale="en",bool? foreignSettingsBrand=null)

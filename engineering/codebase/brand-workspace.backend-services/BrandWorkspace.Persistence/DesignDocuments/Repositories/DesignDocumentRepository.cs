@@ -26,7 +26,17 @@ public sealed class DesignDocumentRepository(NpgsqlDataSource dataSource, TimePr
             connection,
             null,
             """
-            SELECT d.id, d.kind, r.title, r.revision, r.archived, d.created_at, r.saved_at
+            SELECT d.id, d.kind, r.title, r.revision, r.archived, d.created_at, r.saved_at,
+                r.snapshot->>'locale',
+                CASE WHEN r.snapshot->'catalogue' IS NOT NULL THEN json_build_object(
+                    'slug', r.snapshot->'catalogue'->>'slug',
+                    'description', r.snapshot->'catalogue'->>'description',
+                    'isActive', r.snapshot->'catalogue'->'isActive',
+                    'outputs', r.snapshot->'catalogue'->'outputs',
+                    'web', json_build_object('theme',r.snapshot->'catalogue'->'web'->>'theme','pageCount',
+                        (SELECT count(*) FROM json_array_elements(r.snapshot->'catalogue'->'web'->'pages') p WHERE COALESCE(p->>'isActive','true')='true')),
+                    'pdfPageCount',(SELECT count(*) FROM json_array_elements(r.snapshot->'pages') p WHERE COALESCE(p->>'isActive','true')='true'))::text
+                END
             FROM design_documents.documents d
             JOIN design_documents.revisions r
                 ON r.organization_id=d.organization_id
@@ -55,7 +65,10 @@ public sealed class DesignDocumentRepository(NpgsqlDataSource dataSource, TimePr
                 reader.GetInt32(3),
                 reader.GetBoolean(4),
                 reader.GetFieldValue<DateTimeOffset>(5),
-                reader.GetFieldValue<DateTimeOffset>(6)));
+                reader.GetFieldValue<DateTimeOffset>(6)) {
+                    Locale = reader.IsDBNull(7) ? null : reader.GetString(7),
+                    Catalogue = reader.IsDBNull(8) ? null : JsonSerializer.Deserialize<CatalogueSummary>(reader.GetString(8), StoredJsonConstants.Default)
+                });
         }
         return documents;
     }
@@ -230,7 +243,17 @@ public sealed class DesignDocumentRepository(NpgsqlDataSource dataSource, TimePr
             connection,
             transaction,
             """
-            SELECT d.kind, r.title, r.snapshot::text, r.revision, r.archived, d.created_at, r.saved_at
+            SELECT d.kind, r.title, r.snapshot::text, r.revision, r.archived, d.created_at, r.saved_at,
+                r.snapshot->>'locale',
+                CASE WHEN r.snapshot->'catalogue' IS NOT NULL THEN json_build_object(
+                    'slug', r.snapshot->'catalogue'->>'slug',
+                    'description', r.snapshot->'catalogue'->>'description',
+                    'isActive', r.snapshot->'catalogue'->'isActive',
+                    'outputs', r.snapshot->'catalogue'->'outputs',
+                    'web', json_build_object('theme',r.snapshot->'catalogue'->'web'->>'theme','pageCount',
+                        (SELECT count(*) FROM json_array_elements(r.snapshot->'catalogue'->'web'->'pages') p WHERE COALESCE(p->>'isActive','true')='true')),
+                    'pdfPageCount',(SELECT count(*) FROM json_array_elements(r.snapshot->'pages') p WHERE COALESCE(p->>'isActive','true')='true'))::text
+                END
             FROM design_documents.documents d
             JOIN design_documents.revisions r
                 ON r.organization_id=d.organization_id
