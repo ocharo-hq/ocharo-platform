@@ -9,7 +9,6 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:http": "VITE_HTTPS=false vite",
     "build": "pnpm typecheck && vite build",
     "typecheck": "vue-tsc --noEmit && node scripts/check-sfc.mjs",
     "lint": "eslint src tests scripts *.ts *.mjs",

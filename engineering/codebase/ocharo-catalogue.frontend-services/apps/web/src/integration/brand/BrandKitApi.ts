@@ -3,7 +3,7 @@ import type { BrandKit } from '../../domain/catalogue/BrandKit';
 const env = import.meta.env as Record<string, string | undefined>;
 
 /** The Brand service root; public brand endpoints allow cross-origin reads. */
-export const brandBaseUrl = env.VITE_OCHARO_BRAND_URL ?? 'http://localhost:8287/';
+export const brandBaseUrl = env.VITE_OCHARO_BRAND_URL ?? 'https://localhost:8286/';
 
 /** Reads the published brand kit; null when the Brand service is not running (print falls back to text). */
 export async function fetchBrandKit(fetchImplementation: typeof fetch = globalThis.fetch): Promise<BrandKit | null> {

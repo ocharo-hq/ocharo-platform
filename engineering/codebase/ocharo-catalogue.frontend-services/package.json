@@ -10,7 +10,6 @@
   },
   "scripts": {
     "dev": "pnpm --filter @ocharocatalogue/web dev",
-    "dev:http": "pnpm --filter @ocharocatalogue/web dev:http",
     "typecheck": "pnpm --filter @ocharocatalogue/web typecheck",
     "build": "pnpm --filter @ocharocatalogue/web build",
     "preview": "pnpm --filter @ocharocatalogue/web preview",

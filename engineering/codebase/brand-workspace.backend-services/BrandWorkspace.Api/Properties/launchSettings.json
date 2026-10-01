@@ -1,1 +1,12 @@
-{"profiles":{"https":{"commandName":"Project","launchBrowser":false,"applicationUrl":"https://localhost:8264;http://localhost:8265","environmentVariables":{"ASPNETCORE_ENVIRONMENT":"Development"}},"http":{"commandName":"Project","launchBrowser":false,"applicationUrl":"http://localhost:8265","environmentVariables":{"ASPNETCORE_ENVIRONMENT":"Development"}}}}
+{
+  "profiles": {
+    "https": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:8264",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

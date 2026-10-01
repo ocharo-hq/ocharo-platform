@@ -128,15 +128,14 @@ organization API boundary and requires current membership.
 
 | Surface | Local port |
 |---|---|
-| API development | HTTPS 8264 / HTTP 8265 |
+| API development | HTTPS 8264; 8265 reserved |
 | Vue development | HTTPS 8266 |
 | Packaged API and SPA | HTTP 8268; optional HTTPS 8269; loopback only |
 | PostgreSQL | 8270, loopback only |
 | Worker | No HTTP listener |
 
 Use the shared [port ledger](../../../../../../../../career/engineering/wow-two/wow-two-ws/conventions/deployment/hosting/ports.md) when adding services.
-Default Vite uses mkcert; certificate trust stays user-controlled. `pnpm dev:http` is an explicit
-diagnostic fallback; secure session cookies require the HTTPS frontend. Vite proxies `/api` to the
+Default Vite uses mkcert; certificate trust stays user-controlled. Development and browser checks use HTTPS only. Vite proxies `/api` to the
 HTTPS development API. Browser application and API requests remain same-origin.
 
 ## CI and publication

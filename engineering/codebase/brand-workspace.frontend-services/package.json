@@ -9,7 +9,6 @@
   },
   "scripts": {
     "dev": "pnpm --filter @brand-workspace/web dev",
-    "dev:http": "pnpm --filter @brand-workspace/web dev:http",
     "build": "pnpm --filter @brand-workspace/web build && node scripts/deploy.mjs",
     "lint": "pnpm --filter @brand-workspace/web lint",
     "typecheck": "pnpm --filter @brand-workspace/web typecheck",

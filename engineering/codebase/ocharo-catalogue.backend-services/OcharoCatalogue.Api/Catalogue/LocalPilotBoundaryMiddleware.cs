@@ -41,7 +41,7 @@ public sealed class LocalPilotBoundaryMiddleware(RequestDelegate next, IConfigur
 
     private bool IsAllowedOrigin(string origin, HttpRequest request)
     {
-        if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https") || uri.AbsolutePath != "/")
+        if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps || uri.AbsolutePath != "/")
             return false;
         var authority = uri.GetLeftPart(UriPartial.Authority);
         if (string.Equals(authority, $"{request.Scheme}://{request.Host.Value}", StringComparison.OrdinalIgnoreCase)) return true;
