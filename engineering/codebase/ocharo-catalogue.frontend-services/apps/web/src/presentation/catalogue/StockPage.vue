@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ContentSkeleton from '../common/ContentSkeleton.vue';
 import { computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Save } from 'lucide-vue-next';
@@ -37,7 +38,7 @@ onMounted(() => sheet.load());
         <Icon :icon="Save" :size="15" />{{ sheet.dirtyCount.value }} ta o‘zgarishni saqlash
       </button>
     </div>
-    <p v-if="sheet.loading.value" class="mt-6 text-sm text-muted-foreground" role="status">Yuklanmoqda…</p>
+    <ContentSkeleton v-if="sheet.loading.value" />
     <div class="panel mt-6 overflow-x-auto p-0">
       <table class="w-full min-w-[900px] text-sm">
         <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">

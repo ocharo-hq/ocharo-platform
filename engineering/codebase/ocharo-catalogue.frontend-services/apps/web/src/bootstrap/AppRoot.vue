@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import FeedbackHost from '../presentation/common/FeedbackHost.vue';
+import { useErrorToast } from '../application/common/UseFeedback';
 import BuildIdentity from '../presentation/common/BuildIdentity.vue';
+import CatalogueDeskEntry from '../presentation/common/CatalogueDeskEntry.vue';
 import { computed, onMounted } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import {
@@ -18,12 +21,13 @@ import {
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { AppErrorBoundary, RouteAnnouncer } from '@wow-two-beta/ui-vue/router';
 import { useCatalogueStore } from '../application/catalogue';
-import { platformLinks } from './PlatformLinks';
+import { catalogueDeskUrl, platformLinks } from './PlatformLinks';
 
 /** Composes Ocharo Catalogue: products, prices, collections, print sheet and settings. */
 defineOptions({ name: 'AppRoot' });
 const store = useCatalogueStore();
 const route = useRoute();
+useErrorToast(store.error);
 const navigation = [
   { path: '/', label: 'Mahsulotlar', icon: Shirt },
   { path: '/copy', label: 'Matnlar', icon: Languages },
@@ -43,6 +47,7 @@ onMounted(() => store.loadSettings());
 
 <template>
   <div class="min-h-screen bg-background text-foreground">
+    <FeedbackHost />
     <a
       href="#main-content"
       class="no-print sr-only focus:not-sr-only focus:fixed focus:left-5 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-card focus:px-5 focus:py-3"
@@ -98,7 +103,7 @@ onMounted(() => store.loadSettings());
       >
         <div class="flex items-center gap-3">
           <span class="font-editorial text-2xl lg:hidden">Ocharo.</span>
-          <span class="hidden text-xs text-muted-foreground sm:inline">Katalog</span><BuildIdentity />
+          <span class="hidden text-xs text-muted-foreground sm:inline">Katalog</span>
           <Icon :icon="ChevronRight" :size="13" class="hidden text-muted-foreground sm:block" />
           <span class="text-xs font-semibold">{{ section }}</span>
         </div>
@@ -127,16 +132,7 @@ onMounted(() => store.loadSettings());
         tabindex="-1"
         class="mx-auto max-w-[1600px] px-5 py-8 sm:px-8 xl:px-10 print:max-w-none print:p-0"
       >
-        <div
-          v-if="store.error.value"
-          role="alert"
-          class="no-print mb-6 flex items-start justify-between gap-4 rounded-xl border border-destructive/20 bg-destructive-soft px-5 py-4 text-sm text-destructive-soft-foreground"
-        >
-          <p class="leading-6">{{ store.error.value }}</p>
-          <button class="shrink-0 rounded p-1" aria-label="Xabarni yopish" @click="store.error.value = null">
-            <Icon :icon="X" :size="15" />
-          </button>
-        </div>
+        <CatalogueDeskEntry :desk-url="catalogueDeskUrl" />
         <div
           v-if="store.notice.value"
           role="status"
@@ -157,6 +153,7 @@ onMounted(() => store.loadSettings());
             </section>
           </template>
         </AppErrorBoundary>
+        <footer class="no-print mt-10 border-t border-border pt-4 text-xs text-muted-foreground"><span class="mr-2">Ilova haqida</span><BuildIdentity /></footer>
       </main>
       <RouteAnnouncer />
     </div>

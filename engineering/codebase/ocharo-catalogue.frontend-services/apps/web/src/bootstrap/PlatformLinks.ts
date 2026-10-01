@@ -40,3 +40,15 @@ export const platformLinks: PlatformLink[] = [
     url: env.VITE_OCHARO_STUDIO_URL ?? 'https://localhost:8262/',
   },
 ];
+
+/** A configured canonical authoring destination; only trusted HTTPS links are exposed. */
+export function resolveCatalogueDeskUrl(value: string | undefined): string | null {
+  try {
+    const url = new URL(value ?? 'https://localhost:8266/catalogue');
+    return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+export const catalogueDeskUrl = resolveCatalogueDeskUrl(env.VITE_OCHARO_DESK_URL);

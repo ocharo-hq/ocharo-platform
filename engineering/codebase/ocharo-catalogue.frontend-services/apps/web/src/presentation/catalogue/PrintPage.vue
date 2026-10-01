@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ContentSkeleton from '../common/ContentSkeleton.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { Printer } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
@@ -242,7 +243,7 @@ onMounted(() => feed.load(locale.value));
           <p v-for="line in contactLines" :key="line">{{ line }}</p>
         </div>
       </header>
-      <p v-if="feed.loading.value" class="py-10 text-sm text-muted-foreground" role="status">Yuklanmoqda…</p>
+      <ContentSkeleton v-if="feed.loading.value" />
       <div class="mt-8 grid grid-cols-2 gap-x-8 gap-y-10 md:grid-cols-3 print:grid-cols-3">
         <figure v-for="p in products" :key="p.id" class="break-inside-avoid">
           <div class="flex aspect-[3/4] items-center justify-center bg-[#f3efe6]">

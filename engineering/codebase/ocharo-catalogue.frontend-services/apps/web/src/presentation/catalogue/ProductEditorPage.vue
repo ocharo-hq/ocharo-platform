@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { requestConfirmation } from '../../application/common/UseFeedback';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave, RouterLink, useRoute, useRouter } from 'vue-router';
 import { ArrowDown, ArrowLeft, ArrowUp, History, ImagePlus, RotateCcw, Save, Trash2, Upload } from 'lucide-vue-next';
@@ -46,7 +47,7 @@ function warnUnsaved(event: BeforeUnloadEvent) {
 }
 window.addEventListener('beforeunload', warnUnsaved);
 onBeforeUnmount(() => window.removeEventListener('beforeunload', warnUnsaved));
-onBeforeRouteLeave(() => !editor.dirty.value || window.confirm('Saqlanmagan o‘zgarishlar bor. Chiqib ketilsinmi?'));
+onBeforeRouteLeave(async () => !editor.dirty.value || await requestConfirmation('Saqlanmagan o‘zgarishlar bor. Chiqib ketilsinmi?', { confirmLabel: 'O‘zgarishlarni bekor qilish' }));
 
 async function save() {
   const wasNew = editor.isNew.value;

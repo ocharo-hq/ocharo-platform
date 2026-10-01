@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ContentSkeleton from '../common/ContentSkeleton.vue';
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Check, Save } from 'lucide-vue-next';
@@ -80,7 +81,7 @@ onMounted(() => grid.load());
         ><input v-model="onlyMissing" type="checkbox" />Faqat bo‘sh yoki tasdiqlanmaganlar</label
       >
     </div>
-    <p v-if="grid.loading.value" class="mt-6 text-sm text-muted-foreground" role="status">Yuklanmoqda…</p>
+    <ContentSkeleton v-if="grid.loading.value" />
     <div class="panel mt-4 overflow-x-auto p-0">
       <table class="w-full min-w-[980px] text-sm">
         <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">

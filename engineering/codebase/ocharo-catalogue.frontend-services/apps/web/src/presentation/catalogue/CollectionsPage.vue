@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { requestConfirmation } from '../../application/common/UseFeedback';
 import { computed, onMounted, ref } from 'vue';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
@@ -32,7 +33,7 @@ async function save() {
   if (saved) draft.value = collections.edit(saved);
 }
 async function remove(id: string) {
-  if (!window.confirm('To‘plam o‘chirilsinmi? Mahsulotlar o‘chmaydi.')) return;
+  if (!await requestConfirmation('To‘plam o‘chirilsinmi? Mahsulotlar o‘chmaydi.', { confirmLabel: 'To‘plamni o‘chirish' })) return;
   await collections.remove(id);
   draft.value = null;
 }
