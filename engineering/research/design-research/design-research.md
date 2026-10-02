@@ -45,8 +45,9 @@ in `ocharo-catalogue.frontend-services/apps/web/src/bootstrap/index.css`.
 
 `AppShellHeader` contains the SDK `Navbar` and the smaller-screen navigation row.
 Below `lg`, the header grows to its contents and stacks those rows. The primary
-row keeps its height in either layout. The brand link goes to the catalogue gallery;
-existing route selection, Preferences and theme/locale behavior remain active.
+row keeps its height in either layout. The public reader brand link goes to the catalogue gallery; the operator brand control
+opens the app launcher. Existing route selection, Preferences and theme/locale behavior
+remain active.
 
 Use approved `ocharo-wordmark-ink.png` in light mode and `ocharo-wordmark-reverse.png`
 in dark mode. These are byte-identical copies of the approved logo-family exports.
@@ -61,9 +62,11 @@ mastheads retain their own app-specific design requirements.
 
 ## Ocharo app launcher
 
-The approved stacked Catalogue header gains a nine-dot app button beside Preferences.
-Use the published SDK `Popover`; show a three-column grid of app names, without icons
-or descriptions. The current Catalogue app is highlighted. Keyboard focus enters the
+The approved stacked Catalogue wordmark and app label form the app-launcher button.
+A 16px chevron sits to the right and rotates while open; hover and open states show a
+subtle surface. This supersedes the separate nine-dot button trial on 2026-10-02.
+Use the published SDK `Popover`, anchored bottom-start; show a three-column grid of
+app names, without icons or descriptions. The current Catalogue app is highlighted. Keyboard focus enters the
 panel; Escape and outside click dismiss it. Keep a 44px trigger and at least 44px tiles.
 The panel fits narrow screens and uses the existing light/dark surface tokens.
 
@@ -98,3 +101,55 @@ Public reader isolation passed all six locale/theme combinations. The final acce
 dialog name was verified after rebuilding the attribute-forwarding change.
 
 These local checks do not close the version-track owner-review boxes.
+
+## Merged logo-menu verification — 2026-10-02
+
+Frontend build/typecheck and lint passed. The actual-component fixture passed all 36
+width/locale/theme cases after moving the launcher into the logo. The logo remains
+80 × 30px; the trigger is at least 44px high and the primary row remains 56px.
+The menu stays within the viewport at 320px; inline navigation has clearance at
+1024px in all three languages. Keyboard opening, all nine links, Escape focus return
+and outside dismissal passed. Other apps preserve the current route in a separate tab.
+All six public-reader locale/theme cases retain the brand link and hide the launcher.
+Owner review remains open.
+
+## Glass palette review — proposals, 2026-10-02
+
+The warm-paper implementation remains current. The user reopened its color direction
+because the colors looked old. The following paired palettes are design proposals,
+not accepted tokens or app-wide rollout instructions.
+
+Recommend **Ink and Raspberry**: replace beige/brown surfaces with neutral white and
+cool graphite, keeping a restrained raspberry accent for Ocharo's fashion identity.
+Porcelain and Cobalt is crisper and more tool-like; Pearl and Jade is calmer and
+craft-oriented. Those style assessments are design judgments, not measured user results.
+
+Each cell lists light / dark. Glass opacity is 84% for the navigation material;
+use a denser 92% menu layer over varied content and verify the actual background.
+
+| Token | Ink and Raspberry | Porcelain and Cobalt | Pearl and Jade |
+|---|---|---|---|
+| Canvas | `#F5F6FA` / `#0F1118` | `#F3F6FC` / `#0D1424` | `#F2F7F5` / `#0B1714` |
+| Glass surface | `#FFFFFF` / `#1C2030` | `#FFFFFF` / `#19243A` | `#FFFFFF` / `#172A24` |
+| Main text | `#181B25` / `#F4F5FA` | `#151E30` / `#F3F6FC` | `#13251F` / `#EEF8F2` |
+| Accent | `#8B2459` / `#F2A4CC` | `#2457CE` / `#99BBFF` | `#006C54` / `#7BE2B2` |
+| Soft accent | `#F8E9F0` / `#3D2438` | `#E8EEFC` / `#253960` | `#E3F4EC` / `#203E33` |
+| Essential control border | `#858EA3` / `#67718A` | `#8493AA` / `#657B9C` | `#789789` / `#5F8775` |
+| Focus | `#9D2E6A` / `#F2A4CC` | `#2457CE` / `#99BBFF` | `#00795E` / `#7BE2B2` |
+
+Use glass for navigation, menus and overlay chrome; keep product photography, text
+editing fields and exported catalogue pages opaque. Menu/content text remains fully
+opaque. Avoid translucent layers stacked over each other, and provide a solid surface
+when reduced transparency or forced colors is requested or blur is unsupported.
+
+[Fluent's material guidance](https://fluent2.microsoft.design/material/) recommends
+acrylic for transient menus and popovers. [Microsoft's acrylic guidance](https://learn.microsoft.com/en-us/windows/apps/design/style/acrylic)
+covers layering and solid fallbacks. Target at least 4.5:1 for normal text under
+[WCAG text contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
+and 3:1 for essential control indicators under
+[WCAG non-text contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html).
+
+Calculated text contrast for 84% glass over the specified neutral canvases is
+17.00 / 15.24 (Raspberry), 16.50 / 14.84 (Cobalt), and 15.83 / 14.39 (Jade).
+These calculations do not certify arbitrary photographs or gradients beneath glass;
+verify composited backgrounds and all interaction states during implementation.

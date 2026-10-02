@@ -80,7 +80,13 @@ onMounted(() => {
     >
       <Navbar :bordered="false" container-class="max-w-[1800px] px-5 sm:px-8" class="shrink-0 bg-card">
         <template #start>
+          <OcharoAppsMenu
+            v-if="!publicRoute"
+            :apps="platformLinks"
+            :logo-src="dark ? '/brand/ocharo-wordmark-reverse.png' : '/brand/ocharo-wordmark-ink.png'"
+          />
           <RouterLink
+            v-else
             to="/catalogues"
             class="flex min-h-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
             aria-label="Ocharo Catalogue"
@@ -115,7 +121,6 @@ onMounted(() => {
         </template>
         <template #end>
           <div class="flex shrink-0 items-center gap-2">
-            <OcharoAppsMenu v-if="!publicRoute" :apps="platformLinks" />
             <button
               type="button"
               class="btn-outline min-h-11 min-w-11 rounded-full lg:min-h-0 lg:min-w-0"
