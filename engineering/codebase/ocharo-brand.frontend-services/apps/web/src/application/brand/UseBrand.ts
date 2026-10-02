@@ -19,6 +19,7 @@ const error = ref<string | null>(null);
 const notice = ref<string | null>(null);
 const busy = ref(false);
 const loaded = ref(false);
+const refreshing = ref(false);
 
 async function run<T>(
   action: () => Promise<{ ok: true; value: T } | { ok: false; failure: Parameters<typeof describeFailure>[0] }>,
@@ -37,6 +38,8 @@ async function run<T>(
 }
 
 async function refresh() {
+  refreshing.value = true;
+  try {
   const [d, r, a, c, k] = await Promise.all([
     brandApi.draft(),
     brandApi.releases(),
@@ -49,8 +52,9 @@ async function refresh() {
   if (r.ok) releases.value = r.value;
   if (a.ok) appearances.value = a.value;
   if (c.ok) consumers.value = c.value;
-  kit.value = k.ok ? k.value : null;
+  if (k.ok) kit.value = k.value;
   loaded.value = true;
+  } finally { refreshing.value = false; }
 }
 
 /** Shared brand store and commands. */
@@ -65,6 +69,7 @@ export function useBrand() {
     notice,
     busy,
     loaded,
+    refreshing,
     urls: brandUrls,
     refresh,
     currentVersion: (slot: string) =>
@@ -77,7 +82,7 @@ export function useBrand() {
         () => brandApi.saveIdentity(draft.value!.revision, identity),
         'Identitet saqlandi (qoralama). Ilovalar nashrdan keyin ko‘radi.',
       );
-      if (view) draft.value = view;
+      if (view) await refresh();
     },
     async upload(slot: string, file: File, note: string | null) {
       const version = await run(() => brandApi.upload(slot, file, note), `${file.name} yuklandi.`);
@@ -90,7 +95,7 @@ export function useBrand() {
         () => brandApi.setCurrent(slot, draft.value!.revision, versionId),
         'Joriy fayl tanlandi — nashr qilinganda hamma ilovada almashadi.',
       );
-      if (view) draft.value = view;
+      if (view) await refresh();
     },
     async setStatus(versionId: string, status: string) {
       if (await run(() => brandApi.setStatus(versionId, status))) await refresh();

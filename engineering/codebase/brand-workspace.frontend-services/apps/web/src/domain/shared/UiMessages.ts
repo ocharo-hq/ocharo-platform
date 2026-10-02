@@ -8,6 +8,11 @@ export type UiMessageTable = Record<string, { uz: string; ru: string }>;
 
 /** English source phrases identify operator messages; authored content never passes through this table. */
 const baseUiMessages: UiMessageTable = {
+  'Saved products unavailable': {uz:'Saqlangan mahsulotlar mavjud emas',ru:'Сохранённые товары недоступны'},
+  'The service could not be reached. Your edits have been retained.': {uz:'Xizmatga ulanib bo‘lmadi. O‘zgarishlaringiz saqlanib qoldi.',ru:'Не удалось подключиться к сервису. Ваши изменения сохранены.'},
+
+  'Catalogues unavailable': { uz: 'Kataloglar mavjud emas', ru: 'Каталоги недоступны' },
+  'Saved successfully. The current view could not refresh. Your local edits are preserved.': { uz: 'Saqlandi. Ko‘rinishni yangilab bo‘lmadi. Mahalliy o‘zgarishlaringiz saqlanib qoldi.', ru: 'Сохранено. Не удалось обновить представление. Ваши локальные изменения сохранены.' },
   'Interface language': { uz: 'Interfeys tili', ru: 'Язык интерфейса' },
   'Ocharo workspace': { uz: 'Ocharo ish maydoni', ru: 'Рабочее пространство Ocharo' },
   'Your creative business': { uz: 'Sizning ijodiy biznesingiz', ru: 'Ваш творческий бизнес' },

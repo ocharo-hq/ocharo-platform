@@ -34,12 +34,14 @@ function shape<T>(check: (value: unknown) => boolean) {
 const isObject = (value: unknown) => typeof value === 'object' && value !== null && !Array.isArray(value);
 const isArray = (value: unknown) => Array.isArray(value);
 
-/** Reads a human message from an API failure (ProblemDetails detail first). */
+/** Selects safe operator copy without displaying server diagnostics. */
 export function describeFailure(failure: ApiFailure): string {
-  const detail = failure.problem?.['detail'];
-  if (typeof detail === 'string' && detail.length > 0) return detail;
-  if (failure.code === 'transport') return 'Brend xizmatiga ulanib bo‘lmadi. Xizmat ishlayotganini tekshiring.';
-  return failure.status > 0 ? `Xizmat ${failure.status} xato qaytardi.` : failure.message;
+  if (failure.code === 'cancelled') return '';
+  if (failure.status === 401) return 'Qayta kiring. O‘zgarishlaringiz saqlanib turibdi.';
+  if (failure.status === 403) return 'Ruxsatingiz o‘zgardi. O‘zgarishlaringiz saqlanib turibdi.';
+  if (failure.status === 409) return 'Yangi talqin mavjud. O‘zgarishlaringiz saqlanib turibdi; holatni tekshiring.';
+  if ([400, 422].includes(failure.status)) return 'Kiritilgan qiymatlarni tekshiring. O‘zgarishlaringiz saqlanib turibdi.';
+  return 'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi; qayta urinib ko‘ring.';
 }
 
 /** Same-origin brand endpoints; mutations are never retried automatically. */

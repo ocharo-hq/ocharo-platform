@@ -62,7 +62,7 @@ async function upload(): Promise<void> {
     }
     message.value = 'Saving the private edition…';
     const result = await props.access.write(signal => api.uploadEdition(organization, brand, body, signal), controller.signal);
-    if (result.ok) { current.value = result.value; message.value = 'Edition saved privately. Review the complete pages before publishing.'; }
+    if (result.ok) { await load(); message.value = 'Edition saved privately. Review the complete pages before publishing.'; }
     else { error.value = failureMessage(result.failure); message.value = ''; }
   } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Unable to prepare this edition.'; message.value = ''; }
   finally { busy.value = false; }
@@ -85,7 +85,7 @@ async function publish(): Promise<void> {
     <label class="field-label">{{ t("Publication brand") }}<select v-model="brandId" :aria-label="t('Publication brand')" :disabled="busy || loading"><option value="">{{ t("Choose brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
     <p v-if="!document || dirty" class="edition-notice">{{ t("Save this design before preparing its buyer edition.") }}</p>
     <p v-else-if="error&&!current" class="edition-notice">{{ t('Edition status is unavailable. Retry before preparing or publishing.') }}</p>
-    <ContentSkeleton v-else-if="loading&&!current" :cards="1" :label="t('Loading edition status')"/><p v-else-if="!current" class="edition-notice">{{ t("Save the brand’s products in Products & releases before attaching an edition.") }}</p>
+    <ContentSkeleton v-else-if="loading" :cards="1" :label="t('Loading edition status')"/><p v-else-if="!current" class="edition-notice">{{ t("Save the brand’s products in Products & releases before attaching an edition.") }}</p>
     <div class="edition-actions"><Button variant="outline" :is-disabled="blocked || !current || !workspace.canEdit.value" @click="upload">{{ busy ? t("Working…") : t("Prepare buyer edition") }}</Button><button type="button" class="quiet-button" :disabled="busy || loading" @click="load">{{ t("Reload edition status") }}</button></div>
     <p v-if="edition">{{ t("Saved edition:") }} {{ edition.title }} {{ t("· design revision") }} {{ edition.sourceRevision }} · {{ edition.pages.length }} {{ t("pages ·") }} {{ edition.approvedForPublication ? t('approved') : t("awaiting review") }}</p>
     <div v-if="matching && workspace.canApprove.value" class="edition-review">

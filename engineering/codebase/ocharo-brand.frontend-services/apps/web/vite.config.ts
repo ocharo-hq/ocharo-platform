@@ -1,3 +1,4 @@
+import { proxyUnavailable } from './dev/ProxyProblem';
 import { readFileSync } from 'node:fs';
 import { Agent } from 'node:https';
 import tailwindcss from '@tailwindcss/vite';
@@ -27,6 +28,7 @@ export default defineConfig(({ command }) => {
           target: httpsTarget(process.env.VITE_API_TARGET ?? 'https://localhost:8286'),
           changeOrigin: false,
           secure: true,
+          configure: (proxy) => { proxy.on('error', proxyUnavailable); },
           ...(command === 'serve' && process.env.VITE_API_CA_PATH
             ? { agent: new Agent({ ca: readFileSync(process.env.VITE_API_CA_PATH) }) }
             : {}),

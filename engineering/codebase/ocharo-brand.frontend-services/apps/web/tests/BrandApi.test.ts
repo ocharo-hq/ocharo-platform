@@ -9,12 +9,12 @@ function reply(status: number, body: unknown) {
 }
 
 describe('brand api', () => {
-  it('surfaces the publish conflict detail', async () => {
+  it('maps publish conflict to safe localized feedback', async () => {
     const api = createBrandApi((async () =>
       reply(409, { detail: 'Nothing changed since the last release.' })) as unknown as typeof fetch);
     const result = await api.publish(3, null);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(describeFailure(result.failure)).toBe('Nothing changed since the last release.');
+    if (!result.ok) { expect(result.failure.status).toBe(409); expect(describeFailure(result.failure)).not.toContain('Nothing changed'); expect(describeFailure(result.failure)).not.toContain('409'); }
   });
 
   it('sends the draft revision with a current-logo change', async () => {

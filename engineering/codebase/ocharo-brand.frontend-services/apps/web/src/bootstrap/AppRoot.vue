@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { watch } from 'vue';
+import { createFeedbackBus } from '@wow-two-beta/ui-vue/feedback';
+import { FeedbackToastHost } from '@wow-two-beta/ui-vue/presentation/feedback';
 import BuildIdentity from '../presentation/common/BuildIdentity.vue';
 import { computed, onMounted } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
@@ -11,6 +14,8 @@ import { platformLinks } from './PlatformLinks';
 /** Composes Ocharo Brend: the single place for logos, palette, contacts and scheduled appearances. */
 defineOptions({ name: 'AppRoot' });
 const brand = useBrand();
+const feedbackBus = createFeedbackBus();
+watch(brand.error, message => { if (message) feedbackBus.notify({ id: message, tone: 'danger', title: 'So‘rovni bajarib bo‘lmadi', description: message, durationMs: 10000 }); }, { immediate: true });
 const route = useRoute();
 const navigation = [
   { path: '/', label: 'Umumiy', icon: LayoutDashboard },
@@ -106,16 +111,6 @@ onMounted(() => brand.refresh());
       </nav>
       <main id="main-content" tabindex="-1" class="mx-auto max-w-[1400px] px-5 py-8 sm:px-8 xl:px-10">
         <div
-          v-if="brand.error.value"
-          role="alert"
-          class="mb-6 flex items-start justify-between gap-4 rounded-xl border border-destructive/20 bg-destructive-soft px-5 py-4 text-sm text-destructive-soft-foreground"
-        >
-          <p class="leading-6">{{ brand.error.value }}</p>
-          <button class="shrink-0 rounded p-1" aria-label="Xabarni yopish" @click="brand.error.value = null">
-            <Icon :icon="X" :size="15" />
-          </button>
-        </div>
-        <div
           v-if="brand.notice.value"
           role="status"
           class="mb-6 flex items-start justify-between gap-4 rounded-xl border border-success/20 bg-success-soft px-5 py-4 text-sm text-success-soft-foreground"
@@ -125,7 +120,9 @@ onMounted(() => brand.refresh());
             <Icon :icon="X" :size="15" />
           </button>
         </div>
-        <AppErrorBoundary>
+        <div v-if="brand.refreshing.value" aria-busy="true" aria-label="Ma’lumot yangilanmoqda" class="grid gap-5 md:grid-cols-3"><div v-for="card in 3" :key="card" class="animate-pulse rounded-2xl border border-border bg-card p-6"><div class="h-5 w-2/3 rounded bg-muted" /><div class="mt-6 h-36 rounded bg-muted" /></div></div>
+        <section v-if="brand.loaded.value && !brand.draft.value && !brand.refreshing.value" class="panel"><h1>Ma’lumot mavjud emas</h1><button class="btn-primary mt-5" @click="brand.refresh">Qayta urinish</button></section>
+        <AppErrorBoundary v-show="!brand.refreshing.value">
           <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
           <template #fallback="{ reset }">
             <section class="panel p-10 text-center">
@@ -135,6 +132,7 @@ onMounted(() => brand.refresh());
           </template>
         </AppErrorBoundary>
       </main>
+      <FeedbackToastHost :bus="feedbackBus" position="bottom-right" />
       <RouteAnnouncer />
     </div>
   </div>

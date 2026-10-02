@@ -104,8 +104,9 @@ function changeOrganization(event: Event): void {
           </nav>
         </div>
         <div>
-          <ContentSkeleton v-if="workspace.loading.value" :label="t('Loading your workspace…')" />
-          <section v-else-if="workspace.error.value" role="alert" class="workspace-card p-6">
+          <ContentSkeleton v-if="workspace.loading.value || workspace.refreshing.value" :label="t('Loading your workspace…')" />
+          <div v-if="!workspace.loading.value" v-show="!workspace.refreshing.value">
+          <section v-if="workspace.error.value" role="alert" class="workspace-card p-6">
             <h1 class="text-xl font-semibold">{{ t("Workspace unavailable") }}</h1>
             <Button class="mt-5" variant="outline" @click="access.navigate(currentPath)">{{ t("Reload workspace") }}</Button>
           </section>
@@ -128,6 +129,7 @@ function changeOrganization(event: Event): void {
             :workspace="workspace"
           />
           <DraftListPage v-else :access="access" :workspace="workspace" />
+          </div>
         </div>
         <footer class="mt-12 border-t border-border pt-5 text-xs leading-5 text-muted-foreground">
           {{ t("Ocharo · A place for your collection, identity, and stories. Social publishing is not connected.") }}

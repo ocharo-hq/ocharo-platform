@@ -19,7 +19,7 @@ const controller = new AbortController();
 const apps = connectedApps(window.location.origin);
 const error = ref('');
 useErrorToast(error);
-const errorDetail = ref('');
+let loadedBrand = '';
 const connecting = ref('');
 const brandId = ref('');
 const imports = ref<CreativeImport[]>([]);
@@ -44,7 +44,7 @@ async function connect(app: ConnectedApp): Promise<void> {
   const organization = props.workspace.organization.value?.id;
   if (!organization || blocked.value || controller.signal.aborted) return;
   error.value = '';
-  errorDetail.value = '';
+
   connecting.value = app.id;
   try {
     const result = await props.access.write(signal => api.ticket(organization, app.audience, signal), controller.signal);
@@ -60,12 +60,13 @@ async function loadImports(): Promise<void> {
   const selected = brandId.value;
   const sequence = ++loadSequence;
   loading.value = true;
-  imports.value = [];
+  if (loadedBrand !== selected) { imports.value = []; products.value = []; productId.value = ''; loadedBrand = selected; }
   const [result, draft] = await Promise.all([api.imports(organization, selected, controller.signal), api.get(organization, selected, controller.signal)]);
   if (controller.signal.aborted || sequence !== loadSequence) return;
   loading.value = false;
-  products.value = draft.ok ? draft.value?.snapshot.products ?? [] : [];
-  productId.value = '';
+  if (draft.ok) products.value = draft.value?.snapshot.products ?? [];
+  else error.value = failureMessage(draft.failure);
+  if (!products.value.some(item => item.document.id === productId.value)) productId.value = '';
   if (result.ok) imports.value = result.value;
   else error.value = failureMessage(result.failure);
 }
@@ -79,17 +80,16 @@ async function importFiles(): Promise<void> {
   if (!organization || !brandId.value || !manifestFile.value || !imageFile.value || blocked.value) return;
   importing.value = true;
   error.value = '';
-  errorDetail.value = '';
+
   try {
-    const imported = await api.importPackage(props.workspace, organization, brandId.value, productId.value || null, manifestFile.value, imageFile.value, controller.signal);
+    await api.importPackage(props.workspace, organization, brandId.value, productId.value || null, manifestFile.value, imageFile.value, controller.signal);
     if (controller.signal.aborted) return;
-    imports.value.unshift(imported);
+    await loadImports();
     manifestFile.value = null; imageFile.value = null; fileSelection.value += 1;
     message.value = 'Studio image imported for review. Attach it from Media to a product, then review its provenance before publication.';
-  } catch (failure) {
+  } catch {
     if (!controller.signal.aborted) {
-      error.value = failure instanceof Error ? failure.message : 'The Studio import could not complete.';
-      errorDetail.value = failure instanceof Error && typeof failure.cause === 'string' ? failure.cause : '';
+      error.value = 'The Studio import could not complete.';
     }
   }
   finally { importing.value = false; }
@@ -99,7 +99,7 @@ async function importFiles(): Promise<void> {
 <template>
   <section class="space-y-7">
     <header class="space-y-2"><p class="eyebrow">{{ t("Your creative workspace") }}</p><h1 class="page-title">{{ t("Connected apps") }}</h1><p class="max-w-2xl text-muted-foreground">{{ t("Open an app with your current organization. Access lasts five minutes; reconnect here when it expires.") }}</p></header>
-    <p v-if="errorDetail" class="text-sm text-muted-foreground">{{ t(errorDetail) }}</p>
+
     <p v-if="message" role="status" class="rounded-lg bg-muted p-4 text-sm">{{ t(message) }}</p>
     <div class="grid gap-5 lg:grid-cols-3">
       <article v-for="app in apps" :key="app.id" class="workspace-card flex flex-col gap-4 p-6">

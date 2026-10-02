@@ -35,6 +35,7 @@ describe('design recovery lifecycle', () => {
     const second = setup(); expect(second.store.recovery.available.value?.title).toBe('Unsaved latest title');
     await second.store.recovery.restore(); expect(second.store.record.value).toBeNull(); expect(second.store.dirty.value).toBe(true); expect(second.store.snapshot.value).toEqual(changed);
     const save = vi.spyOn(second.access.api, 'saveDesign').mockResolvedValue(ResultExtensions.ok({ ...saved(), id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', snapshot: changed }));
+    vi.spyOn(second.access.api, 'getDesign').mockResolvedValue(ResultExtensions.ok({ ...saved(), id: 'dddddddd-dddd-dddd-dddd-dddddddddddd', snapshot: changed }));
     await second.store.save(); expect(save.mock.calls[0]?.[1]).toBeNull(); expect(save.mock.calls[0]?.[2].expectedRevision).toBeNull();
     expect(createDesignRecoveryStorage(identity).read()).toBeNull();
   });

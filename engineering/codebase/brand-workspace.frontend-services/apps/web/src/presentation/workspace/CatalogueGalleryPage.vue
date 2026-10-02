@@ -64,9 +64,9 @@ async function remove(item:DesignSummary){if(locked.value||!await requestConfirm
  <section class="catalogue-gallery">
   <header><div><p class="eyebrow">{{t('Your catalogues')}}</p><h1>{{t('A collection, in every format.')}}</h1><p>{{t('Create one catalogue and design its website, PDF, or both.')}}</p></div><button :disabled="locked" @click="edit()">{{t('New catalogue')}}</button></header>
   <label class="search">{{t('Find a catalogue')}}<input v-model="query" type="search" :placeholder="t('Name or slug')"></label>
-  <div v-if="loadError" role="status" class="load-error"><p>{{loadError}}</p><button :disabled="loading" @click="load">{{t('Try again')}}</button></div>
-  <ContentSkeleton v-if="loading&&!documents.length" :cards="3" :label="t('Loading catalogues')" />
-  <div v-else class="catalogue-grid"><article v-for="item in visible" :key="item.id">
+  <div v-if="loadError" role="status" class="load-error"><p>{{t('Catalogues unavailable')}}</p><button :disabled="loading" @click="load">{{t('Try again')}}</button></div>
+  <ContentSkeleton v-if="loading" :cards="3" :label="t('Loading catalogues')" />
+  <div v-show="!loading" class="catalogue-grid"><article v-for="item in visible" :key="item.id">
    <div class="catalogue-cover"><span>Ocharo</span><strong>{{item.title}}</strong><small>{{item.locale?.toUpperCase()??'PDF'}}</small></div>
    <div class="card-body"><div class="card-heading"><h2>{{item.title}}</h2><span>{{(item.catalogue?.isActive??true)?t('Active'):t('Inactive')}}</span></div><p v-if="item.catalogue?.slug" class="slug">/{{item.catalogue.slug}}</p><p>{{item.catalogue?.description}}</p><small>{{t('Last edited')}} · {{new Date(item.updatedAtUtc).toLocaleString(uiLocale)}}</small>
     <div class="designer-actions"><button v-if="formats(item).web" @click="emit('open',item.id,'web')">{{t('Web designer')}}</button><button v-if="formats(item).pdf" @click="emit('open',item.id,'pdf')">{{t('PDF designer')}}</button></div>

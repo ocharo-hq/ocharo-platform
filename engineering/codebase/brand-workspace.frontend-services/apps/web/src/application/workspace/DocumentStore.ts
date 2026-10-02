@@ -12,6 +12,8 @@ export function useDesignDocument(access: AccessControls, organizationId: string
   const snapshot = shallowRef<DesignSnapshot | null>(null);
   const title = ref('');
   const record = shallowRef<DesignDocument | null>(null);
+  // A confirmed write receipt protects retry identity without replacing the editable projection.
+  const receipt = shallowRef<{ id: string; revision: number } | null>(null);
   const documents = shallowRef<DesignSummary[]>([]);
   const error = ref('');
   const status = ref('');
@@ -61,7 +63,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
     const checked = validateSnapshot(next);
     if (checked.kind !== kind) { error.value = 'This file belongs in the other editor.'; return false; }
     recovery.preserve(); changing = true; recoveryOrigin = null;
-    record.value = null;
+    record.value = null; receipt.value = null;
     snapshot.value = checked;
     title.value = name;
     baseline.value = '';
@@ -75,7 +77,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
     const result = await access.api.getDesign(organizationId, id, controller.signal);
     if (result.ok && result.value.kind === kind) {
       recovery.preserve(); changing = true; recoveryOrigin = null;
-      record.value = result.value;
+      record.value = result.value; receipt.value = { id: result.value.id, revision: result.value.revision };
       snapshot.value = cloneSnapshot(result.value.snapshot);
       title.value = result.value.title;
       baseline.value = serialize(); history.value = []; future.value = [];
@@ -90,21 +92,28 @@ export function useDesignDocument(access: AccessControls, organizationId: string
     if (!title.value.trim()) { error.value = 'Give your design a name.'; return; }
     const recoveryToken = recovery.checkpoint();
     busy.value = true; error.value = ''; status.value = '';
-    const input = { kind, title: title.value.trim(), snapshot: cloneSnapshot(snapshot.value), expectedRevision: asCopy ? null : record.value?.revision ?? null };
+    const input = { kind, title: title.value.trim(), snapshot: cloneSnapshot(snapshot.value), expectedRevision: asCopy ? null : receipt.value?.revision ?? record.value?.revision ?? null };
     try {
-      const result = await access.write((signal) => access.api.saveDesign(organizationId, asCopy ? null : record.value?.id ?? null, input, signal), controller.signal);
+      const result = await access.write((signal) => access.api.saveDesign(organizationId, asCopy ? null : receipt.value?.id ?? record.value?.id ?? null, input, signal), controller.signal);
       if (result.ok) {
+        receipt.value = { id: result.value.id, revision: result.value.revision };
+        status.value = t('Saved revision {revision}', { revision: result.value.revision });
+        loading.value = true;
+        const current = await access.api.getDesign(organizationId, result.value.id, controller.signal);
+        loading.value = false;
+        if (!current.ok) { error.value = 'Saved successfully. The current view could not refresh. Your local edits are preserved.'; await list(); return; }
+        if (current.value.kind !== kind) { error.value = 'This design belongs in the other editor.'; return; }
         changing = true; recoveryOrigin = null;
-        record.value = result.value;
-        title.value = result.value.title;
-        snapshot.value = cloneSnapshot(result.value.snapshot);
-        baseline.value = serialize(); status.value = t('Saved revision {revision}',{revision:result.value.revision});
+        record.value = current.value; receipt.value = { id: current.value.id, revision: current.value.revision };
+        title.value = current.value.title;
+        snapshot.value = cloneSnapshot(current.value.snapshot);
+        baseline.value = serialize(); status.value = t('Saved revision {revision}',{revision:current.value.revision});
         changing = false; recovery.saved(recoveryToken);
         await list();
       } else error.value = result.failure.status === 409
         ? 'A newer revision exists. Your edits are retained. Save a copy, or open the saved design to reload.'
         : failureMessage(result.failure);
-    } finally { busy.value = false; }
+    } finally { busy.value = false; loading.value = false; }
   }
   function undo(): void {
     const previous = history.value.at(-1);
@@ -117,5 +126,5 @@ export function useDesignDocument(access: AccessControls, organizationId: string
     if (!next || !snapshot.value || busy.value || loading.value || access.busy.value) return;
     history.value = [...history.value, snapshot.value]; future.value = future.value.slice(0, -1); snapshot.value = next;
   }
-  return { snapshot, title, record, documents, error, status, loading, busy, dirty, history, future, recovery, list, replace, create, load, save, undo, redo };
+  return { snapshot, title, record, receipt, documents, error, status, loading, busy, dirty, history, future, recovery, list, replace, create, load, save, undo, redo };
 }

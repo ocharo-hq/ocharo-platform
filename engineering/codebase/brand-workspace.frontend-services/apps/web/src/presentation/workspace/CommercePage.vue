@@ -18,6 +18,7 @@ const props=defineProps<{access:AccessControls;workspace:WorkspaceControls}>();
 const api=useCommerce(props.access);
 const org=()=>props.workspace.organization.value!.id;
 const newKey=()=>crypto.randomUUID();
+const confirmedRevision=ref<number|null>(null);
 const brandId=ref('');const current=ref<CommerceDraft|null>(null);const snapshot=ref<CommerceSnapshot|null>(null);
 const baseline=ref('');const releases=ref<CommerceRelease[]>([]);const message=ref('');const error=ref('');const loading=ref(false);
 useErrorToast(error);
@@ -34,18 +35,17 @@ watch(dirty,value=>props.access.setDirty(value),{flush:'sync'});
 onScopeDispose(()=>{controller.abort();props.access.setDirty(false);});
 watch(()=>props.workspace.brands.value,brands=>{if(!brandId.value&&brands?.length)brandId.value=brands[0]!.id;},{immediate:true});
 watch(brandId,()=>void load(),{immediate:true});
-function apply(value:CommerceDraft){current.value=value;snapshot.value=structuredClone(value.snapshot);baseline.value=JSON.stringify(snapshot.value);}
-async function load(){if(!brandId.value)return;const sequence=++loadSequence;loading.value=true;error.value='';message.value='';const requested=brandId.value;const organization=org();current.value=null;snapshot.value=null;releases.value=[];
+async function load(){if(!brandId.value)return;const sequence=++loadSequence;loading.value=true;error.value='';message.value='';const requested=brandId.value;const organization=org();if(current.value&&current.value.brandId!==requested){current.value=null;confirmedRevision.value=null;snapshot.value=null;releases.value=[];}
  try{const [draft,history]=await Promise.all([api.get(organization,requested,controller.signal),api.releases(organization,requested,controller.signal)]);
  if(controller.signal.aborted||sequence!==loadSequence||brandId.value!==requested||org()!==organization)return;
- if(!draft.ok){error.value=failureMessage(draft.failure);return;}current.value=draft.value;snapshot.value=draft.value?structuredClone(draft.value.snapshot):null;baseline.value=JSON.stringify(snapshot.value);releases.value=history.ok?history.value:[];if(!history.ok)error.value=failureMessage(history.failure);productId.value=snapshot.value?.products[0]?.document.id??'';
+ if(!draft.ok){error.value=failureMessage(draft.failure);return false;}current.value=draft.value;confirmedRevision.value=draft.value?.revision??null;snapshot.value=draft.value?structuredClone(draft.value.snapshot):null;baseline.value=JSON.stringify(snapshot.value);if(history.ok)releases.value=history.value;else error.value=failureMessage(history.failure);if(!snapshot.value?.products.some(item=>item.document.id===productId.value))productId.value=snapshot.value?.products[0]?.document.id??'';return true;
  }finally{if(sequence===loadSequence)loading.value=false;}}
 function start(){const brand=props.workspace.brands.value?.find(b=>b.id===brandId.value);if(!brand)return;snapshot.value=initialCommerce(brand.name,brand.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''));}
 async function adopt(){error.value='';const brand=props.workspace.brands.value?.find(b=>b.id===brandId.value);const slug=(brand?.name??'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
  const result=await props.access.write(signal=>api.adopt(org(),brandId.value,slug,signal),controller.signal);
- if(result.ok){apply(result.value);message.value='Preserved records copied into a private draft. Review image provenance before publication.';productId.value=result.value.snapshot.products[0]?.document.id??'';}else error.value=failureMessage(result.failure);}
-async function save(){if(!snapshot.value)return false;error.value='';const result=await props.access.write(signal=>api.save(org(),brandId.value,current.value?.revision??0,snapshot.value!,signal),controller.signal);
- if(result.ok){apply(result.value);message.value=t('Draft revision {revision} saved.',{revision:result.value.revision});return true;}error.value=failureMessage(result.failure);return false;}
+ if(result.ok){await load();message.value='Preserved records copied into a private draft. Review image provenance before publication.';}else error.value=failureMessage(result.failure);}
+async function save(){if(!snapshot.value)return false;error.value='';const result=await props.access.write(signal=>api.save(org(),brandId.value,confirmedRevision.value??current.value?.revision??0,snapshot.value!,signal),controller.signal);
+ if(result.ok){confirmedRevision.value=result.value.revision;const refreshed=await load();if(!refreshed)error.value='Saved successfully. The current view could not refresh. Your local edits are preserved.';if(refreshed)message.value=t('Draft revision {revision} saved.',{revision:result.value.revision});return Boolean(refreshed);}error.value=failureMessage(result.failure);return false;}
 function addProduct(){if(!snapshot.value||!newId.value||snapshot.value.products.some(p=>p.document.id===newId.value))return;
  const id=newId.value;const product:Product={revision:1,sourceRevision:null,document:{id,garmentType:'garment',variantCode:id,status:'draft',sortOrder:snapshot.value.products.length,sizes:[],fabricCodes:[],decorationCodes:[],tags:[],locales:{uz:emptyCopy(),ru:emptyCopy(),en:emptyCopy()},pricing:null,media:[],issues:[],notes:null,stock:null,madeToOrder:false}};
  snapshot.value.products.push(product);productId.value=id;newId.value='';}
@@ -54,12 +54,12 @@ function setVerified(key:string,event:Event){if(!snapshot.value)return;const che
 async function attach(asLogo=false){const media=props.workspace.media.value?.find(m=>m.id===libraryId.value);if(!media||!snapshot.value)return;if(dirty.value&&!await save())return;
  const provenance:Provenance={kind:'unknown',approvedForPublication:false,sourceUrl:null,credit:null,rights:null};
  const result=await props.access.write(signal=>api.attach(org(),brandId.value,current.value!.revision,media.id,provenance,signal),controller.signal);
- if(!result.ok){error.value=failureMessage(result.failure);return;}apply(result.value);
+ if(!result.ok){error.value=failureMessage(result.failure);return;}if(!await load())return;
  if(asLogo)snapshot.value!.logos[logoSlot.value]={...media,slot:logoSlot.value,status:'draft',uploadedAt:media.createdAtUtc,width:null,height:null,hasPreview:false,alt:null,sourcePath:null,role:'logo'};
  else if(selected.value&&!selected.value.document.media.some(image=>image.id===media.id))selected.value.document.media.push({id:media.id,role:'photo',fileName:media.fileName,contentType:media.contentType,byteLength:media.byteLength,sha256:media.sha256,width:null,height:null,hasPreview:false,alt:null,sourcePath:null});
  await save();}
 async function publish(){if(!current.value||dirty.value)return;error.value='';const result=await props.access.write(signal=>api.publish(org(),brandId.value,current.value!.revision,note.value,signal),controller.signal);
- if(result.ok){releases.value.unshift(result.value);note.value='';message.value=t('Release {revision} published. Your approved catalogue is available to connected public apps.',{revision:result.value.revision});}else error.value=failureMessage(result.failure);}
+ if(result.ok){if(await load())note.value='';message.value=t('Release {revision} published. Your approved catalogue is available to connected public apps.',{revision:result.value.revision});}else error.value=failureMessage(result.failure);}
 async function withdraw(release:CommerceRelease){if(dirty.value||!note.value.trim())return;const result=await props.access.write(signal=>api.withdraw(org(),brandId.value,release.id,note.value,signal),controller.signal);if(result.ok){await load();message.value='Release withdrawn. Pinned public links now return unavailable.';}else error.value=failureMessage(result.failure);}
 </script>
 
@@ -68,10 +68,10 @@ async function withdraw(release:CommerceRelease){if(dirty.value||!note.value.tri
  <div class="flex flex-wrap items-end justify-between gap-4"><div><p class="eyebrow">{{ t("Brand authority") }}</p><h1 class="page-title">{{ t("Products & releases") }}</h1><p class="text-muted-foreground">{{ t("Manage your products, identity and the catalogue your customers see.") }}</p></div>
  <label>{{ t("Brand") }}<select v-model="brandId" class="native-select mt-2" :disabled="dirty||blocked"><option value="">{{ t("Choose a brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{brand.name}}</option></select></label></div>
 <p v-if="message" role="status" class="rounded-lg bg-muted p-3 text-sm">{{ t(message) }}</p>
- <p v-if="!brandId" class="empty-state">{{ t("Create a brand in Brands to begin.") }}</p><ContentSkeleton v-else-if="loading" :label="t('Loading brand records…')" />
+ <p v-if="!brandId" class="empty-state">{{ t("Create a brand in Brands to begin.") }}</p><ContentSkeleton v-if="loading" :label="t('Loading brand records…')" />
  <section v-else-if="error&&!snapshot" class="workspace-card p-6"><h2 class="font-semibold">{{ t("Product library unavailable") }}</h2><Button class="mt-4" variant="outline" @click="load">{{ t("Retry") }}</Button></section>
  <section v-else-if="!snapshot" class="workspace-card space-y-4 p-7"><h2 class="text-xl font-semibold">{{ t("Start this brand’s product library") }}</h2><p>{{ t("Records remain private until an owner publishes a release.") }}</p><div v-if="workspace.canEdit.value" class="flex flex-wrap gap-3"><Button @click="start">{{ t("Start an empty draft") }}</Button><Button v-if="workspace.canApprove.value" variant="outline" :is-disabled="blocked" @click="adopt">{{ t("Adopt preserved Ocharo records") }}</Button></div><p class="text-sm text-muted-foreground">{{ t("Adoption preserves original product IDs, copy, prices, collections and image hashes. Every image starts awaiting publication review.") }}</p></section>
- <template v-else>
+ <div v-if="snapshot" v-show="!loading">
   <div class="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-muted p-4"><div><b>{{snapshot.products.length}}</b> {{ t("products ·") }} <b>{{snapshot.collections.length}}</b> {{ t("collections · Draft") }} {{current?.revision??t('unsaved')}} <span v-if="dirty">{{ t("· Unsaved changes") }}</span></div><Button v-if="workspace.canEdit.value" :is-disabled="blocked||!dirty" @click="save">{{ t("Save draft") }}</Button></div>
   <nav :aria-label="t('Brand review')" class="flex flex-wrap gap-2"><Button v-for="item in ['products','identity','collections','images','releases']" :key="item" size="sm" :variant="tab===item?'soft':'ghost'" @click="tab=item">{{t(({products:'Products',identity:'Brand identity',collections:'Collections',images:'Image review',releases:'Publish & history'})[item]??item)}}</Button></nav>
   <fieldset :disabled="blocked||!workspace.canEdit.value" class="min-w-0">
@@ -99,6 +99,6 @@ async function withdraw(release:CommerceRelease){if(dirty.value||!note.value.tri
   <section v-if="tab==='releases'" class="space-y-5"><div class="workspace-card space-y-4 p-6"><h2 class="text-xl font-semibold">{{ t("Publish a reviewed version") }}</h2><p class="text-sm text-muted-foreground">{{ t("Only active products with approved language copy and resolved questions appear. Draft prices, source notes, exact stock and unapproved images remain private.") }}</p><p v-if="dirty" class="text-sm">{{ t("Save your changes before publication.") }}</p><label class="block">{{ t("Release or withdrawal note") }}<textarea v-model="note" class="native-input mt-2" rows="2" maxlength="1000"/></label><Button v-if="workspace.canApprove.value" :is-disabled="blocked||dirty||!current||!note.trim()" @click="publish">{{ t("Publish catalogue") }}</Button></div>
    <article v-for="release in releases" :key="release.id" class="workspace-card flex flex-wrap items-center justify-between gap-4 p-5"><div><h3 class="font-semibold">{{ t("Release") }} {{release.revision}} · {{t(release.withdrawnAt?'Withdrawn':'Published')}}</h3><p class="text-sm">{{release.note}}</p><p class="text-xs text-muted-foreground">{{new Date(release.publishedAt).toLocaleString(uiLocale)}} {{ t("· Draft") }} {{release.sourceRevision}}</p><a v-if="!release.withdrawnAt" :href="`/api/public/v1/brands/${snapshot.slug}/catalogue?locale=en&release=${release.id}`" target="_blank" rel="noopener" class="text-sm underline">{{ t("View published catalogue data") }}</a></div><Button v-if="workspace.canApprove.value&&!release.withdrawnAt" variant="outline" size="sm" :is-disabled="blocked||dirty||!note.trim()" @click="withdraw(release)">{{ t("Withdraw with note") }}</Button></article>
   </section>
- </template>
+ </div>
 </section>
 </template>

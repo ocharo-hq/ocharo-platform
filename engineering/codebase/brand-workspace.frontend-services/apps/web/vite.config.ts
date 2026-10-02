@@ -1,3 +1,4 @@
+import { proxyUnavailable } from './dev/ProxyProblem';
 import { readFileSync } from 'node:fs';
 import { Agent } from 'node:https';
 import { fileURLToPath, URL } from 'node:url';
@@ -28,6 +29,7 @@ export default defineConfig(({ command }) => ({
     strictPort: true,
     proxy: {
       '/api': { target: httpsTarget(process.env.VITE_API_TARGET ?? 'https://localhost:8264'), secure: true,
+          configure: (proxy) => { proxy.on('error', proxyUnavailable); },
           ...(command === 'serve' && process.env.VITE_API_CA_PATH
             ? { agent: new Agent({ ca: readFileSync(process.env.VITE_API_CA_PATH) }) }
             : {}) },

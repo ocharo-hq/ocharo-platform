@@ -1,4 +1,5 @@
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { notifyError } from '@/application/shared/UseFeedback';
 
 import { useAppQuery, useQueryCache } from '@wow-two-beta/ui-vue/query';
 
@@ -9,6 +10,7 @@ import type { AccessControls } from './UseAccess';
 /** Owns tenant-scoped reads and server-confirmed preparation commands for one document. */
 export function useWorkspace(access: AccessControls, location: WorkspaceLocation) {
   const cache = useQueryCache();
+  const refreshing = ref(false);
   const orgId = location.organizationId ?? '';
   const scope = [access.session.value?.sessionId, orgId];
   const organizationsQuery = useAppQuery({
@@ -54,23 +56,30 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
       draftQuery.loading.value,
   );
 
+  async function refreshAfterWrite(keys: readonly unknown[][]) {
+    refreshing.value = true;
+    try { await Promise.all(keys.map(key => cache.invalidate(key))); }
+    catch { notifyError('Saved successfully. The current view could not refresh. Your local edits are preserved.', 'workspace-refresh'); }
+    finally { refreshing.value = false; }
+  }
+
   function createOrganization(input: { name: string; slug: string }, signal: AbortSignal) {
     return access.write((s) => access.api.createOrganization(input, s), signal);
   }
   async function createBrand(input: { name: string; timeZone: string }, signal: AbortSignal) {
     const result = await access.write((s) => access.api.createBrand(orgId, input, s), signal);
-    if (result.ok) await cache.invalidate([...scope, 'brands']);
+    if (result.ok) await refreshAfterWrite([[...scope, 'brands']]);
     return result;
   }
   async function uploadMedia(file: File, provenance: string, signal: AbortSignal) {
     const result = await access.write((s) => access.api.uploadMedia(orgId, file, provenance, s), signal);
-    if (result.ok) await cache.invalidate([...scope, 'media']);
+    if (result.ok) await refreshAfterWrite([[...scope, 'media']]);
     return result;
   }
   async function saveDraft(input: DraftInput, expectedRevision: number | null, signal: AbortSignal) {
     const id = location.draftId === 'new' ? null : location.draftId;
     const result = await access.write((s) => access.api.saveDraft(orgId, id, input, expectedRevision, s), signal);
-    if (result.ok && id) cache.set(draftKey, result.value);
+    if (result.ok) await refreshAfterWrite([[...scope, 'drafts'], ...(id ? [draftKey] : [])]);
     return result;
   }
   async function transition(
@@ -83,7 +92,7 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
       (s) => access.api.transition(orgId, location.draftId!, action, revision, reason, s),
       signal,
     );
-    if (result.ok) cache.set(draftKey, result.value);
+    if (result.ok) await refreshAfterWrite([draftKey, [...scope, 'drafts']]);
     return result;
   }
   function createExport(revision: number, key: string, signal: AbortSignal) {
@@ -101,6 +110,7 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
     error,
     refreshError,
     loading,
+    refreshing,
     createOrganization,
     createBrand,
     uploadMedia,
