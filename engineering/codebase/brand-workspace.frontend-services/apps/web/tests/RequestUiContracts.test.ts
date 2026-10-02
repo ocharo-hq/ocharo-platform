@@ -4,14 +4,10 @@ import { runInNewContext } from "node:vm";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { describe, expect, it, vi } from "vitest";
 import { proxyUnavailable } from "../dev/ProxyProblem";
-const root = resolve(process.cwd(), "../../../../../..");
+const root = resolve(process.cwd(), "../../..");
 const appPaths = [
-  "ocharo-platform/engineering/codebase/brand-workspace.frontend-services/apps/web",
-  "ocharo-platform/engineering/codebase/ocharo-brand.frontend-services/apps/web",
-  "ocharo-marketing/engineering/codebase/ocharo-marketing.frontend-services/apps/web",
-  "ocharo-marketing/engineering/codebase/ocharo-marketing.frontend-services/apps/editorial",
-  "ocharo-studio/engineering/codebase/ocharo-studio.frontend-services/apps/web",
-  "ocharo-assets/engineering/codebase/ocharo-motion.frontend-services/apps/web",
+  "brand-workspace.frontend-services/apps/web",
+  "ocharo-brand.frontend-services/apps/web",
 ];
 function boot(
   path: string,
@@ -50,42 +46,6 @@ describe("first paint and proxy contracts", () => {
       expect(actual.style.colorScheme).toBe("light");
     },
   );
-  it("honours Studio legacy and tab-scoped dark preferences before mount", () => {
-    const path = appPaths[4]!;
-    expect(
-      boot(path, { "ocharo-studio.theme": "true" }).style.colorScheme,
-    ).toBe("dark");
-    const scoped = {
-      "ocharo-studio.theme": "false",
-      "ocharo-studio:tab": "my-tab",
-      "ocharo-studio:studio:recovery:my-tab": JSON.stringify({
-        schemaVersion: 1,
-        settings: { dark: true },
-      }),
-    };
-    const actual = boot(path, scoped, "/studio");
-    expect(actual.style.colorScheme).toBe("dark");
-    expect(actual.toggle).toHaveBeenCalledWith("dark", true);
-  });
-  it("handles blocked Studio storage without preventing the initial document paint", () => {
-    const style: { colorScheme?: string } = {};
-    runInNewContext(
-      readFileSync(resolve(root, appPaths[4]!, "public/theme.js"), "utf8"),
-      {
-        document: {
-          documentElement: { classList: { toggle: vi.fn() }, style },
-        },
-        localStorage: {
-          getItem: () => {
-            throw Error("blocked");
-          },
-        },
-        sessionStorage: { getItem: () => null },
-        location: { pathname: "/studio" },
-      },
-    );
-    expect(style.colorScheme).toBe("light");
-  });
   it.each(["GET", "HEAD"])(
     "returns safe structured transport problems for %s without exposing proxy errors",
     (method) => {
@@ -149,3 +109,22 @@ it.each(["aborted", "destroyed"])(
     expect(end).not.toHaveBeenCalled();
   },
 );
+
+it("copies the retained Brand proxy helper and first-paint assets into its container build", () => {
+  const docker = readFileSync(
+    resolve(root, "../deployment/brand/Dockerfile"),
+    "utf8",
+  );
+  for (const folder of ["dev", "public"]) {
+    expect(docker).toContain(
+      `COPY ocharo-brand.frontend-services/apps/web/${folder}/ ./apps/web/${folder}/`,
+    );
+    const file = folder === "dev" ? "ProxyProblem.ts" : "theme.js";
+    expect(
+      readFileSync(
+        resolve(root, "ocharo-brand.frontend-services/apps/web", folder, file),
+        "utf8",
+      ),
+    ).not.toBe("");
+  }
+});

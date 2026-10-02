@@ -19,6 +19,8 @@ COPY ocharo-brand.frontend-services/apps/web/package.json ./apps/web/
 RUN pnpm install --frozen-lockfile
 # Copy authored inputs explicitly; host node_modules and generated output stay out.
 COPY ocharo-brand.frontend-services/apps/web/index.html ocharo-brand.frontend-services/apps/web/vite.config.ts ocharo-brand.frontend-services/apps/web/vitest.config.ts ocharo-brand.frontend-services/apps/web/tsconfig*.json ./apps/web/
+COPY ocharo-brand.frontend-services/apps/web/dev/ ./apps/web/dev/
+COPY ocharo-brand.frontend-services/apps/web/public/ ./apps/web/public/
 COPY ocharo-brand.frontend-services/apps/web/src/ ./apps/web/src/
 COPY ocharo-brand.frontend-services/apps/web/scripts/ ./apps/web/scripts/
 COPY ocharo-brand.frontend-services/apps/web/tests/ ./apps/web/tests/
