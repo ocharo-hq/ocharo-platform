@@ -1,15 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { Agent } from 'node:https';
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vite';
 import mkcert from 'vite-plugin-mkcert';
-
-/** Keeps development proxy overrides on verified HTTPS endpoints. */
-function httpsTarget(value: string): string {
-  if (new URL(value).protocol !== 'https:') throw new Error('The development API target must use HTTPS.');
-  return value;
-}
+import { developmentApiProxy } from './scripts/development-api';
 
 export default defineConfig(({ command }) => {
   return {
@@ -23,14 +16,11 @@ export default defineConfig(({ command }) => {
       strictPort: true,
       https: {},
       proxy: {
-        '/api': {
-          target: httpsTarget(process.env.VITE_API_TARGET ?? 'https://localhost:8278'),
-          changeOrigin: false,
-          secure: true,
-          ...(command === 'serve' && process.env.VITE_API_CA_PATH
-            ? { agent: new Agent({ ca: readFileSync(process.env.VITE_API_CA_PATH) }) }
-            : {}),
-        },
+        '/api': developmentApiProxy({
+          target: process.env.VITE_API_TARGET ?? 'https://localhost:8278',
+          development: command === 'serve',
+          certificatePath: process.env.VITE_API_CA_PATH,
+        }),
       },
     },
   };

@@ -21,9 +21,14 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-The Vite app uses HTTPS on `8224` and proxies `/api` to the backend HTTPS profile on `8220`.
-Development and browser checks use trusted HTTPS; configure `VITE_API_CA_PATH` for the backend certificate.
-`VITE_API_TARGET` can select a running local backend for those checks; the default is `https://localhost:8220`.
+The Vite app uses HTTPS on `8282` and proxies `/api` to `OcharoCatalogue.Api` on `8278`.
+The local proxy checks for an existing .NET development certificate, exports only its public PEM
+into a temporary directory, and uses that certificate for verified loopback HTTPS. Temporary files
+are removed immediately; no certificate is created or trusted, and no private key is exported.
+For a custom backend certificate, supply its public PEM path through `VITE_API_CA_PATH`.
+Remote API targets retain Node's normal certificate verification. Frontend builds need no local certificates.
+`VITE_API_TARGET` can select another HTTPS backend; the default is `https://localhost:8278`.
+Keep Rider and WebStorm runtimes user-owned; restart the frontend when certificate configuration changes.
 
 ```sh
 pnpm typecheck
