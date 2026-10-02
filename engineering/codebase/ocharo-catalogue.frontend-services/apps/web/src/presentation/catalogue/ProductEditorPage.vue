@@ -118,6 +118,20 @@ async function save() {
   if (id) summary.value = '';
   if (id && wasNew) await router.replace(`/products/${id}`);
 }
+function formatHistoryWhen(value: string) {
+  if (uiLocale.value === 'uz') return formatWhen(value);
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '—';
+  return new Intl.DateTimeFormat(uiLocale.value === 'ru' ? 'ru-RU' : 'en-GB', {
+    timeZone: 'Asia/Tashkent',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
+}
 function move(index: number, delta: number) {
   const list = editor.draft.value?.media;
   if (!list) return;
@@ -166,7 +180,7 @@ async function onFiles(event: Event) {
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p class="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-              {{ store.garmentName(editor.draft.value.garmentType) }}
+              {{ store.garmentName(editor.draft.value.garmentType, uiLocale) }}
             </p>
             <h1 class="mt-1 font-editorial text-4xl tracking-tight">
               {{
@@ -179,9 +193,9 @@ async function onFiles(event: Event) {
                 >{{ editor.detail.value.document.id }} · {{ t('Revision') }} {{ editor.detail.value.revision }}</span
               >
               <StatusBadge :status="editor.draft.value.status" />
-              <span v-if="openIssues" class="chip bg-warning-soft text-warning-soft-foreground"
-                >{{ openIssues }} ochiq savol</span
-              >
+              <span v-if="openIssues" class="chip bg-warning-soft text-warning-soft-foreground">{{
+                t('{count} open questions', { count: openIssues })
+              }}</span>
               <span
                 v-for="c in editor.detail.value?.collectionIds ?? []"
                 :key="c"
@@ -488,7 +502,10 @@ async function onFiles(event: Event) {
                     :placeholder="t('Alt text')"
                     :aria-label="t('Alt text')"
                   />
-                  <p v-if="index === 0" class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                  <p
+                    v-if="index === 0"
+                    class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-primary-soft-foreground"
+                  >
                     {{ t('Primary image') }}
                   </p>
                 </li>
@@ -497,7 +514,7 @@ async function onFiles(event: Event) {
                 v-if="detached.length"
                 class="mt-4 rounded-xl border border-dashed border-border p-3 text-xs text-muted-foreground"
               >
-                <p>Olib tashlangan (saqlasangiz ro‘yxatdan chiqadi; fayl joyida qoladi):</p>
+                <p>{{ t('Removed images leave the product list when saved; their files remain stored.') }}</p>
                 <div class="mt-2 flex flex-wrap gap-2">
                   <button v-for="view in detached" :key="view.media.id" class="chip bg-muted" @click="reattach(view)">
                     ↺ {{ view.media.fileName }}
@@ -518,13 +535,13 @@ async function onFiles(event: Event) {
                 >
                   <div>
                     <p class="font-semibold">v{{ entry.revision }} · {{ entry.summary }}</p>
-                    <p class="text-xs text-muted-foreground">{{ formatWhen(entry.savedAt) }}</p>
+                    <p class="text-xs text-muted-foreground">{{ formatHistoryWhen(entry.savedAt) }}</p>
                   </div>
                   <button
                     v-if="entry.revision !== editor.detail.value?.revision"
                     class="btn-ghost shrink-0 px-2 text-xs"
                     :disabled="editor.dirty.value"
-                    :title="editor.dirty.value ? 'Avval saqlang yoki bekor qiling' : 'Shu versiyani tiklash'"
+                    :title="editor.dirty.value ? t('Save or cancel your changes first.') : t('Restore this revision')"
                     @click="editor.restore(entry.revision)"
                   >
                     <Icon :icon="RotateCcw" :size="13" />{{ t('Restore') }}
@@ -550,7 +567,7 @@ async function onFiles(event: Event) {
               v-model="summary"
               class="field max-w-xs flex-1"
               :placeholder="t('Change note (optional)')"
-              aria-label="O‘zgarish izohi"
+              :aria-label="t('Change note')"
             />
             <button
               class="btn-ghost ml-auto"

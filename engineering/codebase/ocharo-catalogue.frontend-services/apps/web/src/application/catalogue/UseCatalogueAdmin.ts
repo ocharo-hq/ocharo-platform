@@ -7,10 +7,12 @@ import type {
 } from '../../domain/catalogue/CatalogueModels';
 import { catalogueApi, catalogueExports, describeFailure } from '../../integration/catalogue';
 import { useCatalogueStore } from './CatalogueStore';
+import { useUiLocale } from '../shared/UseUiLocale';
 
 /** Settings, workspace import and exports. */
 export function useCatalogueAdmin() {
   const store = useCatalogueStore();
+  const { t } = useUiLocale();
   const busy = ref(false);
   const report = shallowRef<ImportReport | null>(null);
   return {
@@ -21,19 +23,23 @@ export function useCatalogueAdmin() {
       busy.value = true;
       const result = await catalogueApi.saveSettings(settings, store.settingsRevision.value);
       busy.value = false;
-      if (!result.ok) return store.fail(describeFailure(result.failure));
+      if (!result.ok) return store.fail(describeFailure(result.failure, t));
       store.settings.value = result.value.settings;
       store.settingsRevision.value = result.value.revision;
-      store.succeed('Sozlamalar saqlandi.');
+      store.succeed(t('Settings saved.'));
     },
     async importWorkspace(updateExisting: boolean, includeReferenceImages: boolean) {
       busy.value = true;
       const result = await catalogueApi.importWorkspace(updateExisting, includeReferenceImages);
       busy.value = false;
-      if (!result.ok) return store.fail(describeFailure(result.failure));
+      if (!result.ok) return store.fail(describeFailure(result.failure, t));
       report.value = result.value;
       store.succeed(
-        `Import: ${result.value.created} yangi, ${result.value.updated} yangilandi, ${result.value.unchanged} o‘zgarishsiz.`,
+        t('Import: {created} created, {updated} updated, {unchanged} unchanged.', {
+          created: result.value.created,
+          updated: result.value.updated,
+          unchanged: result.value.unchanged,
+        }),
       );
     },
   };
@@ -42,6 +48,7 @@ export function useCatalogueAdmin() {
 /** The public feed, as the print/lookbook view and sibling apps see it. */
 export function usePublicCatalogue() {
   const store = useCatalogueStore();
+  const { t } = useUiLocale();
   const catalogue = shallowRef<PublicCatalogue | null>(null);
   const loading = ref(false);
   return {
@@ -52,7 +59,7 @@ export function usePublicCatalogue() {
       const result = await catalogueApi.publicCatalogue(locale);
       loading.value = false;
       if (result.ok) catalogue.value = result.value;
-      else store.fail(describeFailure(result.failure));
+      else store.fail(describeFailure(result.failure, t));
     },
   };
 }

@@ -2,10 +2,12 @@ import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue'
 import type { BulkResult, ProductFilter, ProductSummary } from '../../domain/catalogue/CatalogueModels';
 import { catalogueApi, describeFailure } from '../../integration/catalogue';
 import { useCatalogueStore } from './CatalogueStore';
+import { useUiLocale } from '../shared/UseUiLocale';
 
 /** Loads the product grid for the current filters and runs bulk commands on a selection. */
 export function useProductList(initial: ProductFilter = {}) {
   const store = useCatalogueStore();
+  const { t } = useUiLocale();
   const filter = reactive<ProductFilter>({ ...initial });
   const products = shallowRef<ProductSummary[]>([]);
   const loading = ref(false);
@@ -27,7 +29,7 @@ export function useProductList(initial: ProductFilter = {}) {
     if (result.ok) {
       products.value = result.value;
       selected.value = new Set([...selected.value].filter((id) => result.value.some((p) => p.id === id)));
-    } else store.fail(describeFailure(result.failure));
+    } else store.fail(describeFailure(result.failure, t));
   }
 
   watch(
@@ -50,8 +52,8 @@ export function useProductList(initial: ProductFilter = {}) {
   }
 
   function report(result: BulkResult, what: string) {
-    const skipped = result.skipped.length ? ` O‘tkazib yuborildi: ${result.skipped.join('; ')}` : '';
-    store.succeed(`${what}: ${result.changed} ta mahsulot yangilandi.${skipped}`);
+    const skipped = result.skipped.length ? ` ${t('Skipped: {items}', { items: result.skipped.join('; ') })}` : '';
+    store.succeed(`${t('{action}: updated {count} products.', { action: t(what), count: result.changed })}${skipped}`);
   }
 
   return {
@@ -70,23 +72,23 @@ export function useProductList(initial: ProductFilter = {}) {
     },
     async setStatus(status: string) {
       const result = await catalogueApi.bulkStatus([...selected.value], status);
-      if (!result.ok) return store.fail(describeFailure(result.failure));
-      report(result.value, 'Holat');
+      if (!result.ok) return store.fail(describeFailure(result.failure, t));
+      report(result.value, 'Status');
       await load();
     },
     async adjustPrices(mode: 'percent' | 'add', value: number, roundTo: number, tier: 'retail' | 'wholesale' | null) {
       const result = await catalogueApi.bulkPricing([...selected.value], mode, value, roundTo, tier);
-      if (!result.ok) return store.fail(describeFailure(result.failure));
-      report(result.value, 'Narxlar');
+      if (!result.ok) return store.fail(describeFailure(result.failure, t));
+      report(result.value, 'Prices');
       await load();
     },
     async duplicate(id: string) {
       const result = await catalogueApi.duplicateProduct(id);
       if (!result.ok) {
-        store.fail(describeFailure(result.failure));
+        store.fail(describeFailure(result.failure, t));
         return null;
       }
-      store.succeed(`${result.value.document.id} qoralama sifatida yaratildi.`);
+      store.succeed(t('Created {product} as a draft.', { product: result.value.document.id }));
       return result.value.document.id;
     },
   };

@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import type { ProductCopyRow } from '../../domain/catalogue/CatalogueModels';
 import { catalogueApi, describeFailure } from '../../integration/catalogue';
 import { useCatalogueStore } from './CatalogueStore';
+import { useUiLocale } from '../shared/UseUiLocale';
 
 interface EditableRow {
   row: ProductCopyRow;
@@ -13,6 +14,7 @@ interface EditableRow {
 /** Three-language copy for every product, edited in place and saved row by row (revision-checked). */
 export function useCopyGrid() {
   const store = useCatalogueStore();
+  const { t } = useUiLocale();
   const rows = ref<EditableRow[]>([]);
   const loading = ref(false);
   const dirtyCount = computed(() => rows.value.filter(isDirty).length);
@@ -25,7 +27,7 @@ export function useCopyGrid() {
     loading.value = true;
     const result = await catalogueApi.copyRows();
     loading.value = false;
-    if (!result.ok) return store.fail(describeFailure(result.failure));
+    if (!result.ok) return store.fail(describeFailure(result.failure, t));
     rows.value = result.value.map((row) => ({
       row: structuredClone(row),
       baseline: JSON.stringify(row.locales),
@@ -40,7 +42,7 @@ export function useCopyGrid() {
     const result = await catalogueApi.saveCopy(item.row.id, item.row.revision, item.row.locales);
     item.saving = false;
     if (!result.ok) {
-      item.error = describeFailure(result.failure);
+      item.error = describeFailure(result.failure, t);
       return false;
     }
     item.row = structuredClone(result.value);
@@ -59,8 +61,8 @@ export function useCopyGrid() {
       let saved = 0;
       for (const item of rows.value.filter(isDirty)) if (await save(item)) saved++;
       const failed = rows.value.filter((item) => item.error).length;
-      if (failed) store.fail(`${saved} ta saqlandi, ${failed} tasida xato — qatorlarni tekshiring.`);
-      else store.succeed(`${saved} ta mahsulot matni saqlandi.`);
+      if (failed) store.fail(t('Saved {saved}; {failed} failed. Check the rows.', { saved, failed }));
+      else store.succeed(t('Saved copy for {count} products.', { count: saved }));
     },
   };
 }

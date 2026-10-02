@@ -20,21 +20,21 @@ describe('catalogue rules', () => {
         { minimumQuantity: 1, maximumQuantity: null, unitPrice: 1 },
         { minimumQuantity: 10, maximumQuantity: null, unitPrice: 1 },
       ]),
-    ).toMatch(/kesishmoqda/);
+    ).toMatch(/overlap/);
     expect(
       tierProblem([
         { minimumQuantity: 1, maximumQuantity: 1, unitPrice: 130000 },
         { minimumQuantity: 10, maximumQuantity: null, unitPrice: 100000 },
       ]),
     ).toBeNull();
-    expect(tierProblem([{ minimumQuantity: 0, maximumQuantity: null, unitPrice: 1 }])).toMatch(/1 dan/);
+    expect(tierProblem([{ minimumQuantity: 0, maximumQuantity: null, unitPrice: 1 }])).toMatch(/at least 1/);
   });
 
   it('requires an Uzbek name and an image before activation', () => {
     const locales = { uz: emptyLocale(), ru: emptyLocale(), en: emptyLocale() };
-    expect(activationProblem({ locales, media: [] })).toMatch(/nom/);
+    expect(activationProblem({ locales, media: [] })).toMatch(/Uzbek name/);
     locales.uz.name = 'Nimcha';
-    expect(activationProblem({ locales, media: [] })).toMatch(/rasm/);
+    expect(activationProblem({ locales, media: [] })).toMatch(/active image/);
   });
 
   it('copies a document into an independent edit payload', () => {

@@ -5,13 +5,16 @@ import { Printer } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { useBrandKit, useCatalogueStore, usePublicCatalogue } from '../../application/catalogue';
 import type { LocaleCode, PublicProduct } from '../../domain/catalogue/CatalogueModels';
-import { formatUzs, localeLabels, locales } from '../../domain/catalogue/CatalogueRules';
+import { formatUzs, locales } from '../../domain/catalogue/CatalogueRules';
+import { useUiLocale } from '../../application/shared/UseUiLocale';
 
 /** Print-ready lookbook / price sheet built from the public feed (what other platforms see). */
 defineOptions({ name: 'PrintPage' });
 const store = useCatalogueStore();
 const feed = usePublicCatalogue();
 const brand = useBrandKit();
+const { t } = useUiLocale();
+const languageNames = computed(() => ({ uz: t('Uzbek'), ru: t('Russian'), en: t('English') }));
 const contactLines = computed(() => brand.contactLines(store.settings.value?.contactLines ?? []));
 const locale = ref<LocaleCode>('uz');
 const collection = ref('');
@@ -101,17 +104,17 @@ onMounted(() => feed.load(locale.value));
   <section>
     <div class="no-print flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">Katalog varag‘i</h1>
+        <h1 class="font-editorial text-4xl tracking-tight">{{ t('Catalogue sheet') }}</h1>
         <p class="mt-2 text-sm text-muted-foreground">
-          Faqat “Katalogda” holatidagi mahsulotlar. Chop etish oynasida “PDF sifatida saqlash”ni tanlang.
+          {{ t('Only active products are included. Choose “Save as PDF” in the print dialog.') }}
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
-        <select v-model="locale" class="field w-36" aria-label="Til">
-          <option v-for="code in locales" :key="code" :value="code">{{ localeLabels[code] }}</option>
+        <select v-model="locale" class="field w-36" :aria-label="t('Content language')">
+          <option v-for="code in locales" :key="code" :value="code">{{ languageNames[code] }}</option>
         </select>
-        <select v-model="collection" class="field w-48" aria-label="To‘plam">
-          <option value="">Barcha mahsulotlar</option>
+        <select v-model="collection" class="field w-48" :aria-label="t('Collection')">
+          <option value="">{{ t('All products') }}</option>
           <option v-for="c in feed.catalogue.value?.collections ?? []" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
         <div role="tablist" class="flex rounded-lg bg-muted p-1 text-sm">
@@ -124,7 +127,7 @@ onMounted(() => feed.load(locale.value));
             ]"
             @click="mode = 'lookbook'"
           >
-            Lookbook
+            {{ t('Lookbook') }}
           </button>
           <button
             role="tab"
@@ -135,13 +138,13 @@ onMounted(() => feed.load(locale.value));
             ]"
             @click="mode = 'order'"
           >
-            Buyurtma varag‘i
+            {{ t('Order sheet') }}
           </button>
         </div>
         <label v-if="mode === 'lookbook'" class="flex items-center gap-2 text-sm"
-          ><input v-model="showPrices" type="checkbox" />Narxlar</label
+          ><input v-model="showPrices" type="checkbox" />{{ t('Prices') }}</label
         >
-        <button class="btn-primary" @click="printSheet"><Icon :icon="Printer" :size="15" />Chop etish</button>
+        <button class="btn-primary" @click="printSheet"><Icon :icon="Printer" :size="15" />{{ t('Print') }}</button>
       </div>
     </div>
 
@@ -262,17 +265,17 @@ onMounted(() => feed.load(locale.value));
             <p v-if="p.fabric" class="mt-1 text-xs text-muted-foreground">{{ p.fabric }}</p>
             <p v-if="p.sizes.length" class="mt-1 text-xs">{{ text.sizes }}: {{ p.sizes.join(' · ') }}</p>
             <div v-if="showPrices && p.pricing" class="mt-2 text-sm">
-              <p v-for="t in p.pricing.tiers" :key="t.minimumQuantity">
+              <p v-for="tier in p.pricing.tiers" :key="tier.minimumQuantity">
                 <span class="text-muted-foreground">
                   {{
-                    t.minimumQuantity === 1 && t.maximumQuantity === 1
+                    tier.minimumQuantity === 1 && tier.maximumQuantity === 1
                       ? text.piece
-                      : t.maximumQuantity === null
-                        ? `${t.minimumQuantity} ${text.bulk}`
-                        : `${t.minimumQuantity}–${t.maximumQuantity}`
+                      : tier.maximumQuantity === null
+                        ? `${tier.minimumQuantity} ${text.bulk}`
+                        : `${tier.minimumQuantity}–${tier.maximumQuantity}`
                   }}:
                 </span>
-                <span class="font-semibold">{{ price(t.unitPrice) }}</span>
+                <span class="font-semibold">{{ price(tier.unitPrice) }}</span>
               </p>
             </div>
           </figcaption>

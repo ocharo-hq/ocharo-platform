@@ -5,11 +5,18 @@ import { RouterLink } from 'vue-router';
 import { Save } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { useStockSheet } from '../../application/catalogue';
-import { availabilityLabels } from '../../domain/catalogue/CatalogueRules';
+import { useUiLocale } from '../../application/shared/UseUiLocale';
 
-/** Pieces on hand per size; drives "sotuvda bor / tugagan" in the public feed and the order sheet. */
+/** Pieces on hand per size; drives availability in the public feed and the order sheet. */
 defineOptions({ name: 'StockPage' });
 const sheet = useStockSheet();
+const { t } = useUiLocale();
+const availabilityLabels = computed<Record<string, string>>(() => ({
+  'in-stock': t('In stock'),
+  'sold-out': t('Sold out'),
+  'made-to-order': t('Made to order'),
+  unknown: t('Stock not tracked'),
+}));
 const allSizes = computed(() => {
   const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
   const sizes = new Set(sheet.rows.value.flatMap((item) => item.row.sizes));
@@ -28,14 +35,17 @@ onMounted(() => sheet.load());
   <section>
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">Qoldiq</h1>
+        <h1 class="font-editorial text-4xl tracking-tight">{{ t('Stock') }}</h1>
         <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
-          O‘lcham bo‘yicha mavjud donalar: jami {{ sheet.total.value }} dona. Ommaviy lentaga faqat “sotuvda bor /
-          tugagan” holati chiqadi, sonlar ichki qoladi.
+          {{
+            t('Pieces by size: {count} in total. Only availability is public; exact quantities stay private.', {
+              count: sheet.total.value,
+            })
+          }}
         </p>
       </div>
       <button class="btn-primary" :disabled="sheet.dirtyCount.value === 0" @click="sheet.saveAll()">
-        <Icon :icon="Save" :size="15" />{{ sheet.dirtyCount.value }} ta o‘zgarishni saqlash
+        <Icon :icon="Save" :size="15" />{{ t('Save changes ({count})', { count: sheet.dirtyCount.value }) }}
       </button>
     </div>
     <ContentSkeleton v-if="sheet.loading.value" />
@@ -43,10 +53,10 @@ onMounted(() => sheet.load());
       <table class="w-full min-w-[900px] text-sm">
         <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
           <tr>
-            <th class="px-4 py-3 font-semibold">Mahsulot</th>
-            <th class="px-2 py-3 font-semibold">Hisob</th>
+            <th class="px-4 py-3 font-semibold">{{ t('Product') }}</th>
+            <th class="px-2 py-3 font-semibold">{{ t('Tracking') }}</th>
             <th v-for="size in allSizes" :key="size" class="w-20 px-1 py-3 text-center font-semibold">{{ size }}</th>
-            <th class="px-4 py-3 font-semibold">Holat</th>
+            <th class="px-4 py-3 font-semibold">{{ t('Status') }}</th>
             <th class="px-4 py-3"></th>
           </tr>
         </thead>
@@ -57,7 +67,10 @@ onMounted(() => sheet.load());
             :class="['border-t border-border', sheet.isDirty(item) ? 'bg-warning-soft/40' : '']"
           >
             <td class="px-4 py-2">
-              <RouterLink :to="`/products/${item.row.id}`" class="flex items-center gap-3 hover:text-primary">
+              <RouterLink
+                :to="`/products/${item.row.id}`"
+                class="flex items-center gap-3 hover:text-primary-soft-foreground"
+              >
                 <img
                   v-if="item.row.previewUrl"
                   :src="item.row.previewUrl"
@@ -77,10 +90,10 @@ onMounted(() => sheet.load());
                   type="checkbox"
                   :checked="item.row.stock !== null"
                   @change="sheet.track(item, ($event.target as HTMLInputElement).checked)"
-                />Sanash</label
+                />{{ t('Track quantities') }}</label
               >
               <label class="mt-1 flex items-center gap-1.5"
-                ><input v-model="item.row.madeToOrder" type="checkbox" />Buyurtmaga</label
+                ><input v-model="item.row.madeToOrder" type="checkbox" />{{ t('Made to order') }}</label
               >
             </td>
             <td v-for="size in allSizes" :key="size" class="px-1 py-2 text-center">
@@ -91,7 +104,7 @@ onMounted(() => sheet.load());
                 min="0"
                 class="field w-16 px-2 text-center"
                 :disabled="item.row.stock === null"
-                :aria-label="`${item.row.id} ${size}`"
+                :aria-label="t('Quantity for {product}, size {size}', { product: item.row.id, size })"
                 @input="sheet.setQuantity(item, size, Number(($event.target as HTMLInputElement).value))"
               />
               <span v-else class="text-muted-foreground">—</span>
@@ -103,10 +116,10 @@ onMounted(() => sheet.load());
             </td>
             <td class="px-4 py-2 text-right">
               <button class="btn-outline" :disabled="!sheet.isDirty(item) || item.saving" @click="sheet.save(item)">
-                {{ item.saving ? '…' : 'Saqlash' }}
+                {{ item.saving ? t('Saving…') : t('Save') }}
               </button>
               <p v-if="item.error" class="mt-1 max-w-40 text-left text-xs text-destructive" role="alert">
-                {{ item.error }}
+                {{ t(item.error) }}
               </p>
             </td>
           </tr>

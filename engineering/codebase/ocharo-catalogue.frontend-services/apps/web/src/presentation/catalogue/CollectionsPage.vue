@@ -57,8 +57,8 @@ async function save() {
 }
 async function remove(id: string) {
   if (
-    !(await requestConfirmation('To‘plam o‘chirilsinmi? Mahsulotlar o‘chmaydi.', {
-      confirmLabel: 'To‘plamni o‘chirish',
+    !(await requestConfirmation(t('Delete this collection? Its products will remain.'), {
+      confirmLabel: t('Delete collection'),
     }))
   )
     return;
@@ -99,7 +99,8 @@ onMounted(async () => {
           >
             <p class="font-editorial text-lg">{{ c.document.names.uz }}</p>
             <p class="mt-1 text-xs text-muted-foreground">
-              {{ c.document.productIds.length }} ta mahsulot · {{ c.document.isPublished ? 'chop etilgan' : 'ichki' }}
+              {{ t('Products: {count}', { count: c.document.productIds.length }) }} ·
+              {{ t(c.document.isPublished ? 'Published' : 'Internal') }}
             </p>
           </button>
         </li>
@@ -185,15 +186,15 @@ onMounted(async () => {
               <span class="flex-1 text-sm"
                 >{{ byId.get(id)?.nameUz ?? id }} <span class="text-xs text-muted-foreground">{{ id }}</span></span
               >
-              <button class="btn-ghost px-1.5" aria-label="Yuqoriga" @click="move(index, -1)">
+              <button class="btn-ghost px-1.5" :aria-label="t('Move up')" @click="move(index, -1)">
                 <Icon :icon="ArrowUp" :size="13" />
               </button>
-              <button class="btn-ghost px-1.5" aria-label="Pastga" @click="move(index, 1)">
+              <button class="btn-ghost px-1.5" :aria-label="t('Move down')" @click="move(index, 1)">
                 <Icon :icon="ArrowDown" :size="13" />
               </button>
               <button
                 class="btn-ghost px-1.5 text-destructive"
-                aria-label="Olib tashlash"
+                :aria-label="t('Remove product')"
                 @click="draft.productIds.splice(index, 1)"
               >
                 <Icon :icon="X" :size="13" />

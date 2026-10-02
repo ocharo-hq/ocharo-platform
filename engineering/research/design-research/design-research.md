@@ -23,30 +23,33 @@ the needle; the translated app name sits underneath.
 | Brand gap | 2px vertically; 44px total stack |
 | Desktop navigation | Inline at `lg` (1024px) and above |
 | Tablet/phone navigation | Separate horizontal scroll row; at least 44px targets |
-| Preferences | At least 44 × 44px below `lg` |
+| Public Settings button | At least 44 × 44px below `lg`; operator preferences live in Settings |
 
 ## Header tokens
 
 The user approved the white **Ink and Raspberry** palette on 2026-10-02.
-Catalogue adopts that light palette; the existing warm dark palette remains until
-the revised dark comparison is selected. The source is
+The user selected **Neutral graphite** for dark mode on 2026-10-02. Catalogue
+adopts both approved palettes. The source is
 `ocharo-catalogue.frontend-services/apps/web/src/bootstrap/index.css`.
 
-| Semantic token | Approved light | Existing dark | SDK / Tailwind mapping |
+| Semantic token | Approved light | Approved Neutral graphite | SDK / Tailwind mapping |
 |---|---|---|---|
-| Canvas | `#F5F6FA` | `#201E1B` | `background` |
-| Editing surface | `#FFFFFF` | `#292622` | `card` |
-| Header material | White at 84% | `#292622`, opaque | `chrome` |
-| Menu material | White at 92% | `#292622`, opaque | `menu` |
-| Main ink | `#181B25` | `#F4EEE5` | `foreground` |
-| Secondary ink | `#555E72` | `#BCB4A8` | `muted-foreground` |
-| Accent | `#8B2459` | `#DDB0B9` | `primary` |
-| Active surface | `#F8E9F0` | `#473239` | `primary-soft` |
-| Divider | `#DFE3ED` | `#4B443C` | `border` |
-| Essential control border | `#858EA3` | `#4B443C` | `control` |
-| Focus | `#9D2E6A` | `#DDB0B9` | `ring` |
+| Canvas | `#F5F6FA` | `#141416` | `background` |
+| Editing surface | `#FFFFFF` | `#1D1D20` | `card` |
+| Header material | White at 84% | `#29292D` at 90% | `chrome` |
+| Menu material | White at 92% | `#29292D` at 96% | `menu` |
+| Main ink | `#181B25` | `#F4F2F5` | `foreground` |
+| Secondary ink | `#555E72` | `#B7B3BD` | `muted-foreground` |
+| Action fill | `#8B2459` | `#C24783` | `primary` |
+| Action label | `#FFFFFF` | `#FFFFFF` | `primary-foreground` |
+| Active surface | `#F8E9F0` | `#392330` | `primary-soft` |
+| Active label | `#8B2459` | `#E69ABC` | `primary-soft-foreground` |
+| Divider | `#DFE3ED` | `#3D3B42` | `border` |
+| Essential control border | `#858EA3` | `#85808C` | `control` |
+| Focus | `#9D2E6A` | `#E69ABC` | `ring` |
 
-Light navigation and the app menu use 24px blur and 120% saturation. The header
+Light navigation and the app menu use 24px blur and 120% saturation. Dark uses
+24px blur and 100% saturation, with 6% raspberry and 8% neutral ambient tint. The header
 owns the material; the nested `Navbar` is transparent. The SDK popover is portalled,
 so its backdrop does not sit inside the header's blur layer. Content cards and
 editing fields stay opaque. Canvas gradients use restrained raspberry and blue
@@ -54,7 +57,7 @@ ambient tint, without applying filters to garment photographs or changing author
 Web/PDF catalogue colors. Print removes interface gradients.
 
 Reduced-transparency, forced-colors and unsupported-blur modes use solid surfaces.
-Those fallbacks are part of the accepted light implementation. This change is
+Those fallbacks apply to both accepted palettes. This change is
 Catalogue-specific; it does not roll out an unreviewed palette to the other apps.
 
 ## Composition
@@ -62,8 +65,8 @@ Catalogue-specific; it does not roll out an unreviewed palette to the other apps
 `AppShellHeader` contains the SDK `Navbar` and the smaller-screen navigation row.
 Below `lg`, the header grows to its contents and stacks those rows. The primary
 row keeps its height in either layout. The public reader brand link goes to the catalogue gallery; the operator brand control
-opens the app launcher. Existing route selection, Preferences and theme/locale behavior
-remain active.
+opens the app launcher. Route selection and independent interface/content language
+behavior remain active.
 
 Use approved `ocharo-wordmark-ink.png` in light mode and `ocharo-wordmark-reverse.png`
 in dark mode. These are byte-identical copies of the approved logo-family exports.
@@ -172,7 +175,7 @@ These calculations do not certify arbitrary photographs or gradients beneath gla
 verify composited backgrounds and all interaction states during implementation.
 
 
-## Dark refinement — proposals, 2026-10-02
+## Dark refinement — selection, 2026-10-02
 
 The initial navy proposal used the same `#1C2030` for glass and content, flattening
 the surface hierarchy. Its blue ambient tint intensified under saturation. A single
@@ -180,10 +183,10 @@ pastel accent served both filled actions and readable accent text, which made ac
 visually dominant. These are design assessments; its calculated text contrast already
 passed the stated target.
 
-Recommend **Neutral graphite**: distinct neutral surfaces, denser dark glass and a
-restrained raspberry action fill. **Soft charcoal** is a warmer alternative. Keep the
-approved white side identical while comparing dark options. No dark implementation
-is authorized by the light approval.
+The user selected **Neutral graphite**: distinct neutral surfaces, denser dark glass
+and a restrained raspberry action fill. **Soft charcoal** remains a historical
+alternative. The approved white side stays identical. The separate dark selection
+authorizes the Catalogue dark implementation.
 
 | Token | Neutral graphite | Soft charcoal |
 |---|---|---|
@@ -234,5 +237,68 @@ Authored Web/PDF catalogue styling and original image assets were not edited.
 
 The revised dark comparison passed 24 responsive and interaction cases across its
 three proposals. The approved white tokens, layout and embedded artwork match the
-initial review. Neutral graphite and Soft charcoal remain proposals; these local
-checks do not close the owner-review boxes or establish production deployment.
+initial review. At that light-only stage both dark variants remained proposals. The subsequent
+Neutral graphite selection is recorded above; local checks do not close owner-review
+boxes or establish production deployment.
+
+
+## Catalogue navigation and settings — 2026-10-02
+
+The operator navigation follows the selected work order: **Catalogues → Collections
+→ Products → Stock → Settings**. Products and their existing root route remain
+unchanged; catalogues and collections lead the menu because they change more often.
+
+Operator Settings is the single entry for browser interface language and appearance,
+Catalogue defaults, and Catalogue import/download tools. The duplicate operator
+Preferences button is removed. Global Ocharo brand identity remains owned by Brand;
+Catalogue defaults only configure this app's output and product metadata.
+Public `/c/` readers retain a Settings modal with interface language, appearance and
+About only. They request no operator settings and expose no import/default editing.
+
+Saved interface language hydration was working. Hardcoded Uzbek page text caused
+the English-selected interface mismatch. Settings, Stock, Collections, product-editor
+validation and legacy routed controls now use English source keys with complete
+Uzbek/Russian messages. Known SDK control labels receive the same locale through
+its provider. Authored product/collection/copy and stored history text stay untouched;
+server-provided error details and import warnings retain their original language.
+
+Changing interface settings persists in browser storage and does not write backend
+Catalogue defaults or change a design's content language. Neutral graphite applies
+to interface chrome and editing surfaces; authored web themes and exported PDF pages
+retain their own colors and media.
+
+
+## Graphite and consolidated settings verification — 2026-10-02
+
+An isolated browser fixture compiled the actual `AppRoot`, `SettingsPage`, shared
+interface controls, published SDK and app stylesheet. It mocked settings reads and
+forbade writes; it did not use or restart the developer's Rider/WebStorm services.
+
+Four desktop/phone cases at 1440px and 390px covered both themes. The primary row
+stayed 56px, the wordmark 80 × 30px, and the single operator Settings entry followed
+the selected menu order. Both palettes had no page overflow. Narrow garment-type
+fields use a contained horizontal table scroll rather than compressing their values.
+
+Real SDK language controls changed English → Uzbek → Russian and restored Russian
+on reload. Authored defaults and unsaved form values stayed intact, with zero backend
+writes. Public Settings passed in both themes: two interface controls, no operator
+navigation, no Catalogue defaults/import controls and no operator settings request.
+Launcher keyboard dismissal restored focus to the logo trigger.
+
+Neutral graphite header/menu materials use 90%/96% opacity, 24px blur and 100%
+saturation. Editing cards and fields remain opaque. Primary fills and light accent
+text use separate semantic tokens. Reduced-transparency and forced-colors emulation
+verified solid surfaces, no blur and no gradient in both themes. Print uses a white
+interface canvas and hides navigation. Unsupported-blur fallback remains defined in
+CSS but cannot execute in this browser because it supports blur.
+
+These checks verify interface behavior with mocked data, not live authentication,
+production deployment, catalogue publication or completed owner review.
+
+
+Final Catalogue frontend gates passed: lint, formatting, typecheck/component compile,
+production build and all 74 tests across 14 files. Four preferences regression tests
+cover navigation, live locale changes, browser persistence and public isolation.
+API/screen checks cover localized safe SDK failures and numeric designer failures;
+raw backend ProblemDetails remain unchanged. The browser receipt matched the final
+interface source hashes and recorded no errors, failed checks or page overflow.

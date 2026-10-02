@@ -2,6 +2,7 @@ import { ref, shallowRef } from 'vue';
 import type { CollectionDetail, CollectionNames } from '../../domain/catalogue/CatalogueModels';
 import { catalogueApi, describeFailure } from '../../integration/catalogue';
 import { useCatalogueStore } from './CatalogueStore';
+import { useUiLocale } from '../shared/UseUiLocale';
 
 export interface CollectionDraft {
   id: string | null;
@@ -16,13 +17,14 @@ export interface CollectionDraft {
 /** Collections list and editor. */
 export function useCollections() {
   const store = useCatalogueStore();
+  const { t } = useUiLocale();
   const collections = shallowRef<CollectionDetail[]>([]);
   const busy = ref(false);
 
   async function load() {
     const result = await catalogueApi.listCollections();
     if (result.ok) collections.value = result.value;
-    else store.fail(describeFailure(result.failure));
+    else store.fail(describeFailure(result.failure, t));
   }
 
   return {
@@ -56,17 +58,17 @@ export function useCollections() {
       });
       busy.value = false;
       if (!result.ok) {
-        store.fail(describeFailure(result.failure));
+        store.fail(describeFailure(result.failure, t));
         return null;
       }
-      store.succeed(`“${result.value.document.names.uz}” to‘plami saqlandi.`);
+      store.succeed(t('Collection “{name}” saved.', { name: result.value.document.names.uz }));
       await load();
       return result.value;
     },
     async remove(id: string) {
       const result = await catalogueApi.deleteCollection(id);
-      if (!result.ok) return store.fail(describeFailure(result.failure));
-      store.succeed('To‘plam o‘chirildi. Mahsulotlar joyida qoldi.');
+      if (!result.ok) return store.fail(describeFailure(result.failure, t));
+      store.succeed(t('Collection deleted. Its products remain.'));
       await load();
     },
   };

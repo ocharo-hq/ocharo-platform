@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
+import { translateUi } from '../src/domain/shared/UiMessages';
 import { createCatalogueApi, describeFailure } from '../src/integration/catalogue';
 
 function reply(status: number, body: unknown) {
@@ -39,7 +41,32 @@ describe('catalogue api', () => {
     if (!result.ok) {
       expect(result.failure.status).toBe(409);
       expect(describeFailure(result.failure)).toMatch(/revision 3/);
+      const translate = vi.fn((source: string) => `translated: ${source}`);
+      expect(describeFailure(result.failure, translate)).toBe(result.failure.problem?.['detail']);
+      expect(translate).not.toHaveBeenCalled();
     }
+  });
+
+  it.each([
+    {
+      code: 'protocol' as const,
+      uz: 'Amalni bajarib bo‘lmadi.',
+      ru: 'Не удалось выполнить операцию.',
+    },
+    {
+      code: 'timeout' as const,
+      uz: 'Amal uchun ajratilgan vaqt tugadi.',
+      ru: 'Время выполнения операции истекло.',
+    },
+    {
+      code: 'cancelled' as const,
+      uz: 'Amal bekor qilindi.',
+      ru: 'Операция отменена.',
+    },
+  ])('localizes the safe SDK $code fallback', ({ code, uz, ru }) => {
+    const failure = ApiFailureFactory.create(code);
+    expect(describeFailure(failure, (source, variables) => translateUi(source, 'uz', variables))).toBe(uz);
+    expect(describeFailure(failure, (source, variables) => translateUi(source, 'ru', variables))).toBe(ru);
   });
 
   it('rejects a non-array product list as a protocol failure', async () => {

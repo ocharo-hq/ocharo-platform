@@ -51,7 +51,7 @@ const tileClass =
             v-if="app.key === 'catalogue'"
             to="/catalogues"
             aria-current="true"
-            :class="[tileClass, 'bg-primary-soft text-primary']"
+            :class="[tileClass, 'bg-primary-soft text-primary-soft-foreground']"
             @click="open = false"
             >{{ t(app.label) }}</RouterLink
           >

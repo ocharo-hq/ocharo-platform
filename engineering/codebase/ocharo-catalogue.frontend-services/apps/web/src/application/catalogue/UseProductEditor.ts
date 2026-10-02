@@ -25,7 +25,7 @@ export function useProductEditor() {
     const list: string[] = [];
     if (value.pricing) {
       const tiers = tierProblem(value.pricing.tiers);
-      if (tiers) list.push(tiers);
+      if (tiers) list.push(t(tiers));
     }
     if (value.status === 'active') {
       const media =
@@ -33,14 +33,14 @@ export function useProductEditor() {
           .filter((m) => value.media?.some((x) => x.id === m.id && x.isActive !== false))
           .map((m) => ({ ...m, isActive: true })) ?? [];
       const reason = activationProblem({ locales: value.locales, media });
-      if (reason) list.push(reason);
+      if (reason) list.push(t(reason));
     }
     for (const { code } of catalogueLanguages)
       if (
         productLocale(value.locales, code)?.status === 'approved' &&
         !productLocale(value.locales, code)?.name?.trim()
       )
-        list.push(`Tasdiqlangan ${code.toUpperCase()} matnga nom kerak.`);
+        list.push(t('Approved {language} copy needs a name.', { language: code.toUpperCase() }));
     return list;
   });
 
@@ -69,7 +69,7 @@ export function useProductEditor() {
     async load(id: string) {
       const result = await catalogueApi.getProduct(id);
       if (!result.ok) {
-        store.fail(describeFailure(result.failure));
+        store.fail(describeFailure(result.failure, t));
         return false;
       }
       adopt(result.value);
@@ -109,7 +109,7 @@ export function useProductEditor() {
           : await catalogueApi.updateProduct(detail.value.document.id, payload);
       saving.value = false;
       if (!result.ok) {
-        store.fail(describeFailure(result.failure));
+        store.fail(describeFailure(result.failure, t));
         return null;
       }
       adopt(result.value);
@@ -118,13 +118,13 @@ export function useProductEditor() {
       return result.value.document.id;
     },
     async upload(files: FileList | File[], role: MediaRole) {
-      if (!detail.value) return store.fail('Rasm qo‘shishdan oldin mahsulotni saqlang.');
-      if (dirty.value) return store.fail('Avval o‘zgarishlarni saqlang, keyin rasm qo‘shing.');
+      if (!detail.value) return store.fail(t('Save the product before adding images.'));
+      if (dirty.value) return store.fail(t('Save your changes before adding images.'));
       uploading.value = true;
       for (const file of Array.from(files)) {
         const result = await catalogueApi.uploadImage(detail.value.document.id, file, role, detail.value.revision);
         if (!result.ok) {
-          store.fail(`${file.name}: ${describeFailure(result.failure)}`);
+          store.fail(`${file.name}: ${describeFailure(result.failure, t)}`);
           break;
         }
         adopt(result.value);
@@ -135,10 +135,15 @@ export function useProductEditor() {
     async restore(revision: number) {
       if (!detail.value) return;
       const result = await catalogueApi.restore(detail.value.document.id, revision, detail.value.revision);
-      if (!result.ok) return store.fail(describeFailure(result.failure));
+      if (!result.ok) return store.fail(describeFailure(result.failure, t));
       adopt(result.value);
       await loadHistory();
-      store.succeed(`${revision}-versiya tiklandi (yangi versiya ${result.value.revision}).`);
+      store.succeed(
+        t('Restored revision {revision} as new revision {newRevision}.', {
+          revision,
+          newRevision: result.value.revision,
+        }),
+      );
     },
     reset() {
       if (detail.value) adopt(detail.value);

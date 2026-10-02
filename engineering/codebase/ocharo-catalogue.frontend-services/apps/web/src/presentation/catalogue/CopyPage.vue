@@ -6,7 +6,8 @@ import { Check, Save } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { useCatalogueStore, useCopyGrid } from '../../application/catalogue';
 import type { LocaleCode } from '../../domain/catalogue/CatalogueModels';
-import { localeLabels, locales } from '../../domain/catalogue/CatalogueRules';
+import { locales } from '../../domain/catalogue/CatalogueRules';
+import { useUiLocale } from '../../application/shared/UseUiLocale';
 import StatusBadge from './components/StatusBadge.vue';
 
 /** Fill and approve uz/ru/en copy for every product in one grid. */
@@ -14,14 +15,16 @@ defineOptions({ name: 'CopyPage' });
 type Field = 'name' | 'fabric' | 'decoration' | 'description';
 const store = useCatalogueStore();
 const grid = useCopyGrid();
+const { t } = useUiLocale();
+const languageNames = computed(() => ({ uz: t('Uzbek'), ru: t('Russian'), en: t('English') }));
 const field = ref<Field>('name');
 const onlyMissing = ref(false);
-const fields: { key: Field; label: string }[] = [
-  { key: 'name', label: 'Nomi' },
-  { key: 'fabric', label: 'Mato' },
-  { key: 'decoration', label: 'Bezak' },
-  { key: 'description', label: 'Tavsif' },
-];
+const fields = computed<{ key: Field; label: string }[]>(() => [
+  { key: 'name', label: t('Name') },
+  { key: 'fabric', label: t('Fabric') },
+  { key: 'decoration', label: t('Decoration') },
+  { key: 'description', label: t('Description') },
+]);
 const visible = computed(() =>
   grid.rows.value.filter(
     (item) =>
@@ -51,14 +54,15 @@ onMounted(() => grid.load());
   <section>
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">Matnlar</h1>
+        <h1 class="font-editorial text-4xl tracking-tight">{{ t('Product copy') }}</h1>
         <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Uch tildagi matnni bir joyda to‘ldiring va tasdiqlang. {{ approved }} / {{ grid.rows.value.length * 3 }} til
-          tasdiqlangan. Tasdiq faqat nom bo‘lsa qabul qilinadi.
+          {{ t('Fill and approve copy in three languages.') }}
+          {{ t('{approved} / {total} language versions approved.', { approved, total: grid.rows.value.length * 3 }) }}
+          {{ t('A name is required before approval.') }}
         </p>
       </div>
       <button class="btn-primary" :disabled="grid.dirtyCount.value === 0" @click="grid.saveAll()">
-        <Icon :icon="Save" :size="15" />{{ grid.dirtyCount.value }} ta o‘zgarishni saqlash
+        <Icon :icon="Save" :size="15" />{{ t('Save {count} changes', { count: grid.dirtyCount.value }) }}
       </button>
     </div>
     <div class="panel mt-6 flex flex-wrap items-center gap-3 p-4">
@@ -78,16 +82,16 @@ onMounted(() => grid.load());
         </button>
       </div>
       <label class="flex items-center gap-2 text-sm"
-        ><input v-model="onlyMissing" type="checkbox" />Faqat bo‘sh yoki tasdiqlanmaganlar</label
+        ><input v-model="onlyMissing" type="checkbox" />{{ t('Only missing or unapproved') }}</label
       >
     </div>
-    <ContentSkeleton v-if="grid.loading.value" />
+    <ContentSkeleton v-if="grid.loading.value" :label="t('Loading product copy')" />
     <div class="panel mt-4 overflow-x-auto p-0">
       <table class="w-full min-w-[980px] text-sm">
         <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
           <tr>
-            <th class="px-4 py-3 font-semibold">Mahsulot</th>
-            <th v-for="code in locales" :key="code" class="px-4 py-3 font-semibold">{{ localeLabels[code] }}</th>
+            <th class="px-4 py-3 font-semibold">{{ t('Product') }}</th>
+            <th v-for="code in locales" :key="code" class="px-4 py-3 font-semibold">{{ languageNames[code] }}</th>
             <th class="px-4 py-3"></th>
           </tr>
         </thead>
@@ -98,7 +102,10 @@ onMounted(() => grid.load());
             :class="['border-t border-border align-top', grid.isDirty(item) ? 'bg-warning-soft/40' : '']"
           >
             <td class="w-56 px-4 py-3">
-              <RouterLink :to="`/products/${item.row.id}`" class="flex items-center gap-3 hover:text-primary">
+              <RouterLink
+                :to="`/products/${item.row.id}`"
+                class="flex items-center gap-3 hover:text-primary-soft-foreground"
+              >
                 <img
                   v-if="item.row.previewUrl"
                   :src="item.row.previewUrl"
@@ -121,14 +128,14 @@ onMounted(() => grid.load());
                 :value="item.row.locales[code][field] ?? ''"
                 rows="3"
                 class="field"
-                :aria-label="`${item.row.id} ${localeLabels[code]}`"
+                :aria-label="`${item.row.id} ${languageNames[code]}`"
                 @input="setValue(code, item, ($event.target as HTMLTextAreaElement).value)"
               ></textarea>
               <input
                 v-else
                 :value="item.row.locales[code][field] ?? ''"
                 class="field"
-                :aria-label="`${item.row.id} ${localeLabels[code]}`"
+                :aria-label="`${item.row.id} ${languageNames[code]}`"
                 @input="setValue(code, item, ($event.target as HTMLInputElement).value)"
               />
               <button
@@ -142,12 +149,12 @@ onMounted(() => grid.load());
                 @click="toggleApproved(code, item)"
               >
                 <Icon v-if="item.row.locales[code].status === 'approved'" :icon="Check" :size="11" />
-                {{ item.row.locales[code].status === 'approved' ? 'Tasdiqlangan' : 'Qoralama' }}
+                {{ item.row.locales[code].status === 'approved' ? t('Approved') : t('Draft') }}
               </button>
             </td>
             <td class="px-4 py-3 text-right">
               <button class="btn-outline" :disabled="!grid.isDirty(item) || item.saving" @click="grid.save(item)">
-                {{ item.saving ? '…' : 'Saqlash' }}
+                {{ item.saving ? t('Saving…') : t('Save') }}
               </button>
               <p v-if="item.error" class="mt-2 max-w-40 text-left text-xs text-destructive" role="alert">
                 {{ item.error }}

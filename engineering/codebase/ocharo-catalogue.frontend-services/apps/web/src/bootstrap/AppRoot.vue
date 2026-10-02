@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { provideLocale } from '@wow-two-beta/ui-vue/foundation/i18n';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import { Boxes, BookOpen, Layers, Settings, Shirt, X } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
@@ -10,21 +11,34 @@ import { useCatalogueStore } from '../application/catalogue';
 import { useUiLocale } from '../application/shared/UseUiLocale';
 import { useErrorToast } from '../application/common/UseFeedback';
 import FeedbackHost from '../presentation/common/FeedbackHost.vue';
-import BuildIdentity from '../presentation/common/BuildIdentity.vue';
-import CatalogueSelect from '../presentation/common/CatalogueSelect.vue';
+import InterfacePreferences from '../presentation/common/InterfacePreferences.vue';
+import { useAppearance } from '../application/shared/UseAppearance';
 import OcharoAppsMenu from '../presentation/common/OcharoAppsMenu.vue';
 import { platformLinks } from './PlatformLinks';
 
 defineOptions({ name: 'AppRoot' });
 const store = useCatalogueStore();
 const route = useRoute();
-const { t, uiLocale, setUiLocale } = useUiLocale();
+const { t, uiLocale } = useUiLocale();
 const preferences = ref(false);
-const theme = ref('system');
+const { dark, initializeAppearance } = useAppearance();
+provideLocale(
+  uiLocale,
+  computed(() => ({
+    'OverlayCloseButton.close': t('Close'),
+    'SelectPickerContent.searchPlaceholder': t('Search…'),
+    'SelectPickerContent.noResultsLabel': t('No results'),
+    'Toast.closeLabel': t('Close'),
+    'Alert.closeLabel': t('Close'),
+    'Banner.closeLabel': t('Close'),
+    'Tag.closeLabel': t('Remove'),
+    'Spinner.label': t('Loading…'),
+  })),
+);
 const navigation = [
-  { path: '/', label: 'Products', icon: Shirt },
   { path: '/catalogues', label: 'Catalogues', icon: BookOpen },
   { path: '/collections', label: 'Collections', icon: Layers },
+  { path: '/', label: 'Products', icon: Shirt },
   { path: '/stock', label: 'Stock', icon: Boxes },
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -33,21 +47,6 @@ function active(path: string) {
 }
 const title = computed(() => navigation.find((item) => active(item.path))?.label ?? 'Catalogue');
 const publicRoute = computed(() => route.path.startsWith('/c/'));
-const dark = ref(false);
-function applyTheme() {
-  dark.value =
-    theme.value === 'dark' || (theme.value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  document.documentElement.classList.toggle('dark', dark.value);
-  document.documentElement.style.colorScheme = dark.value ? 'dark' : 'light';
-}
-watch(theme, () => {
-  applyTheme();
-  try {
-    localStorage.setItem('ocharo.catalogue.theme', theme.value);
-  } catch {
-    /* current tab still updates */
-  }
-});
 watch(
   [title, uiLocale],
   () => {
@@ -58,13 +57,7 @@ watch(
 useErrorToast(store.error);
 onMounted(() => {
   if (!publicRoute.value) void store.loadSettings();
-  try {
-    const saved = localStorage.getItem('ocharo.catalogue.theme');
-    if (saved && ['light', 'dark', 'system'].includes(saved)) theme.value = saved;
-  } catch {
-    /* storage optional */
-  }
-  applyTheme();
+  initializeAppearance();
 });
 </script>
 <template>
@@ -112,7 +105,7 @@ onMounted(() => {
               :class="[
                 'flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm',
                 active(item.path)
-                  ? 'bg-primary-soft font-semibold text-primary'
+                  ? 'bg-primary-soft font-semibold text-primary-soft-foreground'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground',
               ]"
               ><Icon :icon="item.icon" :size="17" />{{ t(item.label) }}</RouterLink
@@ -120,14 +113,14 @@ onMounted(() => {
           </nav>
         </template>
         <template #end>
-          <div class="flex shrink-0 items-center gap-2">
+          <div v-if="publicRoute" class="flex shrink-0 items-center gap-2">
             <button
               type="button"
               class="btn-outline min-h-11 min-w-11 rounded-full lg:min-h-0 lg:min-w-0"
-              :aria-label="t('Preferences')"
+              :aria-label="t('Settings')"
               @click="preferences = true"
             >
-              <Icon :icon="Settings" :size="18" /><span class="hidden xl:inline">{{ t('Preferences') }}</span>
+              <Icon :icon="Settings" :size="18" /><span class="hidden xl:inline">{{ t('Settings') }}</span>
             </button>
           </div>
         </template>
@@ -144,7 +137,7 @@ onMounted(() => {
           :aria-current="active(item.path) ? 'page' : undefined"
           :class="[
             'flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs',
-            active(item.path) ? 'bg-primary-soft text-primary' : 'text-muted-foreground',
+            active(item.path) ? 'bg-primary-soft text-primary-soft-foreground' : 'text-muted-foreground',
           ]"
           ><Icon :icon="item.icon" :size="15" />{{ t(item.label) }}</RouterLink
         >
@@ -174,37 +167,9 @@ onMounted(() => {
     </AppShellMain>
     <Modal v-model:open="preferences"
       ><ModalContent :is-blurred="true" class="w-[min(28rem,calc(100vw-2rem))] bg-card text-foreground"
-        ><ModalTitle class="font-editorial text-2xl">{{ t('Preferences') }}</ModalTitle>
+        ><ModalTitle class="font-editorial text-2xl">{{ t('Settings') }}</ModalTitle>
         <div class="mt-6 space-y-5">
-          <div>
-            <label class="label">{{ t('Interface language') }}</label
-            ><CatalogueSelect
-              :model-value="uiLocale"
-              :label="t('Interface language')"
-              :options="[
-                { value: 'uz', label: 'O‘zbekcha' },
-                { value: 'ru', label: 'Русский' },
-                { value: 'en', label: 'English' },
-              ]"
-              @update:model-value="setUiLocale"
-            />
-          </div>
-          <div>
-            <label class="label">{{ t('Appearance') }}</label
-            ><CatalogueSelect
-              v-model="theme"
-              :label="t('Appearance')"
-              :options="[
-                { value: 'system', label: t('System') },
-                { value: 'light', label: t('Light') },
-                { value: 'dark', label: t('Dark') },
-              ]"
-            />
-          </div>
-          <div class="border-t border-border pt-4 text-xs text-muted-foreground">
-            <p class="mb-2">{{ t('About') }}</p>
-            <BuildIdentity />
-          </div>
+          <InterfacePreferences />
           <button class="btn-primary w-full" @click="preferences = false">{{ t('Done') }}</button>
         </div>
       </ModalContent></Modal

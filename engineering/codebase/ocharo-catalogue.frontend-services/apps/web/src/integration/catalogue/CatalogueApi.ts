@@ -48,11 +48,18 @@ const isArray = (value: unknown) => Array.isArray(value);
 const hasDocument = (value: unknown) => isObject(value) && isObject((value as { document?: unknown }).document);
 
 /** Reads a human message from an API failure (ProblemDetails detail first). */
-export function describeFailure(failure: ApiFailure): string {
+export function describeFailure(
+  failure: ApiFailure,
+  translate: (source: string, variables?: Record<string, string | number>) => string = (source, variables) =>
+    source.replace(/\{(\w+)\}/g, (match, key: string) => String(variables?.[key] ?? match)),
+): string {
   const detail = failure.problem?.['detail'];
   if (typeof detail === 'string' && detail.length > 0) return detail;
-  if (failure.code === 'transport') return 'Katalog xizmatiga ulanib bo‘lmadi. Xizmat ishlayotganini tekshiring.';
-  return failure.status > 0 ? `Xizmat ${failure.status} xato qaytardi.` : failure.message;
+  if (failure.code === 'transport')
+    return translate('Could not connect to the catalogue service. Check that it is running.');
+  return failure.status > 0
+    ? translate('The catalogue service returned error {status}.', { status: failure.status })
+    : translate(failure.message);
 }
 
 /** Same-origin catalogue endpoints; mutations are never retried automatically. */

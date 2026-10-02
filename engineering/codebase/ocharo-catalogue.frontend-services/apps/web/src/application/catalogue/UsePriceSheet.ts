@@ -2,19 +2,21 @@ import { ref } from 'vue';
 import { toInput } from '../../domain/catalogue/CatalogueRules';
 import { catalogueApi, describeFailure } from '../../integration/catalogue';
 import { useCatalogueStore } from './CatalogueStore';
+import { useUiLocale } from '../shared/UseUiLocale';
 
 /** Inline single-price edits: reads the current revision, changes one tier, saves revision-checked. */
 export function usePriceSheet() {
   const store = useCatalogueStore();
+  const { t } = useUiLocale();
   const saving = ref<string | null>(null);
   return {
     saving,
     async setPrice(productId: string, tier: 'retail' | 'wholesale', value: number) {
-      if (!Number.isFinite(value) || value < 0) return store.fail('Narx noto‘g‘ri.');
+      if (!Number.isFinite(value) || value < 0) return store.fail(t('Enter a valid price.'));
       saving.value = `${productId}:${tier}`;
       try {
         const current = await catalogueApi.getProduct(productId);
-        if (!current.ok) return store.fail(describeFailure(current.failure));
+        if (!current.ok) return store.fail(describeFailure(current.failure, t));
         const input = toInput(current.value.document, current.value.revision);
         const pricing = input.pricing ?? { currency: 'UZS', status: 'draft' as const, tiers: [], wording: null };
         const tiers = [...pricing.tiers].sort((a, b) => a.minimumQuantity - b.minimumQuantity);
@@ -41,8 +43,10 @@ export function usePriceSheet() {
           ...input,
           changeSummary: `Narx (${tier === 'retail' ? '1 dona' : 'ulgurji'}) o‘zgardi`,
         });
-        if (!saved.ok) return store.fail(describeFailure(saved.failure));
-        store.succeed(`${productId}: narx saqlandi (qoralama — tasdiqlashni unutmang).`);
+        if (!saved.ok) return store.fail(describeFailure(saved.failure, t));
+        store.succeed(
+          t('Price saved for {product}. Confirm the draft price before publication.', { product: productId }),
+        );
         return saved.value;
       } finally {
         saving.value = null;

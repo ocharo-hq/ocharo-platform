@@ -2,6 +2,7 @@ import {
   ApiFailureFactory,
   createApiClient,
   rawEnvelope,
+  type ApiFailure,
   type ResponseEnvelope,
 } from '@wow-two-beta/ui-vue/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
@@ -46,6 +47,13 @@ export interface DesignRevision {
   createdAtUtc?: string;
   updatedAtUtc?: string;
 }
+/** Retains request details until the application resolves its interface-language message. */
+export class DesignRequestError extends Error {
+  constructor(readonly failure: ApiFailure) {
+    super(describeFailure(failure));
+    this.name = 'DesignRequestError';
+  }
+}
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const envelope: ResponseEnvelope = {
   unwrap: rawEnvelope.unwrap,
@@ -73,7 +81,7 @@ export function createDesignApi(fetchImplementation: typeof fetch = globalThis.f
     promise: Promise<{ ok: true; value: T } | { ok: false; failure: Parameters<typeof describeFailure>[0] }>,
   ): Promise<T> {
     const result = await promise;
-    if (!result.ok) throw new Error(describeFailure(result.failure));
+    if (!result.ok) throw new DesignRequestError(result.failure);
     return result.value;
   }
   return {
@@ -155,7 +163,7 @@ export function createDesignApi(fetchImplementation: typeof fetch = globalThis.f
       }
       const value: unknown = await response.json().catch(() => null);
       if (!response.ok)
-        throw new Error(describeFailure(ApiFailureFactory.create('http', response, object(value) ? value : null)));
+        throw new DesignRequestError(ApiFailureFactory.create('http', response, object(value) ? value : null));
       if (!object(value) || typeof value.id !== 'string')
         throw new Error('The catalogue service returned an invalid release.');
       return value as unknown as PreparedRelease;

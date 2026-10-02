@@ -2,6 +2,7 @@ import { computed, ref } from 'vue';
 import type { StockRow } from '../../domain/catalogue/CatalogueModels';
 import { catalogueApi, describeFailure } from '../../integration/catalogue';
 import { useCatalogueStore } from './CatalogueStore';
+import { useUiLocale } from '../shared/UseUiLocale';
 
 interface EditableStock {
   row: StockRow;
@@ -13,6 +14,7 @@ interface EditableStock {
 /** Pieces on hand per size for every product, saved row by row (revision-checked). */
 export function useStockSheet() {
   const store = useCatalogueStore();
+  const { t } = useUiLocale();
   const rows = ref<EditableStock[]>([]);
   const loading = ref(false);
   const snapshot = (row: StockRow) => JSON.stringify({ stock: row.stock, madeToOrder: row.madeToOrder });
@@ -24,7 +26,7 @@ export function useStockSheet() {
     const result = await catalogueApi.saveStock(item.row.id, item.row.revision, item.row.stock, item.row.madeToOrder);
     item.saving = false;
     if (!result.ok) {
-      item.error = describeFailure(result.failure);
+      item.error = describeFailure(result.failure, t);
       return false;
     }
     item.row = structuredClone(result.value);
@@ -44,7 +46,7 @@ export function useStockSheet() {
       loading.value = true;
       const result = await catalogueApi.stockRows();
       loading.value = false;
-      if (!result.ok) return store.fail(describeFailure(result.failure));
+      if (!result.ok) return store.fail(describeFailure(result.failure, t));
       rows.value = result.value.map((row) => ({
         row: structuredClone(row),
         baseline: snapshot(row),
@@ -65,8 +67,8 @@ export function useStockSheet() {
       let saved = 0;
       for (const item of rows.value.filter(isDirty)) if (await save(item)) saved++;
       const failed = rows.value.filter((item) => item.error).length;
-      if (failed) store.fail(`${saved} ta saqlandi, ${failed} tasida xato.`);
-      else store.succeed(`${saved} ta mahsulot qoldig‘i saqlandi.`);
+      if (failed) store.fail(t('Saved: {saved}. Failed: {failed}. Check the affected rows.', { saved, failed }));
+      else store.succeed(t('Stock saved for {count} products.', { count: saved }));
     },
   };
 }

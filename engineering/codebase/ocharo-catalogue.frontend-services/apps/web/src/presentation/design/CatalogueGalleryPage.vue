@@ -2,7 +2,7 @@
 import { computed, onMounted, onScopeDispose, ref } from 'vue';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
-import { designApi } from '../../application/design/UseCatalogueDocument';
+import { designApi, describeDesignFailure } from '../../application/design/UseCatalogueDocument';
 import { notifyError, requestConfirmation } from '../../application/common/UseFeedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import { catalogueLanguages, type CatalogueLanguage } from '../../domain/catalogue/CatalogueLanguages';
@@ -43,8 +43,8 @@ const visible = computed(() =>
   ),
 );
 function fail(cause: unknown) {
-  const message = cause instanceof Error ? cause.message : t('Unable to load catalogues.');
-  notifyError(t(message));
+  const message = describeDesignFailure(cause, t, 'Unable to load catalogues.');
+  notifyError(message);
   return message;
 }
 async function load() {

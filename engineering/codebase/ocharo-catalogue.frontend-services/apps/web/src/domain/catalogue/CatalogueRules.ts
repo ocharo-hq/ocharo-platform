@@ -42,8 +42,9 @@ export function formatUzs(value: number | null | undefined): string {
 
 /** Why a product cannot be activated yet, or null. Mirrors the API rule. */
 export function activationProblem(document: Pick<ProductDocument, 'locales' | 'media'>): string | null {
-  if (!document.locales.uz.name?.trim()) return 'Faol mahsulotga o‘zbekcha nom kerak.';
-  if (!document.media.some((media) => media.isActive !== false)) return 'Faol mahsulotga kamida bitta rasm kerak.';
+  if (!document.locales.uz.name?.trim()) return 'An active product needs an Uzbek name.';
+  if (!document.media.some((media) => media.isActive !== false))
+    return 'An active product needs at least one active image.';
   return null;
 }
 
@@ -89,13 +90,14 @@ export function tierProblem(
   const sorted = [...tiers].sort((a, b) => a.minimumQuantity - b.minimumQuantity);
   for (let i = 0; i < sorted.length; i++) {
     const tier = sorted[i]!;
-    if (!Number.isInteger(tier.minimumQuantity) || tier.minimumQuantity < 1) return 'Miqdor 1 dan boshlanadi.';
+    if (!Number.isInteger(tier.minimumQuantity) || tier.minimumQuantity < 1)
+      return 'Minimum quantity must be a whole number of at least 1.';
     if (tier.maximumQuantity !== null && tier.maximumQuantity < tier.minimumQuantity)
-      return 'Maksimal miqdor minimaldan kichik.';
-    if (!Number.isFinite(tier.unitPrice) || tier.unitPrice < 0) return 'Narx noto‘g‘ri.';
+      return 'Maximum quantity cannot be less than minimum quantity.';
+    if (!Number.isFinite(tier.unitPrice) || tier.unitPrice < 0) return 'Enter a valid price.';
     const next = sorted[i + 1];
     if (next && (tier.maximumQuantity === null || tier.maximumQuantity >= next.minimumQuantity))
-      return 'Narx oraliqlari kesishmoqda; faqat oxirgisi ochiq bo‘lishi mumkin.';
+      return 'Price ranges overlap; only the last range can be open-ended.';
   }
   return null;
 }

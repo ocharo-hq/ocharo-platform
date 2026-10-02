@@ -4,10 +4,12 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import CatalogueGalleryPage from '../src/presentation/design/CatalogueGalleryPage.vue';
 import CatalogueWebDesignerPage from '../src/presentation/design/CatalogueWebDesignerPage.vue';
 import CatalogueWebPreview from '../src/presentation/design/CatalogueWebPreview.vue';
-import { designApi } from '../src/integration/design/DesignApi';
+import { designApi, DesignRequestError } from '../src/integration/design/DesignApi';
+import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
 import { documentFixture, sourceFixture, productFixture } from './NativeDesignFixture';
-vi.mock('../src/integration/design/DesignApi', () => ({
+vi.mock('../src/integration/design/DesignApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/integration/design/DesignApi')>()),
   designApi: {
     list: vi.fn(),
     get: vi.fn(),
@@ -82,6 +84,24 @@ describe('native catalogue screens', () => {
     expect(wrapper.text()).not.toContain('Create your first catalogue.');
     wrapper.unmount();
   });
+  it.each([
+    { locale: 'uz' as const, expected: 'Katalog xizmati 503 xatosini qaytardi.' },
+    { locale: 'ru' as const, expected: 'Служба каталога вернула ошибку 503.' },
+  ])('localizes numeric request failures in the $locale gallery and designer', async ({ locale, expected }) => {
+    useUiLocale().setUiLocale(locale);
+    const failure = new DesignRequestError(ApiFailureFactory.create('http', new Response(null, { status: 503 })));
+    vi.mocked(designApi.list).mockRejectedValue(failure);
+    vi.mocked(designApi.get).mockRejectedValue(failure);
+    const gallery = await open(CatalogueGalleryPage, '/catalogues');
+    expect(gallery.wrapper.text()).toContain(expected);
+    expect(gallery.wrapper.text()).not.toContain('The catalogue service returned error 503.');
+    gallery.wrapper.unmount();
+    const designer = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
+    expect(designer.wrapper.text()).toContain(expected);
+    expect(designer.wrapper.text()).not.toContain('The catalogue service returned error 503.');
+    designer.wrapper.unmount();
+  });
+
   it('adds a page and saves the same document through the native API', async () => {
     const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
     await wrapper

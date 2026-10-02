@@ -92,27 +92,28 @@ body {
   }
 }
 
-/* Existing dark palette stays in place while the new dark options are reviewed. */
+/* Approved Neutral graphite: action fill and soft-accent text have separate roles. */
 html.dark {
-  --color-control: #4b443c;
-  --color-chrome: #292622;
-  --color-menu: #292622;
-  --color-chrome-hover: #35312c;
+  --color-control: #85808c;
+  --color-chrome: rgb(41 41 45 / 90%);
+  --color-menu: rgb(41 41 45 / 96%);
+  --color-chrome-hover: #392330;
+  --color-ambient: #7a727b;
   --shadow-menu: 0 20px 60px rgb(0 0 0 / 25%);
-  --color-background: #201e1b;
-  --color-foreground: #f4eee5;
-  --color-card: #292622;
-  --color-card-foreground: #f4eee5;
-  --color-primary: #ddb0b9;
-  --color-primary-foreground: #2e1d24;
-  --color-primary-soft: #473239;
-  --color-primary-soft-foreground: #f0cbd1;
-  --color-secondary: #35312c;
-  --color-secondary-foreground: #e1d9cd;
-  --color-muted: #35312c;
-  --color-muted-foreground: #bcb4a8;
-  --color-border: #4b443c;
-  --color-ring: #ddb0b9;
+  --color-background: #141416;
+  --color-foreground: #f4f2f5;
+  --color-card: #1d1d20;
+  --color-card-foreground: #f4f2f5;
+  --color-primary: #c24783;
+  --color-primary-foreground: #ffffff;
+  --color-primary-soft: #392330;
+  --color-primary-soft-foreground: #e69abc;
+  --color-secondary: #262629;
+  --color-secondary-foreground: #f4f2f5;
+  --color-muted: #262629;
+  --color-muted-foreground: #b7b3bd;
+  --color-border: #3d3b42;
+  --color-ring: #e69abc;
   --color-success: #a6cfb4;
   --color-success-soft: #263d30;
   --color-success-soft-foreground: #c1e1ca;
@@ -141,38 +142,56 @@ html:not(.dark) .catalogue-canvas {
 html:not(.dark) .catalogue-main {
   background-color: transparent;
 }
+html.dark .catalogue-canvas {
+  background-image:
+    radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--color-primary) 6%, transparent), transparent 55%),
+    radial-gradient(ellipse at 95% 90%, color-mix(in srgb, var(--color-ambient) 8%, transparent), transparent 55%);
+}
+html.dark .catalogue-main {
+  background-color: transparent;
+}
 html.dark .catalogue-chrome,
 html.dark .catalogue-apps-panel {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+  -webkit-backdrop-filter: blur(24px) saturate(100%);
+  backdrop-filter: blur(24px) saturate(100%);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .catalogue-chrome,
-  .catalogue-apps-panel {
-    background-color: var(--color-card);
-  }
-}
-@media (prefers-reduced-transparency: reduce) {
-  .catalogue-chrome,
-  .catalogue-apps-panel {
+  .catalogue-apps-panel,
+  html.dark .catalogue-chrome,
+  html.dark .catalogue-apps-panel {
     background-color: var(--color-card);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
-  html:not(.dark) .catalogue-canvas {
+}
+@media (prefers-reduced-transparency: reduce) {
+  .catalogue-chrome,
+  .catalogue-apps-panel,
+  html.dark .catalogue-chrome,
+  html.dark .catalogue-apps-panel {
+    background-color: var(--color-card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html:not(.dark) .catalogue-canvas,
+  html.dark .catalogue-canvas {
     background-image: none;
   }
 }
 @media (forced-colors: active) {
   .catalogue-chrome,
-  .catalogue-apps-panel {
+  .catalogue-apps-panel,
+  html.dark .catalogue-chrome,
+  html.dark .catalogue-apps-panel {
     background-color: Canvas;
     color: CanvasText;
     border-color: CanvasText;
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
-  html:not(.dark) .catalogue-canvas {
+  html:not(.dark) .catalogue-canvas,
+  html.dark .catalogue-canvas {
     background-image: none;
   }
 }

@@ -55,7 +55,7 @@ function remove(value: string) {
         v-for="s in props.suggestions.filter((s) => !model.includes(s))"
         :key="s"
         type="button"
-        class="rounded-md border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary"
+        class="rounded-md border border-dashed border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:border-primary hover:text-primary-soft-foreground"
         @click="add(s)"
       >
         + {{ s }}

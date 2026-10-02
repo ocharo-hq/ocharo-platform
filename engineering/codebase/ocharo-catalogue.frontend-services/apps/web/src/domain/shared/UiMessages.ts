@@ -1,4 +1,8 @@
+import { catalogueLegacyUiMessages } from './CatalogueLegacyUiMessages';
+import { catalogueOperationsUiMessages } from './CatalogueOperationsUiMessages';
+import { catalogueInterfaceUiMessages } from './CatalogueInterfaceUiMessages';
 import { nativeDesignerUiMessages } from './NativeDesignerUiMessages';
+import { catalogueSettingsUiMessages } from './CatalogueSettingsUiMessages';
 import { catalogueAppUiMessages } from './CatalogueAppUiMessages';
 import { catalogueUiMessages } from './CatalogueUiMessages';
 import { productReviewUiMessages } from './ProductReviewUiMessages';
@@ -1769,6 +1773,9 @@ export const operatorUiMessages: UiMessageTable = {
 };
 
 export const uiMessages: UiMessageTable = {
+  ...catalogueLegacyUiMessages,
+  ...catalogueOperationsUiMessages,
+  ...catalogueInterfaceUiMessages,
   ...baseUiMessages,
   ...operatorUiMessages,
   ...designerUiMessages,
@@ -1776,6 +1783,7 @@ export const uiMessages: UiMessageTable = {
   ...catalogueUiMessages,
   ...catalogueAppUiMessages,
   ...nativeDesignerUiMessages,
+  ...catalogueSettingsUiMessages,
 };
 
 /** Resolves exact interface phrases without interpreting or translating customer-authored data. */

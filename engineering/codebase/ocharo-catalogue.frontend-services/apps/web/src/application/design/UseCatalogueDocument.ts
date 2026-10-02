@@ -4,11 +4,13 @@ import { notifyError, requestConfirmation } from '../common/UseFeedback';
 import { useUiLocale } from '../shared/UseUiLocale';
 import {
   designApi,
+  DesignRequestError,
   type DesignRevision,
   type PreparedRelease,
   type ReleaseSummary,
 } from '../../integration/design/DesignApi';
 import { inspectDesign } from '../../integration/design/DesignPreflight';
+import { describeFailure } from '../../integration/catalogue/CatalogueApi';
 import type { DesignPreflightReport } from '../../domain/design/DesignPreflight';
 import { exportDesignPdf, exportDesignPng, renderCatalogueBundle } from '../../integration/design/DesignExport';
 import {
@@ -19,6 +21,16 @@ import {
 } from '../../domain/design/EditorModels';
 import { eligiblePdf, refreshCatalogue, type DesignSource } from '../../domain/design/CatalogueDesign';
 export { designApi } from '../../integration/design/DesignApi';
+/** Resolves request failures in the application while leaving server details unchanged. */
+export function describeDesignFailure(
+  cause: unknown,
+  translate: (source: string, variables?: Record<string, string | number>) => string,
+  fallback = 'Unable to save this catalogue.',
+): string {
+  return cause instanceof DesignRequestError
+    ? describeFailure(cause.failure, translate)
+    : translate(cause instanceof Error ? cause.message : fallback);
+}
 export function useCatalogueDocument() {
   const route = useRoute(),
     { t } = useUiLocale(),
@@ -45,8 +57,8 @@ export function useCatalogueDocument() {
     id = () => String(route.params.id ?? '');
   const key = () => `ocharo-catalogue-design:${id()}`;
   function fail(cause: unknown) {
-    error.value = cause instanceof Error ? cause.message : t('Unable to save this catalogue.');
-    notifyError(t(error.value));
+    error.value = describeDesignFailure(cause, t);
+    notifyError(error.value);
   }
   function accept(value: DesignDocument) {
     document.value = value;
