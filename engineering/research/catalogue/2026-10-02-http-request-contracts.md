@@ -70,21 +70,51 @@ No inline script/style or relaxed Content-Security-Policy is required.
 | Target | Result |
 |---|---|
 | Native Catalogue frontend | 111 tests; lint, formatting, typecheck, SFC compilation and production build passed |
-| Desk frontend | 263 tests; lint, typecheck, SFC compilation and production build passed |
+| Desk frontend | 258 tests; lint, typecheck, SFC compilation and production build passed |
 | Brand frontend | 4 tests; lint, typecheck, SFC compilation and production build passed |
-| Marketing frontend | 62 tests; lint, typecheck, SFC compilation and production build passed |
+| Marketing frontend | 64 tests; lint, typecheck, SFC compilation and production build passed |
 | Editorial frontend | 37 tests; lint, typecheck, SFC compilation and production build passed |
-| Studio frontend | 101 tests; lint, typecheck, SFC compilation and production build passed |
-| Assets frontend and engine | 5 web tests and 2 engine tests; lint, typecheck, SFC compilation and production build passed |
+| Studio frontend | 104 tests; lint, typecheck, SFC compilation and production build passed |
+| Assets frontend and engine | 6 web tests and 2 engine tests; lint, typecheck, SFC compilation and production build passed |
 | SDK Web, final source | 263 tests passed, including complete HTTP error boundary coverage |
 | Seven backend suites, isolated source copies | 715 tests passed: Catalogue 55, Brand 9, Desk 184, Marketing 258, Blog 176, Studio 29, Motion 4; temporary ProjectReferences to SDK source, not released package pins |
 | Private image worker | 26 tests passed with a fake processor, including interrupted upload capacity recovery |
 | Native Catalogue and worker CI | Runs 36977227486 (dbf684a) and 36979645014 (131f083) succeeded |
 | Final read-only review | Relay headers/validation/correlation, upload disconnects and six proxy disconnect guards verified; no remaining actionable findings in that scope |
 
+## Published verification
+
+| Repository | Latest verified source commit | Completed CI |
+|---|---|---|
+| Platform | `5058195` | [36982707109](https://github.com/ocharo-hq/ocharo-platform/actions/runs/36982707109), success |
+| Marketing | `1e989ab` | [36984576429](https://github.com/ocharo-hq/ocharo-marketing/actions/runs/36984576429), success |
+| Studio | `9f4a35f` | [36982714142](https://github.com/ocharo-hq/ocharo-studio/actions/runs/36982714142), success |
+| Assets | `3f22a1a` | [36986342373](https://github.com/ocharo-hq/ocharo-assets/actions/runs/36986342373), success |
+
+Published cohesive batches:
+
+- Platform: `dbf684a`, `66a7c91`, `131f083`, `c352b1c`, `5058195`.
+- Marketing: `d23b789`, `1e989ab`.
+- Studio: `b85059c`, `9f4a35f`.
+- Assets: `156c888`, `7ef657d`, `547713c`, `3f22a1a`.
+
+First-paint tests execute within their owning repositories. Brand's container copies the new proxy
+helper and boot assets; its actual frontend Docker stage built successfully. Marketing and Assets
+have standalone verification workflows covering their frontend, backend, packaging and container gates.
+Marketing public packaging uses explicitly isolated export fixtures and establishes no content publication.
+Assets verifies the immutable release, copies verified model inputs before tests, and formats generated
+TypeScript through the existing app Prettier configuration. Generated release metadata and source models
+remain unchanged. The synchronization, format check and full frontend build passed in that order.
+
+Final frontend total: 586 tests, including the two Assets engine tests. Seven Assets Vue style warnings
+remain advisory; chunk-size and Desk's future native Vite config-loader warning are also non-blocking.
+Required gates passed without exclusions or weakened assertions. Studio's three hosted browser shards
+passed. Local verification receipts are preserved in `.local/verification/http-contracts-20261002/`;
+that ignored folder is local evidence, not a committed artifact or production runtime result.
+
 ## Delivery and owner review
 
-Native Catalogue frontend commit `dbf684a` and worker commits `66a7c91` / `131f083` are pushed; their Platform CI runs succeeded. Companion frontend source is verified and ready for cohesive repository commits.
+Native Catalogue frontend commit `dbf684a` and worker commits `66a7c91` / `131f083` are pushed. Companion frontend batches are committed and pushed in all four owning repositories. All four latest app verification runs in the preceding table passed. These runs verify committed code and its current released package pins; they do not include the unpublished shared SDK adoption described below.
 
 The shared SDK's 13-file change is staged, with commit/push flags ON in its owning WoW2 workspace. This chat's peer registry currently admits only Ocharo repositories, so its Git hook rejected the SDK commit. An exact SDK peer-scope proposal is pending human decision; the live registry and all Git flags remain unchanged. Seven actual API package pins therefore remain unchanged. Backend implementation is present locally and validated in isolated source-copy suites; it is not yet built against a published SDK package or committed/pushed. Do not interpret these source-copy results as verification of the real package pins.
 
