@@ -27,19 +27,35 @@ the needle; the translated app name sits underneath.
 
 ## Header tokens
 
-Current warm-paper tokens remain the source of the header palette. They are defined
-in `ocharo-catalogue.frontend-services/apps/web/src/bootstrap/index.css`.
+The user approved the white **Ink and Raspberry** palette on 2026-10-02.
+Catalogue adopts that light palette; the existing warm dark palette remains until
+the revised dark comparison is selected. The source is
+`ocharo-catalogue.frontend-services/apps/web/src/bootstrap/index.css`.
 
-| Semantic token | Light | Dark | SDK / Tailwind mapping |
+| Semantic token | Approved light | Existing dark | SDK / Tailwind mapping |
 |---|---|---|---|
-| Canvas | `#f5f2eb` | `#201e1b` | `background` |
-| Header surface | `#fffdf8` | `#292622` | `card` |
-| Main ink | `#272924` | `#f4eee5` | `foreground` |
-| Secondary ink | `#76796e` | `#bcb4a8` | `muted-foreground` |
-| Accent | `#783e4c` | `#ddb0b9` | `primary` |
-| Active surface | `#f3e7e9` | `#473239` | `primary-soft` |
-| Divider | `#e6e2d8` | `#4b443c` | `border` |
-| Focus | `#783e4c` | `#ddb0b9` | `ring` |
+| Canvas | `#F5F6FA` | `#201E1B` | `background` |
+| Editing surface | `#FFFFFF` | `#292622` | `card` |
+| Header material | White at 84% | `#292622`, opaque | `chrome` |
+| Menu material | White at 92% | `#292622`, opaque | `menu` |
+| Main ink | `#181B25` | `#F4EEE5` | `foreground` |
+| Secondary ink | `#555E72` | `#BCB4A8` | `muted-foreground` |
+| Accent | `#8B2459` | `#DDB0B9` | `primary` |
+| Active surface | `#F8E9F0` | `#473239` | `primary-soft` |
+| Divider | `#DFE3ED` | `#4B443C` | `border` |
+| Essential control border | `#858EA3` | `#4B443C` | `control` |
+| Focus | `#9D2E6A` | `#DDB0B9` | `ring` |
+
+Light navigation and the app menu use 24px blur and 120% saturation. The header
+owns the material; the nested `Navbar` is transparent. The SDK popover is portalled,
+so its backdrop does not sit inside the header's blur layer. Content cards and
+editing fields stay opaque. Canvas gradients use restrained raspberry and blue
+ambient tint, without applying filters to garment photographs or changing authored
+Web/PDF catalogue colors. Print removes interface gradients.
+
+Reduced-transparency, forced-colors and unsupported-blur modes use solid surfaces.
+Those fallbacks are part of the accepted light implementation. This change is
+Catalogue-specific; it does not roll out an unreviewed palette to the other apps.
 
 ## Composition
 
@@ -113,11 +129,12 @@ and outside dismissal passed. Other apps preserve the current route in a separat
 All six public-reader locale/theme cases retain the brand link and hide the launcher.
 Owner review remains open.
 
-## Glass palette review — proposals, 2026-10-02
+## Initial glass palette review — 2026-10-02
 
-The warm-paper implementation remains current. The user reopened its color direction
-because the colors looked old. The following paired palettes are design proposals,
-not accepted tokens or app-wide rollout instructions.
+The user reopened the color direction because the colors looked old. The initial
+paired proposals below are retained as the review record. Only the white Ink and
+Raspberry direction was approved; its navy dark counterpart was not accepted.
+The current adopted light tokens are listed above, and the dark refinement follows.
 
 Recommend **Ink and Raspberry**: replace beige/brown surfaces with neutral white and
 cool graphite, keeping a restrained raspberry accent for Ocharo's fashion identity.
@@ -153,3 +170,69 @@ Calculated text contrast for 84% glass over the specified neutral canvases is
 17.00 / 15.24 (Raspberry), 16.50 / 14.84 (Cobalt), and 15.83 / 14.39 (Jade).
 These calculations do not certify arbitrary photographs or gradients beneath glass;
 verify composited backgrounds and all interaction states during implementation.
+
+
+## Dark refinement — proposals, 2026-10-02
+
+The initial navy proposal used the same `#1C2030` for glass and content, flattening
+the surface hierarchy. Its blue ambient tint intensified under saturation. A single
+pastel accent served both filled actions and readable accent text, which made actions
+visually dominant. These are design assessments; its calculated text contrast already
+passed the stated target.
+
+Recommend **Neutral graphite**: distinct neutral surfaces, denser dark glass and a
+restrained raspberry action fill. **Soft charcoal** is a warmer alternative. Keep the
+approved white side identical while comparing dark options. No dark implementation
+is authorized by the light approval.
+
+| Token | Neutral graphite | Soft charcoal |
+|---|---|---|
+| Canvas | `#141416` | `#181617` |
+| Glass | `#29292D` | `#302B2D` |
+| Content | `#1D1D20` | `#211E20` |
+| Elevated content | `#262629` | `#2D282B` |
+| Main text | `#F4F2F5` | `#F7F2F4` |
+| Secondary text | `#B7B3BD` | `#C0B5BB` |
+| Action fill / label | `#C24783` / `#FFFFFF` | `#C24783` / `#FFFFFF` |
+| Accent text / focus | `#E69ABC` | `#E79BBD` |
+| Soft accent | `#392330` | `#432834` |
+| Divider | `#3D3B42` | `#494046` |
+| Essential control | `#85808C` | `#90838A` |
+
+Dark proposals use 90% header opacity, 96% menu opacity, 24px blur and 100%
+saturation. Reduce ambient tint to 8% and raspberry glow to 6%. Keep primary actions
+on opaque content, and garment photographs unfiltered.
+
+Calculated normal body contrast on opaque content is 15.11:1 for Neutral graphite
+and 14.92:1 for Soft charcoal. Action-label contrast is 4.64:1 in both. Secondary text
+on a 96% menu over its own canvas is 7.12:1 and 7.09:1 respectively. Essential control
+borders on a 96% menu over white are 3.34:1 and 3.40:1. These are defined-composite
+calculations, not certification of arbitrary underlying content.
+
+
+## Approved light implementation verification — 2026-10-02
+
+Catalogue frontend build/typecheck, lint, targeted formatting and `git diff --check`
+passed. An isolated browser fixture used the actual `AppRoot`, app menu, published
+SDK and compiled app stylesheet, with its settings request mocked. The editing
+sample used the actual opaque panel and field utilities; no user services were
+started, restarted or contacted.
+
+All six width/theme cases at 390, 1024 and 1440px passed: the header is 84% white,
+the menu 92% white, both with 24px blur; the nested navbar is transparent. The
+primary row remains 56px and the approved wordmark 80 × 30px, with no image filter.
+Editing panels and inputs are opaque white, essential field borders use `#858EA3`,
+and no page overflow occurred. Escape dismissal returns focus to the logo trigger.
+
+Browser emulation verified reduced-transparency and forced-colors fallbacks: solid
+surfaces, no blur and no ambient gradient. Print uses white document/canvas/main
+backgrounds and hides navigation. Unsupported-blur fallback is defined in CSS;
+the test browser supports blur, so that capability branch was not executed.
+All 23 pre-existing dark color tokens match the previous compiled stylesheet.
+Public readers in both modes hide the launcher and request no operator settings.
+Authored Web/PDF catalogue styling and original image assets were not edited.
+
+The revised dark comparison passed 24 responsive and interaction cases across its
+three proposals. The approved white tokens, layout and embedded artwork match the
+initial review. Neutral graphite and Soft charcoal remain proposals; these local
+checks do not close the owner-review boxes or establish production deployment.

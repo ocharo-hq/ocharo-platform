@@ -2,22 +2,27 @@
 @import '@wow-two-beta/ui-vue/styles.css';
 @source '../../node_modules/@wow-two-beta/ui-vue/dist';
 
-/* Shared Ocharo operator palette (same tokens as Ocharo Marketing). */
+/* Approved Catalogue light palette: Ink and Raspberry. */
 @theme {
-  --color-background: #f5f2eb;
-  --color-foreground: #272924;
-  --color-card: #fffdf8;
-  --color-card-foreground: #272924;
-  --color-primary: #783e4c;
-  --color-primary-foreground: #fffdf8;
-  --color-primary-soft: #f3e7e9;
-  --color-primary-soft-foreground: #783e4c;
-  --color-secondary: #eeeae0;
-  --color-secondary-foreground: #494c43;
-  --color-muted: #efede6;
-  --color-muted-foreground: #76796e;
-  --color-border: #e6e2d8;
-  --color-ring: #783e4c;
+  --color-background: #f5f6fa;
+  --color-foreground: #181b25;
+  --color-card: #ffffff;
+  --color-card-foreground: #181b25;
+  --color-primary: #8b2459;
+  --color-primary-foreground: #ffffff;
+  --color-primary-soft: #f8e9f0;
+  --color-primary-soft-foreground: #8b2459;
+  --color-secondary: #eef0f6;
+  --color-secondary-foreground: #555e72;
+  --color-muted: #eef0f6;
+  --color-muted-foreground: #555e72;
+  --color-border: #dfe3ed;
+  --color-ring: #9d2e6a;
+  --color-control: #858ea3;
+  --color-chrome: rgb(255 255 255 / 84%);
+  --color-menu: rgb(255 255 255 / 92%);
+  --color-chrome-hover: #f8e9f0;
+  --color-ambient: #becff6;
   --color-success: #426553;
   --color-success-soft: #e9f0e9;
   --color-success-soft-foreground: #426553;
@@ -29,7 +34,8 @@
   --color-destructive-soft-foreground: #a0443d;
   --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
   --font-editorial: Georgia, 'Times New Roman', serif;
-  --shadow-paper: 0 12px 35px #25292306;
+  --shadow-paper: 0 12px 35px rgb(24 32 60 / 4%);
+  --shadow-menu: 0 20px 60px rgb(24 32 60 / 12%);
 }
 
 html {
@@ -44,6 +50,7 @@ body {
 /* Operator form/button vocabulary as Tailwind v4 utilities (composable with @apply). */
 @utility field {
   @apply w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15;
+  border-color: var(--color-control);
 }
 @utility label {
   @apply mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
@@ -65,6 +72,7 @@ body {
 }
 @utility btn-outline {
   @apply btn border border-border bg-card hover:bg-muted;
+  border-color: var(--color-control);
 }
 @media print {
   .no-print {
@@ -84,8 +92,13 @@ body {
   }
 }
 
-/* Warm paper remains the editing surface; dark mode keeps the same warm hue family. */
+/* Existing dark palette stays in place while the new dark options are reviewed. */
 html.dark {
+  --color-control: #4b443c;
+  --color-chrome: #292622;
+  --color-menu: #292622;
+  --color-chrome-hover: #35312c;
+  --shadow-menu: 0 20px 60px rgb(0 0 0 / 25%);
   --color-background: #201e1b;
   --color-foreground: #f4eee5;
   --color-card: #292622;
@@ -109,6 +122,65 @@ html.dark {
   --color-destructive: #efaaa1;
   --color-destructive-soft: #492b28;
   --color-destructive-soft-foreground: #ffd0c8;
+}
+
+/* Glass belongs to navigation and transient menus; editing surfaces stay opaque. */
+.catalogue-chrome,
+.catalogue-apps-panel {
+  -webkit-backdrop-filter: blur(24px) saturate(120%);
+  backdrop-filter: blur(24px) saturate(120%);
+}
+.catalogue-apps-panel {
+  box-shadow: var(--shadow-menu);
+}
+html:not(.dark) .catalogue-canvas {
+  background-image:
+    radial-gradient(ellipse at 12% 12%, color-mix(in srgb, var(--color-primary) 15%, transparent), transparent 55%),
+    radial-gradient(ellipse at 95% 90%, color-mix(in srgb, var(--color-ambient) 20%, transparent), transparent 55%);
+}
+html:not(.dark) .catalogue-main {
+  background-color: transparent;
+}
+html.dark .catalogue-chrome,
+html.dark .catalogue-apps-panel {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .catalogue-chrome,
+  .catalogue-apps-panel {
+    background-color: var(--color-card);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .catalogue-chrome,
+  .catalogue-apps-panel {
+    background-color: var(--color-card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html:not(.dark) .catalogue-canvas {
+    background-image: none;
+  }
+}
+@media (forced-colors: active) {
+  .catalogue-chrome,
+  .catalogue-apps-panel {
+    background-color: Canvas;
+    color: CanvasText;
+    border-color: CanvasText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  html:not(.dark) .catalogue-canvas {
+    background-image: none;
+  }
+}
+@media print {
+  .catalogue-canvas,
+  .catalogue-main {
+    background: white !important;
+  }
 }
 
 @media (max-width: 1023px) {

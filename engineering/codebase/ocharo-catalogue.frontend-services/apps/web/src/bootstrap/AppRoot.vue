@@ -68,7 +68,7 @@ onMounted(() => {
 });
 </script>
 <template>
-  <AppShell sidebar-width="0px" aside-width="0px" class="min-h-screen bg-background text-foreground">
+  <AppShell sidebar-width="0px" aside-width="0px" class="catalogue-canvas min-h-screen bg-background text-foreground">
     <FeedbackHost />
     <a
       href="#main-content"
@@ -76,9 +76,9 @@ onMounted(() => {
       >{{ t('Skip to content') }}</a
     >
     <AppShellHeader
-      class="no-print border-b border-border bg-card/95 backdrop-blur max-lg:h-auto max-lg:flex-col max-lg:items-stretch max-lg:gap-0"
+      class="catalogue-chrome no-print border-b border-border bg-chrome max-lg:h-auto max-lg:flex-col max-lg:items-stretch max-lg:gap-0"
     >
-      <Navbar :bordered="false" container-class="max-w-[1800px] px-5 sm:px-8" class="shrink-0 bg-card">
+      <Navbar :bordered="false" container-class="max-w-[1800px] px-5 sm:px-8" class="shrink-0 bg-transparent">
         <template #start>
           <OcharoAppsMenu
             v-if="!publicRoute"
@@ -150,7 +150,7 @@ onMounted(() => {
         >
       </nav>
     </AppShellHeader>
-    <AppShellMain v-bind="{ id: 'main-content', tabindex: -1 }" class="w-full bg-background">
+    <AppShellMain v-bind="{ id: 'main-content', tabindex: -1 }" class="catalogue-main w-full bg-background">
       <div class="mx-auto w-full max-w-[1800px] px-5 py-7 sm:px-8 xl:px-10 print:max-w-none print:p-0">
         <div
           v-if="store.notice.value"

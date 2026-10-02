@@ -22,8 +22,8 @@ const tileClass =
         type="button"
         :aria-label="t('Ocharo apps')"
         :title="t('Ocharo apps')"
-        class="flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
-        :class="{ 'bg-muted': open }"
+        class="flex min-h-11 min-w-11 shrink-0 items-center gap-2 rounded-lg px-2 transition-colors hover:bg-chrome-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+        :class="{ 'bg-chrome-hover': open }"
       >
         <span class="flex flex-col items-center justify-center gap-0.5">
           <img :src="logoSrc" alt="Ocharo" class="h-[30px] w-20 shrink-0 object-contain" />
@@ -42,7 +42,7 @@ const tileClass =
     </PopoverTrigger>
     <PopoverContent
       v-bind="panelAttrs"
-      class="no-print w-[min(22rem,calc(100vw-2rem))] rounded-2xl border-border bg-card p-4 text-foreground shadow-xl"
+      class="catalogue-apps-panel no-print w-[min(22rem,calc(100vw-2rem))] rounded-2xl border-border bg-menu p-4 text-foreground"
     >
       <h2 id="ocharo-apps-title" class="text-sm font-semibold">{{ t('Ocharo apps') }}</h2>
       <div class="mt-3 grid grid-cols-3 gap-2">
