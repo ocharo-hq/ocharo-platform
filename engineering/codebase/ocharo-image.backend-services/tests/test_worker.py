@@ -162,3 +162,61 @@ def test_private_readiness_reports_injected_build_identity(monkeypatch):
         status = app.get('/health/ready', headers=HEADERS).json()
         assert status['version'] == '0.1.7-test.2'
         assert status['commit'] == '0123456789abcdef0123456789abcdef01234567'
+
+
+@pytest.mark.parametrize('method,path,headers,body,status', [
+    ('GET', '/health/ready', {}, None, 401),
+    ('GET', '/unknown', HEADERS, None, 404),
+    ('PUT', '/v1/remove-background', HEADERS, None, 405),
+    ('POST', '/v1/remove-background', {**HEADERS, 'Content-Type': 'text/plain'}, b'invalid', 415),
+    ('POST', '/v1/remove-background', HEADERS, b'invalid', 422),
+])
+def test_every_failure_uses_problem_details(method, path, headers, body, status):
+    with client() as app:
+        response = app.request(method, path, headers={**headers, 'Accept': 'text/html'}, content=body)
+        assert response.status_code == status
+        assert response.headers['content-type'].startswith('application/problem+json')
+        problem = response.json()
+        assert problem['status'] == status and problem['type'] == 'about:blank'
+        assert problem['title'] and problem['detail'] and problem['instance'] == path
+        assert problem['traceId'] and problem['requestId']
+        assert response.headers['cache-control'] == 'no-store'
+        if status == 401:
+            assert response.headers['www-authenticate'] == 'ImageWorker'
+        if status == 405:
+            assert response.headers['allow'] == 'POST'
+
+
+def test_head_error_never_emits_a_body():
+    with client() as app:
+        response = app.head('/unknown', headers=HEADERS)
+        assert response.status_code == 404 and response.content == b''
+        assert response.headers['content-type'].startswith('application/problem+json')
+
+
+def test_unexpected_exception_is_safe_problem_details():
+    application = create_app(Settings(KEY, Path('/unused')), lambda _: lambda image: image.copy())
+
+    @application.get('/explode')
+    async def explode():
+        raise RuntimeError('private-path-and-secret')
+
+    with TestClient(application) as app:
+        response = app.get('/explode', headers=HEADERS)
+        assert response.status_code == 500
+        assert response.headers['content-type'].startswith('application/problem+json')
+        assert response.json()['status'] == 500
+        assert 'private-path-and-secret' not in response.text
+
+
+def test_readiness_failure_is_problem_details_without_losing_capability():
+    def missing(_):
+        raise ValueError('private-model-path')
+
+    with TestClient(create_app(Settings(KEY, Path('/unused')), missing)) as app:
+        response = app.get('/health/ready', headers=HEADERS)
+        assert response.status_code == 503
+        assert response.headers['content-type'].startswith('application/problem+json')
+        assert response.json()['status'] == 503
+        assert response.json()['ready'] is False
+        assert 'private-model-path' not in response.text

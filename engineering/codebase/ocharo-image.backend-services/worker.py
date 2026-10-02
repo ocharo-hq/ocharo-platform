@@ -7,10 +7,15 @@ from threading import BoundedSemaphore
 from typing import Callable
 import hmac
 import json
+import logging
 import os
 import warnings
+from http import HTTPStatus
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException
 from fastapi.responses import JSONResponse, Response
 from PIL import Image, ImageChops, ImageOps, UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
@@ -107,6 +112,18 @@ def render(content: bytes, content_type: str, processor: Callable) -> bytes:
                 result.close()
 
 
+def problem(request: Request, status: int, detail: str, *, headers=None, extensions=None):
+    """One safe HTTP failure contract, including framework failures and correlation."""
+    request_id = getattr(request.state, "request_id", None) or uuid4().hex
+    body = {"type": "about:blank", "title": HTTPStatus(status).phrase, "status": status,
+            "detail": detail, "instance": request.url.path, "requestId": request_id,
+            "traceId": request_id, **(extensions or {})}
+    response_headers = {"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", **(headers or {})}
+    if request.method == "HEAD":
+        return Response(status_code=status, media_type="application/problem+json", headers=response_headers)
+    return JSONResponse(body, status_code=status, media_type="application/problem+json", headers=response_headers)
+
+
 def create_app(settings: Settings, loader: Callable = load_processor) -> FastAPI:
     gate = BoundedSemaphore(1)
 
@@ -123,13 +140,30 @@ def create_app(settings: Settings, loader: Callable = load_processor) -> FastAPI
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
+    @app.exception_handler(HTTPException)
+    async def http_error(request: Request, exception: HTTPException):
+        return problem(request, exception.status_code, HTTPStatus(exception.status_code).phrase,
+                       headers=exception.headers)
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(request: Request, exception: RequestValidationError):
+        errors = [{"property": ".".join(str(part) for part in item["loc"]),
+                   "code": item["type"], "message": "The supplied value is invalid."}
+                  for item in exception.errors()]
+        return problem(request, 422, "The request is invalid.", extensions={"errors": errors})
+
     @app.middleware("http")
     async def boundary(request: Request, call_next):
+        request.state.request_id = uuid4().hex
         if request.url.path != "/health/live":
             supplied = request.headers.get("x-image-worker-key", "")
             if not supplied or not hmac.compare_digest(supplied.encode(), settings.key.encode()):
-                return JSONResponse({"detail": "Worker authentication required."}, status_code=401, headers={"Cache-Control": "no-store"})
-        response = await call_next(request)
+                return problem(request, 401, "Worker authentication required.", headers={"WWW-Authenticate": "ImageWorker"})
+        try:
+            response = await call_next(request)
+        except Exception:
+            logging.getLogger(__name__).exception("Unhandled image worker request %s", request.state.request_id)
+            return problem(request, 500, "The request could not be completed.")
         response.headers["Cache-Control"] = "no-store"
         response.headers["X-Content-Type-Options"] = "nosniff"
         return response
@@ -139,39 +173,40 @@ def create_app(settings: Settings, loader: Callable = load_processor) -> FastAPI
         return {"alive": True}
 
     @app.get("/health/ready")
-    async def ready():
+    async def ready(request: Request):
         available = app.state.processor is not None
-        return JSONResponse({"ready": available, "model": MODEL_NAME, "version": os.environ.get("APP_VERSION") or "dev", "commit": os.environ.get("VCS_REF") or None}, status_code=200 if available else 503)
+        identity = {"ready": available, "model": MODEL_NAME, "version": os.environ.get("APP_VERSION") or "dev", "commit": os.environ.get("VCS_REF") or None}
+        return JSONResponse(identity) if available else problem(request, 503, "Background removal is not ready.", extensions=identity)
 
     @app.post("/v1/remove-background")
     async def remove_background(request: Request):
         processor = app.state.processor
         if processor is None:
-            return JSONResponse({"detail": "Background removal is not ready."}, status_code=503)
+            return problem(request, 503, "Background removal is not ready.")
         content_type = request.headers.get("content-type", "").split(";", 1)[0].lower().strip()
         if content_type not in ALLOWED:
-            return JSONResponse({"detail": "Provide PNG, JPEG, or WebP bytes."}, status_code=415)
+            return problem(request, 415, "Provide PNG, JPEG, or WebP bytes.")
         length = request.headers.get("content-length")
         if length is not None:
             try:
                 if not 0 < int(length) <= MAX_INPUT_BYTES:
                     raise ValueError()
             except ValueError:
-                return JSONResponse({"detail": "Provide an image up to 20 MiB."}, status_code=413)
+                return problem(request, 413, "Provide an image up to 20 MiB.")
         if not gate.acquire(blocking=False):
-            return JSONResponse({"detail": "Background removal is busy. Retry shortly."}, status_code=429, headers={"Retry-After": "2"})
+            return problem(request, 429, "Background removal is busy. Retry shortly.", headers={"Retry-After": "2"})
         try:
             data = bytearray()
             async for chunk in request.stream():
                 if len(data) + len(chunk) > MAX_INPUT_BYTES:
-                    return JSONResponse({"detail": "Provide an image up to 20 MiB."}, status_code=413)
+                    return problem(request, 413, "Provide an image up to 20 MiB.")
                 data.extend(chunk)
             output = await run_in_threadpool(render, bytes(data), content_type, processor)
             return Response(output, media_type="image/png", headers={"X-Image-Model": MODEL_NAME})
         except (ValueError, UnidentifiedImageError, Image.DecompressionBombError, Image.DecompressionBombWarning, OSError):
-            return JSONResponse({"detail": "The image is invalid or exceeds processing limits."}, status_code=422)
+            return problem(request, 422, "The image is invalid or exceeds processing limits.")
         except Exception:
-            return JSONResponse({"detail": "Background removal failed. The original image is unchanged."}, status_code=503)
+            return problem(request, 503, "Background removal failed. The original image is unchanged.")
         finally:
             gate.release()
 
