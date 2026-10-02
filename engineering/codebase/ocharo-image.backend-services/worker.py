@@ -16,6 +16,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException
+from starlette.requests import ClientDisconnect
 from fastapi.responses import JSONResponse, Response
 from PIL import Image, ImageChops, ImageOps, UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
@@ -161,6 +162,8 @@ def create_app(settings: Settings, loader: Callable = load_processor) -> FastAPI
                 return problem(request, 401, "Worker authentication required.", headers={"WWW-Authenticate": "ImageWorker"})
         try:
             response = await call_next(request)
+        except ClientDisconnect:
+            raise
         except Exception:
             logging.getLogger(__name__).exception("Unhandled image worker request %s", request.state.request_id)
             return problem(request, 500, "The request could not be completed.")
@@ -203,6 +206,8 @@ def create_app(settings: Settings, loader: Callable = load_processor) -> FastAPI
                 data.extend(chunk)
             output = await run_in_threadpool(render, bytes(data), content_type, processor)
             return Response(output, media_type="image/png", headers={"X-Image-Model": MODEL_NAME})
+        except ClientDisconnect:
+            raise
         except (ValueError, UnidentifiedImageError, Image.DecompressionBombError, Image.DecompressionBombWarning, OSError):
             return problem(request, 422, "The image is invalid or exceeds processing limits.")
         except Exception:

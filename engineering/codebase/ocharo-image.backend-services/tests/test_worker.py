@@ -220,3 +220,37 @@ def test_readiness_failure_is_problem_details_without_losing_capability():
         assert response.json()['status'] == 503
         assert response.json()['ready'] is False
         assert 'private-model-path' not in response.text
+
+
+def test_disconnected_upload_propagates_and_releases_capacity():
+    import asyncio
+    from starlette.requests import ClientDisconnect, Request
+
+    async def run():
+        application = create_app(Settings(KEY, Path('/unused')), lambda _: lambda image: image.copy())
+        application.state.processor = lambda image: image.copy()
+        endpoint = next(route.endpoint for route in application.routes if getattr(route, 'path', None) == '/v1/remove-background')
+        scope = {'type': 'http', 'method': 'POST', 'path': '/v1/remove-background', 'headers':
+                 [(b'content-type', b'image/png'), (b'x-image-worker-key', KEY.encode())], 'app': application}
+        chunks = iter([{'type': 'http.request', 'body': b'partial', 'more_body': True}, {'type': 'http.disconnect'}])
+
+        async def receive_disconnected():
+            return next(chunks)
+
+        with pytest.raises(ClientDisconnect):
+            await endpoint(Request(scope, receive_disconnected))
+
+        async def receive_image():
+            return {'type': 'http.request', 'body': picture(), 'more_body': False}
+
+        recovered = await endpoint(Request(scope, receive_image))
+        assert recovered.status_code == 200 and recovered.media_type == 'image/png'
+        boundary = application.user_middleware[0].kwargs['dispatch']
+
+        async def disconnected_next(_):
+            raise ClientDisconnect()
+
+        with pytest.raises(ClientDisconnect):
+            await boundary(Request(scope), disconnected_next)
+
+    asyncio.run(run())
