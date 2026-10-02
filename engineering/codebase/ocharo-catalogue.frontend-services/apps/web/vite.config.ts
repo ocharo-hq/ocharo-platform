@@ -13,7 +13,7 @@ function httpsTarget(value: string): string {
 
 export default defineConfig(({ command }) => {
   return {
-    define: { __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || "dev") },
+    define: { __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || 'dev') },
     base: '/',
     plugins: [vue(), tailwindcss(), ...(command === 'serve' ? [mkcert()] : [])],
     build: { outDir: 'dist', emptyOutDir: true, target: 'es2022' },
