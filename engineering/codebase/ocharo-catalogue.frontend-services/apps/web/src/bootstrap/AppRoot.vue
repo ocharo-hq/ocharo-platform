@@ -9,7 +9,6 @@ import { AppShell, AppShellHeader, AppShellMain, Navbar } from '@wow-two-beta/ui
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
 import { useCatalogueStore } from '../application/catalogue';
 import { useUiLocale } from '../application/shared/UseUiLocale';
-import { useErrorToast } from '../application/common/UseFeedback';
 import FeedbackHost from '../presentation/common/FeedbackHost.vue';
 import InterfacePreferences from '../presentation/common/InterfacePreferences.vue';
 import { useAppearance } from '../application/shared/UseAppearance';
@@ -54,10 +53,9 @@ watch(
   },
   { immediate: true },
 );
-useErrorToast(store.error);
+initializeAppearance();
 onMounted(() => {
   if (!publicRoute.value) void store.loadSettings();
-  initializeAppearance();
 });
 </script>
 <template>

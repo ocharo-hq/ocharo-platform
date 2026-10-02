@@ -11,7 +11,7 @@ function reply(status: number, body: unknown) {
 }
 
 describe('catalogue api', () => {
-  it('surfaces ProblemDetails detail on a revision conflict', async () => {
+  it('preserves ProblemDetails diagnostics while showing safe localized revision conflict copy', async () => {
     const fetch = vi.fn(async () =>
       reply(409, {
         title: 'Catalogue command rejected',
@@ -40,10 +40,13 @@ describe('catalogue api', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.failure.status).toBe(409);
-      expect(describeFailure(result.failure)).toMatch(/revision 3/);
+      expect(result.failure.problem?.['detail']).toMatch(/revision 3/);
+      expect(describeFailure(result.failure)).toBe('This item changed elsewhere. Reload before saving.');
       const translate = vi.fn((source: string) => `translated: ${source}`);
-      expect(describeFailure(result.failure, translate)).toBe(result.failure.problem?.['detail']);
-      expect(translate).not.toHaveBeenCalled();
+      expect(describeFailure(result.failure, translate)).toBe(
+        'translated: This item changed elsewhere. Reload before saving.',
+      );
+      expect(translate).toHaveBeenCalled();
     }
   });
 
@@ -69,6 +72,12 @@ describe('catalogue api', () => {
     expect(describeFailure(failure, (source, variables) => translateUi(source, 'ru', variables))).toBe(ru);
   });
 
+  it('does not expose server diagnostics from 500 ProblemDetails', () => {
+    const failure = ApiFailureFactory.create('http', new Response(null, { status: 500 }), {
+      detail: 'SQL private connection diagnostic',
+    });
+    expect(describeFailure(failure)).toBe('The catalogue service returned error 500.');
+  });
   it('rejects a non-array product list as a protocol failure', async () => {
     const api = createCatalogueApi((async () =>
       reply(200, { unexpected: true })) as unknown as typeof globalThis.fetch);

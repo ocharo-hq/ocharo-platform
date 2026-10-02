@@ -17,6 +17,7 @@ export function useCopyGrid() {
   const { t } = useUiLocale();
   const rows = ref<EditableRow[]>([]);
   const loading = ref(false);
+  const busy = ref(false);
   const dirtyCount = computed(() => rows.value.filter(isDirty).length);
 
   function isDirty(item: EditableRow) {
@@ -37,32 +38,45 @@ export function useCopyGrid() {
   }
 
   async function save(item: EditableRow) {
+    if (item.saving) return false;
     item.saving = true;
     item.error = null;
     const result = await catalogueApi.saveCopy(item.row.id, item.row.revision, item.row.locales);
-    item.saving = false;
     if (!result.ok) {
+      item.saving = false;
       item.error = describeFailure(result.failure, t);
+      store.fail(item.error);
       return false;
     }
-    item.row = structuredClone(result.value);
-    item.baseline = JSON.stringify(result.value.locales);
+    const projection = await catalogueApi.copyRows();
+    const refreshed = projection.ok ? projection.value.find((row) => row.id === item.row.id) : undefined;
+    item.row = structuredClone(refreshed ?? result.value);
+    if (!projection.ok) store.fail(describeFailure(projection.failure, t));
+    item.baseline = JSON.stringify(item.row.locales);
+    item.saving = false;
     return true;
   }
 
   return {
     rows,
     loading,
+    busy,
     dirtyCount,
     isDirty,
     load,
     save,
     async saveAll() {
-      let saved = 0;
-      for (const item of rows.value.filter(isDirty)) if (await save(item)) saved++;
-      const failed = rows.value.filter((item) => item.error).length;
-      if (failed) store.fail(t('Saved {saved}; {failed} failed. Check the rows.', { saved, failed }));
-      else store.succeed(t('Saved copy for {count} products.', { count: saved }));
+      if (busy.value) return;
+      busy.value = true;
+      try {
+        let saved = 0;
+        for (const item of rows.value.filter(isDirty)) if (await save(item)) saved++;
+        const failed = rows.value.filter((item) => item.error).length;
+        if (failed) store.fail(t('Saved {saved}; {failed} failed. Check the rows.', { saved, failed }));
+        else store.succeed(t('Saved copy for {count} products.', { count: saved }));
+      } finally {
+        busy.value = false;
+      }
     },
   };
 }

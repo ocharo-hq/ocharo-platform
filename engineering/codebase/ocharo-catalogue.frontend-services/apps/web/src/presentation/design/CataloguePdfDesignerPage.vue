@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { useCatalogueDocument } from '../../application/design/UseCatalogueDocument';
+import { useCatalogueDocument, describeDesignFailure } from '../../application/design/UseCatalogueDocument';
 import { notifyError, requestConfirmation } from '../../application/common/UseFeedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import {
@@ -169,7 +169,7 @@ function replace(sha: string) {
     try {
       editor.replace(replaceImage(editor.snapshot.value, page.value.id, element.value.id, sha, products.value));
     } catch (cause) {
-      notifyError(cause instanceof Error ? t(cause.message) : t('Unable to change this image.'));
+      notifyError(describeDesignFailure(cause, t, 'Unable to change this image.'));
     }
 }
 function addElement(type: DesignElement['type']) {
@@ -256,7 +256,7 @@ async function original() {
       result.warnings.join('\n') ||
       t('Original design connected to current products. Review independent text before exporting.');
   } catch (cause) {
-    notifyError(cause instanceof Error ? t(cause.message) : t('Unable to load the original design.'));
+    notifyError(describeDesignFailure(cause, t, 'Unable to load the original design.'));
   }
 }
 </script>
@@ -264,7 +264,6 @@ async function original() {
   <ContentSkeleton v-if="editor.loading.value" :label="t('Loading catalogue')" :cards="3" />
   <section v-else-if="!editor.snapshot.value" class="panel">
     <h1>{{ t('Unable to open this catalogue.') }}</h1>
-    <p>{{ editor.error.value }}</p>
     <button class="btn-outline" @click="editor.load">{{ t('Try again') }}</button>
   </section>
   <section v-else class="native-designer">

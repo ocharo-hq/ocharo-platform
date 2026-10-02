@@ -11,6 +11,8 @@ export function useProductList(initial: ProductFilter = {}) {
   const filter = reactive<ProductFilter>({ ...initial });
   const products = shallowRef<ProductSummary[]>([]);
   const loading = ref(false);
+  const pending = ref<string | null>(null);
+  const loadFailed = ref(false);
   const selected = ref<Set<string>>(new Set());
   let controller: AbortController | null = null;
   let debounce: ReturnType<typeof setTimeout> | undefined;
@@ -20,6 +22,7 @@ export function useProductList(initial: ProductFilter = {}) {
     controller = new AbortController();
     const signal = controller.signal;
     loading.value = true;
+    loadFailed.value = false;
     const clean = Object.fromEntries(
       Object.entries(filter).filter(([, v]) => v !== undefined && v !== ''),
     ) as ProductFilter;
@@ -29,7 +32,10 @@ export function useProductList(initial: ProductFilter = {}) {
     if (result.ok) {
       products.value = result.value;
       selected.value = new Set([...selected.value].filter((id) => result.value.some((p) => p.id === id)));
-    } else store.fail(describeFailure(result.failure, t));
+    } else {
+      loadFailed.value = true;
+      store.fail(describeFailure(result.failure, t));
+    }
   }
 
   watch(
@@ -60,6 +66,8 @@ export function useProductList(initial: ProductFilter = {}) {
     filter,
     products,
     loading,
+    pending,
+    loadFailed,
     selected,
     selectedCount: computed(() => selected.value.size),
     load,
@@ -71,25 +79,44 @@ export function useProductList(initial: ProductFilter = {}) {
       selected.value = new Set();
     },
     async setStatus(status: string) {
-      const result = await catalogueApi.bulkStatus([...selected.value], status);
-      if (!result.ok) return store.fail(describeFailure(result.failure, t));
-      report(result.value, 'Status');
-      await load();
+      if (pending.value) return;
+      pending.value = `status:${status}`;
+      try {
+        const result = await catalogueApi.bulkStatus([...selected.value], status);
+        if (!result.ok) return store.fail(describeFailure(result.failure, t));
+        report(result.value, 'Status');
+        await load();
+      } finally {
+        pending.value = null;
+      }
     },
     async adjustPrices(mode: 'percent' | 'add', value: number, roundTo: number, tier: 'retail' | 'wholesale' | null) {
-      const result = await catalogueApi.bulkPricing([...selected.value], mode, value, roundTo, tier);
-      if (!result.ok) return store.fail(describeFailure(result.failure, t));
-      report(result.value, 'Prices');
-      await load();
+      if (pending.value) return;
+      pending.value = 'prices';
+      try {
+        const result = await catalogueApi.bulkPricing([...selected.value], mode, value, roundTo, tier);
+        if (!result.ok) return store.fail(describeFailure(result.failure, t));
+        report(result.value, 'Prices');
+        await load();
+      } finally {
+        pending.value = null;
+      }
     },
     async duplicate(id: string) {
-      const result = await catalogueApi.duplicateProduct(id);
-      if (!result.ok) {
-        store.fail(describeFailure(result.failure, t));
-        return null;
+      if (pending.value) return null;
+      pending.value = `duplicate:${id}`;
+      try {
+        const result = await catalogueApi.duplicateProduct(id);
+        if (!result.ok) {
+          store.fail(describeFailure(result.failure, t));
+          return null;
+        }
+        store.succeed(t('Created {product} as a draft.', { product: result.value.document.id }));
+        await load();
+        return result.value.document.id;
+      } finally {
+        pending.value = null;
       }
-      store.succeed(t('Created {product} as a draft.', { product: result.value.document.id }));
-      return result.value.document.id;
     },
   };
 }

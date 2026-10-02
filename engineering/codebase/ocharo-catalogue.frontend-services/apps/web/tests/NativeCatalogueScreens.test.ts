@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import CatalogueGalleryPage from '../src/presentation/design/CatalogueGalleryPage.vue';
@@ -7,6 +7,14 @@ import CatalogueWebPreview from '../src/presentation/design/CatalogueWebPreview.
 import { designApi, DesignRequestError } from '../src/integration/design/DesignApi';
 import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
+import { feedbackBus } from '../src/application/common/UseFeedback';
+let messages: string[] = [];
+let unsubscribe = () => {};
+let notificationClock = Date.now();
+afterEach(() => {
+  unsubscribe();
+  vi.restoreAllMocks();
+});
 import { documentFixture, sourceFixture, productFixture } from './NativeDesignFixture';
 vi.mock('../src/integration/design/DesignApi', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../src/integration/design/DesignApi')>()),
@@ -47,6 +55,10 @@ async function open(component: typeof CatalogueGalleryPage | typeof CatalogueWeb
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  notificationClock += 10_001;
+  vi.spyOn(Date, 'now').mockImplementation(() => notificationClock);
+  messages = [];
+  unsubscribe = feedbackBus.subscribe((notice) => messages.push(String(notice.description)));
   sessionStorage.clear();
   useUiLocale().setUiLocale('en');
   const doc = documentFixture();
@@ -68,6 +80,66 @@ beforeEach(() => {
   }));
 });
 describe('native catalogue screens', () => {
+  it('keeps the last catalogue grid while a failed duplicate is pending', async () => {
+    let reject!: (cause: Error) => void;
+    vi.mocked(designApi.duplicate).mockReturnValue(
+      new Promise((_resolve, failure) => {
+        reject = failure;
+      }),
+    );
+    const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
+    const button = wrapper.findAll('button').find((item) => item.text() === 'Duplicate')!;
+    await button.trigger('click');
+    expect(button.attributes('aria-busy')).toBe('true');
+    expect(wrapper.findAll('.catalogue-grid article')).toHaveLength(1);
+    expect(designApi.list).toHaveBeenCalledTimes(1);
+    reject(new Error('Duplicate rejected'));
+    await flushPromises();
+    expect(wrapper.findAll('.catalogue-grid article')).toHaveLength(1);
+    expect(designApi.list).toHaveBeenCalledTimes(1);
+    expect(button.attributes('aria-busy')).toBe('false');
+    expect(messages).toContain('Unable to load catalogues.');
+    wrapper.unmount();
+  });
+  it('refreshes the gallery only after a successful duplicate acknowledgement', async () => {
+    let resolve!: (value: ReturnType<typeof documentFixture>) => void;
+    vi.mocked(designApi.duplicate).mockReturnValue(
+      new Promise((success) => {
+        resolve = success;
+      }),
+    );
+    const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
+    await wrapper
+      .findAll('button')
+      .find((item) => item.text() === 'Duplicate')!
+      .trigger('click');
+    expect(designApi.list).toHaveBeenCalledTimes(1);
+    resolve(documentFixture());
+    await flushPromises();
+    expect(designApi.list).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+  it('finishes a failed retry without permanent skeletons and retains the last grid', async () => {
+    const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
+    vi.mocked(designApi.duplicate).mockResolvedValue(documentFixture());
+    vi.mocked(designApi.list).mockRejectedValue(new Error('Refresh unavailable'));
+    await wrapper
+      .findAll('button')
+      .find((item) => item.text() === 'Duplicate')!
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.findAll('.catalogue-grid article')).toHaveLength(1);
+    expect(wrapper.text()).not.toContain('Refresh unavailable');
+    await wrapper
+      .findAll('button')
+      .find((item) => item.text() === 'Try again')!
+      .trigger('click');
+    await flushPromises();
+    expect(wrapper.findAll('.catalogue-grid article')).toHaveLength(1);
+    expect(wrapper.find('[aria-busy="true"]').exists()).toBe(false);
+    expect(messages.filter((item) => item === 'Unable to load catalogues.')).toHaveLength(1);
+    wrapper.unmount();
+  });
   it('shows gallery format routes and last edited identity', async () => {
     const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
     expect(wrapper.text()).toContain('Woven days');
@@ -79,7 +151,10 @@ describe('native catalogue screens', () => {
   it('keeps failed gallery loading distinct from an empty catalogue', async () => {
     vi.mocked(designApi.list).mockRejectedValue(new Error('Service unavailable'));
     const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
-    expect(wrapper.text()).toContain('Service unavailable');
+    expect(wrapper.text()).not.toContain('Service unavailable');
+    expect(wrapper.text()).toContain('Content unavailable');
+    expect(wrapper.find('[aria-busy="true"]').exists()).toBe(false);
+    expect(messages).toContain('Unable to load catalogues.');
     expect(wrapper.text()).toContain('Try again');
     expect(wrapper.text()).not.toContain('Create your first catalogue.');
     wrapper.unmount();
@@ -93,11 +168,13 @@ describe('native catalogue screens', () => {
     vi.mocked(designApi.list).mockRejectedValue(failure);
     vi.mocked(designApi.get).mockRejectedValue(failure);
     const gallery = await open(CatalogueGalleryPage, '/catalogues');
-    expect(gallery.wrapper.text()).toContain(expected);
+    expect(gallery.wrapper.text()).not.toContain(expected);
+    expect(messages).toContain(expected);
     expect(gallery.wrapper.text()).not.toContain('The catalogue service returned error 503.');
     gallery.wrapper.unmount();
     const designer = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
-    expect(designer.wrapper.text()).toContain(expected);
+    expect(designer.wrapper.text()).not.toContain(expected);
+    expect(messages).toContain(expected);
     expect(designer.wrapper.text()).not.toContain('The catalogue service returned error 503.');
     designer.wrapper.unmount();
   });
@@ -183,7 +260,8 @@ describe('native catalogue screens', () => {
     const { wrapper, router } = await open(CatalogueWebDesignerPage, '/catalogues/' + first.id + '/web');
     await router.push('/catalogues/22222222-2222-2222-2222-222222222222/web');
     await flushPromises();
-    expect(wrapper.text()).toContain('Catalogue B unavailable');
+    expect(wrapper.text()).not.toContain('Catalogue B unavailable');
+    expect(messages).toContain('Unable to save this catalogue.');
     expect(wrapper.text()).not.toContain('Save catalogue');
     expect(wrapper.find('input[maxlength="160"]').exists()).toBe(false);
     wrapper.unmount();

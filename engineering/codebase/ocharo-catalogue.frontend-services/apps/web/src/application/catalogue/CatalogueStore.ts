@@ -2,11 +2,12 @@ import { computed, ref, shallowRef } from 'vue';
 import type { CatalogueSettings, GarmentType } from '../../domain/catalogue/CatalogueModels';
 import { catalogueApi, describeFailure } from '../../integration/catalogue';
 import { useUiLocale } from '../shared/UseUiLocale';
+import { notifyError } from '../common/UseFeedback';
 import type { UiLocale } from '../../domain/shared/UiMessages';
 
 const { t, uiLocale } = useUiLocale();
 
-/** App-wide catalogue state: settings, and the one notice/error banner. */
+/** App-wide catalogue state: persisted settings and transient feedback. */
 const settings = shallowRef<CatalogueSettings | null>(null);
 const settingsRevision = ref(0);
 const sourceRoot = ref<string | null>(null);
@@ -22,7 +23,10 @@ async function loadSettings(force = false) {
       settings.value = result.value.settings;
       settingsRevision.value = result.value.revision;
       sourceRoot.value = result.value.sourceRoot;
-    } else error.value = describeFailure(result.failure, t);
+    } else {
+      error.value = describeFailure(result.failure, t);
+      notifyError(error.value);
+    }
   })().finally(() => {
     settingsLoad = null;
   });
@@ -47,6 +51,7 @@ export function useCatalogueStore() {
     fail(message: string) {
       notice.value = null;
       error.value = message;
+      notifyError(message);
     },
     succeed(message: string) {
       error.value = null;

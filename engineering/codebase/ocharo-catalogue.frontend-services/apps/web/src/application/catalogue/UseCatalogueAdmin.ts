@@ -20,15 +20,21 @@ export function useCatalogueAdmin() {
     report,
     exports: catalogueExports,
     async saveSettings(settings: CatalogueSettings) {
+      if (busy.value) return;
       busy.value = true;
-      const result = await catalogueApi.saveSettings(settings, store.settingsRevision.value);
-      busy.value = false;
-      if (!result.ok) return store.fail(describeFailure(result.failure, t));
-      store.settings.value = result.value.settings;
-      store.settingsRevision.value = result.value.revision;
-      store.succeed(t('Settings saved.'));
+      try {
+        const result = await catalogueApi.saveSettings(settings, store.settingsRevision.value);
+        if (!result.ok) return store.fail(describeFailure(result.failure, t));
+        store.settings.value = result.value.settings;
+        store.settingsRevision.value = result.value.revision;
+        store.succeed(t('Settings saved.'));
+        await store.loadSettings(true);
+      } finally {
+        busy.value = false;
+      }
     },
     async importWorkspace(updateExisting: boolean, includeReferenceImages: boolean) {
+      if (busy.value) return;
       busy.value = true;
       const result = await catalogueApi.importWorkspace(updateExisting, includeReferenceImages);
       busy.value = false;

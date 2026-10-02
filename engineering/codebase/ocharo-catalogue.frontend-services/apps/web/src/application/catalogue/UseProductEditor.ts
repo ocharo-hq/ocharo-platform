@@ -51,6 +51,13 @@ export function useProductEditor() {
     isNew.value = false;
   }
 
+  async function refreshAcknowledged(next: ProductDetail) {
+    const fresh = await catalogueApi.getProduct(next.document.id);
+    // Retain the server receipt if projection refresh fails: never retry a durable create automatically.
+    adopt(fresh.ok ? fresh.value : next);
+    return fresh.ok ? null : describeFailure(fresh.failure, t);
+  }
+
   async function loadHistory() {
     if (!detail.value) return;
     const result = await catalogueApi.revisions(detail.value.document.id);
@@ -107,17 +114,20 @@ export function useProductEditor() {
         isNew.value || !detail.value
           ? await catalogueApi.createProduct(payload)
           : await catalogueApi.updateProduct(detail.value.document.id, payload);
-      saving.value = false;
       if (!result.ok) {
+        saving.value = false;
         store.fail(describeFailure(result.failure, t));
         return null;
       }
-      adopt(result.value);
+      const refreshError = await refreshAcknowledged(result.value);
       await loadHistory();
       store.succeed(`${t('Saved')} · ${result.value.document.id} · ${t('Revision')} ${result.value.revision}`);
+      if (refreshError) store.fail(refreshError);
+      saving.value = false;
       return result.value.document.id;
     },
     async upload(files: FileList | File[], role: MediaRole) {
+      if (saving.value || uploading.value) return;
       if (!detail.value) return store.fail(t('Save the product before adding images.'));
       if (dirty.value) return store.fail(t('Save your changes before adding images.'));
       uploading.value = true;
@@ -127,23 +137,30 @@ export function useProductEditor() {
           store.fail(`${file.name}: ${describeFailure(result.failure, t)}`);
           break;
         }
-        adopt(result.value);
+        const refreshError = await refreshAcknowledged(result.value);
+        if (refreshError) store.fail(refreshError);
       }
       uploading.value = false;
       await loadHistory();
     },
     async restore(revision: number) {
-      if (!detail.value) return;
+      if (!detail.value || saving.value || uploading.value) return;
+      saving.value = true;
       const result = await catalogueApi.restore(detail.value.document.id, revision, detail.value.revision);
-      if (!result.ok) return store.fail(describeFailure(result.failure, t));
-      adopt(result.value);
+      if (!result.ok) {
+        saving.value = false;
+        return store.fail(describeFailure(result.failure, t));
+      }
+      const refreshError = await refreshAcknowledged(result.value);
       await loadHistory();
+      saving.value = false;
       store.succeed(
         t('Restored revision {revision} as new revision {newRevision}.', {
           revision,
           newRevision: result.value.revision,
         }),
       );
+      if (refreshError) store.fail(refreshError);
     },
     reset() {
       if (detail.value) adopt(detail.value);

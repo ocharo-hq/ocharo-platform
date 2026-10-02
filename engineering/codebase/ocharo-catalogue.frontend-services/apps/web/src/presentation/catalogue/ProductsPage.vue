@@ -6,6 +6,7 @@ import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { useCatalogueStore, useProductList, useCollections } from '../../application/catalogue';
 import { formatUzs, statusLabels } from '../../domain/catalogue/CatalogueRules';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
+import RequestUnavailable from '../common/RequestUnavailable.vue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
 import StatusBadge from './components/StatusBadge.vue';
@@ -112,9 +113,30 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
       class="panel mt-3 flex flex-wrap items-center gap-3 border-primary/30 bg-primary-soft/40 p-4 text-sm"
     >
       <span class="font-semibold">{{ list.selectedCount.value }} · {{ t('Products') }}:</span>
-      <button class="btn-outline" @click="list.setStatus('active')">{{ t('Activate') }}</button>
-      <button class="btn-outline" @click="list.setStatus('draft')">{{ t('Move to drafts') }}</button>
-      <button class="btn-outline" @click="list.setStatus('archived')">{{ t('Archive') }}</button>
+      <button
+        class="btn-outline"
+        :disabled="!!list.pending.value"
+        :aria-busy="list.pending.value === 'status:active'"
+        @click="list.setStatus('active')"
+      >
+        {{ list.pending.value === 'status:active' ? t('Working…') : t('Activate') }}
+      </button>
+      <button
+        class="btn-outline"
+        :disabled="!!list.pending.value"
+        :aria-busy="list.pending.value === 'status:draft'"
+        @click="list.setStatus('draft')"
+      >
+        {{ list.pending.value === 'status:draft' ? t('Working…') : t('Move to drafts') }}
+      </button>
+      <button
+        class="btn-outline"
+        :disabled="!!list.pending.value"
+        :aria-busy="list.pending.value === 'status:archived'"
+        @click="list.setStatus('archived')"
+      >
+        {{ list.pending.value === 'status:archived' ? t('Working…') : t('Archive') }}
+      </button>
       <span class="mx-2 h-6 w-px bg-border" />
       <label class="flex items-center gap-2"
         >{{ t('Price')
@@ -130,21 +152,23 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
           { value: 'wholesale', label: t('10+ pieces') },
         ]"
       />
-      <button class="btn-primary" @click="list.adjustPrices('percent', percent, 1000, tier || null)">
-        {{ t('Apply (round to 1,000)') }}
+      <button
+        class="btn-primary"
+        :disabled="!!list.pending.value"
+        :aria-busy="list.pending.value === 'prices'"
+        @click="list.adjustPrices('percent', percent, 1000, tier || null)"
+      >
+        {{ list.pending.value === 'prices' ? t('Working…') : t('Apply (round to 1,000)') }}
       </button>
     </div>
 
-    <ContentSkeleton
-      v-if="list.loading.value && !list.products.value.length"
-      :label="t('Loading products')"
-      :cards="6"
-    />
+    <ContentSkeleton v-if="list.loading.value" :label="t('Loading products')" :cards="6" />
+    <RequestUnavailable v-else-if="list.loadFailed.value" :retained="!!list.products.value.length" @retry="list.load" />
     <p v-else-if="!list.products.value.length" class="panel mt-6 p-10 text-center text-sm text-muted-foreground">
       {{ t('No products found. Clear filters or import products in Settings.') }}
     </p>
 
-    <ul class="mt-6 grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+    <ul v-if="!list.loading.value" class="mt-6 grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
       <li
         v-for="product in list.products.value"
         :key="product.id"
@@ -165,6 +189,8 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
           class="absolute right-3 top-3 z-10 rounded-md bg-card/90 p-1 text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 hover:text-primary focus:opacity-100"
           :aria-label="`${t('Duplicate')} ${product.id}`"
           :title="t('Duplicate as a new variant')"
+          :disabled="!!list.pending.value"
+          :aria-busy="list.pending.value === `duplicate:${product.id}`"
           @click="duplicate(product.id)"
         >
           <Icon :icon="Copy" :size="16" />

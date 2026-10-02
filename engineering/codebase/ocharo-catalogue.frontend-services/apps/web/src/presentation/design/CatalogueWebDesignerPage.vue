@@ -109,7 +109,6 @@ function reorderProduct(index: number, delta: number) {
   <ContentSkeleton v-if="editor.loading.value" :label="t('Loading catalogue')" :cards="3" />
   <section v-else-if="!editor.snapshot.value" class="panel">
     <h1>{{ t('Unable to open this catalogue.') }}</h1>
-    <p>{{ editor.error.value }}</p>
     <button class="btn-outline" @click="editor.load">{{ t('Try again') }}</button>
   </section>
   <section v-else class="native-designer">

@@ -84,7 +84,6 @@ function locale(value: string) {
     ><button class="btn-ghost" @click="editor.dismissRecovery">{{ t('Dismiss') }}</button>
   </div>
   <p v-if="editor.notice.value" role="status" class="notice">{{ editor.notice.value }}</p>
-  <p v-if="editor.error.value" role="status" class="error">{{ t(editor.error.value) }}</p>
   <details class="panel publication">
     <summary>{{ t('Publication and saved history') }}</summary>
     <p>

@@ -44,7 +44,12 @@ onMounted(() => sheet.load());
           }}
         </p>
       </div>
-      <button class="btn-primary" :disabled="sheet.dirtyCount.value === 0" @click="sheet.saveAll()">
+      <button
+        class="btn-primary"
+        :disabled="sheet.dirtyCount.value === 0 || sheet.busy.value"
+        :aria-busy="sheet.busy.value"
+        @click="sheet.saveAll()"
+      >
         <Icon :icon="Save" :size="15" />{{ t('Save changes ({count})', { count: sheet.dirtyCount.value }) }}
       </button>
     </div>
@@ -89,11 +94,14 @@ onMounted(() => sheet.load());
                 ><input
                   type="checkbox"
                   :checked="item.row.stock !== null"
+                  :disabled="item.saving"
                   @change="sheet.track(item, ($event.target as HTMLInputElement).checked)"
                 />{{ t('Track quantities') }}</label
               >
               <label class="mt-1 flex items-center gap-1.5"
-                ><input v-model="item.row.madeToOrder" type="checkbox" />{{ t('Made to order') }}</label
+                ><input v-model="item.row.madeToOrder" :disabled="item.saving" type="checkbox" />{{
+                  t('Made to order')
+                }}</label
               >
             </td>
             <td v-for="size in allSizes" :key="size" class="px-1 py-2 text-center">
@@ -103,7 +111,7 @@ onMounted(() => sheet.load());
                 type="number"
                 min="0"
                 class="field w-16 px-2 text-center"
-                :disabled="item.row.stock === null"
+                :disabled="item.row.stock === null || item.saving"
                 :aria-label="t('Quantity for {product}, size {size}', { product: item.row.id, size })"
                 @input="sheet.setQuantity(item, size, Number(($event.target as HTMLInputElement).value))"
               />
@@ -118,9 +126,6 @@ onMounted(() => sheet.load());
               <button class="btn-outline" :disabled="!sheet.isDirty(item) || item.saving" @click="sheet.save(item)">
                 {{ item.saving ? t('Saving…') : t('Save') }}
               </button>
-              <p v-if="item.error" class="mt-1 max-w-40 text-left text-xs text-destructive" role="alert">
-                {{ t(item.error) }}
-              </p>
             </td>
           </tr>
         </tbody>

@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-vue-next';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
+import RequestUnavailable from '../common/RequestUnavailable.vue';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { useCollections, useProductList, type CollectionDraft } from '../../application/catalogue';
 
@@ -23,6 +24,7 @@ function edit(value: CollectionDraft) {
   baseline.value = JSON.stringify(value);
 }
 async function close() {
+  if (collections.busy.value) return;
   if (
     draft.value &&
     JSON.stringify(draft.value) !== baseline.value &&
@@ -62,8 +64,7 @@ async function remove(id: string) {
     }))
   )
     return;
-  await collections.remove(id);
-  draft.value = null;
+  if (await collections.remove(id)) draft.value = null;
 }
 onMounted(async () => {
   await Promise.all([collections.load(), list.load()]);
@@ -84,8 +85,13 @@ onMounted(async () => {
         <Icon :icon="Plus" :size="15" />{{ t('New collection') }}
       </button>
     </div>
-    <ContentSkeleton v-if="loading" :cards="3" />
+    <ContentSkeleton v-if="loading || collections.loading.value" :cards="3" />
     <div v-else class="mt-6">
+      <RequestUnavailable
+        v-if="collections.loadFailed.value"
+        :retained="!!collections.collections.value.length"
+        @retry="collections.load"
+      />
       <ul class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <li v-for="c in collections.collections.value" :key="c.document.id">
           <button
@@ -114,6 +120,8 @@ onMounted(async () => {
 
       <Modal
         :open="!!draft"
+        :dismiss-on-escape="!collections.busy.value"
+        :dismiss-on-outside-click="!collections.busy.value"
         @update:open="
           (value) => {
             if (!value) void close();
@@ -128,91 +136,97 @@ onMounted(async () => {
             <ModalTitle class="font-editorial text-2xl">
               {{ draft.expectedRevision === null ? t('New collection') : draft.names.uz }}
             </ModalTitle>
-            <button class="btn-ghost" :aria-label="t('Close')" @click="close"><Icon :icon="X" :size="16" /></button>
+            <button class="btn-ghost" :disabled="collections.busy.value" :aria-label="t('Close')" @click="close">
+              <Icon :icon="X" :size="16" />
+            </button>
           </div>
-          <div class="mt-4 grid gap-4 sm:grid-cols-3">
-            <div>
-              <label class="label" for="c-uz">{{ t('Name (uz)') }}</label
-              ><input id="c-uz" v-model="draft.names.uz" class="field" />
+          <fieldset :disabled="collections.busy.value" class="min-w-0 border-0 p-0">
+            <div class="mt-4 grid gap-4 sm:grid-cols-3">
+              <div>
+                <label class="label" for="c-uz">{{ t('Name (uz)') }}</label
+                ><input id="c-uz" v-model="draft.names.uz" class="field" />
+              </div>
+              <div>
+                <label class="label" for="c-ru">{{ t('Name (ru)') }}</label
+                ><input id="c-ru" v-model="draft.names.ru" class="field" />
+              </div>
+              <div>
+                <label class="label" for="c-en">{{ t('Name (en)') }}</label
+                ><input id="c-en" v-model="draft.names.en" class="field" />
+              </div>
             </div>
-            <div>
-              <label class="label" for="c-ru">{{ t('Name (ru)') }}</label
-              ><input id="c-ru" v-model="draft.names.ru" class="field" />
+            <div class="mt-4 grid gap-4 sm:grid-cols-[1fr_140px]">
+              <div>
+                <label class="label" for="c-desc">{{ t('Description') }}</label
+                ><textarea id="c-desc" v-model="draft.description" rows="2" class="field" />
+              </div>
+              <div>
+                <label class="label" for="c-order">{{ t('Order') }}</label
+                ><input id="c-order" v-model.number="draft.sortOrder" type="number" class="field" />
+              </div>
             </div>
-            <div>
-              <label class="label" for="c-en">{{ t('Name (en)') }}</label
-              ><input id="c-en" v-model="draft.names.en" class="field" />
-            </div>
-          </div>
-          <div class="mt-4 grid gap-4 sm:grid-cols-[1fr_140px]">
-            <div>
-              <label class="label" for="c-desc">{{ t('Description') }}</label
-              ><textarea id="c-desc" v-model="draft.description" rows="2" class="field" />
-            </div>
-            <div>
-              <label class="label" for="c-order">{{ t('Order') }}</label
-              ><input id="c-order" v-model.number="draft.sortOrder" type="number" class="field" />
-            </div>
-          </div>
-          <label class="mt-4 flex items-center gap-2 text-sm"
-            ><input v-model="draft.isPublished" type="checkbox" />{{ t('Show in the public catalogue feed') }}</label
-          >
-
-          <h3 class="mt-6 text-sm font-semibold">{{ t('Product order') }}</h3>
-          <div class="mt-2 flex gap-2">
-            <CatalogueSelect
-              v-model="pick"
-              :label="t('Choose a product…')"
-              :options="[
-                { value: '', label: t('Choose a product…') },
-                ...available.map((p) => ({ value: p.id, label: (p.nameUz ?? p.id) + ' — ' + p.id })),
-              ]"
-            />
-            <button class="btn-outline" :disabled="!pick" @click="add">{{ t('Add') }}</button>
-          </div>
-          <ol class="mt-3 space-y-2">
-            <li
-              v-for="(id, index) in draft.productIds"
-              :key="id"
-              class="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
+            <label class="mt-4 flex items-center gap-2 text-sm"
+              ><input v-model="draft.isPublished" type="checkbox" />{{ t('Show in the public catalogue feed') }}</label
             >
-              <span class="w-6 text-xs text-muted-foreground">{{ index + 1 }}</span>
-              <img
-                v-if="byId.get(id)?.primaryPreviewUrl"
-                :src="byId.get(id)!.primaryPreviewUrl!"
-                alt=""
-                class="h-10 w-8 object-contain"
+
+            <h3 class="mt-6 text-sm font-semibold">{{ t('Product order') }}</h3>
+            <div class="mt-2 flex gap-2">
+              <CatalogueSelect
+                v-model="pick"
+                :label="t('Choose a product…')"
+                :options="[
+                  { value: '', label: t('Choose a product…') },
+                  ...available.map((p) => ({ value: p.id, label: (p.nameUz ?? p.id) + ' — ' + p.id })),
+                ]"
               />
-              <span class="flex-1 text-sm"
-                >{{ byId.get(id)?.nameUz ?? id }} <span class="text-xs text-muted-foreground">{{ id }}</span></span
+              <button class="btn-outline" :disabled="!pick" @click="add">{{ t('Add') }}</button>
+            </div>
+            <ol class="mt-3 space-y-2">
+              <li
+                v-for="(id, index) in draft.productIds"
+                :key="id"
+                class="flex items-center gap-3 rounded-lg border border-border px-3 py-2"
               >
-              <button class="btn-ghost px-1.5" :aria-label="t('Move up')" @click="move(index, -1)">
-                <Icon :icon="ArrowUp" :size="13" />
-              </button>
-              <button class="btn-ghost px-1.5" :aria-label="t('Move down')" @click="move(index, 1)">
-                <Icon :icon="ArrowDown" :size="13" />
+                <span class="w-6 text-xs text-muted-foreground">{{ index + 1 }}</span>
+                <img
+                  v-if="byId.get(id)?.primaryPreviewUrl"
+                  :src="byId.get(id)!.primaryPreviewUrl!"
+                  alt=""
+                  class="h-10 w-8 object-contain"
+                />
+                <span class="flex-1 text-sm"
+                  >{{ byId.get(id)?.nameUz ?? id }} <span class="text-xs text-muted-foreground">{{ id }}</span></span
+                >
+                <button class="btn-ghost px-1.5" :aria-label="t('Move up')" @click="move(index, -1)">
+                  <Icon :icon="ArrowUp" :size="13" />
+                </button>
+                <button class="btn-ghost px-1.5" :aria-label="t('Move down')" @click="move(index, 1)">
+                  <Icon :icon="ArrowDown" :size="13" />
+                </button>
+                <button
+                  class="btn-ghost px-1.5 text-destructive"
+                  :aria-label="t('Remove product')"
+                  @click="draft.productIds.splice(index, 1)"
+                >
+                  <Icon :icon="X" :size="13" />
+                </button>
+              </li>
+            </ol>
+            <div class="mt-6 flex items-center gap-3">
+              <button class="btn-primary" :disabled="collections.busy.value || !draft.names.uz.trim()" @click="save">
+                {{ collections.busy.value ? t('Saving…') : t('Save') }}
               </button>
               <button
-                class="btn-ghost px-1.5 text-destructive"
-                :aria-label="t('Remove product')"
-                @click="draft.productIds.splice(index, 1)"
+                v-if="draft.expectedRevision !== null && draft.id"
+                class="btn-ghost ml-auto text-destructive"
+                :disabled="collections.busy.value"
+                :aria-busy="collections.busy.value"
+                @click="remove(draft.id)"
               >
-                <Icon :icon="X" :size="13" />
+                <Icon :icon="Trash2" :size="14" />{{ t('Delete') }}
               </button>
-            </li>
-          </ol>
-          <div class="mt-6 flex items-center gap-3">
-            <button class="btn-primary" :disabled="collections.busy.value || !draft.names.uz.trim()" @click="save">
-              {{ t('Save') }}
-            </button>
-            <button
-              v-if="draft.expectedRevision !== null && draft.id"
-              class="btn-ghost ml-auto text-destructive"
-              @click="remove(draft.id)"
-            >
-              <Icon :icon="Trash2" :size="14" />{{ t('Delete') }}
-            </button>
-          </div>
+            </div>
+          </fieldset>
         </ModalContent></Modal
       >
     </div>

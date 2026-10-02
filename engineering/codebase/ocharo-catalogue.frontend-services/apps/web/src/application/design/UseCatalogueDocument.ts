@@ -11,6 +11,7 @@ import {
 } from '../../integration/design/DesignApi';
 import { inspectDesign } from '../../integration/design/DesignPreflight';
 import { describeFailure } from '../../integration/catalogue/CatalogueApi';
+import { uiMessages } from '../../domain/shared/UiMessages';
 import type { DesignPreflightReport } from '../../domain/design/DesignPreflight';
 import { exportDesignPdf, exportDesignPng, renderCatalogueBundle } from '../../integration/design/DesignExport';
 import {
@@ -29,7 +30,7 @@ export function describeDesignFailure(
 ): string {
   return cause instanceof DesignRequestError
     ? describeFailure(cause.failure, translate)
-    : translate(cause instanceof Error ? cause.message : fallback);
+    : translate(cause instanceof Error && Object.hasOwn(uiMessages, cause.message) ? cause.message : fallback);
 }
 export function useCatalogueDocument() {
   const route = useRoute(),
@@ -164,7 +165,9 @@ export function useCatalogueDocument() {
       if (!document.value || !snapshot.value) return;
       const next = source.value ? refreshCatalogue(snapshot.value, source.value.products) : snapshot.value;
       const saved = await designApi.save(document.value.id, title.value.trim(), next, document.value.revision);
-      accept(saved);
+      // A successful write is durable even when its separate detail refresh fails.
+      document.value = { ...document.value, revision: saved.revision };
+      accept(await designApi.get(saved.id));
       sessionStorage.removeItem(key());
       recovery.value = null;
       notice.value = t('Catalogue saved.');

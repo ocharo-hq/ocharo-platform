@@ -1,0 +1,21 @@
+/* First-paint colors match bootstrap/index.css before the application bundle loads. */
+html {
+  background: #f5f6fa;
+  color-scheme: light;
+}
+body,
+#root {
+  background: inherit;
+  margin: 0;
+  min-height: 100dvh;
+}
+html.dark {
+  background: #141416;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  html:not(.light):not(.dark) {
+    background: #141416;
+    color-scheme: dark;
+  }
+}

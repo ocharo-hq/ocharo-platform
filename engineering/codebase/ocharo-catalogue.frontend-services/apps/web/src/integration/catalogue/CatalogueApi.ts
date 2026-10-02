@@ -47,14 +47,22 @@ const isObject = (value: unknown) => typeof value === 'object' && value !== null
 const isArray = (value: unknown) => Array.isArray(value);
 const hasDocument = (value: unknown) => isObject(value) && isObject((value as { document?: unknown }).document);
 
-/** Reads a human message from an API failure (ProblemDetails detail first). */
+/** Maps request failures to safe interface copy; diagnostic ProblemDetails remain on the failure object. */
 export function describeFailure(
   failure: ApiFailure,
   translate: (source: string, variables?: Record<string, string | number>) => string = (source, variables) =>
     source.replace(/\{(\w+)\}/g, (match, key: string) => String(variables?.[key] ?? match)),
 ): string {
-  const detail = failure.problem?.['detail'];
-  if (typeof detail === 'string' && detail.length > 0) return detail;
+  const messages: Record<number, string> = {
+    400: 'Check the form fields and try again.',
+    401: 'Your session is no longer valid. Sign in again.',
+    403: 'You do not have permission to perform this action.',
+    404: 'The requested item is unavailable. Refresh and try again.',
+    409: 'This item changed elsewhere. Reload before saving.',
+    422: 'Check the form fields and try again.',
+    429: 'Too many requests. Wait a moment and try again.',
+  };
+  if (messages[failure.status]) return translate(messages[failure.status]!);
   if (failure.code === 'transport')
     return translate('Could not connect to the catalogue service. Check that it is running.');
   return failure.status > 0

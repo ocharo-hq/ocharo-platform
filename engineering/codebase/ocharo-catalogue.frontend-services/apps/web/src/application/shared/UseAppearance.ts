@@ -15,6 +15,7 @@ function applyAppearance(): void {
     appearance.value === 'dark' ||
     (appearance.value === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   document.documentElement.classList.toggle('dark', dark.value);
+  document.documentElement.classList.toggle('light', !dark.value);
   document.documentElement.style.colorScheme = dark.value ? 'dark' : 'light';
 }
 

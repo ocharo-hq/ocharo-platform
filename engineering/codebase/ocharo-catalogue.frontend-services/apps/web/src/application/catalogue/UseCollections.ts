@@ -20,16 +20,26 @@ export function useCollections() {
   const { t } = useUiLocale();
   const collections = shallowRef<CollectionDetail[]>([]);
   const busy = ref(false);
+  const loading = ref(false);
+  const loadFailed = ref(false);
 
   async function load() {
+    loading.value = true;
+    loadFailed.value = false;
     const result = await catalogueApi.listCollections();
+    loading.value = false;
     if (result.ok) collections.value = result.value;
-    else store.fail(describeFailure(result.failure, t));
+    else {
+      loadFailed.value = true;
+      store.fail(describeFailure(result.failure, t));
+    }
   }
 
   return {
     collections,
     busy,
+    loading,
+    loadFailed,
     load,
     blank(): CollectionDraft {
       return {
@@ -46,6 +56,7 @@ export function useCollections() {
       return { ...structuredClone(detail.document), id: detail.document.id, expectedRevision: detail.revision };
     },
     async save(draft: CollectionDraft) {
+      if (busy.value) return null;
       busy.value = true;
       const result = await catalogueApi.saveCollection(draft.expectedRevision === null ? null : draft.id, {
         expectedRevision: draft.expectedRevision,
@@ -66,10 +77,20 @@ export function useCollections() {
       return result.value;
     },
     async remove(id: string) {
-      const result = await catalogueApi.deleteCollection(id);
-      if (!result.ok) return store.fail(describeFailure(result.failure, t));
-      store.succeed(t('Collection deleted. Its products remain.'));
-      await load();
+      if (busy.value) return false;
+      busy.value = true;
+      try {
+        const result = await catalogueApi.deleteCollection(id);
+        if (!result.ok) {
+          store.fail(describeFailure(result.failure, t));
+          return false;
+        }
+        store.succeed(t('Collection deleted. Its products remain.'));
+        await load();
+        return true;
+      } finally {
+        busy.value = false;
+      }
     },
   };
 }

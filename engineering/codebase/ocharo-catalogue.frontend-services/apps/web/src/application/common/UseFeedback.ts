@@ -11,6 +11,8 @@ const pending = shallowRef<Confirmation | null>(null);
 let settle: ((accepted: boolean) => void) | null = null;
 export const confirmation = readonly(pending);
 export const feedbackBus = createFeedbackBus();
+const recentErrors = new Map<string, number>();
+const errorDurationMs = 10_000;
 
 /** Asks through the app modal; concurrent destructive intents are rejected. */
 export function requestConfirmation(
@@ -36,13 +38,24 @@ export function resolveConfirmation(accepted: boolean): void {
 }
 /** Publishes safe, translated errors through the explicitly mounted SDK host. */
 export function notifyError(message: string, key = message): void {
-  if (!message || message === 'The request was cancelled. Your edits have been retained.') return;
+  const { t } = useUiLocale();
+  if (
+    !message ||
+    message === t('The request was cancelled. Your edits have been retained.') ||
+    message === t('The operation was cancelled.')
+  )
+    return;
+  const now = Date.now();
+  for (const [id, time] of recentErrors) if (now - time >= errorDurationMs) recentErrors.delete(id);
+  const identity = `${useUiLocale().uiLocale.value}:${key}`;
+  if (recentErrors.has(identity)) return;
+  recentErrors.set(identity, now);
   feedbackBus.notify({
     tone: 'danger',
     title: useUiLocale().t('Could not complete the request'),
     description: message,
-    id: key,
-    durationMs: 10000,
+    id: identity,
+    durationMs: errorDurationMs,
   });
 }
 /** Emits each changed failure once; field validation stays beside its field. */

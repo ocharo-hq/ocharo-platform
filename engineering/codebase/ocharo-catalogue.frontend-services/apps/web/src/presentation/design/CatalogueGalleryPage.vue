@@ -16,6 +16,7 @@ import {
 } from '../../domain/design/EditorModels';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
+import RequestUnavailable from '../common/RequestUnavailable.vue';
 defineOptions({ name: 'CatalogueGalleryPage' });
 const router = useRouter(),
   { t, uiLocale } = useUiLocale(),
@@ -24,7 +25,8 @@ const documents = ref<DesignSummary[]>([]),
   loading = ref(true),
   busy = ref(false),
   query = ref(''),
-  loadError = ref('');
+  loadFailed = ref(false),
+  pendingAction = ref('');
 const selected = ref<DesignDocument | null>(null),
   name = ref(''),
   locale = ref<CatalogueLanguage>('uz'),
@@ -32,6 +34,7 @@ const selected = ref<DesignDocument | null>(null),
   dialogOpen = ref(false),
   baseline = ref(''),
   slugError = ref('');
+let loadGeneration = 0;
 const languageOptions = catalogueLanguages.map((item) => ({ value: item.code, label: item.label }));
 const serialize = () => JSON.stringify({ name: name.value, locale: locale.value, metadata: metadata.value });
 const dirty = computed(() => dialogOpen.value && serialize() !== baseline.value),
@@ -48,14 +51,20 @@ function fail(cause: unknown) {
   return message;
 }
 async function load() {
+  const generation = ++loadGeneration;
   loading.value = true;
-  loadError.value = '';
+  loadFailed.value = false;
   try {
-    documents.value = await designApi.list(controller.signal);
+    const next = await designApi.list(controller.signal);
+    if (generation !== loadGeneration || controller.signal.aborted) return;
+    documents.value = next;
   } catch (cause) {
-    if (!controller.signal.aborted) loadError.value = fail(cause);
+    if (generation === loadGeneration && !controller.signal.aborted) {
+      loadFailed.value = true;
+      fail(cause);
+    }
   } finally {
-    loading.value = false;
+    if (generation === loadGeneration) loading.value = false;
   }
 }
 async function close() {
@@ -84,6 +93,7 @@ async function edit(item?: DesignSummary) {
     fail(cause);
   } finally {
     busy.value = false;
+    pendingAction.value = '';
   }
 }
 function nameChanged() {
@@ -112,6 +122,7 @@ async function save() {
   if (metadata.value.outputs.pdf && !snapshot.pages.length)
     snapshot.pages = createCatalogue(name.value.trim(), snapshot.locale, metadata.value).pages;
   busy.value = true;
+  pendingAction.value = 'save';
   try {
     await designApi.save(selected.value?.id ?? null, name.value.trim(), snapshot, selected.value?.revision);
     dialogOpen.value = false;
@@ -120,11 +131,13 @@ async function save() {
     fail(cause);
   } finally {
     busy.value = false;
+    pendingAction.value = '';
   }
 }
 async function duplicate(item: DesignSummary) {
   if (busy.value) return;
   busy.value = true;
+  pendingAction.value = `duplicate:${item.id}`;
   try {
     await designApi.duplicate(item.id);
     await load();
@@ -132,11 +145,13 @@ async function duplicate(item: DesignSummary) {
     fail(cause);
   } finally {
     busy.value = false;
+    pendingAction.value = '';
   }
 }
 async function activate(item: DesignSummary) {
   if (busy.value) return;
   busy.value = true;
+  pendingAction.value = `activate:${item.id}`;
   try {
     const detail = await designApi.get(item.id);
     const snapshot = cloneSnapshot(detail.snapshot);
@@ -147,6 +162,7 @@ async function activate(item: DesignSummary) {
     fail(cause);
   } finally {
     busy.value = false;
+    pendingAction.value = '';
   }
 }
 async function remove(item: DesignSummary) {
@@ -161,6 +177,7 @@ async function remove(item: DesignSummary) {
   )
     return;
   busy.value = true;
+  pendingAction.value = `remove:${item.id}`;
   try {
     await designApi.archive(item.id, item.revision);
     await load();
@@ -168,6 +185,7 @@ async function remove(item: DesignSummary) {
     fail(cause);
   } finally {
     busy.value = false;
+    pendingAction.value = '';
   }
 }
 onBeforeRouteLeave(
@@ -204,11 +222,8 @@ onScopeDispose(() => {
     <label class="search"
       >{{ t('Find a catalogue') }}<input v-model="query" type="search" :placeholder="t('Name or slug')"
     /></label>
-    <div v-if="loadError" role="status" class="load-error">
-      <p>{{ loadError }}</p>
-      <button :disabled="loading" @click="load">{{ t('Try again') }}</button>
-    </div>
-    <ContentSkeleton v-if="loading && !documents.length" :cards="3" :label="t('Loading catalogues')" />
+    <RequestUnavailable v-if="loadFailed" :busy="loading" :retained="!!documents.length" @retry="load" />
+    <ContentSkeleton v-if="loading" :cards="3" :label="t('Loading catalogues')" />
     <div v-else class="catalogue-grid">
       <article v-for="item in visible" :key="item.id">
         <div class="catalogue-cover">
@@ -229,14 +244,23 @@ onScopeDispose(() => {
           </div>
           <div class="card-actions">
             <button :disabled="locked" @click="edit(item)">{{ t('Settings') }}</button
-            ><button :disabled="locked" @click="duplicate(item)">{{ t('Duplicate') }}</button
-            ><button :disabled="locked" @click="activate(item)">
-              {{ (item.catalogue?.isActive ?? true) ? t('Deactivate') : t('Activate') }}</button
-            ><button :disabled="locked" @click="remove(item)">{{ t('Remove') }}</button>
+            ><button :disabled="locked" :aria-busy="pendingAction === `duplicate:${item.id}`" @click="duplicate(item)">
+              {{ pendingAction === `duplicate:${item.id}` ? t('Working…') : t('Duplicate') }}</button
+            ><button :disabled="locked" :aria-busy="pendingAction === `activate:${item.id}`" @click="activate(item)">
+              {{
+                pendingAction === `activate:${item.id}`
+                  ? t('Working…')
+                  : (item.catalogue?.isActive ?? true)
+                    ? t('Deactivate')
+                    : t('Activate')
+              }}</button
+            ><button :disabled="locked" :aria-busy="pendingAction === `remove:${item.id}`" @click="remove(item)">
+              {{ pendingAction === `remove:${item.id}` ? t('Working…') : t('Remove') }}
+            </button>
           </div>
         </div>
       </article>
-      <p v-if="!visible.length && !loadError && !loading">
+      <p v-if="!visible.length && !loadFailed && !loading">
         {{ query ? t('No catalogues match this search.') : t('Create your first catalogue.') }}
       </p>
     </div>
@@ -289,7 +313,9 @@ onScopeDispose(() => {
               ><label><input v-model="metadata.isActive" type="checkbox" />{{ t('Active') }}</label>
             </div>
           </fieldset>
-          <button type="submit" :disabled="busy">{{ busy ? t('Saving…') : t('Save catalogue') }}</button>
+          <button type="submit" :disabled="busy" :aria-busy="pendingAction === 'save'">
+            {{ busy ? t('Saving…') : t('Save catalogue') }}
+          </button>
         </form></ModalContent
       ></Modal
     >

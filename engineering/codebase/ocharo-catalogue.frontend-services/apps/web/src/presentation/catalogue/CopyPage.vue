@@ -61,7 +61,12 @@ onMounted(() => grid.load());
           {{ t('A name is required before approval.') }}
         </p>
       </div>
-      <button class="btn-primary" :disabled="grid.dirtyCount.value === 0" @click="grid.saveAll()">
+      <button
+        class="btn-primary"
+        :disabled="grid.dirtyCount.value === 0 || grid.busy.value"
+        :aria-busy="grid.busy.value"
+        @click="grid.saveAll()"
+      >
         <Icon :icon="Save" :size="15" />{{ t('Save {count} changes', { count: grid.dirtyCount.value }) }}
       </button>
     </div>
@@ -129,6 +134,7 @@ onMounted(() => grid.load());
                 rows="3"
                 class="field"
                 :aria-label="`${item.row.id} ${languageNames[code]}`"
+                :disabled="item.saving"
                 @input="setValue(code, item, ($event.target as HTMLTextAreaElement).value)"
               ></textarea>
               <input
@@ -136,6 +142,7 @@ onMounted(() => grid.load());
                 :value="item.row.locales[code][field] ?? ''"
                 class="field"
                 :aria-label="`${item.row.id} ${languageNames[code]}`"
+                :disabled="item.saving"
                 @input="setValue(code, item, ($event.target as HTMLInputElement).value)"
               />
               <button
@@ -146,6 +153,7 @@ onMounted(() => grid.load());
                     : 'bg-muted text-muted-foreground',
                 ]"
                 :aria-pressed="item.row.locales[code].status === 'approved'"
+                :disabled="item.saving"
                 @click="toggleApproved(code, item)"
               >
                 <Icon v-if="item.row.locales[code].status === 'approved'" :icon="Check" :size="11" />
@@ -156,9 +164,6 @@ onMounted(() => grid.load());
               <button class="btn-outline" :disabled="!grid.isDirty(item) || item.saving" @click="grid.save(item)">
                 {{ item.saving ? t('Saving…') : t('Save') }}
               </button>
-              <p v-if="item.error" class="mt-2 max-w-40 text-left text-xs text-destructive" role="alert">
-                {{ item.error }}
-              </p>
             </td>
           </tr>
         </tbody>

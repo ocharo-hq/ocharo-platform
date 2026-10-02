@@ -21,7 +21,9 @@ describe('native catalogue design API', () => {
     const fetch = vi.fn(async () => reply(409, { detail: 'A newer revision exists.' })),
       api = createDesignApi(fetch as typeof globalThis.fetch),
       value = documentFixture();
-    await expect(api.save(value.id, value.title, value.snapshot, 2)).rejects.toThrow('A newer revision exists.');
+    await expect(api.save(value.id, value.title, value.snapshot, 2)).rejects.toThrow(
+      'This item changed elsewhere. Reload before saving.',
+    );
     expect(fetch).toHaveBeenCalledTimes(1);
   });
   it('sends fingerprint and exact page artifact filenames', async () => {
