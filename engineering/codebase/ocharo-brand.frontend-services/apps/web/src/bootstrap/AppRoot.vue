@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { watch } from 'vue';
 import { createFeedbackBus } from '@wow-two-beta/ui-vue/feedback';
-import { FeedbackToastHost } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { FeedbackToastHost, SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import BrandQueryState from '../presentation/common/BrandQueryState.vue';
 import BuildIdentity from '../presentation/common/BuildIdentity.vue';
 import { computed, onMounted } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
-import { CalendarHeart, ChevronRight, Image, LayoutDashboard, Palette, Plug, X } from 'lucide-vue-next';
+import { CalendarHeart, ChevronRight, Image, LayoutDashboard, Palette, Plug, RefreshCw, X } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { AppErrorBoundary, RouteAnnouncer } from '@wow-two-beta/ui-vue/router';
 import { useBrand } from '../application/brand';
@@ -15,7 +17,20 @@ import { platformLinks } from './PlatformLinks';
 defineOptions({ name: 'AppRoot' });
 const brand = useBrand();
 const feedbackBus = createFeedbackBus();
-watch(brand.error, message => { if (message) feedbackBus.notify({ id: message, tone: 'danger', title: 'So‘rovni bajarib bo‘lmadi', description: message, durationMs: 10000 }); }, { immediate: true });
+watch(
+  brand.error,
+  (message) => {
+    if (message)
+      feedbackBus.notify({
+        id: message,
+        tone: 'danger',
+        title: 'So‘rovni bajarib bo‘lmadi',
+        description: message,
+        durationMs: 10000,
+      });
+  },
+  { immediate: true },
+);
 const route = useRoute();
 const navigation = [
   { path: '/', label: 'Umumiy', icon: LayoutDashboard },
@@ -28,6 +43,12 @@ function isActive(path: string) {
   return path === '/' ? route.path === '/' : route.path.startsWith(path);
 }
 const section = computed(() => navigation.find((item) => isActive(item.path))?.label ?? 'Brend');
+const queryKind = computed(() => {
+  if (route.path.startsWith('/logos')) return 'logos';
+  if (route.path.startsWith('/appearances')) return 'appearances';
+  if (route.path.startsWith('/connect')) return 'connect';
+  return 'overview';
+});
 onMounted(() => brand.refresh());
 </script>
 
@@ -91,10 +112,25 @@ onMounted(() => brand.refresh());
           <Icon :icon="ChevronRight" :size="13" class="hidden text-muted-foreground sm:block" />
           <span class="text-xs font-semibold">{{ section }}</span>
         </div>
-        <span v-if="brand.draft.value" class="text-xs text-muted-foreground">
-          Nashr {{ brand.draft.value.latestRelease ?? '—' }} · {{ brand.pending.value.length }} ta nashr qilinmagan
-          o‘zgarish
-        </span>
+        <div class="flex items-center gap-4">
+          <span v-if="brand.draft.value" class="hidden text-xs text-muted-foreground sm:inline">
+            Nashr <SkeletonState v-if="brand.refreshing.value" class="inline-block h-4 w-4 align-middle" />
+            <template v-else>{{ brand.draft.value.latestRelease ?? '—' }}</template> ·
+            <SkeletonState v-if="brand.refreshing.value" class="inline-block h-4 w-4 align-middle" />
+            <template v-else>{{ brand.pending.value.length }}</template> ta nashr qilinmagan o‘zgarish
+          </span>
+          <form @submit.prevent="brand.refresh">
+            <Button
+              type="submit"
+              variant="outline"
+              :is-loading="brand.refreshing.value"
+              :is-disabled="brand.mutating.value"
+            >
+              <template #leading><Icon :icon="RefreshCw" :size="15" /></template>
+              Yangilash
+            </Button>
+          </form>
+        </div>
       </header>
       <nav aria-label="Mobil bo‘limlar" class="flex gap-2 overflow-x-auto border-b border-border px-5 py-3 lg:hidden">
         <RouterLink
@@ -120,10 +156,11 @@ onMounted(() => brand.refresh());
             <Icon :icon="X" :size="15" />
           </button>
         </div>
-        <div v-if="brand.refreshing.value" aria-busy="true" aria-label="Ma’lumot yangilanmoqda" class="grid gap-5 md:grid-cols-3"><div v-for="card in 3" :key="card" class="animate-pulse rounded-2xl border border-border bg-card p-6"><div class="h-5 w-2/3 rounded bg-muted" /><div class="mt-6 h-36 rounded bg-muted" /></div></div>
-        <section v-if="brand.loaded.value && !brand.draft.value && !brand.refreshing.value" class="panel"><h1>Ma’lumot mavjud emas</h1><button class="btn-primary mt-5" @click="brand.refresh">Qayta urinish</button></section>
-        <AppErrorBoundary v-show="!brand.refreshing.value">
-          <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
+        <AppErrorBoundary>
+          <RouterView v-slot="{ Component }">
+            <component :is="Component" v-if="brand.draft.value || route.path === '/identity'" :key="route.fullPath" />
+            <BrandQueryState v-else :state="brand.queryState.value" :kind="queryKind" />
+          </RouterView>
           <template #fallback="{ reset }">
             <section class="panel p-10 text-center">
               <h1 class="font-editorial text-2xl">Bu bo‘limni ochib bo‘lmadi.</h1>

@@ -265,8 +265,9 @@ async function exportFile(format: 'pdf'|'png'): Promise<void> {
     <DesignRecovery :recovery="store.recovery" :disabled="disabled" />
     <section v-if="library" class="saved-library catalogue-library" :aria-label="t('Saved designs')">
       <div class="library-heading"><div><h2>{{ t("Saved") }} {{ kind === 'catalogue' ? t('catalogues') : t("business cards") }}</h2><p>{{ t("Continue a saved design, or create a new one below.") }}</p></div><label class="field-label">{{ t("Find a saved design") }}<input v-model="librarySearch" type="search" :placeholder="t('Search by name')" maxlength="160"></label></div>
-      <ContentSkeleton v-if="store.loading.value" :cards="3" :label="t('Loading saved designs…')"/>
-      <p v-else-if="!savedDesigns.length&&!store.error.value">{{ librarySearch ? t("No saved designs match this name.") : t("No saved designs yet.") }}</p>
+      <Button variant="outline" :is-disabled="navigationLocked" :is-loading="store.loading.value" @click="store.list()">{{t("Refresh")}}</Button>
+      <ContentSkeleton v-if="store.loading.value&&!store.listLoaded.value" variant="rows" :cards="3" :label="t('Loading saved designs…')"/>
+      <p v-else-if="store.listLoaded.value&&!savedDesigns.length" class="query-label">{{ librarySearch ? t("No saved designs match this name.") : t("No saved designs yet.") }}</p><p v-else-if="!store.loading.value&&!store.listLoaded.value" class="query-label" role="status">{{t("Content unavailable. Try refreshing.")}}</p>
       <a v-for="doc in savedDesigns" :key="doc.id" class="saved-design" :href="designEditorUrl(workspace.organization.value!.id, kind, doc.id)" :aria-disabled="navigationLocked || undefined" @click="openDesignFromLink($event, doc.id)"><b>{{ doc.title }}</b><small>{{ t("Revision") }} {{ doc.revision }} · {{ new Date(doc.updatedAtUtc).toLocaleDateString() }}</small><span>{{ t("Open in editor →") }}</span></a>
     </section>
     <div v-if="!store.snapshot.value" class="template-launch">

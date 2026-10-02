@@ -24,6 +24,7 @@ const connecting = ref('');
 const brandId = ref('');
 const imports = ref<CreativeImport[]>([]);
 const loading = ref(false);
+const hasLoaded = ref(false);
 const products = ref<Product[]>([]);
 const productId = ref('');
 const manifestFile = ref<File | null>(null);
@@ -60,14 +61,14 @@ async function loadImports(): Promise<void> {
   const selected = brandId.value;
   const sequence = ++loadSequence;
   loading.value = true;
-  if (loadedBrand !== selected) { imports.value = []; products.value = []; productId.value = ''; loadedBrand = selected; }
+  if (loadedBrand !== selected) { imports.value = []; products.value = []; productId.value = ''; loadedBrand = selected; hasLoaded.value = false; }
   const [result, draft] = await Promise.all([api.imports(organization, selected, controller.signal), api.get(organization, selected, controller.signal)]);
   if (controller.signal.aborted || sequence !== loadSequence) return;
   loading.value = false;
   if (draft.ok) products.value = draft.value?.snapshot.products ?? [];
   else error.value = failureMessage(draft.failure);
   if (!products.value.some(item => item.document.id === productId.value)) productId.value = '';
-  if (result.ok) imports.value = result.value;
+  if (result.ok) { imports.value = result.value; hasLoaded.value = true; }
   else error.value = failureMessage(result.failure);
 }
 function selectFile(event: Event, kind: 'manifest' | 'image'): void {
@@ -111,7 +112,7 @@ async function importFiles(): Promise<void> {
     <p v-if="!apps.length" role="status" class="workspace-card p-5">{{ t("Connected apps are available from the configured local Ocharo workspace.") }}</p>
     <section class="space-y-4 border-t border-border pt-6">
       <div class="flex flex-wrap items-end justify-between gap-4"><div><h2 class="text-xl font-semibold">{{ t("Creative imports") }}</h2><p class="mt-1 text-sm text-muted-foreground">{{ t("Studio renders arrive as unreviewed images. Review their source and rights before adding them to your catalogue.") }}</p></div>
-        <label>{{ t("Brand") }}<select v-model="brandId" :disabled="blocked" class="native-select mt-2"><option value="">{{ t("Choose a brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
+        <Button variant="outline" :is-disabled="blocked||loading||!brandId" :is-loading="loading" @click="loadImports">{{t("Refresh")}}</Button><label>{{ t("Brand") }}<select v-model="brandId" :disabled="blocked" class="native-select mt-2"><option value="">{{ t("Choose a brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
       </div>
       <form v-if="workspace.canEdit.value && brandId" class="workspace-card grid gap-4 p-5 sm:grid-cols-2" @submit.prevent="importFiles">
         <label class="flex min-w-0 flex-col gap-2">{{ t("Studio manifest") }}<input :key="`manifest-${fileSelection}`" type="file" accept="application/json,.json" :disabled="blocked" class="block w-full min-w-0 rounded-lg border border-border bg-background p-3 text-sm file:mr-3" @change="selectFile($event, 'manifest')" /></label>
@@ -120,10 +121,10 @@ async function importFiles(): Promise<void> {
         <div class="flex items-end"><Button type="submit" :is-disabled="blocked || !manifestFile || !imageFile">{{ t(importing ? 'Importing…' : 'Import Studio image') }}</Button></div>
         <p class="text-xs text-muted-foreground sm:col-span-2">{{ t("Choose both files downloaded by Studio. The image fingerprint must match. Studio's author submission does not approve catalogue publication.") }}</p>
       </form>
-      <ContentSkeleton v-if="loading" :cards="2" :label="t('Loading creative imports…')"/>
-      <Button v-else-if="error&&!imports.length" variant="outline" @click="loadImports">{{t('Retry')}}</Button>
+      <ContentSkeleton v-if="loading&&!hasLoaded" variant="imports" :cards="2" :label="t('Loading creative imports…')"/>
+      <p v-else-if="!hasLoaded" role="status" class="query-label">{{t("Content unavailable. Try refreshing.")}}</p>
       <p v-else-if="!imports.length" class="empty-state">{{ t("No Studio renders have been imported for this brand.") }}</p>
-      <div v-else class="grid gap-4 sm:grid-cols-2"><article v-for="item in imports" :key="item.id" class="workspace-card space-y-3 p-5">
+      <div v-else :aria-busy="loading" class="grid gap-4 sm:grid-cols-2"><article v-for="item in imports" :key="item.id" class="workspace-card space-y-3 p-5">
         <img :src="`/api/organizations/${workspace.organization.value!.id}/media/${item.input.derivative.mediaId}/content`" :alt="t('Unreviewed Studio visualization')" class="h-48 w-full rounded-lg bg-muted object-contain"/>
         <h3 class="font-semibold">{{ item.input.productId || t('Unassigned render') }}</h3><p class="text-sm">{{ t(item.status) }} · {{ new Date(item.createdAt).toLocaleString(uiLocale) }}</p>
         <p class="text-xs text-muted-foreground">{{ t("Look") }} {{ item.input.source.lookId }} {{ t("· Revision") }} {{ item.input.source.revision }}</p>

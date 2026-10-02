@@ -81,6 +81,7 @@ function changeOrganization(event: Event): void {
               </option></select
             ><Badge v-if="workspace.organization.value" variant="outline">{{ t(workspace.organization.value.role) }}</Badge></label
           >
+          <Button size="sm" variant="outline" :is-disabled="access.busy.value || access.dirty.value || workspace.loading.value || workspace.refreshing.value" :is-loading="workspace.refreshing.value" @click="workspace.refresh()">{{ t("Refresh") }}</Button>
           <nav :aria-label="t('Workspace sections')" class="flex flex-wrap gap-1">
             <template v-if="location.organizationId"
               ><Button
@@ -104,15 +105,12 @@ function changeOrganization(event: Event): void {
           </nav>
         </div>
         <div>
-          <ContentSkeleton v-if="workspace.loading.value || workspace.refreshing.value" :label="t('Loading your workspace…')" />
-          <div v-if="!workspace.loading.value" v-show="!workspace.refreshing.value">
-          <section v-if="workspace.error.value" role="alert" class="workspace-card p-6">
-            <h1 class="text-xl font-semibold">{{ t("Workspace unavailable") }}</h1>
-            <Button class="mt-5" variant="outline" @click="access.navigate(currentPath)">{{ t("Reload workspace") }}</Button>
-          </section>
+          <ContentSkeleton v-if="workspace.initialLoading.value" :variant="location.section === 'products' ? 'form' : location.section === 'media' || location.section === 'catalogue' ? 'gallery' : 'rows'" :label="t('Loading your workspace…')" />
+          <div v-else :aria-busy="workspace.loading.value || workspace.refreshing.value">
+          <p v-if="workspace.error.value" role="status" class="query-label">{{ t("Workspace unavailable") }}</p>
           <slot v-else-if="location.section === 'system'" name="diagnostics" />
           <OrganizationPage v-else-if="!location.organizationId" :access="access" :workspace="workspace" :catalogue-entry="location.section === 'catalogue'" />
-          <section v-else-if="!workspace.organization.value" role="alert" class="workspace-card p-6">
+          <section v-else-if="!workspace.organization.value" role="status" class="query-label">
             <h1 class="text-xl font-semibold">{{ t("Organization unavailable") }}</h1>
             <p class="mt-3 text-sm text-muted-foreground">{{ t("Choose one of your current memberships.") }}</p>
           </section>

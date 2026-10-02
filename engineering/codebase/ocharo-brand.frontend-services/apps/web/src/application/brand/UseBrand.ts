@@ -17,44 +17,85 @@ const consumers = shallowRef<ConsumerView[]>([]);
 const kit = shallowRef<PublicBrand | null>(null);
 const error = ref<string | null>(null);
 const notice = ref<string | null>(null);
-const busy = ref(false);
+const mutating = ref(false);
 const loaded = ref(false);
 const refreshing = ref(false);
+const busy = computed(() => mutating.value || refreshing.value);
+const queryState = ref<'loading' | 'success' | 'unavailable'>('loading');
+let pendingRefresh: Promise<void> | null = null;
 
 async function run<T>(
   action: () => Promise<{ ok: true; value: T } | { ok: false; failure: Parameters<typeof describeFailure>[0] }>,
   message?: string,
 ) {
-  busy.value = true;
-  error.value = null;
-  const result = await action();
-  busy.value = false;
-  if (!result.ok) {
-    error.value = describeFailure(result.failure);
+  if (mutating.value) return null;
+  mutating.value = true;
+  try {
+    // UI commands are disabled during reads; direct callers wait for an older read to settle.
+    if (pendingRefresh) await pendingRefresh;
+    error.value = null;
+    const result = await action();
+    if (!result.ok) {
+      error.value = describeFailure(result.failure);
+      return null;
+    }
+    if (message) notice.value = message;
+    await refreshAfterMutation();
+    return result.value;
+  } catch {
+    error.value = 'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi; qayta urinib ko‘ring.';
     return null;
+  } finally {
+    mutating.value = false;
   }
-  if (message) notice.value = message;
-  return result.value;
 }
 
-async function refresh() {
+/** Coalesces explicit reads and preserves the last complete administrative snapshot on failure. */
+function refresh(): Promise<void> {
+  if (pendingRefresh) return pendingRefresh;
   refreshing.value = true;
-  try {
-  const [d, r, a, c, k] = await Promise.all([
-    brandApi.draft(),
-    brandApi.releases(),
-    brandApi.appearances(),
-    brandApi.consumers(),
-    brandApi.publicKit(),
-  ]);
-  if (d.ok) draft.value = d.value;
-  else error.value = describeFailure(d.failure);
-  if (r.ok) releases.value = r.value;
-  if (a.ok) appearances.value = a.value;
-  if (c.ok) consumers.value = c.value;
-  if (k.ok) kit.value = k.value;
-  loaded.value = true;
-  } finally { refreshing.value = false; }
+  error.value = null;
+  if (!draft.value) queryState.value = 'loading';
+  const minimum = new Promise<void>((resolve) => setTimeout(resolve, 400));
+  pendingRefresh = (async () => {
+    try {
+      const [d, r, a, c, k] = await Promise.all([
+        brandApi.draft(),
+        brandApi.releases(),
+        brandApi.appearances(),
+        brandApi.consumers(),
+        brandApi.publicKit(),
+      ]);
+      if (!d.ok || !r.ok || !a.ok || !c.ok) {
+        const failure = [d, r, a, c].find((result) => !result.ok);
+        if (failure && !failure.ok) error.value = describeFailure(failure.failure);
+        queryState.value = draft.value ? 'success' : 'unavailable';
+        return;
+      }
+      draft.value = d.value;
+      releases.value = r.value;
+      appearances.value = a.value;
+      consumers.value = c.value;
+      // The public kit may be absent before the first release; it is not an administrative read failure.
+      if (k.ok) kit.value = k.value;
+      queryState.value = 'success';
+    } catch {
+      error.value = 'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi; qayta urinib ko‘ring.';
+      queryState.value = draft.value ? 'success' : 'unavailable';
+    } finally {
+      await minimum;
+      loaded.value = true;
+      refreshing.value = false;
+      pendingRefresh = null;
+    }
+  })();
+  return pendingRefresh;
+}
+
+/** A command acknowledgement requires a read started after that acknowledgement. */
+async function refreshAfterMutation(): Promise<void> {
+  if (pendingRefresh) await pendingRefresh;
+  await refresh();
 }
 
 /** Shared brand store and commands. */
@@ -68,44 +109,43 @@ export function useBrand() {
     error,
     notice,
     busy,
+    mutating,
     loaded,
     refreshing,
+    queryState,
     urls: brandUrls,
-    refresh,
+    refresh: () => (mutating.value ? Promise.resolve() : refresh()),
     currentVersion: (slot: string) =>
       draft.value?.logos.find((v) => v.id === draft.value?.draft.currentLogos[slot]) ?? null,
     versionsFor: (slot: string) => draft.value?.logos.filter((v) => v.slot === slot) ?? [],
     pending: computed(() => (draft.value?.latestRelease ? draft.value.unpublishedChanges : ['Hali nashr qilinmagan'])),
-    async saveIdentity(identity: BrandIdentity) {
-      if (!draft.value) return;
+    async saveIdentity(identity: BrandIdentity, expectedRevision: number) {
+      if (!draft.value) return null;
       const view = await run(
-        () => brandApi.saveIdentity(draft.value!.revision, identity),
+        () => brandApi.saveIdentity(expectedRevision, identity),
         'Identitet saqlandi (qoralama). Ilovalar nashrdan keyin ko‘radi.',
       );
-      if (view) await refresh();
+      return view;
     },
     async upload(slot: string, file: File, note: string | null) {
       const version = await run(() => brandApi.upload(slot, file, note), `${file.name} yuklandi.`);
-      if (version) await refresh();
       return version;
     },
     async setCurrent(slot: string, versionId: string) {
       if (!draft.value) return;
-      const view = await run(
+      await run(
         () => brandApi.setCurrent(slot, draft.value!.revision, versionId),
         'Joriy fayl tanlandi — nashr qilinganda hamma ilovada almashadi.',
       );
-      if (view) await refresh();
     },
     async setStatus(versionId: string, status: string) {
-      if (await run(() => brandApi.setStatus(versionId, status))) await refresh();
+      await run(() => brandApi.setStatus(versionId, status));
     },
     async publish(note: string | null) {
       if (!draft.value) return;
       const release = await run(() => brandApi.publish(draft.value!.revision, note));
       if (release) {
         notice.value = `${release.version}-nashr chiqdi: ${release.changes.join('; ')}.`;
-        await refresh();
       }
     },
     async saveAppearance(body: {
@@ -120,11 +160,10 @@ export function useBrand() {
       linkUrl: string | null;
     }) {
       const saved = await run(() => brandApi.saveAppearance(body), 'Tadbir ko‘rinishi saqlandi.');
-      if (saved) await refresh();
       return saved;
     },
     async cancelAppearance(id: string) {
-      if (await run(() => brandApi.cancelAppearance(id), 'Tadbir bekor qilindi.')) await refresh();
+      await run(() => brandApi.cancelAppearance(id), 'Tadbir bekor qilindi.');
     },
   };
 }

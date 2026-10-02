@@ -83,3 +83,15 @@ body {
     transition-duration: 0.01ms;
   }
 }
+
+/* First-read outcomes reserve the route without an empty-state card. */
+.brand-query-region {
+  min-height: 24rem;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+.brand-query-region[aria-busy] {
+  display: block;
+  text-align: left;
+}

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useErrorToast } from "@/application/shared/UseFeedback";
 import ContentSkeleton from "@/presentation/shared/ContentSkeleton.vue";
+import { Button } from "@wow-two-beta/ui-vue/presentation/actions";
 import { computed, onScopeDispose, ref, watch } from "vue";
 import { useCommerce } from "@/application/workspace/UseCommerce";
 import {
@@ -58,6 +59,7 @@ const drafts = ref<CommerceDraft[]>([]),
   errors = ref<string[]>([]),
   warnings = ref<string[]>([]);
 const requestError = ref<string | null>(null);
+const hasLoaded = ref(false);
 useErrorToast(requestError);
 const brandId = ref(""),
   bindingProduct = ref(""),
@@ -200,6 +202,7 @@ async function load(): Promise<boolean> {
       } else requestError.value = failureMessage(result.failure);
     }
     drafts.value = [...retained.values()];
+    if (results.every(({ result }) => result.ok)) hasLoaded.value = true;
     return results.every(({ result }) => result.ok);
   } catch {
     if (request === sequence && !controller.signal.aborted)
@@ -389,6 +392,7 @@ function photo(elementId: string, event: Event): void {
     class="catalogue-settings"
     :aria-label="t('Catalogue content settings')"
   >
+    <div class="settings-toolbar"><Button variant="outline" :is-disabled="disabled || loading" :is-loading="loading" @click="load">{{t("Refresh")}}</Button></div>
     <fieldset :disabled="disabled || loading">
       <div class="settings-toolbar">
         <label
@@ -630,14 +634,12 @@ function photo(elementId: string, event: Event): void {
       </details>
     </fieldset>
     <ContentSkeleton
-      v-if="loading"
-      :cards="1"
+      v-if="loading && !hasLoaded"
+      variant="rows"
+      :cards="2"
       :label="t('Loading saved products…')"
     />
-    <div v-else-if="requestError && !source" class="editor-unavailable">
-      <p>{{ t("Saved products unavailable") }}</p>
-      <button type="button" @click="load">{{ t("Try again") }}</button>
-    </div>
+    <p v-else-if="requestError && !source" class="query-label" role="status">{{ t("Saved products unavailable") }}</p>
     <p v-for="error in errors" :key="error" class="editor-alert" role="alert">
       {{ translateDesignerNotice(error, t) }}
     </p>

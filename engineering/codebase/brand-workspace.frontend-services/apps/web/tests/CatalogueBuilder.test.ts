@@ -38,4 +38,12 @@ describe('catalogue selection workflow',()=>{
   await wrapper.findAll('button').find(button=>button.text()==='Create catalogue')!.trigger('click');
   expect(wrapper.get('[role="alert"]').text()).toContain('Choose one to 2');expect(wrapper.emitted('pages')).toBeUndefined();
  });
+ it('keeps chosen images when a same-brand refresh fails',async()=>{
+  mountBuilder();await flushPromises();await wrapper.get('.product-choice input').setValue(true);
+  api.get.mockResolvedValueOnce({ok:false,failure:{code:'transport',status:0,headers:new Headers()}});
+  await wrapper.findAll('button').find(button=>button.text()==='Refresh')!.trigger('click');await flushPromises();
+  expect((wrapper.get('.product-choice input').element as HTMLInputElement).checked).toBe(true);
+  expect(wrapper.text()).toContain('1 products selected');expect(wrapper.find('.skeleton-rows').exists()).toBe(false);
+ });
+
 });

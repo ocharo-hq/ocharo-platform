@@ -15,6 +15,7 @@ const props = defineProps<{ access: AccessControls; organizationId: string; docu
 const emit = defineEmits<{ restore: [copy: DesignRevisionCopy] }>();
 const panelId = useId(), pageId = useId();
 const expanded = ref(false), loading = ref(false), previewLoading = ref(false);
+const hasLoaded = ref(false);
 const revisions = ref<DesignRevision[]>([]), preview = shallowRef<DesignDocument | null>(null);
 const selected = ref<number | null>(null), pageIndex = ref(0), hasMore = ref(false);
 const listError = ref<string | null>(null), previewError = ref<string | null>(null);
@@ -29,7 +30,7 @@ const pageSize = 20;
 function cancel(): void {
   listSequence++; previewSequence++;
   listController?.abort(); previewController?.abort();
-  loading.value = false; previewLoading.value = false;
+  loading.value = false; previewLoading.value = false; hasLoaded.value = false;
 }
 function clear(): void {
   cancel(); revisions.value = []; preview.value = null; selected.value = null;
@@ -51,18 +52,19 @@ function toggle(): void {
 }
 async function load(older = false): Promise<void> {
   if (!props.document || locked.value || loading.value || !expanded.value) return;
-  if (!older) clear();
+  const requestedOffset = older ? nextOffset : 0;
   const documentId = props.document.id, organizationId = props.organizationId;
   const request = ++listSequence;
   listController?.abort(); const controller = new AbortController(); listController = controller;
   loading.value = true; listError.value = '';
   try {
-    const result = await props.access.api.getDesignRevisions(organizationId, documentId, controller.signal, nextOffset, pageSize);
+    const result = await props.access.api.getDesignRevisions(organizationId, documentId, controller.signal, requestedOffset, pageSize);
     if (disposed || controller.signal.aborted || request !== listSequence) return;
+    if (result.ok) hasLoaded.value = true;
     if (!result.ok) { listError.value = failureMessage(result.failure); return; }
     // Offset advances over server rows; de-duplication tolerates another editor appending a revision.
-    nextOffset += result.value.length;
-    const unique = new Map(revisions.value.map(item => [item.revision, item]));
+    nextOffset = requestedOffset + result.value.length;
+    const unique = new Map((older ? revisions.value : []).map(item => [item.revision, item]));
     for (const item of result.value) unique.set(item.revision, item);
     revisions.value = [...unique.values()].sort((a, b) => b.revision - a.revision);
     hasMore.value = result.value.length === pageSize;
@@ -104,10 +106,10 @@ function date(value: string): string { return new Date(value).toLocaleString(); 
     <div v-if="expanded" :id="panelId" class="history-content">
       <p class="history-hint">{{ t("Inspect earlier saved pages. Restoring creates a separate unsaved copy for editing.") }}</p>
       <div class="history-actions"><button type="button" class="quiet-button" :disabled="locked || loading" @click="load()">{{ t("Refresh history") }}</button></div>
-      <ContentSkeleton v-if="loading" label="Loading revisions…" :cards="1" />
-      <p v-else-if="listError" class="history-hint">{{ t("Saved revision history is unavailable. Refresh to retry.") }}</p>
-      <p v-if="!loading && !listError && !revisions.length">{{ t("No saved revisions were returned. Refresh to try again.") }}</p>
-      <div v-if="!loading" class="history-layout">
+      <ContentSkeleton v-if="loading&&!hasLoaded" variant="rows" label="Loading revisions…" :cards="3" />
+      <p v-else-if="listError && !hasLoaded" class="query-label" role="status">{{ t("Saved revision history is unavailable. Refresh to retry.") }}</p>
+      <p v-if="hasLoaded && !revisions.length" class="query-label">{{ t("No saved revisions were returned. Refresh to try again.") }}</p>
+      <div v-if="revisions.length" class="history-layout" :aria-busy="loading">
         <div class="history-list">
           <ol :aria-label="t('Saved revisions')">
             <li v-for="revision in revisions" :key="revision.revision">
@@ -122,7 +124,7 @@ function date(value: string): string { return new Date(value).toLocaleString(); 
           <button v-if="hasMore" type="button" class="quiet-button" :disabled="locked || loading" @click="load(true)">{{ t("Load older revisions") }}</button>
         </div>
         <div class="history-preview" :aria-busy="previewLoading">
-          <ContentSkeleton v-if="previewLoading" label="Loading revision" :cards="1" />
+          <ContentSkeleton v-if="previewLoading" variant="canvas" label="Loading revision" :cards="1" />
           <div v-if="previewError"><p class="history-hint">{{ t("Preview unavailable") }}</p><button v-if="selected" type="button" class="quiet-button" :disabled="locked" @click="inspect(selected)">{{ t("Retry revision") }}</button></div>
           <template v-if="preview">
             <h3>{{ preview.title }}</h3>

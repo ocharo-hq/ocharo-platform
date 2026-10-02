@@ -18,6 +18,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
   const error = ref('');
   const status = ref('');
   const loading = ref(false);
+  const listLoaded = ref(false);
   const busy = ref(false);
   const baseline = ref('');
   const history = shallowRef<DesignSnapshot[]>([]);
@@ -41,7 +42,7 @@ export function useDesignDocument(access: AccessControls, organizationId: string
   async function list(): Promise<void> {
     loading.value = true;
     const result = await access.api.getDesigns(organizationId, kind, controller.signal);
-    if (result.ok) documents.value = result.value;
+    if (result.ok) { documents.value = result.value; listLoaded.value = true; }
     else error.value = failureMessage(result.failure);
     loading.value = false;
   }
@@ -126,5 +127,5 @@ export function useDesignDocument(access: AccessControls, organizationId: string
     if (!next || !snapshot.value || busy.value || loading.value || access.busy.value) return;
     history.value = [...history.value, snapshot.value]; future.value = future.value.slice(0, -1); snapshot.value = next;
   }
-  return { snapshot, title, record, receipt, documents, error, status, loading, busy, dirty, history, future, recovery, list, replace, create, load, save, undo, redo };
+  return { snapshot, title, record, receipt, documents, error, status, loading, listLoaded, busy, dirty, history, future, recovery, list, replace, create, load, save, undo, redo };
 }

@@ -7,6 +7,8 @@ import { requestConfirmation, notifyError } from '@/application/shared/UseFeedba
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import {Modal,ModalContent,ModalTitle} from '@wow-two-beta/ui-vue/presentation/overlays';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
+import {Button} from '@wow-two-beta/ui-vue/presentation/actions';
+import {SkeletonState} from '@wow-two-beta/ui-vue/presentation/feedback';
 import { catalogueLocales, type CatalogueLocale } from '@/domain/workspace/Commerce';
 import { catalogueMetadata, catalogueSlug, createCatalogue, duplicateCatalogue } from '@/domain/workspace/CatalogueDocuments';
 import { cloneSnapshot, validCatalogueSlug, type CatalogueMetadata, type DesignDocument, type DesignSummary } from '@/domain/workspace/EditorModels';
@@ -15,7 +17,7 @@ defineOptions({name:'CatalogueGalleryPage'});
 const props=defineProps<{access:AccessControls;workspace:WorkspaceControls}>();
 const emit=defineEmits<{open:[id:string,mode:'web'|'pdf']}>();
 const {t,uiLocale}=useUiLocale(),controller=new AbortController();
-const documents=ref<DesignSummary[]>([]),loading=ref(true),busy=ref(false),query=ref(''),loadError=ref('');
+const documents=ref<DesignSummary[]>([]),loading=ref(true),busy=ref(false),query=ref(''),loadError=ref(''),hasLoaded=ref(false);
 const selected=ref<DesignDocument|null>(null),name=ref(''),locale=ref<CatalogueLocale>('uz'),brandId=ref('');
 const metadata=ref<CatalogueMetadata>({slug:'',description:'',isActive:false,outputs:{web:true,pdf:true},web:{theme:'editorial',pages:[]}});
 const dialogOpen=ref(false),baseline=ref(''),slugError=ref('');
@@ -26,9 +28,9 @@ async function close(){if(busy.value)return;if(dirty.value&&!await requestConfir
 
 const visible=computed(()=>documents.value.filter(item=>!item.archived&&`${item.title} ${item.catalogue?.slug??''}`.toLowerCase().includes(query.value.toLowerCase())));
 const org=()=>props.workspace.organization.value!.id;
-const locked=computed(()=>busy.value||props.access.busy.value||!props.workspace.canEdit.value);
+const locked=computed(()=>busy.value||props.access.busy.value||loading.value||!props.workspace.canEdit.value);
 onMounted(load);onScopeDispose(()=>{controller.abort();props.access.setDirty(false);});
-async function load(){loading.value=true;loadError.value='';try{const result=await props.access.api.getDesigns(org(),'catalogue',controller.signal);if(controller.signal.aborted)return;if(result.ok)documents.value=result.value;else loadError.value=failureMessage(result.failure);}catch{if(!controller.signal.aborted)loadError.value=t('Unable to load catalogues.');}finally{loading.value=false;if(loadError.value)notifyError(loadError.value);}}
+async function load(){loading.value=true;loadError.value='';try{const result=await props.access.api.getDesigns(org(),'catalogue',controller.signal);if(controller.signal.aborted)return;if(result.ok){documents.value=result.value;hasLoaded.value=true;}else loadError.value=failureMessage(result.failure);}catch{if(!controller.signal.aborted)loadError.value=t('Unable to load catalogues.');}finally{loading.value=false;if(loadError.value)notifyError(loadError.value);}}
 function formats(item:DesignSummary){return item.catalogue?.outputs??{web:false,pdf:true};}
 async function get(item:DesignSummary){const result=await props.access.api.getDesign(org(),item.id,controller.signal);if(!result.ok){notifyError(failureMessage(result.failure));return null;}return result.value;}
 async function edit(item?:DesignSummary){
@@ -62,17 +64,17 @@ async function remove(item:DesignSummary){if(locked.value||!await requestConfirm
 </script>
 <template>
  <section class="catalogue-gallery">
-  <header><div><p class="eyebrow">{{t('Your catalogues')}}</p><h1>{{t('A collection, in every format.')}}</h1><p>{{t('Create one catalogue and design its website, PDF, or both.')}}</p></div><button :disabled="locked" @click="edit()">{{t('New catalogue')}}</button></header>
+  <header><div><p class="eyebrow">{{t('Your catalogues')}}</p><h1>{{t('A collection, in every format.')}}</h1><p>{{t('Create one catalogue and design its website, PDF, or both.')}}</p></div><div class="designer-actions"><Button variant="outline" :is-disabled="busy||loading||access.busy.value" :is-loading="loading" @click="load">{{t('Refresh')}}</Button><button :disabled="locked" @click="edit()">{{t('New catalogue')}}</button></div></header>
   <label class="search">{{t('Find a catalogue')}}<input v-model="query" type="search" :placeholder="t('Name or slug')"></label>
-  <div v-if="loadError" role="status" class="load-error"><p>{{t('Catalogues unavailable')}}</p><button :disabled="loading" @click="load">{{t('Try again')}}</button></div>
-  <ContentSkeleton v-if="loading" :cards="3" :label="t('Loading catalogues')" />
-  <div v-show="!loading" class="catalogue-grid"><article v-for="item in visible" :key="item.id">
+  <ContentSkeleton v-if="loading&&!hasLoaded" :cards="3" :label="t('Loading catalogues')" />
+  <div v-if="hasLoaded || !loading" class="query-region" :aria-busy="loading"><p v-if="!hasLoaded" role="status" class="query-label">{{t('Catalogues unavailable')}}</p><p v-else-if="!visible.length" class="query-label">{{query?t('No catalogues match this search.'):t('Create your first catalogue.')}}</p>
+  <div v-else class="catalogue-grid"><article v-for="item in visible" :key="item.id">
    <div class="catalogue-cover"><span>Ocharo</span><strong>{{item.title}}</strong><small>{{item.locale?.toUpperCase()??'PDF'}}</small></div>
-   <div class="card-body"><div class="card-heading"><h2>{{item.title}}</h2><span>{{(item.catalogue?.isActive??true)?t('Active'):t('Inactive')}}</span></div><p v-if="item.catalogue?.slug" class="slug">/{{item.catalogue.slug}}</p><p>{{item.catalogue?.description}}</p><small>{{t('Last edited')}} · {{new Date(item.updatedAtUtc).toLocaleString(uiLocale)}}</small>
+   <div class="card-body"><div class="card-heading"><h2>{{item.title}}</h2><span>{{(item.catalogue?.isActive??true)?t('Active'):t('Inactive')}}</span></div><p v-if="item.catalogue?.slug" class="slug">/{{item.catalogue.slug}}</p><p>{{item.catalogue?.description}}</p><small>{{t('Last edited')}} · <SkeletonState v-if="loading" class="inline-block h-4 w-32"/><span v-else>{{new Date(item.updatedAtUtc).toLocaleString(uiLocale)}}</span></small>
     <div class="designer-actions"><button v-if="formats(item).web" @click="emit('open',item.id,'web')">{{t('Web designer')}}</button><button v-if="formats(item).pdf" @click="emit('open',item.id,'pdf')">{{t('PDF designer')}}</button></div>
     <div class="card-actions"><button :disabled="locked" @click="edit(item)">{{t('Settings')}}</button><button :disabled="locked" @click="duplicate(item)">{{t('Duplicate')}}</button><button :disabled="locked" @click="activate(item)">{{(item.catalogue?.isActive??true)?t('Deactivate'):t('Activate')}}</button><button :disabled="locked" @click="remove(item)">{{t('Remove')}}</button></div>
    </div>
-  </article><p v-if="!visible.length&&!loadError&&!loading">{{query?t('No catalogues match this search.'):t('Create your first catalogue.')}}</p></div>
+  </article></div></div>
   <p class="catalogue-note">{{t('Changes affect the working catalogue. Published editions change only after explicit preparation and publication.')}}</p>
   <Modal :open="dialogOpen" :dismiss-on-escape="!busy" :dismiss-on-outside-click="!busy" @update:open="value=>{if(!value)void close();}"><ModalContent v-if="dialogOpen" :is-blurred="true" class="catalogue-settings-modal"><form @submit.prevent="save"><header><ModalTitle>{{selected?t('Catalogue settings'):t('New catalogue')}}</ModalTitle><button type="button" :disabled="busy" @click="close()">{{t('Close')}}</button></header><fieldset :disabled="busy">
    <label>{{t('Name')}}<input v-model="name" maxlength="160" required @input="nameChanged"></label><label>{{t('Slug')}}<input v-model="metadata.slug" maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" :aria-invalid="!!slugError" :aria-describedby="slugError?'slug-error':undefined" required><span v-if="slugError" id="slug-error" role="alert">{{slugError}}</span></label><label>{{t('Description')}}<textarea v-model="metadata.description" maxlength="2000" rows="3" /></label>

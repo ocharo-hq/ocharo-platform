@@ -24,6 +24,8 @@ const draft = ref<CommerceDraft | null>(null), releases = ref<CommerceRelease[]>
 const images = ref<Record<string, string[]>>({}), loading = ref(false), error = ref(''), validation = ref('');
 useErrorToast(error);
 let sequence = 0;
+let loadedBrand = '';
+const hasLoaded = ref(false);
 const source = computed<CommerceDraft | null>(() => {
   if (releaseId.value === 'draft') return draft.value;
   const release = releases.value.find(item => item.id === releaseId.value && !item.withdrawnAt);
@@ -41,7 +43,8 @@ watch(mediaGroup, () => { images.value = Object.fromEntries(selected.value.map(p
 watch(layout, () => { images.value = Object.fromEntries(Object.entries(images.value).map(([id, hashes]) => [id, hashes.slice(0, capacity.value)])); });
 onScopeDispose(() => controller.abort());
 async function load(): Promise<void> {
-  const request = ++sequence; draft.value = null; releases.value = []; images.value = {}; releaseId.value = 'draft'; error.value = '';
+  const request = ++sequence; error.value = '';
+  if (loadedBrand !== brandId.value) { draft.value = null; releases.value = []; images.value = {}; releaseId.value = 'draft'; hasLoaded.value = false; loadedBrand = brandId.value; }
   if (!brandId.value) return;
   loading.value = true;
   const org = props.workspace.organization.value!.id, brand = brandId.value;
@@ -49,7 +52,7 @@ async function load(): Promise<void> {
     const [current, history] = await Promise.all([api.get(org, brand, controller.signal), api.releases(org, brand, controller.signal)]);
     if (controller.signal.aborted || request !== sequence) return;
     if (!current.ok) { error.value = failureMessage(current.failure); return; }
-    draft.value = current.value;
+    draft.value = current.value; hasLoaded.value = true;
     if (history.ok) releases.value = history.value; else error.value = failureMessage(history.failure);
   } finally { if (request === sequence) loading.value = false; }
 }
@@ -87,15 +90,16 @@ function add(): void {
     </div>
     <label class="field-label">{{ t('Photo group for all products') }}<select v-model="mediaGroup"><option v-for="group in catalogueMediaGroups" :key="group" :value="group">{{ t(group) }}</option></select></label>
     <fieldset class="layout-picker" :disabled="disabled"><legend>{{ t("Page template") }}</legend><label v-for="option in catalogueLayouts" :key="option.id" :class="{ chosen: layout === option.id }"><input v-model="layout" type="radio" name="catalogue-layout" :value="option.id"><strong>{{ t(option.title) }}</strong><span>{{ t(option.description) }}</span></label></fieldset>
-    <ContentSkeleton v-if="loading" :cards="2" :label="t('Loading saved products…')"/><Button v-else-if="error&&!source" variant="outline" @click="load">{{t('Retry')}}</Button>
-    <p v-else-if="!source">{{ t("Create and save products in Products & releases to start your catalogue.") }}</p>
-    <div v-else class="builder-products">
+    <Button variant="outline" :is-disabled="disabled||loading||!brandId" :is-loading="loading" @click="load">{{t("Refresh")}}</Button>
+    <ContentSkeleton v-if="loading&&!hasLoaded" variant="rows" :cards="2" :label="t('Loading saved products…')"/><p v-else-if="!hasLoaded&&error" class="query-label" role="status">{{t("Saved products unavailable")}}</p>
+    <p v-else-if="!source" class="query-label">{{ t("Create and save products in Products & releases to start your catalogue.") }}</p>
+    <div v-else class="builder-products" :aria-busy="loading">
       <article v-for="product in visible" :key="product.document.id" :class="{ chosen: Object.hasOwn(images, product.document.id) }">
-        <label class="product-choice"><input type="checkbox" :checked="Object.hasOwn(images, product.document.id)" :disabled="disabled || !product.document.media.length" @change="toggleProduct(product.document.id)"><span><strong>{{ productName(product, locale) }}</strong><small>{{ product.document.id }} {{ t("· product revision") }} {{ product.revision }}</small></span></label>
+        <label class="product-choice"><input type="checkbox" :checked="Object.hasOwn(images, product.document.id)" :disabled="disabled || loading || !product.document.media.length" @change="toggleProduct(product.document.id)"><span><strong>{{ productName(product, locale) }}</strong><small>{{ product.document.id }} {{ t("· product revision") }} {{ product.revision }}</small></span></label>
         <p v-if="!product.document.media.length" class="template-help">{{ t("Add a product image in Products & releases.") }}</p>
-        <div v-if="Object.hasOwn(images, product.document.id)" class="image-picker"><label v-for="image in catalogueMedia(product,mediaGroup)" :key="image.sha256" :class="{ chosen: images[product.document.id]?.includes(image.sha256) }"><input type="checkbox" :checked="images[product.document.id]?.includes(image.sha256)" :disabled="disabled || (!images[product.document.id]?.includes(image.sha256) && (images[product.document.id]?.length ?? 0) >= capacity)" @change="toggleImage(product.document.id, image.sha256)"><img :src="api.image(workspace.organization.value!.id, brandId, image.sha256)" :alt="image.alt || image.fileName" loading="lazy"><span>{{ t(image.role) }}{{ source.snapshot.mediaApprovals[image.sha256]?.approvedForPublication ? '' : ` · ${t('unreviewed')}` }}</span></label></div>
+        <div v-if="Object.hasOwn(images, product.document.id)" class="image-picker"><label v-for="image in catalogueMedia(product,mediaGroup)" :key="image.sha256" :class="{ chosen: images[product.document.id]?.includes(image.sha256) }"><input type="checkbox" :checked="images[product.document.id]?.includes(image.sha256)" :disabled="disabled || loading || (!images[product.document.id]?.includes(image.sha256) && (images[product.document.id]?.length ?? 0) >= capacity)" @change="toggleImage(product.document.id, image.sha256)"><img :src="api.image(workspace.organization.value!.id, brandId, image.sha256)" :alt="image.alt || image.fileName" loading="lazy"><span>{{ t(image.role) }}{{ source.snapshot.mediaApprovals[image.sha256]?.approvedForPublication ? '' : ` · ${t('unreviewed')}` }}</span></label></div>
       </article>
-      <p v-if="!visible.length">{{ t("No products match this search.") }}</p>
+      <p v-if="!visible.length" class="query-label">{{ t("No products match this search.") }}</p>
     </div>
     <p v-if="validation" role="alert" class="review-warning">{{ t(validation) }}</p>
     <footer><div><p>{{ selected.length }} {{ t("products selected · up to") }} {{ capacity }} {{ t("images per page") }}</p><p v-if="warnings" class="review-warning">{{ warnings }} {{ t("chosen images need publication review. This edition remains a private working design.") }}</p><p class="template-help">{{ t('Prices come from Products. Catalogue settings control which price details appear.') }}</p></div><Button :is-disabled="disabled || loading || !selected.length" @click="add">{{ hasDocument ? t("Insert selected pages") : t("Create catalogue") }}</Button></footer>

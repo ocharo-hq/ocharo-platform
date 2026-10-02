@@ -23,7 +23,29 @@ describe('catalogue gallery operations',()=>{
  it('lists summaries without loading snapshots and exposes independent designers',async()=>{setup();await flushPromises();expect(wrapper.text()).toContain('Spring collection');expect(api.getDesign).not.toHaveBeenCalled();await button('Web designer').trigger('click');expect(wrapper.emitted('open')).toEqual([['document','web']]);await button('PDF designer').trigger('click');expect(wrapper.emitted('open')?.[1]).toEqual(['document','pdf']);});
  it('duplicates by creating a new inactive document rather than modifying its source',async()=>{setup();await flushPromises();await button('Duplicate').trigger('click');await flushPromises();expect(api.saveDesign.mock.calls[0]?.[1]).toBeNull();expect(api.saveDesign.mock.calls[0]?.[2]).toMatchObject({expectedRevision:null,title:'Spring · Copy',snapshot:{catalogue:{isActive:false}}});expect(api.saveDesign.mock.calls[0]?.[2].snapshot.catalogue.slug).toMatch(/^spring-copy-/);expect(document.snapshot.catalogue?.slug).toBe('spring');});
  it('preserves a catalogue when removal is declined and archives with expected revision when approved',async()=>{setup();await flushPromises();feedback.requestConfirmation.mockResolvedValue(false);await button('Remove').trigger('click');await flushPromises();expect(api.archiveDesign).not.toHaveBeenCalled();feedback.requestConfirmation.mockResolvedValue(true);await button('Remove').trigger('click');await flushPromises();expect(api.archiveDesign).toHaveBeenCalledWith('org','document',4,expect.any(AbortSignal));});
- it('shows retry instead of a false first-catalogue state when loading fails',async()=>{api.getDesigns.mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('http',new Response(null,{status:500}))));setup();await flushPromises();expect(feedback.notifyError).toHaveBeenCalled();expect(wrapper.text()).not.toContain('Create your first catalogue.');expect(button('Try again')).toBeTruthy();api.getDesigns.mockResolvedValue(ResultExtensions.ok([document]));await button('Try again').trigger('click');await flushPromises();expect(wrapper.text()).toContain('Spring');});
+ it('shows retry instead of a false first-catalogue state when loading fails',async()=>{api.getDesigns.mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('http',new Response(null,{status:500}))));setup();await flushPromises();expect(feedback.notifyError).toHaveBeenCalled();expect(wrapper.text()).not.toContain('Create your first catalogue.');expect(button('Refresh')).toBeTruthy();expect(wrapper.find('.load-error').exists()).toBe(false);api.getDesigns.mockResolvedValue(ResultExtensions.ok([document]));await button('Refresh').trigger('click');await flushPromises();expect(wrapper.text()).toContain('Spring');});
  it('protects unsaved metadata and keeps it after a rejected close',async()=>{setup();await flushPromises();await button('Settings').trigger('click');await flushPromises();await wrapper.get('[role=dialog] input[maxlength="160"]').setValue('Updated collection');expect(setDirty).toHaveBeenLastCalledWith(true);feedback.requestConfirmation.mockResolvedValue(false);await button('Close').trigger('click');await flushPromises();expect(wrapper.find('[role=dialog]').exists()).toBe(true);expect(api.saveDesign).not.toHaveBeenCalled();await wrapper.get('[role=dialog] form').trigger('submit');await flushPromises();expect(api.saveDesign.mock.calls[0]?.[2]).toMatchObject({title:'Updated collection',expectedRevision:4});expect(setDirty).toHaveBeenLastCalledWith(false);});
  it('validates reserved slugs next to the field and prevents a write',async()=>{setup();await flushPromises();await button('Settings').trigger('click');await flushPromises();await wrapper.get('[role=dialog] input[maxlength="100"]').setValue('admin');await wrapper.get('[role=dialog] form').trigger('submit');await flushPromises();expect(wrapper.get('#slug-error').text()).toContain('reserved');expect(api.saveDesign).not.toHaveBeenCalled();});
+ it('keeps a successful empty region plain while a toolbar refresh is pending',async()=>{
+  api.getDesigns.mockResolvedValueOnce(ResultExtensions.ok([]));setup();await flushPromises();
+  expect(wrapper.get('.query-label').text()).toBe('Create your first catalogue.');
+  expect(wrapper.find('.catalogue-grid').exists()).toBe(false);
+  let complete!:(value:ReturnType<typeof ResultExtensions.ok<DesignDocument[]>>)=>void;
+  api.getDesigns.mockReturnValueOnce(new Promise(resolve=>{complete=resolve;}));
+  await button('Refresh').trigger('click');
+  expect(wrapper.find('.skeleton-gallery').exists()).toBe(false);
+  expect(wrapper.get('.query-label').text()).toBe('Create your first catalogue.');
+  expect(button('New catalogue').attributes('disabled')).toBeDefined();
+  complete(ResultExtensions.ok([]));await flushPromises();
+ });
+ it('preserves catalogue identities and actions during refresh and restores last good values after failure',async()=>{
+  setup();await flushPromises();let complete!:(value:ReturnType<typeof ResultExtensions.fail>)=>void;
+  api.getDesigns.mockReturnValueOnce(new Promise(resolve=>{complete=resolve;}));await button('Refresh').trigger('click');
+  expect(wrapper.get('.card-heading').text()).toContain('Spring');expect(button('Web designer').isVisible()).toBe(true);
+  expect(wrapper.find('.skeleton-gallery').exists()).toBe(false);
+  complete(ResultExtensions.fail(ApiFailureFactory.create('http',new Response(null,{status:503}))));await flushPromises();
+  expect(wrapper.get('.catalogue-grid').text()).toContain('Spring collection');
+  expect(wrapper.text()).not.toContain('Catalogues unavailable');expect(feedback.notifyError).toHaveBeenCalled();
+ });
+
 });

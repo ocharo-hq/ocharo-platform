@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { notifyError } from '@/application/shared/UseFeedback';
-import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
+import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onMounted, ref, watch } from 'vue';
 
@@ -74,9 +75,11 @@ onMounted(() => {
 
 watch(
   () => [organization.value?.id, props.access.session.value?.sessionId, props.access.invalidated.value, refreshRevision.value] as const,
-  async ([organizationId, , invalidated], _previous, onCleanup) => {
-    catalogueCount.value = null;
-    cardCount.value = null;
+  async ([organizationId, sessionId, invalidated], previous, onCleanup) => {
+    if (!previous || organizationId !== previous[0] || sessionId !== previous[1] || invalidated) {
+      catalogueCount.value = null;
+      cardCount.value = null;
+    }
     designError.value = false;
     designLoading.value = false;
     if (!organizationId || invalidated) return;
@@ -149,9 +152,7 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
       </div>
     </header>
 
-    <div v-if="designError" class="overview-data-notice" role="status">
-      <button type="button" :disabled="designLoading || access.busy.value" @click="refreshRevision += 1">{{ t("Retry totals") }}</button>
-    </div>
+    <div class="overview-data-notice"><Button variant="outline" :is-disabled="designLoading || access.busy.value" :is-loading="designLoading" @click="refreshRevision += 1">{{ t("Refresh") }}</Button></div>
 
     <template v-if="variation === 'map'">
       <section class="overview-map-panel" aria-labelledby="work-map-title">
@@ -168,7 +169,7 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
             <span class="overview-hub-topline">{{ organizationName }}</span>
             <span class="overview-hub-monogram" aria-hidden="true">{{ organizationName.slice(0, 1) }}<i>·</i></span>
             <h3>{{ t("Your collection") }}</h3>
-            <p>{{ metric(savedDesignCount) }} {{ t("saved designs") }}</p>
+            <p><SkeletonState v-if="designLoading" class="inline-block h-6 w-12" /><span v-else>{{ metric(savedDesignCount) }}</span> {{ t("saved designs") }}</p>
             <span class="overview-hub-footnote">{{ t("The starting point for what comes next") }}</span>
           </div>
           <button v-for="node in nodes" :key="node.id" type="button" class="overview-map-node" :class="`overview-map-node--${node.id}`" :disabled="access.busy.value" :aria-label="`${t(node.action)}, ${node.value === null ? t('Total unavailable') : `${metric(node.value)} ${t(node.unit)}`}`" @click="open(node.destination)">
@@ -181,7 +182,7 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
             </span><span class="overview-node-arrow" aria-hidden="true">↗</span></span>
             <span class="overview-node-title">{{ t(node.title) }}</span>
             <span class="overview-node-description">{{ t(node.eyebrow) }}</span>
-            <span class="overview-node-metric"><b>{{ metric(node.value) }}</b> {{ t(node.unit) }}</span>
+            <span class="overview-node-metric"><b><SkeletonState v-if="designLoading && ['catalogue','cards'].includes(node.id)" class="inline-block h-6 w-12" /><span v-else>{{ metric(node.value) }}</span></b> {{ t(node.unit) }}</span>
           </button>
         </div>
         <div class="overview-map-note"><span aria-hidden="true">↳</span> {{ t("The map shows how your work fits together. Moving content between apps is intentional.") }}</div>
@@ -218,14 +219,14 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
           <button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open('catalogue')">{{ t("Open catalogue") }} <span aria-hidden="true">↗</span></button>
         </article>
       </section>
-      <section class="overview-shortcuts" aria-labelledby="attention-shortcuts-title"><h2 id="attention-shortcuts-title">{{ t("Everything has its place") }}</h2><div><button v-for="node in nodes" :key="node.id" type="button" :disabled="access.busy.value" @click="open(node.destination)"><span>{{ t(node.title) }}</span><span>{{ metric(node.value) }} <i aria-hidden="true">↗</i></span></button></div></section>
+      <section class="overview-shortcuts" aria-labelledby="attention-shortcuts-title"><h2 id="attention-shortcuts-title">{{ t("Everything has its place") }}</h2><div><button v-for="node in nodes" :key="node.id" type="button" :disabled="access.busy.value" @click="open(node.destination)"><span>{{ t(node.title) }}</span><span><SkeletonState v-if="designLoading && ['catalogue','cards'].includes(node.id)" class="inline-block h-6 w-12" /><span v-else>{{ metric(node.value) }}</span> <i aria-hidden="true">↗</i></span></button></div></section>
     </template>
 
     <template v-else>
       <div class="overview-compact-layout">
         <section class="overview-compact-panel" aria-labelledby="compact-title">
           <div class="overview-panel-heading"><div><span class="overview-section-number">{{ t("THE ESSENTIALS") }}</span><h2 id="compact-title">{{ t("Your working collection.") }}</h2></div><span class="overview-compact-mark" aria-hidden="true">{{ organizationName.slice(0, 1) }}·</span></div>
-          <button v-for="(node, index) in nodes" :key="node.id" type="button" class="overview-compact-row" :disabled="access.busy.value" @click="open(node.destination)"><span class="overview-row-number">{{ String(index + 1).padStart(2, '0') }}</span><span class="overview-row-title"><b>{{ t(node.title) }}</b><span>{{ t(node.eyebrow) }}</span></span><span class="overview-row-count"><b>{{ metric(node.value) }}</b><span>{{ t(node.unit) }}</span></span><span class="overview-row-arrow" aria-hidden="true">↗</span></button>
+          <button v-for="(node, index) in nodes" :key="node.id" type="button" class="overview-compact-row" :disabled="access.busy.value" @click="open(node.destination)"><span class="overview-row-number">{{ String(index + 1).padStart(2, '0') }}</span><span class="overview-row-title"><b>{{ t(node.title) }}</b><span>{{ t(node.eyebrow) }}</span></span><span class="overview-row-count"><b><SkeletonState v-if="designLoading && ['catalogue','cards'].includes(node.id)" class="inline-block h-6 w-12" /><span v-else>{{ metric(node.value) }}</span></b><span>{{ t(node.unit) }}</span></span><span class="overview-row-arrow" aria-hidden="true">↗</span></button>
         </section>
         <aside class="overview-compact-attention"><span class="overview-section-number">{{ t("PICK UP THE THREAD") }}</span><span class="overview-compact-symbol" aria-hidden="true">↳</span><h2>{{ t(leadingAttention?.title ?? 'The next idea is yours.') }}</h2><p>{{ t(leadingAttention?.detail ?? 'Open a saved design or begin a new direction.') }}</p><button type="button" class="overview-text-action" :disabled="access.busy.value" @click="open(leadingAttention?.destination ?? 'catalogue')">{{ t(leadingAttention?.label ?? 'Open catalogue') }} <span aria-hidden="true">↗</span></button><div class="overview-compact-status"><span>{{ t("Ready for review") }} <b>{{ reviewCount }}</b></span><span>{{ t("Approved content") }} <b>{{ approvedCount }}</b></span></div></aside>
       </div>
@@ -240,6 +241,6 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
       <div><span class="overview-section-number">{{ t("BEYOND THE WORKSPACE") }}</span><p>{{ t("More of the business, when it is ready.") }}</p></div>
       <ul><li><span aria-hidden="true">○</span> {{ t("Marketing") }} <small>{{ t("Planned") }}</small></li><li><span aria-hidden="true">○</span> {{ t("Journal") }} <small>{{ t("Not connected") }}</small></li><li><span aria-hidden="true">○</span> {{ t("Scheduling") }} <small>{{ t("Planned") }}</small></li><li v-if="variation !== 'map'"><span aria-hidden="true">○</span> {{ t("Studio") }} <small>{{ t("Separate app") }}</small></li></ul>
     </footer>
-    <ContentSkeleton v-if="designLoading" :cards="1" :label="t('Loading saved design totals…')"/>
+    <span v-if="designLoading" class="sr-only" role="status">{{t("Loading saved design totals…")}}</span>
   </section>
 </template>

@@ -44,7 +44,7 @@
     @apply mt-3 mb-5 text-3xl font-medium tracking-tight sm:text-4xl;
   }
   .empty-state {
-    @apply rounded-2xl border border-dashed border-border p-8 text-sm leading-7 text-muted-foreground;
+    @apply flex min-h-72 items-center justify-center p-8 text-center text-sm leading-7 text-muted-foreground;
   }
   .form-error {
     @apply text-sm leading-6 text-destructive;
@@ -74,3 +74,8 @@
 }
 
 @import './editor.css';
+
+.query-region { min-height: 18rem; }
+.query-label { min-height: 18rem; display: grid; place-content: center; padding: 1.5rem; text-align: center; font-size: .875rem; color: var(--color-muted-foreground); }
+.editor-prompt { border: 1px dashed var(--color-border); border-radius: 1rem; padding: 2rem; font-size: .875rem; color: var(--color-muted-foreground); }
+@media (prefers-reduced-motion: reduce) { .animate-pulse { animation: none; } }

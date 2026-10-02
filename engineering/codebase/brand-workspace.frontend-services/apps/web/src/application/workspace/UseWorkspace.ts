@@ -56,6 +56,8 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
       draftQuery.loading.value,
   );
 
+  const initialLoading = computed(() => reads.some(query => query.loading.value && query.data.value === undefined));
+
   async function refreshAfterWrite(keys: readonly unknown[][]) {
     refreshing.value = true;
     try { await Promise.all(keys.map(key => cache.invalidate(key))); }
@@ -63,6 +65,16 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
     finally { refreshing.value = false; }
   }
 
+  async function refresh() {
+    if (refreshing.value || loading.value || access.busy.value || access.dirty.value) return;
+    refreshing.value = true;
+    try {
+      const keys: unknown[][] = [[scope[0], 'organizations']];
+      if (organization.value) keys.push([...scope, 'brands'], [...scope, 'media'], [...scope, 'drafts']);
+      if (organization.value && location.draftId && location.draftId !== 'new') keys.push(draftKey);
+      await Promise.all(keys.map(key => cache.invalidate(key)));
+    } finally { refreshing.value = false; }
+  }
   function createOrganization(input: { name: string; slug: string }, signal: AbortSignal) {
     return access.write((s) => access.api.createOrganization(input, s), signal);
   }
@@ -110,7 +122,9 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
     error,
     refreshError,
     loading,
+    initialLoading,
     refreshing,
+    refresh,
     createOrganization,
     createBrand,
     uploadMedia,
