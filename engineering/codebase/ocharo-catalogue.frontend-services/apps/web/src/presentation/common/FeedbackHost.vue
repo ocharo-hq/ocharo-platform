@@ -15,7 +15,7 @@ const { t } = useUiLocale();
 onScopeDispose(() => resolveConfirmation(false));
 </script>
 <template>
-  <FeedbackToastHost :bus="feedbackBus" position="bottom-right" />
+  <FeedbackToastHost :bus="feedbackBus" position="top-right" />
   <AlertModal
     :open="!!confirmation"
     @update:open="

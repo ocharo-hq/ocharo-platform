@@ -11,7 +11,7 @@ const { t } = useUiLocale();
 onScopeDispose(() => resolveConfirmation(false));
 </script>
 <template>
-  <FeedbackToastHost :bus="feedbackBus" position="bottom-right" />
+  <FeedbackToastHost :bus="feedbackBus" position="top-right" />
   <AlertModal :open="!!confirmation" @update:open="value => { if (!value) resolveConfirmation(false); }">
     <AlertModalContent v-if="confirmation" :is-blurred="true" class="w-[min(32rem,calc(100vw-2rem))]">
       <Icon :icon="TriangleAlert" :size="32" class="mb-4 text-warning" />
