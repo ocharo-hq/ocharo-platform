@@ -96,7 +96,7 @@ describe('native published catalogue reader', () => {
     expect(wrapper.text()).toContain('not published in this language');
     wrapper.unmount();
   });
-  it('keeps 500 failures as toast plus retry, never a successful empty catalogue', async () => {
+  it('keeps 500 failures as toast plus toolbar refresh, never a successful empty catalogue', async () => {
     read.mockResolvedValueOnce(
       ResultExtensions.fail(ApiFailureFactory.create('http', new Response(null, { status: 500 }))),
     );
@@ -104,9 +104,13 @@ describe('native published catalogue reader', () => {
     expect(wrapper.find('.catalogue-unavailable').exists()).toBe(true);
     expect(notices).toHaveBeenCalledOnce();
     expect(notices.mock.calls[0]?.[0].description).toContain('Please retry');
-    await wrapper.find('button').trigger('click');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    await wrapper.find('.catalogue-refresh').trigger('click');
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(400);
     await flushPromises();
     expect(wrapper.find('.web-reader').exists()).toBe(true);
+    vi.useRealTimers();
     wrapper.unmount();
   });
   it('copies the exact published release link and saves a piece locally', async () => {

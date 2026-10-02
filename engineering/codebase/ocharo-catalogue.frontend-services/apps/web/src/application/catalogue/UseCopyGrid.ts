@@ -17,6 +17,8 @@ export function useCopyGrid() {
   const { t } = useUiLocale();
   const rows = ref<EditableRow[]>([]);
   const loading = ref(false);
+  const loaded = ref(false);
+  const loadFailed = ref(false);
   const busy = ref(false);
   const dirtyCount = computed(() => rows.value.filter(isDirty).length);
 
@@ -26,9 +28,14 @@ export function useCopyGrid() {
 
   async function load() {
     loading.value = true;
+    loadFailed.value = false;
     const result = await catalogueApi.copyRows();
     loading.value = false;
-    if (!result.ok) return store.fail(describeFailure(result.failure, t));
+    if (!result.ok) {
+      loadFailed.value = true;
+      return store.fail(describeFailure(result.failure, t));
+    }
+    loaded.value = true;
     rows.value = result.value.map((row) => ({
       row: structuredClone(row),
       baseline: JSON.stringify(row.locales),
@@ -60,6 +67,8 @@ export function useCopyGrid() {
   return {
     rows,
     loading,
+    loaded,
+    loadFailed,
     busy,
     dirtyCount,
     isDirty,

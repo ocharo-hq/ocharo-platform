@@ -7,13 +7,15 @@ import CatalogueWebPreview from '../src/presentation/design/CatalogueWebPreview.
 import { designApi, DesignRequestError } from '../src/integration/design/DesignApi';
 import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
-import { feedbackBus } from '../src/application/common/UseFeedback';
+import { confirmation, feedbackBus, resolveConfirmation } from '../src/application/common/UseFeedback';
 let messages: string[] = [];
 let unsubscribe = () => {};
 let notificationClock = Date.now();
 afterEach(() => {
+  resolveConfirmation(false);
   unsubscribe();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 import { documentFixture, sourceFixture, productFixture } from './NativeDesignFixture';
 vi.mock('../src/integration/design/DesignApi', async (importOriginal) => ({
@@ -119,7 +121,8 @@ describe('native catalogue screens', () => {
     expect(designApi.list).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
-  it('finishes a failed retry without permanent skeletons and retains the last grid', async () => {
+  it('finishes a failed toolbar refresh without permanent skeletons and retains the last grid', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
     vi.mocked(designApi.duplicate).mockResolvedValue(documentFixture());
     vi.mocked(designApi.list).mockRejectedValue(new Error('Refresh unavailable'));
@@ -132,12 +135,31 @@ describe('native catalogue screens', () => {
     expect(wrapper.text()).not.toContain('Refresh unavailable');
     await wrapper
       .findAll('button')
-      .find((item) => item.text() === 'Try again')!
+      .find((item) => item.text() === 'Refresh')!
       .trigger('click');
     await flushPromises();
     expect(wrapper.findAll('.catalogue-grid article')).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(400);
+    await flushPromises();
     expect(wrapper.find('[aria-busy="true"]').exists()).toBe(false);
     expect(messages.filter((item) => item === 'Unable to load catalogues.')).toHaveLength(1);
+    wrapper.unmount();
+  });
+  it('retains the same catalogue document after a failed designer toolbar refresh', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
+    const title = wrapper.find('input[maxlength="160"]').element;
+    vi.mocked(designApi.get).mockRejectedValue(new Error('Unsafe upstream details'));
+    await wrapper.find('.catalogue-refresh').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('input[maxlength="160"]').element).toBe(title);
+    expect(wrapper.find('input[maxlength="160"]').element).toHaveProperty('value', 'Woven days');
+    await vi.advanceTimersByTimeAsync(400);
+    await flushPromises();
+    expect(wrapper.find('input[maxlength="160"]').element).toBe(title);
+    expect(wrapper.text()).not.toContain('Content unavailable');
+    expect(wrapper.text()).not.toContain('Unsafe upstream details');
+    expect(wrapper.find('[aria-busy="true"]').exists()).toBe(false);
     wrapper.unmount();
   });
   it('shows gallery format routes and last edited identity', async () => {
@@ -155,7 +177,7 @@ describe('native catalogue screens', () => {
     expect(wrapper.text()).toContain('Content unavailable');
     expect(wrapper.find('[aria-busy="true"]').exists()).toBe(false);
     expect(messages).toContain('Unable to load catalogues.');
-    expect(wrapper.text()).toContain('Try again');
+    expect(wrapper.find('.catalogue-refresh').text()).toContain('Refresh');
     expect(wrapper.text()).not.toContain('Create your first catalogue.');
     wrapper.unmount();
   });
@@ -179,6 +201,21 @@ describe('native catalogue screens', () => {
     designer.wrapper.unmount();
   });
 
+  it('cancels dirty designer refresh before starting skeletons or replacing the draft', async () => {
+    const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
+    await wrapper.find('input[maxlength="160"]').setValue('Local catalogue title');
+    await wrapper.find('.catalogue-refresh').trigger('click');
+    expect(confirmation.value).not.toBeNull();
+    expect(wrapper.find('.catalogue-refresh').attributes('aria-busy')).not.toBe('true');
+    expect(wrapper.findAll('[data-loading="true"]')).toHaveLength(0);
+    resolveConfirmation(false);
+    await flushPromises();
+    expect(designApi.get).toHaveBeenCalledTimes(1);
+    expect(wrapper.find('input[maxlength="160"]').element).toHaveProperty('value', 'Local catalogue title');
+    expect(wrapper.find('.catalogue-refresh').attributes('aria-busy')).not.toBe('true');
+    expect(wrapper.findAll('[data-loading="true"]')).toHaveLength(0);
+    wrapper.unmount();
+  });
   it('adds a page and saves the same document through the native API', async () => {
     const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
     await wrapper

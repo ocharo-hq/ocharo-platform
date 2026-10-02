@@ -13,6 +13,7 @@ export function useProductList(initial: ProductFilter = {}) {
   const loading = ref(false);
   const pending = ref<string | null>(null);
   const loadFailed = ref(false);
+  const loaded = ref(false);
   const selected = ref<Set<string>>(new Set());
   let controller: AbortController | null = null;
   let debounce: ReturnType<typeof setTimeout> | undefined;
@@ -31,6 +32,7 @@ export function useProductList(initial: ProductFilter = {}) {
     loading.value = false;
     if (result.ok) {
       products.value = result.value;
+      loaded.value = true;
       selected.value = new Set([...selected.value].filter((id) => result.value.some((p) => p.id === id)));
     } else {
       loadFailed.value = true;
@@ -68,6 +70,7 @@ export function useProductList(initial: ProductFilter = {}) {
     loading,
     pending,
     loadFailed,
+    loaded,
     selected,
     selectedCount: computed(() => selected.value.size),
     load,

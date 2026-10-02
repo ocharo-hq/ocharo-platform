@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useRefresh } from '@wow-two-beta/ui-vue/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import RefreshButton from '../common/RefreshButton.vue';
+import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, ref } from 'vue';
 import { useCatalogueDocument } from '../../application/design/UseCatalogueDocument';
 import { requestConfirmation } from '../../application/common/UseFeedback';
@@ -104,141 +108,164 @@ function reorderProduct(index: number, delta: number) {
     if (id) page.productIds.splice(target, 0, id);
   });
 }
+const { refresh: refreshDocument, refreshing } = useRefresh(() => editor.load());
+const refresh = () => editor.reload(refreshDocument);
+const resultBusy = computed(() => editor.loading.value || refreshing.value);
 </script>
 <template>
-  <ContentSkeleton v-if="editor.loading.value" :label="t('Loading catalogue')" :cards="3" />
-  <section v-else-if="!editor.snapshot.value" class="panel">
-    <h1>{{ t('Unable to open this catalogue.') }}</h1>
-    <button class="btn-outline" @click="editor.load">{{ t('Try again') }}</button>
-  </section>
-  <section v-else class="native-designer">
-    <CatalogueDesignerBar :editor="editor" mode="web" />
-    <p v-if="!editor.snapshot.value.catalogue?.outputs.web" class="panel">
-      {{ t('Web output is disabled. Enable it in catalogue settings.') }}
-    </p>
-    <CatalogueSharedSettings :editor="editor" />
-    <div class="designer-grid">
-      <aside class="panel page-panel">
-        <h2>{{ t('Web pages') }}</h2>
-        <button class="btn-outline" :disabled="editor.busy.value || pages.length >= 100" @click="add">
-          + {{ t('Add page') }}
-        </button>
-        <ol class="pages">
-          <li v-for="(item, index) in pages" :key="item.id" :class="{ selected: page?.id === item.id }">
-            <button class="page-name" @click="selected = item.id">
-              {{ index + 1 }} · {{ item.title }} <small v-if="!item.isActive">{{ t('Inactive') }}</small>
-            </button>
-            <div class="actions">
-              <button
-                :disabled="index === 0 || editor.busy.value"
-                :aria-label="t('Move page up')"
-                @click="move(index, -1)"
-              >
-                ↑</button
-              ><button
-                :disabled="index === pages.length - 1 || editor.busy.value"
-                :aria-label="t('Move page down')"
-                @click="move(index, 1)"
-              >
-                ↓
-              </button>
-            </div>
-          </li>
-        </ol>
-        <template v-if="page"
-          ><label
-            >{{ t('Page title')
-            }}<input
-              :value="page.title"
-              class="field"
-              maxlength="160"
-              @change="edit((item) => (item.title = ($event.target as HTMLInputElement).value))" /></label
-          ><label
-            >{{ t('Page template')
-            }}<CatalogueSelect
-              :model-value="page.layout"
-              :options="layouts"
-              :label="t('Page template')"
-              @update:model-value="
-                (value) => edit((item) => (item.layout = value as CatalogueWebPage['layout']))
-              " /></label
-          ><label class="check"
-            ><input
-              type="checkbox"
-              :checked="page.isActive"
-              @change="edit((item) => (item.isActive = ($event.target as HTMLInputElement).checked))"
-            />{{ t('Active page') }}</label
-          >
-          <div class="actions">
-            <button class="btn-outline" :disabled="pages.length >= 100 || editor.busy.value" @click="duplicate">
-              {{ t('Duplicate page') }}</button
-            ><button class="btn-ghost" :disabled="editor.busy.value" @click="remove">{{ t('Remove page') }}</button>
-          </div>
-          <h3>{{ t('Products on this page') }}</h3>
-          <p class="hint">
-            {{ t('Only active products with approved text and active images appear in this language.') }}
+  <section class="catalogue-query-surface">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+      <h1 class="font-editorial text-2xl">{{ t('Web designer') }}</h1>
+      <RefreshButton :busy="resultBusy" :disabled="editor.busy.value && !editor.loading.value" @refresh="refresh" />
+    </div>
+    <div class="catalogue-result-region">
+      <ContentSkeleton
+        v-if="resultBusy && !editor.snapshot.value"
+        :label="t('Loading catalogue')"
+        variant="designer-web"
+      />
+      <ResultEmpty v-else-if="!editor.snapshot.value" :label="t('Content unavailable')" />
+      <SkeletonStateGroup v-else :is-loading="resultBusy" :label="t('Loading catalogue')">
+        <section class="native-designer">
+          <CatalogueDesignerBar :editor="editor" mode="web" />
+          <p v-if="!editor.snapshot.value.catalogue?.outputs.web" class="panel">
+            {{ t('Web output is disabled. Enable it in catalogue settings.') }}
           </p>
-          <input v-model="search" type="search" class="field" :placeholder="t('Find a product')" />
-          <div class="products">
-            <label v-for="product in products" :key="product.document.id" class="check"
-              ><input
-                type="checkbox"
-                :checked="page.productIds.includes(product.document.id)"
-                @change="toggle(product.document.id, ($event.target as HTMLInputElement).checked)"
-              /><span
-                >{{ productName(product, editor.snapshot.value.locale)
-                }}<small v-if="!productEligible(product, editor.snapshot.value.locale)">{{
-                  t('Needs review')
-                }}</small></span
-              ></label
-            >
-          </div>
-          <ol class="product-order">
-            <li v-for="(id, index) in page.productIds" :key="id">
-              <span>{{ id }}</span
-              ><button :disabled="index === 0" :aria-label="t('Move product up')" @click="reorderProduct(index, -1)">
-                ↑</button
-              ><button
-                :disabled="index === page.productIds.length - 1"
-                :aria-label="t('Move product down')"
-                @click="reorderProduct(index, 1)"
-              >
-                ↓
+          <CatalogueSharedSettings :editor="editor" />
+          <div class="designer-grid">
+            <aside class="panel page-panel">
+              <h2>{{ t('Web pages') }}</h2>
+              <button class="btn-outline" :disabled="editor.busy.value || pages.length >= 100" @click="add">
+                + {{ t('Add page') }}
               </button>
-            </li>
-          </ol>
-        </template>
-      </aside>
-      <div class="preview-panel">
-        <div class="preview-toolbar">
-          <h2>{{ t('Web preview') }}</h2>
-          <CatalogueSelect v-model="viewport" :options="sizes" :label="t('Preview size')" /><CatalogueSelect
-            :model-value="editor.snapshot.value.catalogue!.web.theme"
-            :options="themes"
-            :label="t('Web theme')"
-            @update:model-value="
-              (value) => editor.change((next) => (next.catalogue!.web.theme = value as 'editorial' | 'grid'))
-            "
-          />
-        </div>
-        <p v-if="page && !eligibleCount" class="panel hint">
-          {{ t('No approved products on this page yet. Choose products or finish their language review.') }}
-        </p>
-        <div class="viewport-scroll">
-          <div :style="{ width: viewport + 'px' }" class="viewport">
-            <CatalogueWebPreview
-              :snapshot="editor.snapshot.value"
-              :products="editor.source.value?.products ?? []"
-              :title="editor.title.value"
-              :brand-name="editor.source.value?.settings.brandName"
-              :page-id="page?.id"
-            />
+              <ol class="pages">
+                <li v-for="(item, index) in pages" :key="item.id" :class="{ selected: page?.id === item.id }">
+                  <button class="page-name" @click="selected = item.id">
+                    {{ index + 1 }} · {{ item.title }} <small v-if="!item.isActive">{{ t('Inactive') }}</small>
+                  </button>
+                  <div class="actions">
+                    <button
+                      :disabled="index === 0 || editor.busy.value"
+                      :aria-label="t('Move page up')"
+                      @click="move(index, -1)"
+                    >
+                      ↑</button
+                    ><button
+                      :disabled="index === pages.length - 1 || editor.busy.value"
+                      :aria-label="t('Move page down')"
+                      @click="move(index, 1)"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </li>
+              </ol>
+              <template v-if="page"
+                ><label
+                  >{{ t('Page title')
+                  }}<input
+                    :value="page.title"
+                    class="field"
+                    maxlength="160"
+                    @change="edit((item) => (item.title = ($event.target as HTMLInputElement).value))" /></label
+                ><label
+                  >{{ t('Page template')
+                  }}<CatalogueSelect
+                    :model-value="page.layout"
+                    :options="layouts"
+                    :label="t('Page template')"
+                    @update:model-value="
+                      (value) => edit((item) => (item.layout = value as CatalogueWebPage['layout']))
+                    " /></label
+                ><label class="check"
+                  ><input
+                    type="checkbox"
+                    :checked="page.isActive"
+                    @change="edit((item) => (item.isActive = ($event.target as HTMLInputElement).checked))"
+                  />{{ t('Active page') }}</label
+                >
+                <div class="actions">
+                  <button class="btn-outline" :disabled="pages.length >= 100 || editor.busy.value" @click="duplicate">
+                    {{ t('Duplicate page') }}</button
+                  ><button class="btn-ghost" :disabled="editor.busy.value" @click="remove">
+                    {{ t('Remove page') }}
+                  </button>
+                </div>
+                <h3>{{ t('Products on this page') }}</h3>
+                <p class="hint">
+                  {{ t('Only active products with approved text and active images appear in this language.') }}
+                </p>
+                <input v-model="search" type="search" class="field" :placeholder="t('Find a product')" />
+                <div class="products">
+                  <label v-for="product in products" :key="product.document.id" class="check"
+                    ><input
+                      type="checkbox"
+                      :checked="page.productIds.includes(product.document.id)"
+                      @change="toggle(product.document.id, ($event.target as HTMLInputElement).checked)"
+                    /><span
+                      >{{ productName(product, editor.snapshot.value.locale)
+                      }}<small v-if="!productEligible(product, editor.snapshot.value.locale)">{{
+                        t('Needs review')
+                      }}</small></span
+                    ></label
+                  >
+                </div>
+                <ol class="product-order">
+                  <li v-for="(id, index) in page.productIds" :key="id">
+                    <span>{{ id }}</span
+                    ><button
+                      :disabled="index === 0"
+                      :aria-label="t('Move product up')"
+                      @click="reorderProduct(index, -1)"
+                    >
+                      ↑</button
+                    ><button
+                      :disabled="index === page.productIds.length - 1"
+                      :aria-label="t('Move product down')"
+                      @click="reorderProduct(index, 1)"
+                    >
+                      ↓
+                    </button>
+                  </li>
+                </ol>
+              </template>
+            </aside>
+            <div class="preview-panel">
+              <div class="preview-toolbar">
+                <h2>{{ t('Web preview') }}</h2>
+                <CatalogueSelect v-model="viewport" :options="sizes" :label="t('Preview size')" /><CatalogueSelect
+                  :model-value="editor.snapshot.value.catalogue!.web.theme"
+                  :options="themes"
+                  :label="t('Web theme')"
+                  @update:model-value="
+                    (value) => editor.change((next) => (next.catalogue!.web.theme = value as 'editorial' | 'grid'))
+                  "
+                />
+              </div>
+              <ResultEmpty v-if="!pages.length" :label="t('No pages yet. Add a page to start designing.')" />
+              <ResultEmpty
+                v-else-if="page && !eligibleCount"
+                :label="t('No approved products on this page yet. Choose products or finish their language review.')"
+              />
+              <div v-else class="viewport-scroll">
+                <div :style="{ width: viewport + 'px' }" class="viewport">
+                  <SkeletonStateSlot class="catalogue-value" :is-block="true"
+                    ><CatalogueWebPreview
+                      :snapshot="editor.snapshot.value"
+                      :products="editor.source.value?.products ?? []"
+                      :title="editor.title.value"
+                      :brand-name="editor.source.value?.settings.brandName"
+                      :page-id="page?.id"
+                  /></SkeletonStateSlot>
+                </div>
+              </div>
+              <p class="hint">
+                {{ t('The public website reflows to the reader’s screen. PDF page dimensions are edited separately.') }}
+              </p>
+            </div>
           </div>
-        </div>
-        <p class="hint">
-          {{ t('The public website reflows to the reader’s screen. PDF page dimensions are edited separately.') }}
-        </p>
-      </div>
+        </section>
+      </SkeletonStateGroup>
     </div>
   </section>
 </template>

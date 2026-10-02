@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import ContentSkeleton from '../common/ContentSkeleton.vue';
+import { useRefresh } from '@wow-two-beta/ui-vue/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import RefreshButton from '../common/RefreshButton.vue';
+import { requestConfirmation } from '../../application/common/UseFeedback';
+import TableSkeletonRows from '../common/TableSkeletonRows.vue';
+import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Check, Save } from 'lucide-vue-next';
@@ -16,6 +21,17 @@ type Field = 'name' | 'fabric' | 'decoration' | 'description';
 const store = useCatalogueStore();
 const grid = useCopyGrid();
 const { t } = useUiLocale();
+const { refresh: refreshRows, refreshing } = useRefresh(() => grid.load());
+const resultBusy = computed(() => grid.loading.value || refreshing.value);
+async function refresh() {
+  if (resultBusy.value || grid.busy.value || grid.rows.value.some((item) => item.saving)) return;
+  if (
+    grid.dirtyCount.value &&
+    !(await requestConfirmation(t('Discard unsaved changes?'), { confirmLabel: t('Discard changes') }))
+  )
+    return;
+  await refreshRows();
+}
 const languageNames = computed(() => ({ uz: t('Uzbek'), ru: t('Russian'), en: t('English') }));
 const field = ref<Field>('name');
 const onlyMissing = ref(false);
@@ -61,14 +77,21 @@ onMounted(() => grid.load());
           {{ t('A name is required before approval.') }}
         </p>
       </div>
-      <button
-        class="btn-primary"
-        :disabled="grid.dirtyCount.value === 0 || grid.busy.value"
-        :aria-busy="grid.busy.value"
-        @click="grid.saveAll()"
-      >
-        <Icon :icon="Save" :size="15" />{{ t('Save {count} changes', { count: grid.dirtyCount.value }) }}
-      </button>
+      <div class="flex flex-wrap items-center gap-3">
+        <RefreshButton
+          :busy="resultBusy"
+          :disabled="grid.busy.value || grid.rows.value.some((item) => item.saving)"
+          @refresh="refresh"
+        />
+        <button
+          class="btn-primary"
+          :disabled="grid.dirtyCount.value === 0 || grid.busy.value || resultBusy"
+          :aria-busy="grid.busy.value"
+          @click="grid.saveAll()"
+        >
+          <Icon :icon="Save" :size="15" />{{ t('Save {count} changes', { count: grid.dirtyCount.value }) }}
+        </button>
+      </div>
     </div>
     <div class="panel mt-6 flex flex-wrap items-center gap-3 p-4">
       <div role="tablist" class="flex rounded-lg bg-muted p-1 text-sm">
@@ -90,84 +113,97 @@ onMounted(() => grid.load());
         ><input v-model="onlyMissing" type="checkbox" />{{ t('Only missing or unapproved') }}</label
       >
     </div>
-    <ContentSkeleton v-if="grid.loading.value" :label="t('Loading product copy')" />
-    <div class="panel mt-4 overflow-x-auto p-0">
-      <table class="w-full min-w-[980px] text-sm">
-        <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-          <tr>
-            <th class="px-4 py-3 font-semibold">{{ t('Product') }}</th>
-            <th v-for="code in locales" :key="code" class="px-4 py-3 font-semibold">{{ languageNames[code] }}</th>
-            <th class="px-4 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="item in visible"
-            :key="item.row.id"
-            :class="['border-t border-border align-top', grid.isDirty(item) ? 'bg-warning-soft/40' : '']"
-          >
-            <td class="w-56 px-4 py-3">
-              <RouterLink
-                :to="`/products/${item.row.id}`"
-                class="flex items-center gap-3 hover:text-primary-soft-foreground"
+    <div class="catalogue-result-region">
+      <SkeletonStateGroup :is-loading="resultBusy" :label="t('Loading product copy')">
+        <ResultEmpty
+          v-if="!visible.length && (grid.loaded.value || !resultBusy)"
+          :label="grid.loaded.value ? t('No products found.') : t('Content unavailable')"
+        />
+        <div v-else class="panel overflow-x-auto p-0">
+          <table class="w-full min-w-[980px] text-sm">
+            <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th class="px-4 py-3 font-semibold">{{ t('Product') }}</th>
+                <th v-for="code in locales" :key="code" class="px-4 py-3 font-semibold">{{ languageNames[code] }}</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <TableSkeletonRows v-if="resultBusy && !grid.loaded.value" :columns="5" />
+              <tr
+                v-for="item in visible"
+                :key="item.row.id"
+                :class="['border-t border-border align-top', grid.isDirty(item) ? 'bg-warning-soft/40' : '']"
               >
-                <img
-                  v-if="item.row.previewUrl"
-                  :src="item.row.previewUrl"
-                  alt=""
-                  class="h-14 w-10 object-contain"
-                  loading="lazy"
-                />
-                <span>
-                  <span class="block font-semibold">{{ item.row.locales.uz.name ?? item.row.id }}</span>
-                  <span class="block text-xs text-muted-foreground"
-                    >{{ item.row.id }} · {{ store.garmentName(item.row.garmentType) }}</span
+                <td class="w-56 px-4 py-3">
+                  <RouterLink
+                    :to="`/products/${item.row.id}`"
+                    class="flex items-center gap-3 hover:text-primary-soft-foreground"
                   >
-                </span>
-              </RouterLink>
-              <StatusBadge class="mt-2" :status="item.row.status" />
-            </td>
-            <td v-for="code in locales" :key="code" class="px-2 py-3">
-              <textarea
-                v-if="field === 'description'"
-                :value="item.row.locales[code][field] ?? ''"
-                rows="3"
-                class="field"
-                :aria-label="`${item.row.id} ${languageNames[code]}`"
-                :disabled="item.saving"
-                @input="setValue(code, item, ($event.target as HTMLTextAreaElement).value)"
-              ></textarea>
-              <input
-                v-else
-                :value="item.row.locales[code][field] ?? ''"
-                class="field"
-                :aria-label="`${item.row.id} ${languageNames[code]}`"
-                :disabled="item.saving"
-                @input="setValue(code, item, ($event.target as HTMLInputElement).value)"
-              />
-              <button
-                :class="[
-                  'chip mt-1.5',
-                  item.row.locales[code].status === 'approved'
-                    ? 'bg-success-soft text-success-soft-foreground'
-                    : 'bg-muted text-muted-foreground',
-                ]"
-                :aria-pressed="item.row.locales[code].status === 'approved'"
-                :disabled="item.saving"
-                @click="toggleApproved(code, item)"
-              >
-                <Icon v-if="item.row.locales[code].status === 'approved'" :icon="Check" :size="11" />
-                {{ item.row.locales[code].status === 'approved' ? t('Approved') : t('Draft') }}
-              </button>
-            </td>
-            <td class="px-4 py-3 text-right">
-              <button class="btn-outline" :disabled="!grid.isDirty(item) || item.saving" @click="grid.save(item)">
-                {{ item.saving ? t('Saving…') : t('Save') }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                    <img
+                      v-if="item.row.previewUrl"
+                      :src="item.row.previewUrl"
+                      alt=""
+                      class="h-14 w-10 object-contain"
+                      loading="lazy"
+                    />
+                    <span>
+                      <span class="block font-semibold">{{ item.row.locales.uz.name ?? item.row.id }}</span>
+                      <span class="block text-xs text-muted-foreground"
+                        >{{ item.row.id }} · {{ store.garmentName(item.row.garmentType) }}</span
+                      >
+                    </span>
+                  </RouterLink>
+                  <StatusBadge class="mt-2" :status="item.row.status" />
+                </td>
+                <td v-for="code in locales" :key="code" class="px-2 py-3">
+                  <SkeletonStateSlot class="catalogue-value" :is-block="true">
+                    <textarea
+                      v-if="field === 'description'"
+                      :value="item.row.locales[code][field] ?? ''"
+                      rows="3"
+                      class="field"
+                      :aria-label="`${item.row.id} ${languageNames[code]}`"
+                      :disabled="item.saving || resultBusy"
+                      @input="setValue(code, item, ($event.target as HTMLTextAreaElement).value)"
+                    ></textarea>
+                    <input
+                      v-else
+                      :value="item.row.locales[code][field] ?? ''"
+                      class="field"
+                      :aria-label="`${item.row.id} ${languageNames[code]}`"
+                      :disabled="item.saving || resultBusy"
+                      @input="setValue(code, item, ($event.target as HTMLInputElement).value)"
+                    /> </SkeletonStateSlot
+                  ><button
+                    :class="[
+                      'chip mt-1.5',
+                      item.row.locales[code].status === 'approved'
+                        ? 'bg-success-soft text-success-soft-foreground'
+                        : 'bg-muted text-muted-foreground',
+                    ]"
+                    :aria-pressed="item.row.locales[code].status === 'approved'"
+                    :disabled="item.saving || resultBusy"
+                    @click="toggleApproved(code, item)"
+                  >
+                    <Icon v-if="item.row.locales[code].status === 'approved'" :icon="Check" :size="11" />
+                    {{ item.row.locales[code].status === 'approved' ? t('Approved') : t('Draft') }}
+                  </button>
+                </td>
+                <td class="px-4 py-3 text-right">
+                  <button
+                    class="btn-outline"
+                    :disabled="!grid.isDirty(item) || item.saving || resultBusy"
+                    @click="grid.save(item)"
+                  >
+                    {{ item.saving ? t('Saving…') : t('Save') }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </SkeletonStateGroup>
     </div>
   </section>
 </template>

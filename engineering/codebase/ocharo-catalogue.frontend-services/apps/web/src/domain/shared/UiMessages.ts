@@ -1,3 +1,4 @@
+import { catalogueResultUiMessages } from './CatalogueResultUiMessages';
 import { catalogueLegacyUiMessages } from './CatalogueLegacyUiMessages';
 import { catalogueOperationsUiMessages } from './CatalogueOperationsUiMessages';
 import { catalogueInterfaceUiMessages } from './CatalogueInterfaceUiMessages';
@@ -1773,6 +1774,7 @@ export const operatorUiMessages: UiMessageTable = {
 };
 
 export const uiMessages: UiMessageTable = {
+  ...catalogueResultUiMessages,
   ...catalogueLegacyUiMessages,
   ...catalogueOperationsUiMessages,
   ...catalogueInterfaceUiMessages,

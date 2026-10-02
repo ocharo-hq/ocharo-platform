@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useRefresh } from '@wow-two-beta/ui-vue/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import RefreshButton from '../common/RefreshButton.vue';
+import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router';
 import { ArrowDownToLine, Bookmark, Check, Share2 } from 'lucide-vue-next';
@@ -43,9 +47,12 @@ const translatedError = computed(() => (reader.error.value ? t(reader.error.valu
 useErrorToast(translatedError);
 async function reload() {
   notice.value = '';
+  const hadEdition = !!edition.value;
   await reader.load(String(route.params.slug ?? ''), contentLocale.value, releaseId.value);
-  view.value = edition.value?.web ? 'web' : 'pdf';
+  if (!hadEdition) view.value = edition.value?.web ? 'web' : 'pdf';
 }
+const { refresh, refreshing } = useRefresh(reload);
+const resultBusy = computed(() => loading.value || refreshing.value);
 watch(() => [route.params.slug, contentLocale.value, releaseId.value], reload, { immediate: true });
 function changeLanguage(locale: string) {
   if (!languageOptions.value.some((option) => option.value === locale)) return;
@@ -85,163 +92,179 @@ async function share(section?: string) {
 </script>
 
 <template>
-  <ContentSkeleton v-if="loading" :label="t('Loading catalogue')" :cards="3" />
-  <section v-else-if="!edition" class="catalogue-unavailable panel px-6 py-16 text-center">
-    <p class="text-xs uppercase tracking-[.2em] text-muted-foreground">Ocharo</p>
-    <h1 class="mt-4 font-editorial text-4xl">{{ t('Catalogue unavailable') }}</h1>
-    <p class="mx-auto mt-4 max-w-md text-sm text-muted-foreground">
-      {{
-        t(
-          reader.notFound.value
-            ? 'This catalogue is not published in this language.'
-            : 'We could not load this catalogue. Please retry.',
-        )
-      }}
-    </p>
-    <button type="button" class="btn-primary mt-6" @click="reload">{{ t('Retry') }}</button>
-  </section>
-  <section v-else class="published-catalogue" :lang="edition.locale" :dir="direction">
-    <div class="reader-tools no-print">
-      <div class="reader-language">
-        <label class="label" for="catalogue-language">{{ t('Catalogue language') }}</label
-        ><CatalogueSelect
-          id="catalogue-language"
-          :model-value="edition.locale"
-          :options="languageOptions"
-          :label="t('Catalogue language')"
-          @update:model-value="changeLanguage"
+  <section>
+    <div class="no-print flex items-center justify-between gap-4 mb-5">
+      <p class="text-xs uppercase tracking-[.2em] text-muted-foreground">Ocharo</p>
+      <RefreshButton :busy="resultBusy" @refresh="refresh" />
+    </div>
+    <div class="catalogue-result-region">
+      <ContentSkeleton v-if="resultBusy && !edition" :label="t('Loading catalogue')" :cards="3" variant="product" />
+      <div v-else-if="!edition" class="catalogue-unavailable">
+        <ResultEmpty
+          :label="
+            reader.notFound.value ? t('This catalogue is not published in this language.') : t('Content unavailable')
+          "
         />
       </div>
-      <div class="reader-actions">
-        <div v-if="edition.web && edition.pdf" class="reader-view" role="group" :aria-label="t('Catalogue view')">
-          <button type="button" :aria-pressed="view === 'web'" @click="view = 'web'">{{ t('Read online') }}</button
-          ><button type="button" :aria-pressed="view === 'pdf'" @click="view = 'pdf'">{{ t('PDF pages') }}</button>
-        </div>
-        <a
-          v-if="edition.pdf"
-          :href="edition.pdf.pdfUrl"
-          :download="`ocharo-${edition.slug}-${edition.locale}.pdf`"
-          class="btn-primary"
-          ><Icon :icon="ArrowDownToLine" :size="17" />{{ t('Download catalogue PDF') }}</a
-        >
-        <button type="button" class="btn-outline" @click="share()">
-          <Icon :icon="Share2" :size="17" />{{ t('Share catalogue') }}
-        </button>
-      </div>
-      <p role="status" class="reader-notice">{{ notice }}</p>
-    </div>
-    <article v-if="view === 'web' && edition.web" class="web-reader" :class="`theme-${edition.web.theme}`">
-      <header class="collection-intro">
-        <p class="collection-kicker">
-          {{ edition.web.copy.header || 'Ocharo'
-          }}<span v-if="edition.web.copy.collection"> · {{ edition.web.copy.collection }}</span>
-        </p>
-        <h1>{{ edition.title }}</h1>
-        <p class="collection-description">{{ edition.description }}</p>
-        <p v-if="edition.web.copy.coverNote" class="cover-note">{{ edition.web.copy.coverNote }}</p>
-        <nav v-if="edition.web.pages.length > 1" :aria-label="t('Collection sections')" class="section-links">
-          <a v-for="page in edition.web.pages" :key="page.id" :href="`#section-${page.id}`">{{ page.title }}</a>
-        </nav>
-      </header>
-      <section
-        v-for="page in edition.web.pages"
-        :id="`section-${page.id}`"
-        :key="page.id"
-        class="collection-page"
-        :class="page.layout"
-      >
-        <div class="collection-section-heading">
-          <h2>{{ page.title }}</h2>
-          <button type="button" class="section-share no-print" @click="share(`section-${page.id}`)">
-            <Icon :icon="Share2" :size="16" /><span>{{ t('Copy page link') }}</span>
-          </button>
-        </div>
-        <div class="products">
-          <article
-            v-for="product in pageProducts(edition, page)"
-            :id="`product-${page.id}-${product.id}`"
-            :key="product.id"
-            class="product"
-          >
-            <div class="photographs">
-              <figure v-for="image in chosenImages(product, edition.web, page.layout)" :key="image.sha256">
-                <img :src="image.url" :alt="image.alt || product.name || ''" loading="lazy" />
-              </figure>
-              <div
-                v-if="!chosenImages(product, edition.web, page.layout).length"
-                class="image-empty"
-                role="img"
-                :aria-label="product.name ?? undefined"
+      <SkeletonStateGroup v-else :is-loading="resultBusy" :label="t('Loading catalogue')">
+        <section class="published-catalogue" :lang="edition.locale" :dir="direction">
+          <div class="reader-tools no-print">
+            <div class="reader-language">
+              <label class="label" for="catalogue-language">{{ t('Catalogue language') }}</label
+              ><CatalogueSelect
+                id="catalogue-language"
+                :model-value="edition.locale"
+                :options="languageOptions"
+                :label="t('Catalogue language')"
+                @update:model-value="changeLanguage"
               />
             </div>
-            <div class="product-copy">
-              <h3>{{ product.name }}</h3>
-              <p v-if="page.layout !== 'grid' && product.description" class="description">{{ product.description }}</p>
-              <dl>
-                <div v-if="product.fabric">
-                  <dt>{{ edition.web.copy.materials }}</dt>
-                  <dd>{{ product.fabric }}</dd>
-                </div>
-                <div v-if="product.decoration">
-                  <dt>{{ edition.web.copy.decoration }}</dt>
-                  <dd>{{ product.decoration }}</dd>
-                </div>
-                <div v-if="product.sizes.length">
-                  <dt>{{ edition.web.copy.sizes }}</dt>
-                  <dd>{{ product.sizes.join(', ') }}</dd>
-                </div>
-              </dl>
-              <div v-if="edition.web.priceDisplay.show" class="prices">
-                <p v-for="tier in visiblePrices(product, edition.web)" :key="tier.minimumQuantity">
-                  <b
-                    >{{ amount(tier.unitPrice)
-                    }}<template v-if="edition.web.priceDisplay.showCurrency"> UZS</template></b
-                  ><span v-if="edition.web.priceDisplay.showQuantity">
-                    · {{ quantity(tier) }} {{ edition.web.copy.pieces }}</span
-                  >
-                </p>
-                <p v-if="!product.pricing && edition.web.copy.priceOnRequest">{{ edition.web.copy.priceOnRequest }}</p>
+            <div class="reader-actions">
+              <div v-if="edition.web && edition.pdf" class="reader-view" role="group" :aria-label="t('Catalogue view')">
+                <button type="button" :aria-pressed="view === 'web'" @click="view = 'web'">
+                  {{ t('Read online') }}</button
+                ><button type="button" :aria-pressed="view === 'pdf'" @click="view = 'pdf'">
+                  {{ t('PDF pages') }}
+                </button>
               </div>
-              <button
-                type="button"
-                class="save-piece no-print"
-                :aria-pressed="saved.includes(product.id)"
-                @click="toggleSaved(product.id)"
+              <a
+                v-if="edition.pdf"
+                :href="edition.pdf.pdfUrl"
+                :download="`ocharo-${edition.slug}-${edition.locale}.pdf`"
+                class="btn-primary"
+                ><Icon :icon="ArrowDownToLine" :size="17" />{{ t('Download catalogue PDF') }}</a
               >
-                <Icon :icon="saved.includes(product.id) ? Check : Bookmark" :size="17" />{{
-                  t(saved.includes(product.id) ? 'Saved on this device' : 'Save piece')
-                }}
+              <button type="button" class="btn-outline" @click="share()">
+                <Icon :icon="Share2" :size="17" />{{ t('Share catalogue') }}
               </button>
             </div>
-          </article>
-        </div>
-      </section>
-      <footer v-if="edition.web.copy.footer" class="collection-footer">{{ edition.web.copy.footer }}</footer>
-    </article>
-    <article v-else-if="edition.pdf" class="pdf-reader">
-      <header>
-        <p class="text-xs uppercase tracking-[.2em] text-muted-foreground">Ocharo</p>
-        <h1 class="mt-3 font-editorial text-5xl">{{ edition.title }}</h1>
-        <p class="mt-4 max-w-xl text-muted-foreground">{{ edition.description }}</p>
-      </header>
-      <div class="pdf-grid">
-        <figure v-for="page in edition.pdf.pages" :key="page.id">
-          <a :href="page.pdfUrl" :download="`ocharo-${edition.slug}-${page.number}.pdf`"
-            ><img
-              :src="page.imageUrl"
-              :alt="page.title"
-              :style="{ aspectRatio: `${page.widthMm}/${page.heightMm}` }"
-              loading="lazy"
-          /></a>
-          <figcaption>
-            <span>{{ page.number }} · {{ page.title }}</span
-            ><a :href="page.pdfUrl" :download="`ocharo-${edition.slug}-${page.number}.pdf`" class="btn-outline"
-              ><Icon :icon="ArrowDownToLine" :size="16" />{{ t('Download page PDF') }}</a
+            <p role="status" class="reader-notice">{{ notice }}</p>
+          </div>
+          <article v-if="view === 'web' && edition.web" class="web-reader" :class="`theme-${edition.web.theme}`">
+            <header class="collection-intro">
+              <p class="collection-kicker">
+                {{ edition.web.copy.header || 'Ocharo'
+                }}<span v-if="edition.web.copy.collection"> · {{ edition.web.copy.collection }}</span>
+              </p>
+              <h1>{{ edition.title }}</h1>
+              <p class="collection-description">{{ edition.description }}</p>
+              <p v-if="edition.web.copy.coverNote" class="cover-note">{{ edition.web.copy.coverNote }}</p>
+              <nav v-if="edition.web.pages.length > 1" :aria-label="t('Collection sections')" class="section-links">
+                <a v-for="page in edition.web.pages" :key="page.id" :href="`#section-${page.id}`">{{ page.title }}</a>
+              </nav>
+            </header>
+            <ResultEmpty v-if="!edition.web.pages.length" :label="t('No products found.')" />
+            <section
+              v-for="page in edition.web.pages"
+              :id="`section-${page.id}`"
+              :key="page.id"
+              class="collection-page"
+              :class="page.layout"
             >
-          </figcaption>
-        </figure>
-      </div>
-    </article>
+              <div class="collection-section-heading">
+                <h2>{{ page.title }}</h2>
+                <button type="button" class="section-share no-print" @click="share(`section-${page.id}`)">
+                  <Icon :icon="Share2" :size="16" /><span>{{ t('Copy page link') }}</span>
+                </button>
+              </div>
+              <ResultEmpty v-if="!pageProducts(edition, page).length" :label="t('No products found.')" />
+              <div v-else class="products">
+                <article
+                  v-for="product in pageProducts(edition, page)"
+                  :id="`product-${page.id}-${product.id}`"
+                  :key="product.id"
+                  class="product"
+                >
+                  <SkeletonStateSlot class="catalogue-value" :is-block="true"
+                    ><div class="photographs">
+                      <figure v-for="image in chosenImages(product, edition.web, page.layout)" :key="image.sha256">
+                        <img :src="image.url" :alt="image.alt || product.name || ''" loading="lazy" />
+                      </figure>
+                      <div
+                        v-if="!chosenImages(product, edition.web, page.layout).length"
+                        class="image-empty"
+                        role="img"
+                        :aria-label="product.name ?? undefined"
+                      />
+                    </div>
+                  </SkeletonStateSlot>
+                  <div class="product-copy">
+                    <h3>{{ product.name }}</h3>
+                    <p v-if="page.layout !== 'grid' && product.description" class="description">
+                      {{ product.description }}
+                    </p>
+                    <SkeletonStateSlot class="catalogue-value" :is-block="true"
+                      ><dl>
+                        <div v-if="product.fabric">
+                          <dt>{{ edition.web.copy.materials }}</dt>
+                          <dd>{{ product.fabric }}</dd>
+                        </div>
+                        <div v-if="product.decoration">
+                          <dt>{{ edition.web.copy.decoration }}</dt>
+                          <dd>{{ product.decoration }}</dd>
+                        </div>
+                        <div v-if="product.sizes.length">
+                          <dt>{{ edition.web.copy.sizes }}</dt>
+                          <dd>{{ product.sizes.join(', ') }}</dd>
+                        </div>
+                      </dl>
+                      <div v-if="edition.web.priceDisplay.show" class="prices">
+                        <p v-for="tier in visiblePrices(product, edition.web)" :key="tier.minimumQuantity">
+                          <b
+                            >{{ amount(tier.unitPrice)
+                            }}<template v-if="edition.web.priceDisplay.showCurrency"> UZS</template></b
+                          ><span v-if="edition.web.priceDisplay.showQuantity">
+                            · {{ quantity(tier) }} {{ edition.web.copy.pieces }}</span
+                          >
+                        </p>
+                        <p v-if="!product.pricing && edition.web.copy.priceOnRequest">
+                          {{ edition.web.copy.priceOnRequest }}
+                        </p>
+                      </div> </SkeletonStateSlot
+                    ><button
+                      type="button"
+                      class="save-piece no-print"
+                      :aria-pressed="saved.includes(product.id)"
+                      @click="toggleSaved(product.id)"
+                    >
+                      <Icon :icon="saved.includes(product.id) ? Check : Bookmark" :size="17" />{{
+                        t(saved.includes(product.id) ? 'Saved on this device' : 'Save piece')
+                      }}
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </section>
+            <footer v-if="edition.web.copy.footer" class="collection-footer">{{ edition.web.copy.footer }}</footer>
+          </article>
+          <article v-else-if="edition.pdf" class="pdf-reader">
+            <header>
+              <p class="text-xs uppercase tracking-[.2em] text-muted-foreground">Ocharo</p>
+              <h1 class="mt-3 font-editorial text-5xl">{{ edition.title }}</h1>
+              <p class="mt-4 max-w-xl text-muted-foreground">{{ edition.description }}</p>
+            </header>
+            <div class="pdf-grid">
+              <figure v-for="page in edition.pdf.pages" :key="page.id">
+                <SkeletonStateSlot class="catalogue-value" :is-block="true"
+                  ><a :href="page.pdfUrl" :download="`ocharo-${edition.slug}-${page.number}.pdf`"
+                    ><img
+                      :src="page.imageUrl"
+                      :alt="page.title"
+                      :style="{ aspectRatio: `${page.widthMm}/${page.heightMm}` }"
+                      loading="lazy" /></a
+                ></SkeletonStateSlot>
+                <figcaption>
+                  <span>{{ page.number }} · {{ page.title }}</span
+                  ><a :href="page.pdfUrl" :download="`ocharo-${edition.slug}-${page.number}.pdf`" class="btn-outline"
+                    ><Icon :icon="ArrowDownToLine" :size="16" />{{ t('Download page PDF') }}</a
+                  >
+                </figcaption>
+              </figure>
+            </div>
+          </article>
+        </section>
+      </SkeletonStateGroup>
+    </div>
   </section>
 </template>
 

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useRefresh } from '@wow-two-beta/ui-vue/query';
+import RefreshButton from '../common/RefreshButton.vue';
+import ResultEmpty from '../common/ResultEmpty.vue';
 import { requestConfirmation } from '../../application/common/UseFeedback';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave, RouterLink, useRoute, useRouter } from 'vue-router';
@@ -92,6 +95,9 @@ function changeMedia(index: number, remove = false) {
   else item.isActive = item.isActive === false;
 }
 
+const { refresh, refreshing } = useRefresh(async () => {
+  if (productId.value) await editor.load(productId.value);
+});
 onMounted(async () => {
   await store.loadSettings();
   if (productId.value) await editor.load(productId.value);
@@ -615,9 +621,10 @@ async function onFiles(event: Event) {
           </div>
         </fieldset>
       </section>
-      <p v-else-if="loaded" class="panel p-10 text-center text-sm text-muted-foreground">
-        {{ t('Product not found.') }}
-      </p>
-      <ContentSkeleton v-else :label="t('Loading product')" :cards="2" /> </ModalContent
+      <div v-else>
+        <div class="flex justify-end"><RefreshButton :busy="!loaded || refreshing" @refresh="refresh" /></div>
+        <ContentSkeleton v-if="!loaded || refreshing" :label="t('Loading product')" variant="product-form" />
+        <ResultEmpty v-else :label="t('Content unavailable')" />
+      </div> </ModalContent
   ></Modal>
 </template>

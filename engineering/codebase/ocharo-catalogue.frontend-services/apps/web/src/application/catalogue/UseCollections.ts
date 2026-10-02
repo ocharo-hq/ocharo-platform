@@ -22,14 +22,17 @@ export function useCollections() {
   const busy = ref(false);
   const loading = ref(false);
   const loadFailed = ref(false);
+  const loaded = ref(false);
 
   async function load() {
     loading.value = true;
     loadFailed.value = false;
     const result = await catalogueApi.listCollections();
     loading.value = false;
-    if (result.ok) collections.value = result.value;
-    else {
+    if (result.ok) {
+      collections.value = result.value;
+      loaded.value = true;
+    } else {
       loadFailed.value = true;
       store.fail(describeFailure(result.failure, t));
     }
@@ -40,6 +43,7 @@ export function useCollections() {
     busy,
     loading,
     loadFailed,
+    loaded,
     load,
     blank(): CollectionDraft {
       return {

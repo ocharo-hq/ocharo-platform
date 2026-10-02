@@ -57,15 +57,19 @@ export function usePublicCatalogue() {
   const { t } = useUiLocale();
   const catalogue = shallowRef<PublicCatalogue | null>(null);
   const loading = ref(false);
+  const loaded = ref(false);
   return {
     catalogue,
     loading,
+    loaded,
     async load(locale: LocaleCode) {
       loading.value = true;
       const result = await catalogueApi.publicCatalogue(locale);
       loading.value = false;
-      if (result.ok) catalogue.value = result.value;
-      else store.fail(describeFailure(result.failure, t));
+      if (result.ok) {
+        catalogue.value = result.value;
+        loaded.value = true;
+      } else store.fail(describeFailure(result.failure, t));
     },
   };
 }

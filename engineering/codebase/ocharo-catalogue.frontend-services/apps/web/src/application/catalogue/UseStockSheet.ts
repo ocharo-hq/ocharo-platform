@@ -17,6 +17,8 @@ export function useStockSheet() {
   const { t } = useUiLocale();
   const rows = ref<EditableStock[]>([]);
   const loading = ref(false);
+  const loaded = ref(false);
+  const loadFailed = ref(false);
   const busy = ref(false);
   const snapshot = (row: StockRow) => JSON.stringify({ stock: row.stock, madeToOrder: row.madeToOrder });
   const isDirty = (item: EditableStock) => snapshot(item.row) !== item.baseline;
@@ -44,6 +46,8 @@ export function useStockSheet() {
   return {
     rows,
     loading,
+    loaded,
+    loadFailed,
     busy,
     isDirty,
     dirtyCount: computed(() => rows.value.filter(isDirty).length),
@@ -52,9 +56,14 @@ export function useStockSheet() {
     ),
     async load() {
       loading.value = true;
+      loadFailed.value = false;
       const result = await catalogueApi.stockRows();
       loading.value = false;
-      if (!result.ok) return store.fail(describeFailure(result.failure, t));
+      if (!result.ok) {
+        loadFailed.value = true;
+        return store.fail(describeFailure(result.failure, t));
+      }
+      loaded.value = true;
       rows.value = result.value.map((row) => ({
         row: structuredClone(row),
         baseline: snapshot(row),

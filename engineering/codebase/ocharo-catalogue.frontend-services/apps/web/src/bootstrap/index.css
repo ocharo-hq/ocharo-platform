@@ -223,3 +223,190 @@ html.dark .catalogue-apps-panel {
     max-width: 100vw !important;
   }
 }
+
+/* Query surfaces reserve their region even when a successful response is empty. */
+.catalogue-result-region {
+  min-height: 18rem;
+  margin-top: 1.5rem;
+}
+.catalogue-empty-state {
+  min-height: 18rem;
+  margin: 0;
+  padding: 2rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--color-muted-foreground);
+  font-size: 0.875rem;
+}
+.catalogue-products-grid,
+.catalogue-skeleton-product {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+.catalogue-skeleton-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.catalogue-skeleton-product {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.catalogue-skeleton-catalogue {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.catalogue-skeleton-card {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--color-card);
+}
+.catalogue-skeleton-collection .catalogue-skeleton-card {
+  padding: 1rem;
+}
+.catalogue-skeleton-form-grid,
+.catalogue-skeleton-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+.catalogue-skeleton-fields {
+  gap: 1rem;
+}
+.catalogue-skeleton-designer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.catalogue-skeleton-designer-web-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+}
+.catalogue-skeleton-designer-pdf-grid {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 250px;
+  gap: 16px;
+}
+.catalogue-skeleton-page-rail,
+.catalogue-skeleton-inspector {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+}
+.catalogue-skeleton-designer-web-grid .catalogue-skeleton-page-rail {
+  gap: 15px;
+  padding: 18px;
+}
+.catalogue-skeleton-preview-panel {
+  min-width: 0;
+}
+.catalogue-skeleton-preview {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-muted);
+}
+.catalogue-skeleton-web-preview {
+  padding: 16px;
+  max-height: 1000px;
+}
+.catalogue-skeleton-pdf-canvas {
+  padding: 25px;
+  max-height: 1100px;
+}
+.catalogue-skeleton-paper {
+  width: 720px;
+  min-width: 300px;
+  aspect-ratio: 210 / 297;
+  margin: auto;
+}
+@media (min-width: 640px) {
+  .catalogue-skeleton-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .catalogue-skeleton-form-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(340px, 1fr);
+  }
+}
+@media (max-width: 1250px) {
+  .catalogue-skeleton-designer-pdf-grid {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+  .catalogue-skeleton-inspector {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  .catalogue-skeleton-inspector > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 1050px) {
+  .catalogue-skeleton-designer-web-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 800px) {
+  .catalogue-skeleton-designer-pdf-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .catalogue-skeleton-designer-pdf-grid .catalogue-skeleton-page-rail,
+  .catalogue-skeleton-inspector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .catalogue-skeleton-rail-heading,
+  .catalogue-skeleton-rail-list {
+    grid-column: 1 / -1;
+  }
+  .catalogue-skeleton-pdf-canvas {
+    padding: 16px;
+  }
+}
+.catalogue-value {
+  transition:
+    opacity var(--duration-base) var(--ease-standard),
+    background-color var(--duration-base) var(--ease-standard);
+}
+.catalogue-value:not([data-loading]),
+.catalogue-empty-state,
+.catalogue-content-skeleton {
+  animation: catalogue-results-appear var(--duration-base) var(--ease-out);
+}
+@keyframes catalogue-results-appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (max-width: 767px) {
+  .catalogue-skeleton-collection,
+  .catalogue-skeleton-generic {
+    grid-template-columns: 1fr;
+  }
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .catalogue-skeleton-collection {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .catalogue-value,
+  .catalogue-empty-state,
+  .catalogue-content-skeleton {
+    animation: none;
+  }
+  .catalogue-value {
+    transition: none;
+  }
+}

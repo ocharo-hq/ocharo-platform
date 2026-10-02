@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { useRefresh } from '@wow-two-beta/ui-vue/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import RefreshButton from '../common/RefreshButton.vue';
+import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, onMounted, onScopeDispose, ref } from 'vue';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
@@ -16,13 +20,13 @@ import {
 } from '../../domain/design/EditorModels';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
-import RequestUnavailable from '../common/RequestUnavailable.vue';
 defineOptions({ name: 'CatalogueGalleryPage' });
 const router = useRouter(),
   { t, uiLocale } = useUiLocale(),
   controller = new AbortController();
 const documents = ref<DesignSummary[]>([]),
   loading = ref(true),
+  loaded = ref(false),
   busy = ref(false),
   query = ref(''),
   loadFailed = ref(false),
@@ -35,6 +39,8 @@ const selected = ref<DesignDocument | null>(null),
   baseline = ref(''),
   slugError = ref('');
 let loadGeneration = 0;
+const { refresh, refreshing } = useRefresh(load);
+const resultBusy = computed(() => loading.value || refreshing.value);
 const languageOptions = catalogueLanguages.map((item) => ({ value: item.code, label: item.label }));
 const serialize = () => JSON.stringify({ name: name.value, locale: locale.value, metadata: metadata.value });
 const dirty = computed(() => dialogOpen.value && serialize() !== baseline.value),
@@ -58,6 +64,7 @@ async function load() {
     const next = await designApi.list(controller.signal);
     if (generation !== loadGeneration || controller.signal.aborted) return;
     documents.value = next;
+    loaded.value = true;
   } catch (cause) {
     if (generation === loadGeneration && !controller.signal.aborted) {
       loadFailed.value = true;
@@ -217,52 +224,88 @@ onScopeDispose(() => {
         <h1>{{ t('A collection, in every format.') }}</h1>
         <p>{{ t('Create one catalogue and design its website, PDF, or both.') }}</p>
       </div>
-      <button :disabled="locked" @click="edit()">{{ t('New catalogue') }}</button>
+      <div class="flex flex-wrap items-center gap-3">
+        <RefreshButton :busy="resultBusy" :disabled="locked" @refresh="refresh" /><button
+          :disabled="locked"
+          @click="edit()"
+        >
+          {{ t('New catalogue') }}
+        </button>
+      </div>
     </header>
     <label class="search"
       >{{ t('Find a catalogue') }}<input v-model="query" type="search" :placeholder="t('Name or slug')"
     /></label>
-    <RequestUnavailable v-if="loadFailed" :busy="loading" :retained="!!documents.length" @retry="load" />
-    <ContentSkeleton v-if="loading" :cards="3" :label="t('Loading catalogues')" />
-    <div v-else class="catalogue-grid">
-      <article v-for="item in visible" :key="item.id">
-        <div class="catalogue-cover">
-          <span>Ocharo</span><strong>{{ item.title }}</strong
-          ><small>{{ item.locale?.toUpperCase() ?? 'PDF' }}</small>
+    <div class="catalogue-result-region">
+      <ContentSkeleton v-if="resultBusy && !loaded" :cards="3" variant="catalogue" :label="t('Loading catalogues')" />
+      <SkeletonStateGroup v-else :is-loading="resultBusy" :label="t('Loading catalogues')">
+        <ResultEmpty
+          v-if="!visible.length"
+          :label="
+            loaded
+              ? query
+                ? t('No catalogues match this search.')
+                : t('Create your first catalogue.')
+              : t('Content unavailable')
+          "
+        />
+        <div v-else class="catalogue-grid">
+          <article v-for="item in visible" :key="item.id">
+            <div class="catalogue-cover">
+              <span>Ocharo</span><strong>{{ item.title }}</strong
+              ><small>{{ item.locale?.toUpperCase() ?? 'PDF' }}</small>
+            </div>
+            <div class="card-body">
+              <div class="card-heading">
+                <h2>{{ item.title }}</h2>
+                <SkeletonStateSlot class="catalogue-value"
+                  ><span>{{
+                    (item.catalogue?.isActive ?? true) ? t('Active') : t('Inactive')
+                  }}</span></SkeletonStateSlot
+                >
+              </div>
+              <p v-if="item.catalogue?.slug" class="slug">/{{ item.catalogue.slug }}</p>
+              <SkeletonStateSlot class="catalogue-value" :is-block="true"
+                ><p>{{ item.catalogue?.description }}</p></SkeletonStateSlot
+              >
+              <small
+                >{{ t('Last edited') }} ·
+                <SkeletonStateSlot class="catalogue-value">{{
+                  new Date(item.updatedAtUtc).toLocaleString(uiLocale)
+                }}</SkeletonStateSlot></small
+              >
+              <div class="designer-actions">
+                <button v-if="formats(item).web" @click="open(item.id, 'web')">{{ t('Web designer') }}</button
+                ><button v-if="formats(item).pdf" @click="open(item.id, 'pdf')">{{ t('PDF designer') }}</button>
+              </div>
+              <div class="card-actions">
+                <button :disabled="locked" @click="edit(item)">{{ t('Settings') }}</button
+                ><button
+                  :disabled="locked"
+                  :aria-busy="pendingAction === `duplicate:${item.id}`"
+                  @click="duplicate(item)"
+                >
+                  {{ pendingAction === `duplicate:${item.id}` ? t('Working…') : t('Duplicate') }}</button
+                ><button
+                  :disabled="locked"
+                  :aria-busy="pendingAction === `activate:${item.id}`"
+                  @click="activate(item)"
+                >
+                  {{
+                    pendingAction === `activate:${item.id}`
+                      ? t('Working…')
+                      : (item.catalogue?.isActive ?? true)
+                        ? t('Deactivate')
+                        : t('Activate')
+                  }}</button
+                ><button :disabled="locked" :aria-busy="pendingAction === `remove:${item.id}`" @click="remove(item)">
+                  {{ pendingAction === `remove:${item.id}` ? t('Working…') : t('Remove') }}
+                </button>
+              </div>
+            </div>
+          </article>
         </div>
-        <div class="card-body">
-          <div class="card-heading">
-            <h2>{{ item.title }}</h2>
-            <span>{{ (item.catalogue?.isActive ?? true) ? t('Active') : t('Inactive') }}</span>
-          </div>
-          <p v-if="item.catalogue?.slug" class="slug">/{{ item.catalogue.slug }}</p>
-          <p>{{ item.catalogue?.description }}</p>
-          <small>{{ t('Last edited') }} · {{ new Date(item.updatedAtUtc).toLocaleString(uiLocale) }}</small>
-          <div class="designer-actions">
-            <button v-if="formats(item).web" @click="open(item.id, 'web')">{{ t('Web designer') }}</button
-            ><button v-if="formats(item).pdf" @click="open(item.id, 'pdf')">{{ t('PDF designer') }}</button>
-          </div>
-          <div class="card-actions">
-            <button :disabled="locked" @click="edit(item)">{{ t('Settings') }}</button
-            ><button :disabled="locked" :aria-busy="pendingAction === `duplicate:${item.id}`" @click="duplicate(item)">
-              {{ pendingAction === `duplicate:${item.id}` ? t('Working…') : t('Duplicate') }}</button
-            ><button :disabled="locked" :aria-busy="pendingAction === `activate:${item.id}`" @click="activate(item)">
-              {{
-                pendingAction === `activate:${item.id}`
-                  ? t('Working…')
-                  : (item.catalogue?.isActive ?? true)
-                    ? t('Deactivate')
-                    : t('Activate')
-              }}</button
-            ><button :disabled="locked" :aria-busy="pendingAction === `remove:${item.id}`" @click="remove(item)">
-              {{ pendingAction === `remove:${item.id}` ? t('Working…') : t('Remove') }}
-            </button>
-          </div>
-        </div>
-      </article>
-      <p v-if="!visible.length && !loadFailed && !loading">
-        {{ query ? t('No catalogues match this search.') : t('Create your first catalogue.') }}
-      </p>
+      </SkeletonStateGroup>
     </div>
     <p class="catalogue-note">
       {{

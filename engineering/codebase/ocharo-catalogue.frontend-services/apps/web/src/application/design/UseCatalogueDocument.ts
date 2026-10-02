@@ -53,6 +53,7 @@ export function useCatalogueDocument() {
     redoStack = ref<DesignSnapshot[]>([]),
     controller = new AbortController();
   let generation = 0;
+  let loadedIdentity = '';
   const serialize = () => JSON.stringify({ title: title.value, snapshot: snapshot.value }),
     dirty = computed(() => !!snapshot.value && serialize() !== baseline.value),
     id = () => String(route.params.id ?? '');
@@ -72,20 +73,22 @@ export function useCatalogueDocument() {
   }
   async function load() {
     const run = ++generation;
-    // Route ownership changes atomically: a failed B load must never expose A under B's URL.
-    document.value = null;
-    snapshot.value = null;
-    source.value = null;
-    title.value = '';
-    baseline.value = '';
-    recovery.value = null;
-    revisions.value = [];
-    releases.value = [];
-    prepared.value = null;
-    preflight.value = null;
-    undoStack.value = [];
-    redoStack.value = [];
-    notice.value = '';
+    if (loadedIdentity !== id()) {
+      // Route ownership changes atomically: a failed B load must never expose A under B's URL.
+      document.value = null;
+      snapshot.value = null;
+      source.value = null;
+      title.value = '';
+      baseline.value = '';
+      recovery.value = null;
+      revisions.value = [];
+      releases.value = [];
+      prepared.value = null;
+      preflight.value = null;
+      undoStack.value = [];
+      redoStack.value = [];
+      notice.value = '';
+    }
     loading.value = true;
     error.value = '';
     try {
@@ -95,7 +98,9 @@ export function useCatalogueDocument() {
       ]);
       if (run !== generation || controller.signal.aborted) return;
       accept(value);
+      loadedIdentity = id();
       source.value = library;
+      recovery.value = null;
       let stored: string | null = null;
       try {
         stored = sessionStorage.getItem(key());
@@ -115,6 +120,20 @@ export function useCatalogueDocument() {
       if (run === generation && !controller.signal.aborted) fail(cause);
     } finally {
       if (run === generation) loading.value = false;
+    }
+  }
+  async function reload(refresh: () => Promise<unknown> = load) {
+    if (busy.value) return;
+    if (
+      dirty.value &&
+      !(await requestConfirmation(t('Discard unsaved changes?'), { confirmLabel: t('Discard changes') }))
+    )
+      return;
+    busy.value = true;
+    try {
+      await refresh();
+    } finally {
+      busy.value = false;
     }
   }
   function replace(next: DesignSnapshot) {
@@ -369,6 +388,7 @@ export function useCatalogueDocument() {
     canUndo: computed(() => undoStack.value.length > 0),
     canRedo: computed(() => redoStack.value.length > 0),
     load,
+    reload,
     replace,
     change,
     undo,
