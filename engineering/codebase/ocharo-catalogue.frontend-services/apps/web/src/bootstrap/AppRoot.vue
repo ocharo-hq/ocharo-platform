@@ -12,6 +12,8 @@ import { useErrorToast } from '../application/common/UseFeedback';
 import FeedbackHost from '../presentation/common/FeedbackHost.vue';
 import BuildIdentity from '../presentation/common/BuildIdentity.vue';
 import CatalogueSelect from '../presentation/common/CatalogueSelect.vue';
+import OcharoAppsMenu from '../presentation/common/OcharoAppsMenu.vue';
+import { platformLinks } from './PlatformLinks';
 
 defineOptions({ name: 'AppRoot' });
 const store = useCatalogueStore();
@@ -111,16 +113,19 @@ onMounted(() => {
             >
           </nav>
         </template>
-        <template #end
-          ><button
-            type="button"
-            class="btn-outline min-h-11 min-w-11 rounded-full lg:min-h-0 lg:min-w-0"
-            :aria-label="t('Preferences')"
-            @click="preferences = true"
-          >
-            <Icon :icon="Settings" :size="18" /><span class="hidden xl:inline">{{ t('Preferences') }}</span>
-          </button></template
-        >
+        <template #end>
+          <div class="flex shrink-0 items-center gap-2">
+            <OcharoAppsMenu v-if="!publicRoute" :apps="platformLinks" />
+            <button
+              type="button"
+              class="btn-outline min-h-11 min-w-11 rounded-full lg:min-h-0 lg:min-w-0"
+              :aria-label="t('Preferences')"
+              @click="preferences = true"
+            >
+              <Icon :icon="Settings" :size="18" /><span class="hidden xl:inline">{{ t('Preferences') }}</span>
+            </button>
+          </div>
+        </template>
       </Navbar>
       <nav
         v-if="!publicRoute"

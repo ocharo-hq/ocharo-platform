@@ -58,3 +58,43 @@ navigation or compressing the wordmark to fit tablet navigation.
 Implementation starts in Catalogue. Owner review remains open before treating this
 trial as the accepted header for the remaining operator apps. Public editorial
 mastheads retain their own app-specific design requirements.
+
+## Ocharo app launcher
+
+The approved stacked Catalogue header gains a nine-dot app button beside Preferences.
+Use the published SDK `Popover`; show a three-column grid of app names, without icons
+or descriptions. The current Catalogue app is highlighted. Keyboard focus enters the
+panel; Escape and outside click dismiss it. Keep a 44px trigger and at least 44px tiles.
+The panel fits narrow screens and uses the existing light/dark surface tokens.
+
+Workspace, Brand, Catalogue, Marketing, Blog studio, Studio, Atlas, Wear and Blog are
+browser destinations. Each destination retains its own access checks. Other apps open
+in a new tab, preserving this editor; Catalogue stays within the router and its guards.
+`PlatformLinks.ts` owns HTTPS frontend URLs and `VITE_OCHARO_*_URL` overrides.
+Public `/c/` readers hide the operator launcher. Catalogue currently remains a loopback
+pilot without sign-in; this menu is navigation, not authentication or single sign-on.
+
+## App identity recommendation
+
+Keep the approved Ocharo wordmark plus app label for Catalogue, Workspace, Brand and
+operator Marketing. Atlas, Wear and Blog can have different editorial styles while
+retaining the Ocharo identity. Studio is a candidate for a distinct logo with a subordinate
+`by Ocharo` endorsement if it is marketed independently to public creative-tool users.
+Separate app-logo generation remains unapproved. Any endorsement uses the exact approved
+Ocharo artwork; tiny launcher icons carry no endorsement text.
+
+## Local launcher verification — 2026-10-02
+
+Catalogue frontend build/typecheck and lint passed. The existing architecture and
+destination safety suites passed all 10 tests. An isolated fixture using the actual
+header and launcher passed 36 width/locale/theme combinations: 320, 390, 768, 820,
+1024 and 1440px; Uzbek, Russian and English; light and dark. No header overlap,
+clipping, page overflow or browser errors were observed.
+
+Keyboard checks covered opening, all nine links, Escape focus return and outside
+dismissal. Other-app navigation was intercepted to verify HTTPS/new-tab destinations
+and preservation of the current route; this does not establish service availability.
+Public reader isolation passed all six locale/theme combinations. The final accessible
+dialog name was verified after rebuilding the attribute-forwarding change.
+
+These local checks do not close the version-track owner-review boxes.

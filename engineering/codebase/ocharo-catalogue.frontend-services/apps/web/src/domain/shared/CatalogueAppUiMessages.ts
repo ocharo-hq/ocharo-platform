@@ -2,6 +2,12 @@ import type { UiMessageTable } from './UiMessages';
 
 /** Catalogue app navigation, product forms and preferences. */
 export const catalogueAppUiMessages: UiMessageTable = {
+  'Ocharo apps': { uz: 'Ocharo ilovalari', ru: 'Приложения Ocharo' },
+  Workspace: { uz: 'Ish maydoni', ru: 'Рабочее пространство' },
+  'Blog studio': { uz: 'Blog muharriri', ru: 'Редактор блога' },
+  Blog: { uz: 'Blog', ru: 'Блог' },
+  Atlas: { uz: 'Atlas', ru: 'Атлас' },
+  Wear: { uz: 'Uslub', ru: 'Стиль' },
   Catalogues: {
     uz: 'Kataloglar',
     ru: 'Каталоги',
