@@ -9,5 +9,8 @@ namespace OcharoCatalogue.Api.Catalogue.Controllers;
 public sealed class PublicCatalogueController(PublicCatalogueService feed) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] string? locale, CancellationToken ct) => Ok(await feed.BuildAsync(locale, ct));
+    public async Task<IActionResult> Get([FromQuery] string? locale, CancellationToken ct)
+    {
+        return Ok(await feed.BuildAsync(locale, ct));
+    }
 }

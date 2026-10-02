@@ -10,16 +10,37 @@ namespace OcharoCatalogue.Api.Catalogue.Controllers;
 public sealed class CollectionsController(CollectionService collections) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken ct) => Ok(await collections.ListAsync(ct));
+    public async Task<IActionResult> List(CancellationToken ct)
+    {
+        return Ok(await collections.ListAsync(ct));
+    }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> Get(string id, CancellationToken ct) => Ok(await collections.GetAsync(id, ct));
+    public async Task<IActionResult> Get(string id, CancellationToken ct)
+    {
+        return Ok(await collections.GetAsync(id, ct));
+    }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CollectionInput input, CancellationToken ct) => Ok(await collections.SaveAsync(null, input, ct));
+    public async Task<IActionResult> Create(CollectionInput input, CancellationToken ct)
+    {
+        return Ok(await collections.SaveAsync(
+            null,
+            input,
+            ct));
+    }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(string id, CollectionInput input, CancellationToken ct) => Ok(await collections.SaveAsync(id, input, ct));
+    public async Task<IActionResult> Update(
+        string id,
+        CollectionInput input,
+        CancellationToken ct)
+    {
+        return Ok(await collections.SaveAsync(
+            id,
+            input,
+            ct));
+    }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(string id, CancellationToken ct)
