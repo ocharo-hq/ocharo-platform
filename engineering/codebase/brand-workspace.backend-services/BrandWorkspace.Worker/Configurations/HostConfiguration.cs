@@ -9,6 +9,6 @@ public static partial class HostConfiguration
     public static HostApplicationBuilder Configure(this HostApplicationBuilder builder, bool executeJobs) =>
         builder.AddExplicitEnvironment().AddPostgresDatabase().AddFoundation(executeJobs);
 
-    /// <summary>Configures the worker without applying database migrations.</summary>
-    public static IHost Configure(this IHost host) => host;
+    /// <summary>Verifies mandatory worker startup prerequisites without applying database migrations.</summary>
+    public static Task<IHost> ConfigureAsync(this IHost host) => host.ConfigureFoundationAsync();
 }

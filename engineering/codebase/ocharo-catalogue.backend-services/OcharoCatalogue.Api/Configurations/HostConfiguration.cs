@@ -2,24 +2,28 @@ using OcharoCatalogue.Api.Catalogue;
 
 namespace OcharoCatalogue.Api.Configurations;
 
-/// <summary>Configures the OcharoCatalogue host — slim orchestrator that delegates to extension methods.</summary>
-public static class HostConfiguration
+/// <summary>Extends the host builder and the web application for startup wiring.</summary>
+public static partial class HostConfiguration
 {
-    /// <summary>Configures all services across every layer.</summary>
+    /// <summary>Configures the application builder (services).</summary>
     public static WebApplicationBuilder Configure(this WebApplicationBuilder builder)
     {
         builder
-            .AddPersistenceLayer()
-            .AddInfrastructureLayer()
-            .AddApplicationLayer()
-            .AddApiServices();
+            .AddSqliteDatabase()
+            .AddClock()
+            .AddCatalogue()
+            .AddMediator()
+            .AddControllers();
 
         return builder;
     }
 
-    /// <summary>Configures the middleware pipeline and maps endpoints.</summary>
-    public static WebApplication Configure(this WebApplication app)
+    /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>
+    public static async Task<WebApplication> ConfigureAsync(this WebApplication app)
     {
+        await app.InitializeCatalogueAsync();
+
+
         app.UseMiddleware<CatalogueExceptionMiddleware>();
         app.UseMiddleware<LocalPilotBoundaryMiddleware>();
 

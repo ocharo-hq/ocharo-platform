@@ -11,13 +11,6 @@ public static class MediaProcessingEndpoints
     private const int MaximumBytes = 20 * 1024 * 1024;
     private static readonly SemaphoreSlim Processing = new(1, 1);
 
-    /// <summary>Registers the optional worker from explicit server configuration only.</summary>
-    public static IServiceCollection AddMediaProcessing(this IServiceCollection services, IConfiguration configuration) =>
-        services.AddBackgroundRemoval(o => {
-            o.BaseUrl = configuration["ImageProcessing:WorkerBaseUrl"];
-            o.ApiKey = configuration["ImageProcessing:WorkerKey"];
-        });
-
     /// <summary>Maps HTTPS endpoints authenticated exclusively by a current Marketing audience ticket.</summary>
     public static WebApplication MapMediaProcessingEndpoints(this WebApplication app)
     {

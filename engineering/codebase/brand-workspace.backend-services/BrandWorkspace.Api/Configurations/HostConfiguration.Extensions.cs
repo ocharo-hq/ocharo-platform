@@ -5,6 +5,16 @@ using BrandWorkspace.Api.DesignDocuments;
 using BrandWorkspace.Api.Access;
 using BrandWorkspace.Api.Foundation;
 using BrandWorkspace.Infrastructure.Preparation.Services;
+using BrandWorkspace.Application.Preparation.Repositories;
+using BrandWorkspace.Application.Preparation.Services;
+using BrandWorkspace.Persistence.Preparation.Repositories;
+using BrandWorkspace.Application.DesignDocuments.Repositories;
+using BrandWorkspace.Infrastructure.DesignDocuments.Services;
+using BrandWorkspace.Persistence.DesignDocuments.Repositories;
+using BrandWorkspace.Application.Commerce;
+using BrandWorkspace.Infrastructure.Commerce;
+using BrandWorkspace.Persistence.Commerce;
+using WoW.Two.Sdk.Backend.Beta.Media.BackgroundRemoval;
 using BrandWorkspace.Api.Preparation;
 using BrandWorkspace.Application.Access;
 using BrandWorkspace.Persistence.Access;
@@ -58,14 +68,14 @@ public static partial class HostConfiguration
             ?? throw new InvalidOperationException("ConnectionStrings:Database is required.")));
         builder.Services.AddSingleton<DbDataSource>(services => services.GetRequiredService<NpgsqlDataSource>());
         builder.Services.AddDataSourceConnectionFactory();
-        builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
-        builder.Services.AddSingleton(TimeProvider.System);
         return builder;
     }
 
-    /// <summary>Registers migration services exclusively for the explicit CLI invocation.</summary>
+    /// <summary>Registers foundation diagnostics and migration services for the explicit CLI invocation.</summary>
     private static WebApplicationBuilder AddFoundation(this WebApplicationBuilder builder, bool migrate)
     {
+        builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
+        builder.Services.AddSingleton(TimeProvider.System);
         if (!migrate) return builder;
         builder.Services.AddDatabaseBespokeMigrations(typeof(FoundationRepository).Assembly, options =>
         {
@@ -153,11 +163,45 @@ public static partial class HostConfiguration
     /// <summary>Registers the organization-scoped content preparation workflow.</summary>
     private static WebApplicationBuilder AddPreparation(this WebApplicationBuilder builder)
     {
-        builder.Services.AddPreparationServices();
-        builder.Services.AddDesignDocumentServices();
+        builder.Services.AddSingleton<IPreparationRepository, PreparationRepository>();
+        builder.Services.AddSingleton<IManualPackageBuilder, ManualPackageBuilder>();
+        builder.Services.AddSingleton<ImageValidationService>();
+        builder.Services.AddScoped<PreparationService>();
+        return builder;
+    }
+
+    /// <summary>Registers durable editor documents and their validation workflow.</summary>
+    private static WebApplicationBuilder AddDesignDocuments(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IDesignDocumentRepository, DesignDocumentRepository>();
+        builder.Services.AddSingleton<DesignDocumentValidationService>();
+        builder.Services.AddScoped<DesignDocumentService>();
+        return builder;
+    }
+
+    /// <summary>Registers scoped integration ticket verification.</summary>
+    private static WebApplicationBuilder AddIntegrations(this WebApplicationBuilder builder)
+    {
         builder.Services.AddSingleton<IntegrationTickets>();
-        builder.Services.AddCommerce();
-        builder.Services.AddMediaProcessing(builder.Configuration);
+        return builder;
+    }
+
+    /// <summary>Registers commerce persistence and preserved source adoption.</summary>
+    private static WebApplicationBuilder AddCommerce(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<ICommerceRepository, CommerceRepository>();
+        builder.Services.AddSingleton<LegacyCommerceReader>();
+        return builder;
+    }
+
+    /// <summary>Registers the optional image worker from explicit server configuration.</summary>
+    private static WebApplicationBuilder AddMediaProcessing(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddBackgroundRemoval(options =>
+        {
+            options.BaseUrl = builder.Configuration["ImageProcessing:WorkerBaseUrl"];
+            options.ApiKey = builder.Configuration["ImageProcessing:WorkerKey"];
+        });
         return builder;
     }
 

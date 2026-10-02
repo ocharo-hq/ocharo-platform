@@ -15,4 +15,9 @@
     <ProjectReference Include="..\OcharoBrand.Domain\OcharoBrand.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Host-owned composition can register internal adapters without exposing them publicly. -->
+    <InternalsVisibleTo Include="OcharoBrand.Api" />
+  </ItemGroup>
+
 </Project>

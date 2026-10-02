@@ -1,9 +1,9 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OcharoCatalogue.Application;
+using Microsoft.AspNetCore.Builder;
+using OcharoCatalogue.Api.Configurations;
 using OcharoCatalogue.Application.Abstractions;
-using OcharoCatalogue.Infrastructure;
 using OcharoCatalogue.Persistence;
 using SkiaSharp;
 
@@ -25,14 +25,17 @@ public sealed class CatalogueHarness : IAsyncDisposable
             ["Catalogue:DataRoot"] = Path.Combine(Root, "data"),
             ["Catalogue:SourceRoot"] = sourceRoot,
         };
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddPersistence(configuration);
-        services.AddInfrastructure(configuration, Root);
-        services.AddApplication();
-        services.AddSingleton<IClock>(Clock);
-        Services = services.BuildServiceProvider();
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            ApplicationName = typeof(HostConfiguration).Assembly.GetName().Name,
+            ContentRootPath = Root,
+            EnvironmentName = "Testing",
+        });
+        builder.Configuration.Sources.Clear();
+        builder.Configuration.AddInMemoryCollection(settings);
+        builder.Configure();
+        builder.Services.AddSingleton<IClock>(Clock);
+        Services = builder.Services.BuildServiceProvider();
     }
 
     public static async Task<CatalogueHarness> CreateAsync(string? sourceRoot = null)

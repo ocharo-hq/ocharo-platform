@@ -2,32 +2,14 @@ using OcharoBrand.Api.Brand;
 
 namespace OcharoBrand.Api.Configurations;
 
-/// <summary>Configures the OcharoBrand host — admin API, public brand kit and the operator SPA.</summary>
-public static class HostConfiguration
+/// <summary>Extends the host builder and the web application for startup wiring.</summary>
+public static partial class HostConfiguration
 {
-    public static WebApplicationBuilder Configure(this WebApplicationBuilder builder)
-    {
-        builder.AddPersistenceLayer().AddInfrastructureLayer().AddApplicationLayer().AddApiServices();
-        return builder;
-    }
+    /// <summary>Configures the application builder (services).</summary>
+    public static WebApplicationBuilder Configure(this WebApplicationBuilder builder) =>
+        builder.AddSqliteDatabase().AddBrand().AddHttpSurface();
 
-    public static WebApplication Configure(this WebApplication app)
-    {
-        app.UseMiddleware<BrandExceptionMiddleware>();
-        app.UseMiddleware<LocalPilotBoundaryMiddleware>();
-        if (app.Environment.IsDevelopment())
-            app.MapOpenApi();
-        app.UseDefaultFiles();
-        app.UseStaticFiles();
-        app.MapControllers();
-        app.MapGet("/api/system/version", (HttpContext context) =>
-        {
-            context.Response.Headers.CacheControl = "no-store";
-            return Results.Ok(new { service = "OcharoBrand", version = BuildIdentity.Version });
-        }).AllowAnonymous();
-        app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "OcharoBrand", mode = "local-pilot" }));
-        app.MapFallback("/api/{**slug}", () => Results.Problem(statusCode: 404, title: "API route not found"));
-        app.MapFallbackToFile("index.html");
-        return app;
-    }
+    /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>
+    public static Task<WebApplication> ConfigureAsync(this WebApplication app) =>
+        app.ConfigureHttpSurface().InitializeBrandAsync();
 }

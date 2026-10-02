@@ -28,19 +28,19 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers the PostgreSQL pool and foundation repository.</summary>
+    /// <summary>Registers the PostgreSQL connection pool.</summary>
     private static HostApplicationBuilder AddPostgresDatabase(this HostApplicationBuilder builder)
     {
         var connection = builder.Configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("ConnectionStrings:Database is required.");
         builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connection));
-        builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
         return builder;
     }
 
     /// <summary>Registers explicit durable execution or a client without hosted job processing.</summary>
     private static HostApplicationBuilder AddFoundation(this HostApplicationBuilder builder, bool executeJobs)
     {
+        builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
         var connection = builder.Configuration.GetConnectionString("Database")!;
         void ConfigureStorage(IGlobalConfiguration configuration) => configuration.UsePostgreSqlStorage(
             storage => storage.UseNpgsqlConnection(connection),
@@ -69,12 +69,19 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Runs diagnostic CLI operations or starts durable job execution.</summary>
-    public static async Task<int> RunCommandOrHostAsync(this IHost host, string[] args)
+    /// <summary>Configures mandatory foundation readiness before worker execution or CLI commands.</summary>
+    private static async Task<IHost> ConfigureFoundationAsync(this IHost host)
     {
         var repository = host.Services.GetRequiredService<IFoundationRepository>();
         if (!await repository.IsReadyAsync(CancellationToken.None))
             throw new InvalidOperationException("Database schema is not ready; run the API --migrate command first.");
+        return host;
+    }
+
+    /// <summary>Runs diagnostic CLI operations or starts durable job execution.</summary>
+    public static async Task<int> RunCommandOrHostAsync(this IHost host, string[] args)
+    {
+        var repository = host.Services.GetRequiredService<IFoundationRepository>();
         if (args.Length == 0) { await host.RunAsync(); return 0; }
         if (args is ["--enqueue-probe"])
         {

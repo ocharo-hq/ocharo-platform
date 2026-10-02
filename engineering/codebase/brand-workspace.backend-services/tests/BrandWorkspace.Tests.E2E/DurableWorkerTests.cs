@@ -39,6 +39,13 @@ public sealed class DurableWorkerTests
         await using (var command = dataSource.CreateCommand("SELECT to_regnamespace('foundation') IS NULL"))
             (await command.ExecuteScalarAsync()).Should().Be(true);
 
+        using (var unmigratedWorker = CreateWorker(connection, executeJobs: false))
+        {
+            var startup = () => WorkerConfiguration.ConfigureAsync(unmigratedWorker);
+            var failure = await startup.Should().ThrowAsync<PostgresException>();
+            failure.Which.SqlState.Should().Be(PostgresErrorCodes.UndefinedTable);
+        }
+
         await MigrateAsync(connection);
         await MigrateAsync(connection); // Applying the same embedded source is idempotent.
         string jobId;
@@ -69,6 +76,7 @@ public sealed class DurableWorkerTests
         connection = database.ConnectionString;
         using (var worker = CreateWorker(connection, executeJobs: true))
         {
+            await WorkerConfiguration.ConfigureAsync(worker);
             await worker.StartAsync();
             try
             {
@@ -85,6 +93,7 @@ public sealed class DurableWorkerTests
                 .Enqueue<DiagnosticProbeJob>(job => job.ExecuteAsync(secondProbe, CancellationToken.None));
         using (var restartedWorker = CreateWorker(connection, executeJobs: true))
         {
+            await WorkerConfiguration.ConfigureAsync(restartedWorker);
             await restartedWorker.StartAsync();
             try
             {

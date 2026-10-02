@@ -8,7 +8,6 @@ using BrandWorkspace.Application.DesignDocuments.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.DesignDocuments.Models;
 using BrandWorkspace.Infrastructure.DesignDocuments.Services;
-using BrandWorkspace.Persistence.DesignDocuments.Repositories;
 
 namespace BrandWorkspace.Api.DesignDocuments;
 
@@ -22,14 +21,6 @@ public static class DesignDocumentConfiguration
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
         MaxDepth = DesignDocumentValidationService.MaximumDepth + 2
     };
-
-    public static IServiceCollection AddDesignDocumentServices(this IServiceCollection services)
-    {
-        services.AddSingleton<IDesignDocumentRepository, DesignDocumentRepository>();
-        services.AddSingleton<DesignDocumentValidationService>();
-        services.AddScoped<DesignDocumentService>();
-        return services;
-    }
 
     public static WebApplication MapDesignDocumentEndpoints(this WebApplication app)
     {

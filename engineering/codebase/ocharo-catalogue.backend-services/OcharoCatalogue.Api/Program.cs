@@ -1,14 +1,14 @@
 using OcharoCatalogue.Api.Configurations;
 
+// Build and configure the host.
 var builder = WebApplication.CreateBuilder(args);
 builder.Configure();
 
+// Build and configure the app.
 var app = builder.Build();
-app.Configure();
+await app.ConfigureAsync();
 
-await app.InitializeAsync();
-
+// Run.
 app.Run();
 
-/// <summary>Entry point marker for in-memory E2E hosting.</summary>
 public partial class Program;

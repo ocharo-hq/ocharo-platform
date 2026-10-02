@@ -23,8 +23,6 @@ public sealed record AttachMediaRequest(int ExpectedRevision,Guid MediaId,MediaA
 public static class CommerceEndpoints
 {
     private static IResult CommerceOk(object value) => Results.Json(value, CommerceJson.Options);
-    public static IServiceCollection AddCommerce(this IServiceCollection services)=>services
-        .AddSingleton<ICommerceRepository,CommerceRepository>().AddSingleton<LegacyCommerceReader>();
     private static void Editor(HttpContext h) { if(!OrganizationAccessFilter.GetAccess(h).CanEdit)throw new PreparationException("forbidden","Editor access is required."); }
     private static void Owner(HttpContext h) { if(!OrganizationAccessFilter.GetAccess(h).CanApprove)throw new PreparationException("forbidden","Owner approval is required."); }
     public static WebApplication MapCommerceEndpoints(this WebApplication app)

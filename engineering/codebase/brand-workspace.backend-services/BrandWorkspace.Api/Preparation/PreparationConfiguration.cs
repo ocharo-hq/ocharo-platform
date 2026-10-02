@@ -1,10 +1,7 @@
 using BrandWorkspace.Api.Access;
 using BrandWorkspace.Api.Preparation.Requests;
 using BrandWorkspace.Application.Preparation.Models;
-using BrandWorkspace.Application.Preparation.Repositories;
-using BrandWorkspace.Application.Preparation.Services;
 using BrandWorkspace.Infrastructure.Preparation.Services;
-using BrandWorkspace.Persistence.Preparation.Repositories;
 using Microsoft.AspNetCore.Http.Features;
 
 namespace BrandWorkspace.Api.Preparation;
@@ -12,15 +9,6 @@ namespace BrandWorkspace.Api.Preparation;
 /// <summary>Composes the preparation application and its authenticated organization routes.</summary>
 public static class PreparationConfiguration
 {
-    public static IServiceCollection AddPreparationServices(this IServiceCollection services)
-    {
-        services.AddSingleton<IPreparationRepository, PreparationRepository>();
-        services.AddSingleton<IManualPackageBuilder, ManualPackageBuilder>();
-        services.AddSingleton<ImageValidationService>();
-        services.AddScoped<PreparationService>();
-        return services;
-    }
-
     public static WebApplication MapPreparationEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/organizations/{organizationId:guid}")

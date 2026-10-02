@@ -13,7 +13,7 @@ builder.Configure(args.Length == 0);
 
 // Build and configure the app.
 using var host = builder.Build();
-host.Configure();
+await host.ConfigureAsync();
 
 // Run.
 Environment.ExitCode = await host.RunCommandOrHostAsync(args);
