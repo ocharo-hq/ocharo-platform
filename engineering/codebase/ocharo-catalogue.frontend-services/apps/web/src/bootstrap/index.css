@@ -410,3 +410,39 @@ html.dark .catalogue-apps-panel {
     transition: none;
   }
 }
+
+/* Image controls retain their own readable glass surface over every product photo. */
+.catalogue-image-action {
+  background: var(--color-chrome);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+.catalogue-image-action[aria-pressed='true'] {
+  color: var(--color-primary-soft-foreground);
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary-soft) 90%, transparent);
+}
+.catalogue-product-footer {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .catalogue-image-action {
+    background: var(--color-card);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .catalogue-image-action {
+    background: var(--color-card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (forced-colors: active) {
+  .catalogue-image-action {
+    background: Canvas;
+    color: ButtonText;
+    border-color: ButtonText;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

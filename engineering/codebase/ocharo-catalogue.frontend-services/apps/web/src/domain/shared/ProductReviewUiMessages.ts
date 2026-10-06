@@ -2,6 +2,15 @@ import type { UiMessageTable } from './UiMessages';
 
 /** Operator feedback and product review wording. */
 export const productReviewUiMessages: UiMessageTable = {
+  'I confirm the translation': { uz: 'Tarjimani tasdiqlayman', ru: 'Подтверждаю перевод' },
+  'Describe the product and view shown': {
+    uz: 'Rasmdagi mahsulot va ko‘rinishini tasvirlang',
+    ru: 'Опишите товар и показанный ракурс',
+  },
+  'Reference images': { uz: 'Namuna rasmlari', ru: 'Референсные изображения' },
+  'Cutout images': { uz: 'Fonsiz rasmlar', ru: 'Изображения без фона' },
+  'Product photos': { uz: 'Mahsulot suratlari', ru: 'Фотографии товара' },
+  General: { uz: 'Umumiy', ru: 'Общее' },
   'Please confirm': {
     uz: 'Tasdiqlang',
     ru: 'Подтвердите',

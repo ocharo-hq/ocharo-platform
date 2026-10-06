@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+import { orderProductSizes } from '../../../domain/catalogue/ProductSizes';
 import { useUiLocale } from '../../../application/shared/UseUiLocale';
 const { t } = useUiLocale();
 import { X } from 'lucide-vue-next';
@@ -7,19 +8,26 @@ import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 
 /** Editable list of short codes (sizes, tags, fabric codes). Enter or comma adds; × removes. */
 defineOptions({ name: 'TagInput' });
-const props = defineProps<{ label: string; placeholder?: string; suggestions?: string[] }>();
+const props = defineProps<{ label: string; placeholder?: string; suggestions?: string[]; orderedSizes?: boolean }>();
 const model = defineModel<string[]>({ required: true });
 const entry = ref('');
+/** The selected sizes in catalogue order, or tags in their authored order. */
+const displayed = computed(() =>
+  props.orderedSizes ? orderProductSizes(model.value, props.suggestions) : model.value,
+);
 function add(raw: string) {
   const values = raw
     .split(',')
     .map((v) => v.trim())
     .filter((v) => v.length > 0 && !model.value.includes(v));
-  if (values.length) model.value = [...model.value, ...values];
+  if (values.length) {
+    const next = [...model.value, ...values];
+    model.value = props.orderedSizes ? orderProductSizes(next, props.suggestions) : [...new Set(next)];
+  }
   entry.value = '';
 }
 function remove(value: string) {
-  model.value = model.value.filter((v) => v !== value);
+  model.value = displayed.value.filter((v) => v !== value);
 }
 </script>
 
@@ -29,7 +37,7 @@ function remove(value: string) {
     <div
       class="flex min-h-10 flex-wrap items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1.5 focus-within:border-primary"
     >
-      <span v-for="value in model" :key="value" class="chip bg-secondary text-secondary-foreground">
+      <span v-for="value in displayed" :key="value" class="chip bg-secondary text-secondary-foreground">
         {{ value }}
         <button
           type="button"

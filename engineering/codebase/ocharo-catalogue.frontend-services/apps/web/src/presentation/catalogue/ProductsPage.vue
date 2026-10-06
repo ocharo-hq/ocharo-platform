@@ -196,7 +196,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
             ]"
           >
             <button
-              class="absolute left-3 top-3 z-10 rounded-md bg-card/90 p-1 text-muted-foreground shadow-sm hover:text-primary"
+              class="catalogue-image-action absolute left-3 top-3 z-10 flex size-11 items-center justify-center rounded-xl border border-border text-foreground shadow-sm transition hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:size-9"
               :aria-pressed="list.selected.value.has(product.id)"
               :aria-label="`${t('Select')} ${product.id}`"
               @click="list.toggle(product.id)"
@@ -269,15 +269,15 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
                 </div>
                 <SkeletonStateSlot class="catalogue-value" :is-block="true"
                   ><div class="mt-3 flex flex-wrap gap-1.5 text-[10px]">
-                    <span class="chip bg-secondary text-secondary-foreground"
+                    <span
+                      :class="[
+                        'chip',
+                        product.localesApproved < (product.languagesTotal ?? 3)
+                          ? 'bg-warning-soft text-warning-soft-foreground'
+                          : 'bg-success-soft text-success-soft-foreground',
+                      ]"
                       >{{ product.localesApproved }}/{{ product.languagesTotal ?? 3 }}
                       {{ t('languages confirmed') }}</span
-                    >
-                    <span
-                      v-if="(product.unconfirmedTranslations ?? Math.max(0, 3 - product.localesApproved)) > 0"
-                      class="chip bg-warning-soft text-warning-soft-foreground"
-                      >{{ product.unconfirmedTranslations ?? Math.max(0, 3 - product.localesApproved) }}
-                      {{ t('unconfirmed translations') }}</span
                     >
                     <span v-if="product.openIssues" class="chip bg-warning-soft text-warning-soft-foreground"
                       >{{ product.openIssues }} {{ t('open questions') }}</span
