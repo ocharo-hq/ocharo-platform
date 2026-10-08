@@ -1,0 +1,160 @@
+import type { UiMessageTable } from './UiMessages';
+
+/** Events: the showcase feed, deadlines, and each event's record. */
+export const eventsUiMessages: UiMessageTable = {
+  'Events': { uz: 'Tadbirlar', ru: 'Мероприятия' },
+  'Showcase events': { uz: 'Namoyish tadbirlari', ru: 'Мероприятия для показа' },
+  'Every event where Ocharo could show its products — local, regional and international — with dates, deadlines, costs and where Ocharo stands. Desk records decisions; it never applies, registers or pays on Ocharo\'s behalf.': {
+    uz: 'Ocharo o‘z mahsulotlarini namoyish eta oladigan barcha tadbirlar — mahalliy, mintaqaviy va xalqaro — sanalar, muddatlar, narxlar va Ocharo qaysi bosqichda ekani bilan. Desk faqat qarorlarni qayd etadi; Ocharo nomidan hech qachon ariza bermaydi, ro‘yxatdan o‘tmaydi va to‘lov qilmaydi.',
+    ru: 'Все мероприятия, где Ocharo может показать свою продукцию, — местные, региональные и международные — с датами, сроками, стоимостью и текущим статусом Ocharo. Desk только фиксирует решения и никогда не подаёт заявки, не регистрируется и не платит от имени Ocharo.',
+  },
+  'All events': { uz: 'Barcha tadbirlar', ru: 'Все мероприятия' },
+  'Desk only records where Ocharo stands. Applications, registrations and payments happen outside Desk.': {
+    uz: 'Desk faqat Ocharo qaysi bosqichda ekanini qayd etadi. Arizalar, ro‘yxatdan o‘tish va to‘lovlar Desk’dan tashqarida amalga oshiriladi.',
+    ru: 'Desk только фиксирует, на каком этапе Ocharo. Заявки, регистрация и оплата происходят вне Desk.',
+  },
+
+  // Next deadlines
+  'Next deadlines': { uz: 'Yaqin muddatlar', ru: 'Ближайшие сроки' },
+  'Loading deadlines…': { uz: 'Muddatlar yuklanmoqda…', ru: 'Загрузка сроков…' },
+  'Deadlines unavailable. Try refreshing.': { uz: 'Muddatlar mavjud emas. Yangilab ko‘ring.', ru: 'Сроки недоступны. Попробуйте обновить.' },
+  'No upcoming application deadlines.': { uz: 'Yaqinlashayotgan ariza muddatlari yo‘q.', ru: 'Ближайших сроков подачи заявок нет.' },
+  'Apply by {date}': { uz: 'Ariza muddati: {date}', ru: 'Заявка до {date}' },
+  'Deadline passed': { uz: 'Muddat o‘tgan', ru: 'Срок истёк' },
+  'Deadline today': { uz: 'Muddat bugun', ru: 'Срок сегодня' },
+  '1 day left': { uz: '1 kun qoldi', ru: 'Остался 1 день' },
+  '{count} days left': { uz: '{count} kun qoldi', ru: 'Осталось дней: {count}' },
+
+  // Feed and filters
+  'Event feed': { uz: 'Tadbirlar lentasi', ru: 'Лента мероприятий' },
+  'Add event': { uz: 'Tadbir qo‘shish', ru: 'Добавить мероприятие' },
+  'New event': { uz: 'Yangi tadbir', ru: 'Новое мероприятие' },
+  'Create event': { uz: 'Tadbirni yaratish', ru: 'Создать мероприятие' },
+  'Filter events': { uz: 'Tadbirlarni saralash', ru: 'Фильтр мероприятий' },
+  'Search events': { uz: 'Tadbirlarni qidirish', ru: 'Поиск мероприятий' },
+  'Title, organizer, city or country': { uz: 'Nomi, tashkilotchi, shahar yoki mamlakat', ru: 'Название, организатор, город или страна' },
+  'Scope': { uz: 'Qamrov', ru: 'Охват' },
+  'All': { uz: 'Barchasi', ru: 'Все' },
+  'Format': { uz: 'Format', ru: 'Формат' },
+  'All formats': { uz: 'Barcha formatlar', ru: 'Все форматы' },
+  'All statuses': { uz: 'Barcha holatlar', ru: 'Все статусы' },
+  'Show past events': { uz: 'O‘tgan tadbirlarni ko‘rsatish', ru: 'Показывать прошедшие' },
+  'Loading events…': { uz: 'Tadbirlar yuklanmoqda…', ru: 'Загрузка мероприятий…' },
+  'Events unavailable. Try refreshing.': { uz: 'Tadbirlar mavjud emas. Yangilab ko‘ring.', ru: 'Мероприятия недоступны. Попробуйте обновить.' },
+  'Date not announced': { uz: 'Sana e’lon qilinmagan', ru: 'Дата не объявлена' },
+  'No events match these filters.': { uz: 'Bu filtrlarga mos tadbir topilmadi.', ru: 'Нет мероприятий, подходящих под эти фильтры.' },
+  'No events recorded yet.': { uz: 'Hozircha tadbirlar qayd etilmagan.', ru: 'Мероприятий пока нет.' },
+  'No upcoming events. Turn on past events to see earlier ones.': {
+    uz: 'Yaqinlashayotgan tadbirlar yo‘q. Avvalgilarini ko‘rish uchun o‘tgan tadbirlarni yoqing.',
+    ru: 'Предстоящих мероприятий нет. Включите прошедшие, чтобы увидеть более ранние.',
+  },
+  'Showing the first 200 events. Search or filter to narrow the list.': {
+    uz: 'Dastlabki 200 ta tadbir ko‘rsatilmoqda. Ro‘yxatni toraytirish uchun qidiring yoki saralang.',
+    ru: 'Показаны первые 200 мероприятий. Уточните поиск или фильтры, чтобы сузить список.',
+  },
+
+  // Cards and review
+  'New — review': { uz: 'Yangi — ko‘rib chiqing', ru: 'Новое — на рассмотрение' },
+  'High priority': { uz: 'Yuqori ustuvorlik', ru: 'Высокий приоритет' },
+  'Cost not stated': { uz: 'Narx ko‘rsatilmagan', ru: 'Стоимость не указана' },
+  'Shortlist': { uz: 'Saralanganlarga qo‘shish', ru: 'В шорт-лист' },
+  'Skip': { uz: 'O‘tkazib yuborish', ru: 'Пропустить' },
+  'This event changed elsewhere. The feed has been reloaded; review it and try again.': {
+    uz: 'Bu tadbir boshqa joyda o‘zgartirilgan. Lenta qayta yuklandi; ko‘rib chiqib, qayta urinib ko‘ring.',
+    ru: 'Это мероприятие изменили в другом месте. Лента обновлена; проверьте её и повторите попытку.',
+  },
+
+  // Dates
+  'Dates not announced': { uz: 'Sanalar e’lon qilinmagan', ru: 'Даты не объявлены' },
+  '≈ {date} (expected)': { uz: '≈ {date} (kutilmoqda)', ru: '≈ {date} (ожидается)' },
+
+  // Event details
+  'Loading event…': { uz: 'Tadbir yuklanmoqda…', ru: 'Загрузка мероприятия…' },
+  'Event unavailable': { uz: 'Tadbir mavjud emas', ru: 'Мероприятие недоступно' },
+  'Priority': { uz: 'Ustuvorlik', ru: 'Приоритет' },
+  'Priority: {priority}': { uz: 'Ustuvorlik: {priority}', ru: 'Приоритет: {priority}' },
+  'Save event': { uz: 'Tadbirni saqlash', ru: 'Сохранить мероприятие' },
+  'Delete event': { uz: 'Tadbirni o‘chirish', ru: 'Удалить мероприятие' },
+  'Delete this event? Its status and notes are removed too. This cannot be undone.': {
+    uz: 'Bu tadbir o‘chirilsinmi? Uning holati va izohlari ham o‘chiriladi. Buni qaytarib bo‘lmaydi.',
+    ru: 'Удалить это мероприятие? Его статус и заметки тоже будут удалены. Это действие нельзя отменить.',
+  },
+  'Dates': { uz: 'Sanalar', ru: 'Даты' },
+  'Where': { uz: 'Qayerda', ru: 'Где' },
+  'Application deadline': { uz: 'Ariza topshirish muddati', ru: 'Срок подачи заявки' },
+  'No deadline recorded': { uz: 'Muddat qayd etilmagan', ru: 'Срок не указан' },
+  'Cost': { uz: 'Narxi', ru: 'Стоимость' },
+  'Where it was found': { uz: 'Qayerdan topilgan', ru: 'Где найдено' },
+  'How to take part': { uz: 'Qanday qatnashish mumkin', ru: 'Как принять участие' },
+  'Import key': { uz: 'Import kaliti', ru: 'Ключ импорта' },
+  'Last updated': { uz: 'Oxirgi yangilanish', ru: 'Последнее обновление' },
+  'Revision {revision} · {date}': { uz: '{revision}-tahrir · {date}', ru: 'Редакция {revision} · {date}' },
+
+  // Event form
+  'Event title': { uz: 'Tadbir nomi', ru: 'Название мероприятия' },
+  'Organizer': { uz: 'Tashkilotchi', ru: 'Организатор' },
+  'e.g. UZ': { uz: 'masalan, UZ', ru: 'например, UZ' },
+  'Venue': { uz: 'O‘tkaziladigan joy', ru: 'Площадка' },
+  'Date precision': { uz: 'Sana aniqligi', ru: 'Точность дат' },
+  'Start date': { uz: 'Boshlanish sanasi', ru: 'Дата начала' },
+  'End date': { uz: 'Tugash sanasi', ru: 'Дата окончания' },
+  'Start month': { uz: 'Boshlanish oyi', ru: 'Месяц начала' },
+  'End month (optional)': { uz: 'Tugash oyi (ixtiyoriy)', ru: 'Месяц окончания (необязательно)' },
+  'Estimated from earlier editions. Only the month is shown, marked as expected.': {
+    uz: 'Oldingi o‘tkazilganlari asosida taxmin qilingan. Faqat oy ko‘rsatiladi va kutilayotgan deb belgilanadi.',
+    ru: 'Оценка по прошлым выпускам. Показывается только месяц с пометкой «ожидается».',
+  },
+  'Only the month is announced, so only the month is shown.': {
+    uz: 'Faqat oy e’lon qilingan, shuning uchun faqat oy ko‘rsatiladi.',
+    ru: 'Объявлен только месяц, поэтому показывается только месяц.',
+  },
+  'Dates stay empty until they are announced.': { uz: 'Sanalar e’lon qilinmaguncha bo‘sh qoladi.', ru: 'Даты остаются пустыми, пока их не объявят.' },
+  'As stated, e.g. stand from 500 USD': { uz: 'Ko‘rsatilganidek, masalan, stend 500 USD dan', ru: 'Как указано, например стенд от 500 USD' },
+  'Leave empty when the cost is not stated.': { uz: 'Narx ko‘rsatilmagan bo‘lsa, bo‘sh qoldiring.', ru: 'Оставьте пустым, если стоимость не указана.' },
+  'Fit, what to show, evidence. Never private prices or personal assessments.': {
+    uz: 'Moslik, nimani ko‘rsatish, dalillar. Hech qachon maxfiy narxlar yoki shaxsiy baholar emas.',
+    ru: 'Соответствие, что показать, подтверждения. Никогда — закрытые цены или личные оценки.',
+  },
+
+  // Validation
+  'Enter a title of up to 200 characters.': { uz: '200 belgigacha bo‘lgan nom kiriting.', ru: 'Введите название длиной до 200 символов.' },
+  'Organizer is limited to 160 characters.': { uz: 'Tashkilotchi nomi 160 belgi bilan cheklangan.', ru: 'Организатор — не более 160 символов.' },
+  'Use a two-letter country code, for example UZ or KZ.': { uz: 'Ikki harfli mamlakat kodidan foydalaning, masalan, UZ yoki KZ.', ru: 'Используйте двухбуквенный код страны, например UZ или KZ.' },
+  'Venue is limited to 200 characters.': { uz: 'Joy nomi 200 belgi bilan cheklangan.', ru: 'Площадка — не более 200 символов.' },
+  'Enter the start date, or choose another date precision.': { uz: 'Boshlanish sanasini kiriting yoki boshqa sana aniqligini tanlang.', ru: 'Укажите дату начала или выберите другую точность дат.' },
+  'Dates must be between 2000-01-01 and 2100-12-31.': { uz: 'Sanalar 2000-01-01 va 2100-12-31 oralig‘ida bo‘lishi kerak.', ru: 'Даты должны быть в диапазоне с 2000-01-01 по 2100-12-31.' },
+  'Choose the month the event starts in.': { uz: 'Tadbir boshlanadigan oyni tanlang.', ru: 'Выберите месяц начала мероприятия.' },
+  'The end date cannot be before the start date.': { uz: 'Tugash sanasi boshlanish sanasidan oldin bo‘lishi mumkin emas.', ru: 'Дата окончания не может быть раньше даты начала.' },
+  'The application deadline must be between 2000-01-01 and 2100-12-31.': {
+    uz: 'Ariza muddati 2000-01-01 va 2100-12-31 oralig‘ida bo‘lishi kerak.',
+    ru: 'Срок подачи заявки должен быть в диапазоне с 2000-01-01 по 2100-12-31.',
+  },
+  'How to take part is limited to 2000 characters.': { uz: 'Qatnashish tartibi 2000 belgi bilan cheklangan.', ru: 'Описание участия — не более 2000 символов.' },
+  'Cost is limited to 500 characters.': { uz: 'Narx 500 belgi bilan cheklangan.', ru: 'Стоимость — не более 500 символов.' },
+
+  // Scopes, formats, statuses, precision, priority
+  'Local': { uz: 'Mahalliy', ru: 'Местное' },
+  'Regional': { uz: 'Mintaqaviy', ru: 'Региональное' },
+  'International': { uz: 'Xalqaro', ru: 'Международное' },
+  'Runway show': { uz: 'Podium shousi', ru: 'Показ на подиуме' },
+  'Trade fair': { uz: 'Savdo yarmarkasi', ru: 'Торговая ярмарка' },
+  'Market': { uz: 'Bozor', ru: 'Маркет' },
+  'Exhibition': { uz: 'Ko‘rgazma', ru: 'Выставка' },
+  'Competition': { uz: 'Tanlov', ru: 'Конкурс' },
+  'Festival': { uz: 'Festival', ru: 'Фестиваль' },
+  'Conference': { uz: 'Konferensiya', ru: 'Конференция' },
+  'Candidate': { uz: 'Nomzod', ru: 'Кандидат' },
+  'Shortlisted': { uz: 'Saralangan', ru: 'В шорт-листе' },
+  'Applying': { uz: 'Ariza tayyorlanmoqda', ru: 'Готовим заявку' },
+  'Applied': { uz: 'Ariza topshirilgan', ru: 'Заявка подана' },
+  'Attended': { uz: 'Qatnashilgan', ru: 'Участвовали' },
+  'Skipped': { uz: 'O‘tkazib yuborilgan', ru: 'Пропущено' },
+  'Rejected': { uz: 'Rad etilgan', ru: 'Отклонено' },
+  'Exact dates': { uz: 'Aniq sanalar', ru: 'Точные даты' },
+  'Month only': { uz: 'Faqat oy', ru: 'Только месяц' },
+  'Estimated month': { uz: 'Taxminiy oy', ru: 'Ожидаемый месяц' },
+  'Not announced': { uz: 'E’lon qilinmagan', ru: 'Не объявлены' },
+  'High': { uz: 'Yuqori', ru: 'Высокий' },
+  'Normal': { uz: 'Oddiy', ru: 'Обычный' },
+  'Low': { uz: 'Past', ru: 'Низкий' },
+};

@@ -1,0 +1,56 @@
+/* Layered as components so Tailwind utilities (w-auto, …) can refine these defaults. */
+@layer components {
+.events-input {
+  display: block; width: 100%; min-height: 2.5rem; border: 1px solid var(--color-border); border-radius: .5rem;
+  background: var(--color-card); padding: .5rem .75rem; font-size: .875rem; line-height: 1.4; color: var(--color-foreground);
+}
+textarea.events-input { resize: vertical; }
+.events-input:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+.events-input:disabled { opacity: .6; }
+.events-field { display: grid; gap: .375rem; align-content: start; font-size: .8125rem; color: var(--color-muted-foreground); min-width: 0; }
+.events-alert { border: 1px solid #dcb599; background: #fff0e5; color: #743e29; border-radius: .75rem; padding: .75rem 1rem; font-size: .875rem; line-height: 1.5; }
+
+.events-filters { display: grid; gap: 12px 16px; grid-template-columns: minmax(0, 1fr); align-items: end; }
+.events-toggle { display: inline-flex; align-items: center; gap: .5rem; min-height: 2.5rem; font-size: .875rem; }
+.events-toggle input { width: 18px; height: 18px; accent-color: var(--color-primary); }
+@media (min-width: 768px) {
+  .events-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .events-filter-search, .events-filter-scope { grid-column: 1 / -1; }
+}
+@media (min-width: 1280px) {
+  .events-filters { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .events-filter-search, .events-filter-scope { grid-column: auto; }
+}
+.events-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.events-chip {
+  min-height: 2.5rem; padding: .375rem .875rem; border: 1px solid var(--color-border); border-radius: 999px;
+  background: var(--color-card); font-size: .8125rem; color: var(--color-foreground);
+}
+.events-chip:hover { background: var(--color-muted); }
+.events-chip[aria-pressed='true'] { background: var(--color-primary-soft); border-color: #c9d4bf; color: var(--color-primary-soft-foreground); font-weight: 600; }
+.events-chip:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+.events-group-title { font-size: .8125rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--color-muted-foreground); }
+.events-list { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 768px) { .events-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1440px) { .events-list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.event-card {
+  display: grid; gap: 10px; align-content: start; height: 100%; min-width: 0; padding: 16px; border: 1px solid var(--color-border);
+  border-radius: 16px; background: var(--color-card); overflow-wrap: anywhere;
+}
+.event-card[data-status='candidate'] { border-style: dashed; border-color: #c9d4bf; }
+.event-card[data-status='skipped'], .event-card[data-status='rejected'] { opacity: .75; }
+.event-new { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--color-primary); }
+.event-priority {
+  display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; border-radius: 999px; padding: 2px 8px;
+  background: #fff0e5; color: #743e29; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+
+.events-days[data-tone='urgent'] { color: var(--color-destructive); font-weight: 600; }
+.events-days[data-tone='upcoming'] { color: var(--color-foreground); }
+.events-days[data-tone='passed'] { color: var(--color-muted-foreground); }
+.events-deadlines { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.events-deadline { display: grid; gap: 4px; align-content: start; min-width: 0; padding: 10px 12px; border-radius: 12px; background: var(--color-muted); overflow-wrap: anywhere; }
+.events-deadline-title { font-size: .875rem; font-weight: 600; line-height: 1.35; }
+.events-deadline-title:hover { text-decoration: underline; text-underline-offset: 4px; }
+}
