@@ -4,12 +4,15 @@
 
 ## Features
 
+Build order set by the owner on 2026-10-08: **Events → Sourcing → Catalogue**. Later slices of a vector wait until the vectors before it are confirmed.
+
 | Feature | State | Spec |
 |---|---|---|
 | Workspace and approvals | implemented; owner review open | [preparation.md](../../product/features/preparation.md) |
 | Catalogue editions | implemented; owner review open | [catalogue.md](../../product/features/catalogue.md) |
 | Image processing | implemented; owner review open | [image-processing.md](../../product/features/image-processing.md) |
 | Sourcing: suppliers, contacts, shared media | in progress — v0.1 iteration 16 | [sourcing.md](../../product/features/sourcing.md) |
+| Events: showcase events feed | in progress — v0.1 iteration 17 | [events.md](../../product/features/events.md) |
 
 ## Product and delivery
 

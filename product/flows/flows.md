@@ -34,3 +34,11 @@ record routes and people → move the supplier from lead to quoted → qualify i
 
 Uploading the same bytes again returns the existing item. Desk never contacts a supplier.
 A ledger bundle import adds what is missing and leaves Desk edits untouched.
+
+## Choose where to show
+
+Authenticate → open Events → read the nearest deadlines → review new candidates → shortlist or skip →
+record the application route and cost → move the event to applied, confirmed and attended.
+
+Desk records the decision and evidence; applying, paying and registering happen outside Desk.
+

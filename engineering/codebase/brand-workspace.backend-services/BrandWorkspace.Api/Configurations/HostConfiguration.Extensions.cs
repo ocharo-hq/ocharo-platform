@@ -19,6 +19,10 @@ using BrandWorkspace.Api.Sourcing;
 using BrandWorkspace.Application.Sourcing.Repositories;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
 using BrandWorkspace.Persistence.Sourcing.Repositories;
+using BrandWorkspace.Api.Events;
+using BrandWorkspace.Application.Events.Repositories;
+using BrandWorkspace.Infrastructure.Events.Services;
+using BrandWorkspace.Persistence.Events.Repositories;
 using WoW.Two.Sdk.Backend.Beta.Media.Images;
 using WoW.Two.Sdk.Backend.Beta.Media.BackgroundRemoval;
 using BrandWorkspace.Api.Preparation;
@@ -216,6 +220,16 @@ public static partial class HostConfiguration
         return builder;
     }
 
+    /// <summary>Registers the showcase events feed and its explicit bundle import.</summary>
+    private static WebApplicationBuilder AddEvents(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<IEventRepository, EventRepository>();
+        builder.Services.AddSingleton<EventValidationService>();
+        builder.Services.AddScoped<EventService>();
+        builder.Services.AddScoped<EventImportService>();
+        return builder;
+    }
+
     /// <summary>Registers the optional image worker from explicit server configuration.</summary>
     private static WebApplicationBuilder AddMediaProcessing(this WebApplicationBuilder builder)
     {
@@ -346,6 +360,12 @@ public static partial class HostConfiguration
         if (args.Contains("--import-sourcing"))
         {
             try { await SourcingImportCommand.RunAsync(app.Services, args); }
+            finally { await app.DisposeAsync(); }
+            return;
+        }
+        if (args.Contains("--import-events"))
+        {
+            try { await EventImportCommand.RunAsync(app.Services, args); }
             finally { await app.DisposeAsync(); }
             return;
         }
