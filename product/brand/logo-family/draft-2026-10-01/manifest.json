@@ -1,0 +1,96 @@
+{
+  "status": "draft-pending-visual-review",
+  "date": "2026-10-01",
+  "generator": "built-in image_gen",
+  "assets": [
+    {
+      "file": "assets/ocharo-wordmark-ink.png",
+      "generated_source": "exec-4e5d9b6a-f737-4a2f-b17c-ffad56c87ce4.png",
+      "background": "transparent",
+      "width": 2172,
+      "height": 724,
+      "bytes": 347929,
+      "sha256": "7d5c9503f638cca7ddc538a7c03f8726210764bca26a64213c685fb2cb2d9ea1",
+      "png_color_type": 6
+    },
+    {
+      "file": "assets/ocharo-wordmark-reverse.png",
+      "generated_source": "exec-4e36d516-ebbf-44d2-a3a9-a547e3310d92.png",
+      "background": "opaque charcoal",
+      "width": 2172,
+      "height": 724,
+      "bytes": 1040900,
+      "sha256": "0cdfd746f15766c361ac08f55c304448da8b8a94e8b2a56c1b87f2fefb8f017c",
+      "png_color_type": 2
+    },
+    {
+      "file": "assets/ocharo-symbol-ink.png",
+      "generated_source": "exec-01d919f1-c83c-438d-8005-1b03a53e128e.png",
+      "background": "transparent",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 241236,
+      "sha256": "ef068f60ecb27be3c3b0f5e3b901c6c55a7f2ef4bed3c14e7b17f639913a53f4",
+      "png_color_type": 6
+    },
+    {
+      "file": "assets/ocharo-tile.png",
+      "generated_source": "exec-4e3d239f-233f-4b82-b1b0-3454611ec484.png",
+      "background": "opaque charcoal",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 971218,
+      "sha256": "b61a0600d1035cf8392ef17de3dff81f94c61b8b48f09615f415bc2b164cafa1",
+      "png_color_type": 2
+    },
+    {
+      "file": "assets/ocharo-micro.png",
+      "generated_source": "exec-2a9b11d0-6709-47f1-adc4-ed89a5bd1fda.png",
+      "background": "transparent",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 327593,
+      "sha256": "81d429f3c4531967c13b45d22f56718c1ab8d1bb88ffb4cfea6e924c5432c4d5",
+      "png_color_type": 6
+    },
+    {
+      "file": "assets/ocharo-avatar.png",
+      "generated_source": "exec-8a77e9da-c8e9-41d0-8415-25eaa0370716.png",
+      "background": "opaque ivory",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 902628,
+      "sha256": "64c5a8e76a8ebeaf8d2ec4205f0eda82a153d4071314713e5ab12f409c0e789b",
+      "png_color_type": 2
+    },
+    {
+      "file": "assets/ocharo-micro-reverse.png",
+      "generated_source": "exec-f7022b3d-7d11-4c75-addb-45d2fe8b6859.png",
+      "background": "opaque charcoal",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 937660,
+      "sha256": "30b8cff6d0271c62083148f24525e88752ec41a90327cf9ddcf5e19a1481870b",
+      "png_color_type": 2
+    },
+    {
+      "file": "assets/ocharo-endorsement.png",
+      "generated_source": "exec-9e72b2da-6727-4392-b5c8-7e65f19a02bd.png",
+      "background": "transparent",
+      "width": 2172,
+      "height": 724,
+      "bytes": 216675,
+      "sha256": "7cff1e2d468301458aa97d7099113497d9d6b71f3c881200cc9f1ea771820adc",
+      "png_color_type": 6
+    }
+  ],
+  "reference": {
+    "file": "source/och-logo-approved-ivory-v1.png",
+    "original": "/Users/max/Projects/10x-ws/workbench/fam/mft-10x-ws/context/domains/external/work/career/designer/portfolio/brand/logo/och-logo-approved-ivory-v1.png",
+    "width": 1536,
+    "height": 1024,
+    "bytes": 1236126,
+    "sha256": "32f2efeb381b92fdbf228c6f551909c8d1f78bc1212f1c6b79778cbbf8bcd33e",
+    "png_color_type": 2
+  }
+}

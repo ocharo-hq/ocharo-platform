@@ -1,0 +1,121 @@
+{
+  "sourceHash": "32f2efeb381b92fdbf228c6f551909c8d1f78bc1212f1c6b79778cbbf8bcd33e",
+  "needleClip": "M656 664 682 579 696 537 781 362 798 331 829 328 837 354 817 385 700 575 714 578 704 590 696 600 684 620 673 640 667 650 659 660Z",
+  "ovalClip": "M295 340H605V505L550 570V640H295Z",
+  "eyeClip": "M795 353H817V370L797 407H776V390Z",
+  "compactTranslation": [
+    -278,
+    0
+  ],
+  "needleRedrawn": false,
+  "wordmarkLocalTransforms": false,
+  "specs": [
+    {
+      "name": "ocharo-wordmark-ink",
+      "kind": "wordmark",
+      "view": [
+        280,
+        315,
+        1010,
+        380
+      ],
+      "color": "#20211E",
+      "w": 2020,
+      "h": 760
+    },
+    {
+      "name": "ocharo-wordmark-reverse",
+      "kind": "wordmark",
+      "view": [
+        280,
+        315,
+        1010,
+        380
+      ],
+      "color": "#FFFFFF",
+      "w": 2020,
+      "h": 760
+    },
+    {
+      "name": "ocharo-symbol-ink",
+      "kind": "compact",
+      "view": [
+        275,
+        315,
+        370,
+        370
+      ],
+      "color": "#20211E",
+      "w": 1110,
+      "h": 1110
+    },
+    {
+      "name": "ocharo-tile",
+      "kind": "compact",
+      "view": [
+        275,
+        315,
+        370,
+        370
+      ],
+      "color": "#FFFFFF",
+      "bg": "#20211E",
+      "w": 1110,
+      "h": 1110
+    },
+    {
+      "name": "ocharo-micro",
+      "kind": "compact",
+      "view": [
+        275,
+        315,
+        370,
+        370
+      ],
+      "color": "#20211E",
+      "w": 1110,
+      "h": 1110
+    },
+    {
+      "name": "ocharo-micro-reverse",
+      "kind": "compact",
+      "view": [
+        275,
+        315,
+        370,
+        370
+      ],
+      "color": "#FFFFFF",
+      "w": 1110,
+      "h": 1110
+    },
+    {
+      "name": "ocharo-avatar",
+      "kind": "compact",
+      "view": [
+        275,
+        315,
+        370,
+        370
+      ],
+      "color": "#20211E",
+      "bg": "#F7F3E9",
+      "w": 1110,
+      "h": 1110
+    },
+    {
+      "name": "ocharo-endorsement",
+      "kind": "wordmark",
+      "view": [
+        100,
+        315,
+        1190,
+        380
+      ],
+      "color": "#20211E",
+      "w": 2380,
+      "h": 760,
+      "endorsement": true
+    }
+  ]
+}

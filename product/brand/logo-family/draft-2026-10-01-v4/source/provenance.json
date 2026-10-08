@@ -1,0 +1,11 @@
+{
+  "revision": "v4",
+  "date": "2026-10-01",
+  "generator": "Built-in imagegen",
+  "operation": "Repair continuous lower needle shaft in one compact master",
+  "input": "draft-2026-10-01-v3/assets/ocharo-symbol-ink.png",
+  "original": "source/approved-master.png",
+  "generatedFile": "exec-5da18ad3-80f1-4229-95b6-a42c2cd5e974.png",
+  "fullWordmarks": "Preserved byte-identically from v3",
+  "approval": "Pending user review"
+}

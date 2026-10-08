@@ -1,0 +1,17 @@
+{
+  "approved_source_sha256": "32f2efeb381b92fdbf228c6f551909c8d1f78bc1212f1c6b79778cbbf8bcd33e",
+  "all_eight_embed_original": true,
+  "wordmark_has_no_separate_needle_transform": true,
+  "light_dark_alpha_identical": true,
+  "symbol_small_icon_alpha_identical": true,
+  "original_dark_pixels_inside_crop": {
+    "head": 4295,
+    "lower_shaft": 480
+  },
+  "favicon_sizes": [
+    16,
+    24,
+    32
+  ],
+  "junction_limit": "Compact crop separates the existing c/h junction; no independent original needle exists at that join."
+}

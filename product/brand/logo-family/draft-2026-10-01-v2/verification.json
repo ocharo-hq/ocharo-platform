@@ -1,0 +1,54 @@
+{
+  "compositions": 8,
+  "needle_paths_identical": true,
+  "compact_bodies_identical": true,
+  "wordmark_bodies_identical": true,
+  "light_dark_alpha_identical": true,
+  "favicon_sizes": [
+    16,
+    24,
+    32
+  ],
+  "composition_checks": [
+    {
+      "asset": "ocharo-wordmark-ink",
+      "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+      "transform": "translate(1160 84) rotate(27) scale(0.68)"
+    },
+    {
+      "asset": "ocharo-wordmark-reverse",
+      "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+      "transform": "translate(1160 84) rotate(27) scale(0.68)"
+    },
+    {
+      "asset": "ocharo-symbol-ink",
+      "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+      "transform": "translate(1025 171) rotate(42) scale(1.24)"
+    },
+    {
+      "asset": "ocharo-tile",
+      "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+      "transform": "translate(1025 171) rotate(42) scale(1.24)"
+    },
+    {
+      "asset": "ocharo-micro",
+      "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+      "transform": "translate(1025 171) rotate(42) scale(1.24)"
+    },
+    {
+      "asset": "ocharo-micro-reverse",
+      "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+      "transform": "translate(1025 171) rotate(42) scale(1.24)"
+    },
+    {
+      "asset": "ocharo-avatar",
+      "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+      "transform": "translate(1025 171) rotate(42) scale(1.24)"
+    },
+    {
+      "asset": "ocharo-endorsement",
+      "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+      "transform": "translate(1160 84) rotate(27) scale(0.68)"
+    }
+  ]
+}

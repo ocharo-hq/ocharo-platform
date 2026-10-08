@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Ocharo / logo family</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #292824; background: #f4f1e9; font-synthesis: none; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+    a:hover { text-decoration-thickness: 2px; }
+    a:focus-visible { outline: 3px solid #783b47; outline-offset: 5px; border-radius: 2px; }
+    main { width: min(1260px, calc(100% - 64px)); margin: 0 auto; padding: 58px 0 32px; }
+    .eyebrow { margin: 0 0 14px; color: #675c4f; font-size: 11px; font-weight: 650; letter-spacing: .15em; text-transform: uppercase; }
+    header { display: flex; justify-content: space-between; gap: 28px; align-items: flex-start; padding-bottom: 38px; border-bottom: 1px solid #d5cec1; }
+    h1 { font-family: Georgia, "Times New Roman", serif; font-weight: 400; letter-spacing: -.055em; font-size: clamp(44px, 5.5vw, 72px); line-height: 1; margin: 0 0 18px; }
+    h1 span { color: #80766a; }
+    .intro { margin: 0; max-width: 590px; color: #625e55; line-height: 1.6; font-size: 15px; }
+    .status { padding: 8px 12px; border: 1px solid #b8aaa0; border-radius: 20px; color: #75434c; font-size: 11px; white-space: nowrap; letter-spacing: .02em; }
+    section { margin-top: 38px; }
+    .section-head { display: flex; gap: 24px; align-items: baseline; justify-content: space-between; margin-bottom: 17px; }
+    h2 { margin: 0; font-weight: 500; font-size: 19px; letter-spacing: -.025em; }
+    .section-head p { margin: 0; color: #756c5f; font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+    .grid.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card { min-width: 0; overflow: hidden; border: 1px solid #d9d2c5; border-radius: 12px; background: #fffcf6; }
+    .stage { height: 270px; padding: 40px; display: flex; align-items: center; justify-content: center; background: #fffcf6; overflow: hidden; }
+    .stage.dark { background: #20211e; }
+    .stage img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+    .stage.wordmark img { width: 92%; }
+    .stage.wordmark.reverse { padding: 0; }
+    .stage.wordmark.reverse img { width: 100%; height: 100%; max-width: none; object-fit: contain; }
+    .stage.compact { height: 230px; padding: 37px; }
+    .stage.compact img { width: 145px; height: 145px; }
+    .stage.tile { background: #e7e4db; }
+    .stage.tile img { border-radius: 24%; }
+    .stage.avatar img { border-radius: 50%; }
+    .details { padding: 19px 21px; border-top: 1px solid #e2dbcf; }
+    .details h3 { margin: 0 0 6px; font-size: 14px; font-weight: 600; }
+    .details p { min-height: 34px; margin: 0 0 15px; color: #726b5f; font-size: 12px; line-height: 1.5; }
+    .details a { font-size: 12px; }
+    .proof { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #d9d2c5; border-radius: 12px; overflow: hidden; }
+    .proof-side { min-width: 0; padding: 27px; background: #fffcf6; }
+    .proof-side.dark { background: #20211e; color: #f4f1e9; }
+    .proof-title { margin: 0 0 21px; text-transform: uppercase; letter-spacing: .1em; font-size: 10px; opacity: .72; }
+    .proof-row { display: flex; gap: 32px; align-items: flex-end; flex-wrap: wrap; }
+    figure { margin: 0; min-width: 38px; text-align: center; }
+    figure img { display: block; object-fit: contain; margin: 0 auto 12px; }
+    figcaption { font-size: 11px; opacity: .72; }
+    .note { margin: 15px 0 0; color: #726b5f; font-size: 12px; line-height: 1.55; }
+    footer { display: flex; gap: 24px; justify-content: space-between; margin-top: 42px; padding-top: 21px; border-top: 1px solid #d5cec1; color: #71695d; font-size: 11px; line-height: 1.6; }
+    footer p { margin: 0; max-width: 620px; }
+    @media (max-width: 1000px) { .grid.four { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 620px) {
+      main { width: calc(100% - 32px); padding-top: 30px; }
+      header { flex-direction: column; gap: 20px; padding-bottom: 28px; }
+      h1 { font-size: 45px; }
+      .intro { font-size: 14px; }
+      .section-head { flex-direction: column; gap: 7px; }
+      .grid, .grid.four, .proof { grid-template-columns: 1fr; }
+      .stage { height: 220px; padding: 27px; }
+      .stage.compact { height: 245px; }
+      .details p { min-height: 0; }
+      footer { flex-direction: column; gap: 10px; }
+    }
+    @media print { main { width: 100%; padding: 0; } .card, .proof { break-inside: avoid; } .grid.four { grid-template-columns: repeat(2, 1fr); } .details a { display: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <p class="eyebrow">Identity study · 01</p>
+      <h1>Ocharo <span>/ logo family</span></h1>
+      <p class="intro">The familiar signature, with a compact family for digital spaces. Review the lettering, needle, balance, and small-size clarity together.</p>
+    </div>
+    <span class="status">Drafts · pending review</span>
+  </header>
+
+  <section aria-labelledby="wordmarks-title">
+    <div class="section-head"><h2 id="wordmarks-title">01 / The signature</h2><p>Full wordmarks for generous spaces</p></div>
+    <div class="grid">
+      <article class="card">
+        <div class="stage wordmark"><img src="assets/ocharo-wordmark-ink.png" alt="Ocharo script wordmark in dark ink"></div>
+        <div class="details"><h3>Wordmark / ink</h3><p>Transparent artwork for light backgrounds, headers, and editorial layouts.</p><a href="assets/ocharo-wordmark-ink.png" download>Download PNG</a></div>
+      </article>
+      <article class="card">
+        <div class="stage wordmark reverse dark"><img src="assets/ocharo-wordmark-reverse.png" alt="White Ocharo script wordmark on charcoal"></div>
+        <div class="details"><h3>Wordmark / reverse</h3><p>White lettering on a charcoal background. This export includes its background.</p><a href="assets/ocharo-wordmark-reverse.png" download>Download PNG</a></div>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="compact-title">
+    <div class="section-head"><h2 id="compact-title">02 / Compact expressions</h2><p>New derivatives for review</p></div>
+    <div class="grid four">
+      <article class="card">
+        <div class="stage compact"><img src="assets/ocharo-symbol-ink.png" alt="Compact Ocharo symbol in dark ink"></div>
+        <div class="details"><h3>Symbol</h3><p>Transparent compact mark for tight spaces.</p><a href="assets/ocharo-symbol-ink.png" download>Download PNG</a></div>
+      </article>
+      <article class="card">
+        <div class="stage compact tile"><img src="assets/ocharo-tile.png" alt="Ocharo symbol on a square application tile"></div>
+        <div class="details"><h3>App tile</h3><p>Square artwork, shown with a simulated rounded mask.</p><a href="assets/ocharo-tile.png" download>Download PNG</a></div>
+      </article>
+      <article class="card">
+        <div class="stage compact"><img src="assets/ocharo-micro.png" alt="Simplified Ocharo mark for small rendering sizes"></div>
+        <div class="details"><h3>Micro mark</h3><p>Simplified detail for small browser and interface placements.</p><a href="assets/ocharo-micro.png" download>Ink PNG</a> · <a href="assets/ocharo-micro-reverse.png" download>Reverse PNG</a></div>
+      </article>
+      <article class="card">
+        <div class="stage compact avatar dark"><img src="assets/ocharo-avatar.png" alt="Ocharo avatar artwork inside a circular preview mask"></div>
+        <div class="details"><h3>Avatar</h3><p>Square artwork, shown with a simulated circular crop.</p><a href="assets/ocharo-avatar.png" download>Download PNG</a></div>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="small-title">
+    <div class="section-head"><h2 id="small-title">03 / At a glance</h2><p>Micro-mark rendering checks</p></div>
+    <div class="proof">
+      <div class="proof-side">
+        <p class="proof-title">Light surface</p>
+        <div class="proof-row">
+          <figure><img src="assets/ocharo-micro.png" width="16" height="16" alt="Micro mark at 16 CSS pixels"><figcaption>16 px</figcaption></figure>
+          <figure><img src="assets/ocharo-micro.png" width="24" height="24" alt="Micro mark at 24 CSS pixels"><figcaption>24 px</figcaption></figure>
+          <figure><img src="assets/ocharo-micro.png" width="32" height="32" alt="Micro mark at 32 CSS pixels"><figcaption>32 px</figcaption></figure>
+        </div>
+      </div>
+      <div class="proof-side dark">
+        <p class="proof-title">Dark surface</p>
+        <div class="proof-row">
+          <figure><img src="assets/ocharo-micro-reverse.png" width="16" height="16" alt="White micro mark on charcoal at 16 CSS pixels"><figcaption>16 px</figcaption></figure>
+          <figure><img src="assets/ocharo-micro-reverse.png" width="24" height="24" alt="White micro mark on charcoal at 24 CSS pixels"><figcaption>24 px</figcaption></figure>
+          <figure><img src="assets/ocharo-micro-reverse.png" width="32" height="32" alt="White micro mark on charcoal at 32 CSS pixels"><figcaption>32 px</figcaption></figure>
+        </div>
+      </div>
+    </div>
+    <p class="note">These are CSS size simulations of the same supplied image, not separately exported 16, 24, or 32 px icons. Downloads retain their original dimensions. Dark-surface previews preserve the supplied image colors.</p>
+  </section>
+
+  <section aria-labelledby="endorsement-title">
+    <div class="section-head"><h2 id="endorsement-title">04 / The endorsement</h2><p>For independently named editorial experiences</p></div>
+    <article class="card">
+      <div class="stage wordmark" style="height:180px"><img src="assets/ocharo-endorsement.png" alt="by Ocharo endorsement" style="width:460px"></div>
+      <div class="details"><h3>by Ocharo</h3><p>Connects a separately named site to the parent brand. This is a composition study; app names remain separate text.</p><a href="assets/ocharo-endorsement.png" download>Download PNG</a></div>
+    </article>
+  </section>
+
+  <footer>
+    <p>Based on Ocharo’s approved lettering reference. These generated files and the new compact derivatives remain drafts pending visual approval. The existing brand release remains unchanged.</p>
+    <p>Eight assets · local review<br><a href="logo-family.md">Asset notes</a> · <a href="manifest.json">Manifest</a></p>
+  </footer>
+</main>
+</body>
+</html>

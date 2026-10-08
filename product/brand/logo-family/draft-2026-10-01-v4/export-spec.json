@@ -1,0 +1,41 @@
+{
+  "sourceHash": "deeeedea97ad1485dacdfe7e38cdfb5bd0eadc67b91d58bfde3affcf43629d7e",
+  "width": 1254,
+  "height": 1254,
+  "originalWordmarkPreserved": true,
+  "compactRegenerated": true,
+  "specs": [
+    {
+      "name": "ocharo-symbol-ink",
+      "color": "#20211E",
+      "w": 1254,
+      "h": 1254
+    },
+    {
+      "name": "ocharo-tile",
+      "color": "#FFFFFF",
+      "background": "#20211E",
+      "w": 1254,
+      "h": 1254
+    },
+    {
+      "name": "ocharo-micro",
+      "color": "#20211E",
+      "w": 1254,
+      "h": 1254
+    },
+    {
+      "name": "ocharo-micro-reverse",
+      "color": "#FFFFFF",
+      "w": 1254,
+      "h": 1254
+    },
+    {
+      "name": "ocharo-avatar",
+      "color": "#20211E",
+      "background": "#F7F3E9",
+      "w": 1254,
+      "h": 1254
+    }
+  ]
+}

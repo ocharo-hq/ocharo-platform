@@ -1,0 +1,12 @@
+{
+  "generator": "built-in image_gen",
+  "purpose": "Separate body components; all final needle geometry is authored once in SVG.",
+  "oval": {
+    "generated_source": "exec-02490096-ed7b-4976-8852-43565da0cb3f.png",
+    "prompt": "Use case: precise-object-edit for a reusable logo component. Input is the Ocharo compact O-and-sewing-needle monogram. Remove ONLY the diagonal sewing needle, including its eye, upper projection, inner diagonal shaft, and lower pointed projection. Preserve the original elegant slanted oval O ring with exactly its original outer silhouette, inner counter, thick-and-thin contour, orientation and position. Repair the small missing part of the oval where the needle crossed so the result is one complete continuous oval O ring. No needle and no diagonal line remain anywhere. Solid smooth dark ink O on truly transparent background, same square canvas and positioning as input. No background, texture, added letters or decoration. This is the separate O component for a deterministic shared-needle logo composition."
+  },
+  "lettering": {
+    "generated_source": "exec-120c5b02-e618-4674-995b-17537d77b0d5.png",
+    "prompt": "Use case: precise-object-edit. Create a reusable lettering-only component from this Ocharo wordmark. Preserve the exact O, c, a, r, o, the baseline, connected script, contours, size, spacing and position. Remove the entire diagonal sewing needle that currently forms the tall left stem of the h: its upper eye loop, diagonal shaft, and pointed bottom tip. Keep only the rounded shoulder and right leg of the lowercase h, beginning at their junction around the middle of the letter, ready for a separate needle stem to be overlaid later. No replacement stem and no new needle. It is intentional that the h component is incomplete. Preserve the same wide horizontal canvas. Solid smooth charcoal ink on a truly transparent background. No background, extra text, texture, speckling or ornament. This is a separated component, not a complete finished logo."
+  }
+}

@@ -1,0 +1,224 @@
+{
+  "status": "review-shared-needle-revision",
+  "date": "2026-10-01",
+  "needle_sha256": "e724e2a70189105129e776dc991c22508563c049585b03c8889af28fdb2a5c6a",
+  "compositions": 8,
+  "entries": [
+    {
+      "file": "README.md",
+      "bytes": 3684,
+      "sha256": "3f37382259604b7936a39450d7111f26de2f1a65f2875d3638013518e9bac995"
+    },
+    {
+      "file": "assets/ocharo-avatar.png",
+      "bytes": 89830,
+      "sha256": "f1ba1a97012bbec2384001d3c871c731bf67ac39e229edaf64de8a77145bdd31",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "file": "assets/ocharo-avatar.svg",
+      "bytes": 246411,
+      "sha256": "82c363f15d3e3d61161059457c79fb0f31fa732d9b649aa840382c80eebc5ca6"
+    },
+    {
+      "file": "assets/ocharo-endorsement.png",
+      "bytes": 183643,
+      "sha256": "1b0e0af4eb4c6eed4b596c8d3aad63b84f85a21e4102226e7a4646abe609b373",
+      "width": 2472,
+      "height": 724
+    },
+    {
+      "file": "assets/ocharo-endorsement.svg",
+      "bytes": 438477,
+      "sha256": "26c57823501d02991ab5f29d825db59525af082094bab4b88cec54b9f16ccdd8"
+    },
+    {
+      "file": "assets/ocharo-favicon-16-ink.png",
+      "bytes": 458,
+      "sha256": "65a85203826e0ec781be75e4da15087efe63d4e28dcc69011d34ed10345061e9",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "file": "assets/ocharo-favicon-16-reverse.png",
+      "bytes": 354,
+      "sha256": "bd575955764e59f6d4a088afb71dab54ddbd9808183b94cc99420c17c7c07f99",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "file": "assets/ocharo-favicon-24-ink.png",
+      "bytes": 695,
+      "sha256": "e29210a1a38fac13ced654231735a4e88bae449c9bab8366a4897f44ab74bf83",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "file": "assets/ocharo-favicon-24-reverse.png",
+      "bytes": 519,
+      "sha256": "487e5080aa36989c916355a371b297fb1d747e204961cdb9487831d2213313b7",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "file": "assets/ocharo-favicon-32-ink.png",
+      "bytes": 1061,
+      "sha256": "cfcebdea1a1c21d8fc9995fb3b4f0635a9006040f399cbdd727db07520637151",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "file": "assets/ocharo-favicon-32-reverse.png",
+      "bytes": 773,
+      "sha256": "c09db22cec490b4c42baced6b80071a25e5dba76e20ab478c5dd78a4b706de01",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "file": "assets/ocharo-micro-reverse.png",
+      "bytes": 78285,
+      "sha256": "e22420827aa2eae65946b681cc7a369709e0ff7882dab9f58bc0c26d1acff680",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "file": "assets/ocharo-micro-reverse.svg",
+      "bytes": 246369,
+      "sha256": "e9790cb649db9083ea8a57ec978b0349beac98e64b671edc4145b829c7612a23"
+    },
+    {
+      "file": "assets/ocharo-micro.png",
+      "bytes": 96595,
+      "sha256": "2beea323a9f96ce318d463b06513e8c7333388fcf050cea3198b1aa536ad1978",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "file": "assets/ocharo-micro.svg",
+      "bytes": 246361,
+      "sha256": "1a8f2d69ab2c958713d8c19fd79193fd15b6da279128d410d31c0f791217bb7d"
+    },
+    {
+      "file": "assets/ocharo-symbol-ink.png",
+      "bytes": 96595,
+      "sha256": "2beea323a9f96ce318d463b06513e8c7333388fcf050cea3198b1aa536ad1978",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "file": "assets/ocharo-symbol-ink.svg",
+      "bytes": 246366,
+      "sha256": "ceac4e8be0bf0441eeb0c6ea5808ef7f4213014522869d7cec06a292005d6fd2"
+    },
+    {
+      "file": "assets/ocharo-tile.png",
+      "bytes": 88208,
+      "sha256": "9be52253dfcde2c4e5d81f2a0412b916f71c08b583df5a1aeeb2b340583898b0",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "file": "assets/ocharo-tile.svg",
+      "bytes": 246409,
+      "sha256": "90d7683ba7f82dfe52cd1798d2bfbab3d118786c5092dedbb5ecf28451e95f07"
+    },
+    {
+      "file": "assets/ocharo-wordmark-ink.png",
+      "bytes": 176772,
+      "sha256": "0f535f59f0537b378eeff9c5bb0b24eadd4b7e7467aec56a47cee30722c3a89f",
+      "width": 2172,
+      "height": 724
+    },
+    {
+      "file": "assets/ocharo-wordmark-ink.svg",
+      "bytes": 438338,
+      "sha256": "060e3a4962a08e90ae204376c058d83673c53fc00b40ad6e6a836819cdb14c64"
+    },
+    {
+      "file": "assets/ocharo-wordmark-reverse.png",
+      "bytes": 142540,
+      "sha256": "050576b4531808cded6ea46074df98ee0360aa750c2de59095a00b6c906d6126",
+      "width": 2172,
+      "height": 724
+    },
+    {
+      "file": "assets/ocharo-wordmark-reverse.svg",
+      "bytes": 438342,
+      "sha256": "9f837af9a164e08558a051aa11e856ea8b489bb582f67849d171c35b8a97fca9"
+    },
+    {
+      "file": "build.cjs",
+      "bytes": 3732,
+      "sha256": "406e71e57ba2556e6664a0f1e33bab06a46a1aa9d8508804082f70e5c8b10899"
+    },
+    {
+      "file": "export-spec.json",
+      "bytes": 1909,
+      "sha256": "432e1e5df5c6b85572f6b40fab5a46e218a188c46d309adb9a8c514d1437484b"
+    },
+    {
+      "file": "index.html",
+      "bytes": 11202,
+      "sha256": "7db5713fd3e579cd19f578b93463fabae8f08927db0362bcfe2286db83dc5a8e"
+    },
+    {
+      "file": "preview-mobile.png",
+      "bytes": 226647,
+      "sha256": "94507d5f26cf7f64c9d72430d7c0da5b04172c970b3b2de23711fd88158f33de",
+      "width": 390,
+      "height": 3860
+    },
+    {
+      "file": "preview.png",
+      "bytes": 243907,
+      "sha256": "8675cac44fc489948b9569b13c51620a542fa693ab2cdf9eca4d063762d13901",
+      "width": 1440,
+      "height": 1956
+    },
+    {
+      "file": "prompts.json",
+      "bytes": 2019,
+      "sha256": "902f22af0a3d793ae13614adcc2086cddae0e03158d925627e0624409d81329e"
+    },
+    {
+      "file": "render.cjs",
+      "bytes": 1935,
+      "sha256": "0f6125e4f65d819cc2c84f3e342e6f8adf5671fa370ab0c1cb8574fe4d3b5c64"
+    },
+    {
+      "file": "source/lettering.png",
+      "bytes": 328078,
+      "sha256": "1c1a4a2ca5654db9ebae5bfffd266cbe96192a565b58a0f15db3f437786db35e",
+      "width": 2172,
+      "height": 724
+    },
+    {
+      "file": "source/needle.json",
+      "bytes": 626,
+      "sha256": "2c1c797e9d11ec8bb7ad45d817752ebe2f70df40a04a98ce3fef9d49696d8a1d"
+    },
+    {
+      "file": "source/needle.svg",
+      "bytes": 483,
+      "sha256": "b054b12d8e5137c18c5f2aadf02655b35c3911c0e71ce7d676650c453c923db1"
+    },
+    {
+      "file": "source/oval.png",
+      "bytes": 184096,
+      "sha256": "b2ba66b78a4130864989df2e2c53b331fcbde3c6a288ed7d311870fb6c2134bc",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "file": "verification.json",
+      "bytes": 1874,
+      "sha256": "9f7578bcf1e8b7cc163b2fdcf4e05cc1b744217777ecd6190dc666064b519611"
+    },
+    {
+      "file": "verify.py",
+      "bytes": 2010,
+      "sha256": "da9fc0765d4ce2450fa2ddc0ee6fe637113421707993334844a8385683fc999f"
+    }
+  ]
+}
