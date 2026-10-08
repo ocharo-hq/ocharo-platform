@@ -1,6 +1,6 @@
 # Operator flows
 
-*Last updated: 2026-09-26*
+*Last updated: 2026-10-08*
 
 ## Prepare and approve
 
@@ -26,3 +26,11 @@ platform-owned creative asset → optionally link it to a separately verified pr
 
 Tenant and campaign metadata live in platform records, not injected into Studio's exact-key document.
 Studio's local browser workspace identifier never becomes platform authorization.
+
+## Source materials
+
+Authenticate → open Sourcing → drop supplier photos into the inbox → assign them to suppliers →
+record routes and people → move the supplier from lead to quoted → qualify it explicitly after review.
+
+Uploading the same bytes again returns the existing item. Desk never contacts a supplier.
+A ledger bundle import adds what is missing and leaves Desk edits untouched.

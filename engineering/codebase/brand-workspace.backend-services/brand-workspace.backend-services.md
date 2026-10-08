@@ -90,7 +90,7 @@ Unknown `/api` paths, including dotted paths and non-GET methods, return JSON `4
 
 ## SDK adoption boundary
 
-Published `WoW2.Sdk.Backend.Beta` and its testing package are pinned to `10.0.58-beta`.
+Published `WoW2.Sdk.Backend.Beta` and its testing package are pinned to `10.0.64-beta`.
 NuGet availability was verified on 26 September 2026; source inspection used SDK
 HEAD `546466ef67e0b8c5ba1ad01957052c682b2c447f`, with unrelated documentation edits.
 

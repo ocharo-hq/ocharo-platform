@@ -15,6 +15,11 @@ using BrandWorkspace.Persistence.DesignDocuments.Repositories;
 using BrandWorkspace.Application.Commerce;
 using BrandWorkspace.Infrastructure.Commerce;
 using BrandWorkspace.Persistence.Commerce;
+using BrandWorkspace.Api.Sourcing;
+using BrandWorkspace.Application.Sourcing.Repositories;
+using BrandWorkspace.Infrastructure.Sourcing.Services;
+using BrandWorkspace.Persistence.Sourcing.Repositories;
+using WoW.Two.Sdk.Backend.Beta.Media.Images;
 using WoW.Two.Sdk.Backend.Beta.Media.BackgroundRemoval;
 using BrandWorkspace.Api.Preparation;
 using BrandWorkspace.Application.Access;
@@ -195,6 +200,22 @@ public static partial class HostConfiguration
         return builder;
     }
 
+    /// <summary>Registers supplier records, contact routes and bounded content-addressed supplier media.</summary>
+    private static WebApplicationBuilder AddSourcing(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddImageProcessing(options =>
+        {
+            options.MaxInputBytes = SourcingMediaInspector.MaximumImageBytes;
+            options.MaxPixels = SourcingMediaInspector.MaximumPixels;
+        });
+        builder.Services.AddSingleton<ISourcingRepository, SourcingRepository>();
+        builder.Services.AddSingleton<SourcingValidationService>();
+        builder.Services.AddSingleton<SourcingMediaInspector>();
+        builder.Services.AddScoped<SourcingService>();
+        builder.Services.AddScoped<SourcingImportService>();
+        return builder;
+    }
+
     /// <summary>Registers the optional image worker from explicit server configuration.</summary>
     private static WebApplicationBuilder AddMediaProcessing(this WebApplicationBuilder builder)
     {
@@ -322,6 +343,12 @@ public static partial class HostConfiguration
             return;
         }
         if (args.Contains("--migrate")) throw new ArgumentException("Use --migrate alone.");
+        if (args.Contains("--import-sourcing"))
+        {
+            try { await SourcingImportCommand.RunAsync(app.Services, args); }
+            finally { await app.DisposeAsync(); }
+            return;
+        }
         if (args.Contains("--provision-operator"))
         {
             try { await OperatorProvisioning.RunAsync(app.Services, args); }
