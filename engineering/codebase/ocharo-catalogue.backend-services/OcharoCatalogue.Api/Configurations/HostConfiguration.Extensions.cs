@@ -13,6 +13,7 @@ using OcharoCatalogue.Persistence.Catalogue;
 using WoW.Two.Sdk.Backend.Beta.Mediator;
 using WoW.Two.Sdk.Backend.Beta.Storage.Core;
 using WoW.Two.Sdk.Backend.Beta.Storage.FileSystem;
+using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
 
 namespace OcharoCatalogue.Api.Configurations;
 
@@ -81,6 +82,7 @@ public static partial class HostConfiguration
     /// <summary>Registers the HTTP error boundary, controllers and OpenAPI.</summary>
     private static WebApplicationBuilder AddControllers(this WebApplicationBuilder builder)
     {
+        builder.Services.AddHttpProblemDetails();
         builder.Services.AddControllers();
         builder.Services.AddOpenApi();
         return builder;

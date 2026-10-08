@@ -1,3 +1,4 @@
+using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -58,6 +59,7 @@ public static partial class HostConfiguration
     /// <summary>Registers controller delivery, OpenAPI and JSON errors for the HTTP surface.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
+        builder.Services.AddHttpProblemDetails();
         builder.Services.AddControllers();
         builder.Services.AddOpenApi();
         return builder;
@@ -66,6 +68,7 @@ public static partial class HostConfiguration
     /// <summary>Configures the existing brand API middleware, technical endpoints and operator SPA.</summary>
     private static WebApplication ConfigureHttpSurface(this WebApplication app)
     {
+        app.UseHttpProblemDetails();
 
         app.UseMiddleware<BrandExceptionMiddleware>();
         app.UseMiddleware<LocalPilotBoundaryMiddleware>();

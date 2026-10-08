@@ -220,4 +220,28 @@ public sealed class BrandApiTests : IAsyncDisposable
         Assert.Equal(HttpStatusCode.Forbidden, rejected.StatusCode);
         Assert.Equal("*", publicKit.Headers.GetValues("Access-Control-Allow-Origin").Single());
     }
+    [Theory]
+    [InlineData("GET", "/api/brand/missing-contract-route", null, null, 404)]
+    [InlineData("PATCH", "/api/brand/draft", null, null, 404)]
+    [InlineData("PUT", "/api/brand/identity", "application/json", "{", 400)]
+    [InlineData("PUT", "/api/brand/identity", "text/plain", "invalid", 415)]
+    public async Task ErrorsRemainProblemJsonWhenHtmlIsRequested(string method, string path, string? contentType, string? body, int expected)
+    {
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+        request.Headers.Accept.ParseAdd("text/html");
+        if (body is not null) request.Content = new StringContent(body, System.Text.Encoding.UTF8, contentType!);
+        using var response = await client.SendAsync(request);
+        Assert.Equal(expected, (int)response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+        var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(expected, problem.GetProperty("status").GetInt32());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("type").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("title").GetString()));
+        Assert.Equal(path, problem.GetProperty("instance").GetString());
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("traceId").GetString()));
+        Assert.False(string.IsNullOrWhiteSpace(problem.GetProperty("requestId").GetString()));
+    }
+
 }

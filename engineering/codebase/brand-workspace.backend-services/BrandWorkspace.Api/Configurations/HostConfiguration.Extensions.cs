@@ -1,3 +1,4 @@
+using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
 using BrandWorkspace.Api.MediaProcessing;
 using BrandWorkspace.Api.Commerce;
 using BrandWorkspace.Api.Integrations;
@@ -208,22 +209,14 @@ public static partial class HostConfiguration
     /// <summary>Registers JSON errors for the HTTP surface.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
-        builder.Services.AddProblemDetails();
+        builder.Services.AddHttpProblemDetails();
         return builder;
     }
 
     /// <summary>Configures public technical status and SPA endpoints without business mutations.</summary>
     private static WebApplication AddFoundationEndpoints(this WebApplication app)
     {
-        app.UseExceptionHandler(new ExceptionHandlerOptions
-        {
-            StatusCodeSelector = exception => exception is BadHttpRequestException request ? request.StatusCode : 500
-        });
-        app.UseStatusCodePages(async context =>
-        {
-            if (context.HttpContext.Request.Path.StartsWithSegments("/api"))
-                await Results.Problem(statusCode: context.HttpContext.Response.StatusCode).ExecuteAsync(context.HttpContext);
-        });
+        app.UseHttpProblemDetails();
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseRouting();

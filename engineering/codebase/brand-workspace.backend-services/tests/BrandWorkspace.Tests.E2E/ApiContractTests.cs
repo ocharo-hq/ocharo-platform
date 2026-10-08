@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using AwesomeAssertions;
 using Hangfire;
 using Microsoft.Extensions.Configuration;
@@ -23,9 +24,17 @@ public sealed class ApiContractTests
     {
         await using var factory = CreateFactory("Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1");
         using var client = factory.CreateClient();
-        using var response = await client.SendAsync(new HttpRequestMessage(new HttpMethod(method), path));
+        using var request = new HttpRequestMessage(new HttpMethod(method), path);
+        request.Headers.Accept.ParseAdd("text/html");
+        using var response = await client.SendAsync(request);
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        var problem = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        problem.GetProperty("status").GetInt32().Should().Be(404);
+        problem.GetProperty("instance").GetString().Should().Be(path);
+        problem.GetProperty("traceId").GetString().Should().NotBeNullOrWhiteSpace();
+        problem.GetProperty("requestId").GetString().Should().NotBeNullOrWhiteSpace();
+        response.Headers.CacheControl!.NoStore.Should().BeTrue();
     }
 
     [Fact]
@@ -47,7 +56,10 @@ public sealed class ApiContractTests
         using var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health/live");
         request.Headers.Host = "unconfigured.invalid";
-        (await client.SendAsync(request)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        using var response = await client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
+        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("status").GetInt32().Should().Be(400);
     }
 
     internal static WebApiTestHost<BrandWorkspace.Api.ApiAssemblyMarker> CreateFactory(string connection)

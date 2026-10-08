@@ -4,9 +4,9 @@
     "net10.0": {
       "WoW2.Sdk.Backend.Beta": {
         "type": "Direct",
-        "requested": "[10.0.63-beta, )",
-        "resolved": "10.0.63-beta",
-        "contentHash": "7sWF6caiMGp7WoKZjhHVchnRtUD0XIkijnQ60qnokk7XnVj5V77Y1tNYx5J6tS7/5NW9Hyyt75v/OfRNUfgm5A==",
+        "requested": "[10.0.64-beta, )",
+        "resolved": "10.0.64-beta",
+        "contentHash": "t9568/OW3QLX6AMxl+YXCwsdiaI9S1UghD1xjyenIufr6IAZmwSc3IcB0guHAgHr3bNGGTvr+I52gQwE+29r0g==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -97,8 +97,8 @@
           "Microsoft.EntityFrameworkCore.Relational": "10.0.3",
           "Microsoft.EntityFrameworkCore.SqlServer": "10.0.3",
           "Microsoft.EntityFrameworkCore.Sqlite": "10.0.3",
-          "Microsoft.Extensions.AI": "9.0.0-preview.9.24556.5",
-          "Microsoft.Extensions.AI.Abstractions": "9.0.0-preview.9.24556.5",
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
           "Microsoft.Extensions.Caching.Hybrid": "10.1.0",
           "Microsoft.Extensions.Caching.StackExchangeRedis": "10.0.3",
           "Microsoft.Extensions.Http.Resilience": "9.1.0",
@@ -109,6 +109,7 @@
           "Microsoft.IdentityModel.Tokens": "8.14.0",
           "Microsoft.ML.Tokenizers": "0.22.0",
           "MimeKit": "4.18.0",
+          "ModelContextProtocol.AspNetCore": "2.2.0",
           "NATS.Client.Core": "2.5.5",
           "NATS.Client.JetStream": "2.5.5",
           "NetEscapades.AspNetCore.SecurityHeaders": "1.0.0",
@@ -116,7 +117,7 @@
           "NodaTime.Serialization.SystemTextJson": "1.3.1",
           "Npgsql": "10.0.0",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.0",
-          "OllamaSharp": "4.0.7",
+          "OllamaSharp": "5.5.0",
           "OneOf": "3.0.271",
           "OpenFeature": "2.2.0",
           "OpenTelemetry": "1.15.3",
@@ -161,7 +162,7 @@
           "Telegram.Bot": "22.10.0.1",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Backend.Beta.Data.Abstractions": "10.0.63-beta",
+          "WoW2.Sdk.Backend.Beta.Data.Abstractions": "10.0.64-beta",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",
           "dbup-mysql": "6.0.4",
@@ -1292,16 +1293,17 @@
       },
       "Microsoft.Extensions.AI": {
         "type": "Transitive",
-        "resolved": "9.0.0-preview.9.24556.5",
-        "contentHash": "71WuoNoQObf3OVWFMuGt7WB/iLlHxobH7aUV7yKVO3/p2+JbAOXXyzcD4EoLsA/40HYZmDSXVKAzIZ6co+0vNg==",
+        "resolved": "10.8.3",
+        "contentHash": "VdT9SiqiqmrhsVx//xnfyaaNPuMbo6+vOLm8D/EvtkZfQFpBzPyaJG7W1gFpTJQoQ4nN4k0J9j+NzpScGeEZUQ==",
         "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "9.0.0-preview.9.24556.5"
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "System.Numerics.Tensors": "10.0.10"
         }
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "Transitive",
-        "resolved": "9.0.0-preview.9.24556.5",
-        "contentHash": "h+sY5wkFV7FCFN4KURGiC2yTwXysLtFCZW/ndx9urCMfRyHt+2Z3YW3NBGjXYbAMCB+BQbkzc2aQ9SLKCCzgVA=="
+        "resolved": "10.8.3",
+        "contentHash": "K0B05oApxmviWalNHPMBBcRC7erKiDATz3ENNR/jqTR9JwIwLRefgDhj2jCRwL1aca99pXUe0qyQC73/xIuZig=="
       },
       "Microsoft.Extensions.AmbientMetadata.Application": {
         "type": "Transitive",
@@ -1517,6 +1519,30 @@
           "System.Security.Cryptography.Pkcs": "10.0.0"
         }
       },
+      "ModelContextProtocol": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "4Pb9u02Nwsp0poueDsqNdyGRojFxOYpljB7zDBsq+aHL+Afou3OgxlBc3GWFVnsRMRJrUtWqDh3s6k2JgPzmrQ==",
+        "dependencies": {
+          "ModelContextProtocol.Core": "[2.2.0]"
+        }
+      },
+      "ModelContextProtocol.AspNetCore": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "3JelDMuFIwFzXybsh6K30G6wXu5gmqKnuRnieqgBMuR0FkqqXRv4B+NYZuPgthSyNq5UwRyvv2U2VJBE3RD3PQ==",
+        "dependencies": {
+          "ModelContextProtocol": "[2.2.0]"
+        }
+      },
+      "ModelContextProtocol.Core": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "FeBfXU6T8k+jw4afg4sfxdEX2rL/e5oKOk9ROOGztu9k47+7Bz08sdaToYt2XvMY1opNbwxYQOFMj6wH9TInhA==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3"
+        }
+      },
       "MongoDB.Bson": {
         "type": "Transitive",
         "resolved": "3.0.0",
@@ -1627,11 +1653,11 @@
       },
       "OllamaSharp": {
         "type": "Transitive",
-        "resolved": "4.0.7",
-        "contentHash": "rYQTxaPzsB7yJJFT8Kb7FQXcnRGGhk/Wq2uudPY3Hg/ax0R6+orNLqFIM54LofYC8XvRb7b4otbesqv62L+UvA==",
+        "resolved": "5.5.0",
+        "contentHash": "CpACG21U4KBZ5YcPUH/Pf8VMP0CCO7NsEkYJLLVf06YzVwcixRPy2bub71mbMlWCfzdADd8YfKx8kGWD5ai4Kg==",
         "dependencies": {
-          "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
-          "Microsoft.Extensions.AI.Abstractions": "9.0.0-preview.9.24556.5"
+          "Microsoft.Extensions.AI": "10.8.0",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.0"
         }
       },
       "OneOf": {
@@ -2238,6 +2264,11 @@
         "resolved": "10.0.3",
         "contentHash": "MaGhRfGunmrj/nHjtsi9XkhlYJ/ERGWrbA+BiSKNtGnAjc9XlG5EhAvak6VRcX5LYzPF6pBO8nJ613dTgzabig=="
       },
+      "System.Numerics.Tensors": {
+        "type": "Transitive",
+        "resolved": "10.0.10",
+        "contentHash": "9Ildb4Y9maDztB0ZRGxsNShbpCQ2Tjv2dr4IjskBxpTGhH7aIz1+oC+Hl833ASs/htWwsH6myNe+sRpeyCzeMQ=="
+      },
       "System.Security.Cryptography.Pkcs": {
         "type": "Transitive",
         "resolved": "10.0.0",
@@ -2265,8 +2296,8 @@
       },
       "WoW2.Sdk.Backend.Beta.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.63-beta",
-        "contentHash": "UZPpgpn3SVBc+s+98c9DzF7yJy1PSVDUxcVtiLmpMaG8jVroB2WdrET8pkhRw3MvclGUTEIoEJVN3+21v8topw=="
+        "resolved": "10.0.64-beta",
+        "contentHash": "I0V54oARiJ7Ahmtc3iKPLk4w9g4lwz+NDvpUSlB+PK/vg6d65YLfkFHFEvFQ+cHg6c0jiP1k/p2XY+5IPpAm2g=="
       },
       "YamlDotNet": {
         "type": "Transitive",
@@ -2286,47 +2317,47 @@
       "brandworkspace.application": {
         "type": "Project",
         "dependencies": {
-          "BrandWorkspace.Domain": "[1.0.0, )"
+          "BrandWorkspace.Domain": "[0.0.0, )"
         }
       },
       "brandworkspace.domain": {
         "type": "Project",
         "dependencies": {
-          "OcharoBrand.Domain": "[1.0.0, )",
-          "OcharoCatalogue.Domain": "[1.0.0, )"
+          "OcharoBrand.Domain": "[0.0.0, )",
+          "OcharoCatalogue.Domain": "[0.0.0, )"
         }
       },
       "brandworkspace.infrastructure": {
         "type": "Project",
         "dependencies": {
-          "BrandWorkspace.Application": "[1.0.0, )",
-          "BrandWorkspace.Domain": "[1.0.0, )",
+          "BrandWorkspace.Application": "[0.0.0, )",
+          "BrandWorkspace.Domain": "[0.0.0, )",
           "Microsoft.Data.Sqlite": "[10.0.3, )",
           "SkiaSharp": "[4.152.1, )",
           "SkiaSharp.NativeAssets.Linux": "[4.152.1, )",
-          "WoW2.Sdk.Backend.Beta": "[10.0.63-beta, )"
+          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
         }
       },
       "brandworkspace.persistence": {
         "type": "Project",
         "dependencies": {
-          "BrandWorkspace.Application": "[1.0.0, )",
-          "BrandWorkspace.Domain": "[1.0.0, )",
+          "BrandWorkspace.Application": "[0.0.0, )",
+          "BrandWorkspace.Domain": "[0.0.0, )",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.3, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.0, )",
-          "WoW2.Sdk.Backend.Beta": "[10.0.63-beta, )"
+          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
         }
       },
       "ocharobrand.domain": {
         "type": "Project",
         "dependencies": {
-          "WoW2.Sdk.Backend.Beta": "[10.0.59-beta, )"
+          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
         }
       },
       "ocharocatalogue.domain": {
         "type": "Project",
         "dependencies": {
-          "WoW2.Sdk.Backend.Beta": "[10.0.59-beta, )"
+          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
         }
       },
       "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {

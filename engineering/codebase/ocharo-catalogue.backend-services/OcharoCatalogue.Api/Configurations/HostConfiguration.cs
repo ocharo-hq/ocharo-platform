@@ -1,3 +1,4 @@
+using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
 using OcharoCatalogue.Api.Catalogue;
 
 namespace OcharoCatalogue.Api.Configurations;
@@ -23,6 +24,7 @@ public static partial class HostConfiguration
     {
         await app.InitializeCatalogueAsync();
 
+        app.UseHttpProblemDetails();
 
         app.UseMiddleware<CatalogueExceptionMiddleware>();
         app.UseMiddleware<LocalPilotBoundaryMiddleware>();

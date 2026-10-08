@@ -305,15 +305,15 @@
       },
       "AWSSDK.Core": {
         "type": "Transitive",
-        "resolved": "3.7.400.71",
-        "contentHash": "XON2p7CcsspejVaCDgYHMe8Ml+b7YMfoE1vRLjmFJ+sjhZ0c9UduII+XiIkoOS7eyl2nizYTP2LRFJoj3Fd90A=="
+        "resolved": "3.7.402.91",
+        "contentHash": "B0oP+hfVhLacXwqVOcCAcFj44wEYdfzX3fF0CSEDw8hoiLAyyDyjHtbTrqqtyiwW3fyTOrvrKfgPHOejGBu7gw=="
       },
       "AWSSDK.S3": {
         "type": "Transitive",
-        "resolved": "3.7.302",
-        "contentHash": "JeQuG/ddmgklL5cJm+Vj5kmiBdlrAjRhKUL36EP5jog0xPqtaz/Vi8am3SQW1ld1+6nI8KcymO4+MGnc4eAEug==",
+        "resolved": "3.7.421.10",
+        "contentHash": "7U4faQ9PdY/Oz3sqz/9LV1D0B2CHZVxfvAoNYxYsFf83tBfm0cksRutoDwKsem6A1f7vjy91KGKaNRpjVQWYFQ==",
         "dependencies": {
-          "AWSSDK.Core": "[3.7.300.7, 4.0.0)"
+          "AWSSDK.Core": "[3.7.402.91, 4.0.0)"
         }
       },
       "AWSSDK.SimpleEmailV2": {
@@ -334,13 +334,13 @@
       },
       "Azure.Core": {
         "type": "Transitive",
-        "resolved": "1.53.0",
-        "contentHash": "x9c/toFMOtRrlTdFuE7rlGCVAduQzWVfKmLz5juj41zJAXEhYD5hluiUyyAEzJ6OxpBnKtiaBztzwpZITAVjtg==",
+        "resolved": "1.55.0",
+        "contentHash": "c7femvYS/xEUrLP1sNZN+DoQZmx3X+G3ZXtOOz0RL/7cGMCM3JVqepVmRd3AwM4IK8AtTGS4GOigCO+d/zaSsQ==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "10.0.3",
           "Microsoft.Identity.Client": "4.83.1",
           "Microsoft.Identity.Client.Extensions.Msal": "4.83.1",
-          "System.ClientModel": "1.10.0",
+          "System.ClientModel": "1.11.0",
           "System.Memory.Data": "10.0.3"
         }
       },
@@ -393,6 +393,24 @@
           "Azure.Core": "1.44.1",
           "OpenTelemetry": "1.9.0",
           "OpenTelemetry.PersistentStorage.FileSystem": "1.0.0"
+        }
+      },
+      "Azure.Storage.Blobs": {
+        "type": "Transitive",
+        "resolved": "12.29.2",
+        "contentHash": "NeZmk7bphspT2BYn8XaNCTV4/9vQG+ea79F85MBTi2o2WiXIIJNsRBtFyeBrzK2HIk476rfSqLNwPt4vXgOEkQ==",
+        "dependencies": {
+          "Azure.Core": "1.55.0",
+          "Azure.Storage.Common": "12.28.0"
+        }
+      },
+      "Azure.Storage.Common": {
+        "type": "Transitive",
+        "resolved": "12.28.0",
+        "contentHash": "5l8YhNrks38zKLGFW2BBFLwieyamH/xauABSASsdpZv79G0f+n2n22IjkRmUqCmALSupkwRHh2LOhbW3yj5Qgw==",
+        "dependencies": {
+          "Azure.Core": "1.55.0",
+          "System.IO.Hashing": "10.0.3"
         }
       },
       "BouncyCastle.Cryptography": {
@@ -671,8 +689,7 @@
         "resolved": "11.11.0",
         "contentHash": "viTKWaMbL3yJYgGI0DiCeavNbE9UPMWFVK2XS9nYXGbm3NDMd0/L5ER4wBzmTtW3BYh3SrlSXm9RACiKZ6stlA==",
         "dependencies": {
-          "FluentValidation": "11.11.0",
-          "Microsoft.Extensions.Dependencyinjection.Abstractions": "2.1.0"
+          "FluentValidation": "11.11.0"
         }
       },
       "Fractions": {
@@ -826,6 +843,16 @@
         "dependencies": {
           "MimeKit": "4.18.0"
         }
+      },
+      "Markdig": {
+        "type": "Transitive",
+        "resolved": "1.4.0",
+        "contentHash": "lLhaiI/mNDTNzgLqnmknhf4LjgTqOAyjx5+GNz0X3AxYMxUhmFppF2WVMdER+SDqwhE5wUF1pzs/cuLwFxs7xA=="
+      },
+      "MaxMind.Db": {
+        "type": "Transitive",
+        "resolved": "5.2.0",
+        "contentHash": "UJ6zwjzV8YZ4YbELCUsK+9lEut5Ea6ks3p8CXEK9hQm8GxhJYrKsVxXcVvZsJ2Nzij1e89dXYrqUH7MCoWdhqg=="
       },
       "MedallionTopologicalSort": {
         "type": "Transitive",
@@ -1134,16 +1161,17 @@
       },
       "Microsoft.Extensions.AI": {
         "type": "Transitive",
-        "resolved": "9.0.0-preview.9.24556.5",
-        "contentHash": "71WuoNoQObf3OVWFMuGt7WB/iLlHxobH7aUV7yKVO3/p2+JbAOXXyzcD4EoLsA/40HYZmDSXVKAzIZ6co+0vNg==",
+        "resolved": "10.8.3",
+        "contentHash": "VdT9SiqiqmrhsVx//xnfyaaNPuMbo6+vOLm8D/EvtkZfQFpBzPyaJG7W1gFpTJQoQ4nN4k0J9j+NzpScGeEZUQ==",
         "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "9.0.0-preview.9.24556.5"
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
+          "System.Numerics.Tensors": "10.0.10"
         }
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "Transitive",
-        "resolved": "9.0.0-preview.9.24556.5",
-        "contentHash": "h+sY5wkFV7FCFN4KURGiC2yTwXysLtFCZW/ndx9urCMfRyHt+2Z3YW3NBGjXYbAMCB+BQbkzc2aQ9SLKCCzgVA=="
+        "resolved": "10.8.3",
+        "contentHash": "K0B05oApxmviWalNHPMBBcRC7erKiDATz3ENNR/jqTR9JwIwLRefgDhj2jCRwL1aca99pXUe0qyQC73/xIuZig=="
       },
       "Microsoft.Extensions.AmbientMetadata.Application": {
         "type": "Transitive",
@@ -1373,6 +1401,30 @@
           "System.Security.Cryptography.Pkcs": "10.0.0"
         }
       },
+      "ModelContextProtocol": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "4Pb9u02Nwsp0poueDsqNdyGRojFxOYpljB7zDBsq+aHL+Afou3OgxlBc3GWFVnsRMRJrUtWqDh3s6k2JgPzmrQ==",
+        "dependencies": {
+          "ModelContextProtocol.Core": "[2.2.0]"
+        }
+      },
+      "ModelContextProtocol.AspNetCore": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "3JelDMuFIwFzXybsh6K30G6wXu5gmqKnuRnieqgBMuR0FkqqXRv4B+NYZuPgthSyNq5UwRyvv2U2VJBE3RD3PQ==",
+        "dependencies": {
+          "ModelContextProtocol": "[2.2.0]"
+        }
+      },
+      "ModelContextProtocol.Core": {
+        "type": "Transitive",
+        "resolved": "2.2.0",
+        "contentHash": "FeBfXU6T8k+jw4afg4sfxdEX2rL/e5oKOk9ROOGztu9k47+7Bz08sdaToYt2XvMY1opNbwxYQOFMj6wH9TInhA==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3"
+        }
+      },
       "MongoDB.Bson": {
         "type": "Transitive",
         "resolved": "3.0.0",
@@ -1493,11 +1545,11 @@
       },
       "OllamaSharp": {
         "type": "Transitive",
-        "resolved": "4.0.7",
-        "contentHash": "rYQTxaPzsB7yJJFT8Kb7FQXcnRGGhk/Wq2uudPY3Hg/ax0R6+orNLqFIM54LofYC8XvRb7b4otbesqv62L+UvA==",
+        "resolved": "5.5.0",
+        "contentHash": "CpACG21U4KBZ5YcPUH/Pf8VMP0CCO7NsEkYJLLVf06YzVwcixRPy2bub71mbMlWCfzdADd8YfKx8kGWD5ai4Kg==",
         "dependencies": {
-          "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
-          "Microsoft.Extensions.AI.Abstractions": "9.0.0-preview.9.24556.5"
+          "Microsoft.Extensions.AI": "10.8.0",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.0"
         }
       },
       "OneOf": {
@@ -1656,6 +1708,14 @@
         "type": "Transitive",
         "resolved": "1.4.0",
         "contentHash": "Fk1NKc0lWmlo6LAFYpFJInRgFKt72knRNEvxndDYoQHFwYOPXav+WEUBvQA0k4lxq5xt0SymrZ+oi0F/G40bPQ=="
+      },
+      "PDFsharp": {
+        "type": "Transitive",
+        "resolved": "6.2.4",
+        "contentHash": "GhTr9F1uOYXHCIEOB5PXIgqn5a8WLsJL2m0eewTA0IvY1j6N4HGXHKKmEyB90/N6vrjmYamf41V9zbmdW2HY3g==",
+        "dependencies": {
+          "System.Security.Cryptography.Pkcs": "8.0.1"
+        }
       },
       "Pipelines.Sockets.Unofficial": {
         "type": "Transitive",
@@ -1976,8 +2036,8 @@
       },
       "System.ClientModel": {
         "type": "Transitive",
-        "resolved": "1.10.0",
-        "contentHash": "lBEWs54F5Y5pZ9hC+8z4S/X76957ex+DPk7WecRHlbIHtrPfbRMMlOgI3iDn4Jpb3bSxvBnKaaHoD59auFjlBA==",
+        "resolved": "1.11.0",
+        "contentHash": "1Wl32zh7TbvN+HAO8NqDuaN0Ao2Qu/0j0NJSrXGDtpUQsTXQYJ3C6hd9/Ds2IrgP4agMQYFoXB35GZfC21ByHw==",
         "dependencies": {
           "System.Memory.Data": "10.0.3"
         }
@@ -2073,6 +2133,11 @@
           "Microsoft.IdentityModel.Tokens": "8.14.0"
         }
       },
+      "System.IO.Hashing": {
+        "type": "Transitive",
+        "resolved": "10.0.3",
+        "contentHash": "La6ICwsdTKhVX+LKN+pvFjQRR3LhLwq3uKdi2knjLzRyPYBSydF4cjXidYxIiTcDD6XVYdsBWQEI8ZxiZ/OdIg=="
+      },
       "System.IO.Packaging": {
         "type": "Transitive",
         "resolved": "8.0.1",
@@ -2090,6 +2155,11 @@
         "type": "Transitive",
         "resolved": "10.0.3",
         "contentHash": "MaGhRfGunmrj/nHjtsi9XkhlYJ/ERGWrbA+BiSKNtGnAjc9XlG5EhAvak6VRcX5LYzPF6pBO8nJ613dTgzabig=="
+      },
+      "System.Numerics.Tensors": {
+        "type": "Transitive",
+        "resolved": "10.0.10",
+        "contentHash": "9Ildb4Y9maDztB0ZRGxsNShbpCQ2Tjv2dr4IjskBxpTGhH7aIz1+oC+Hl833ASs/htWwsH6myNe+sRpeyCzeMQ=="
       },
       "System.Security.Cryptography.Pkcs": {
         "type": "Transitive",
@@ -2118,8 +2188,8 @@
       },
       "WoW2.Sdk.Backend.Beta.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.59-beta",
-        "contentHash": "nh4L7Mo6eAeXN7sJU2Kbg3rOQen4hmao/lCt+hs7k1B1L/hIdCGWlDyhUthCKSVHIn8JIR4fR9XxdRxiqF09Rg=="
+        "resolved": "10.0.64-beta",
+        "contentHash": "I0V54oARiJ7Ahmtc3iKPLk4w9g4lwz+NDvpUSlB+PK/vg6d65YLfkFHFEvFQ+cHg6c0jiP1k/p2XY+5IPpAm2g=="
       },
       "xunit.abstractions": {
         "type": "Transitive",
@@ -2184,20 +2254,20 @@
           "OcharoCatalogue.Domain": "[0.0.0, )",
           "OcharoCatalogue.Infrastructure": "[0.0.0, )",
           "OcharoCatalogue.Persistence": "[0.0.0, )",
-          "WoW2.Sdk.Backend.Beta": "[10.0.59-beta, )"
+          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
         }
       },
       "ocharocatalogue.application": {
         "type": "Project",
         "dependencies": {
           "OcharoCatalogue.Domain": "[0.0.0, )",
-          "WoW2.Sdk.Backend.Beta": "[10.0.59-beta, )"
+          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
         }
       },
       "ocharocatalogue.domain": {
         "type": "Project",
         "dependencies": {
-          "WoW2.Sdk.Backend.Beta": "[10.0.59-beta, )"
+          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
         }
       },
       "ocharocatalogue.infrastructure": {
@@ -2207,7 +2277,7 @@
           "OcharoCatalogue.Domain": "[0.0.0, )",
           "PdfPig": "[0.1.16, )",
           "SkiaSharp": "[3.119.2, )",
-          "WoW2.Sdk.Backend.Beta": "[10.0.59-beta, )"
+          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
         }
       },
       "ocharocatalogue.persistence": {
@@ -2261,12 +2331,6 @@
           "SQLitePCLRaw.core": "2.1.11"
         }
       },
-      "Microsoft.Extensions.DependencyInjection.Abstractions": {
-        "type": "CentralTransitive",
-        "requested": "[10.0.9, )",
-        "resolved": "2.1.0",
-        "contentHash": "8/CtASu80UIoyG+r8FstrmZW5GLtXxzoYpjj3jV0FKZCL5CiFgSH3pAmqut/dC68mu7N1bU6v0UtKKL3gCUQGQ=="
-      },
       "PdfPig": {
         "type": "CentralTransitive",
         "requested": "[0.1.16, )",
@@ -2275,10 +2339,11 @@
       },
       "WoW2.Sdk.Backend.Beta": {
         "type": "CentralTransitive",
-        "requested": "[10.0.59-beta, )",
-        "resolved": "10.0.59-beta",
-        "contentHash": "b1H15UBFb/gC5Rg45EU0R9LNRTVv+eZEOMePvA2VXKWoCWGk/S1o8++CJRozJtUBOPUvFhkQWeb3DHD1LKbiMw==",
+        "requested": "[10.0.64-beta, )",
+        "resolved": "10.0.64-beta",
+        "contentHash": "t9568/OW3QLX6AMxl+YXCwsdiaI9S1UghD1xjyenIufr6IAZmwSc3IcB0guHAgHr3bNGGTvr+I52gQwE+29r0g==",
         "dependencies": {
+          "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
           "AWSSDK.SimpleEmailV2": "3.7.402",
           "Ardalis.GuardClauses": "5.0.0",
@@ -2319,6 +2384,7 @@
           "Azure.Identity": "1.21.0",
           "Azure.Messaging.ServiceBus": "7.18.2",
           "Azure.Monitor.OpenTelemetry.AspNetCore": "1.3.0-beta.2",
+          "Azure.Storage.Blobs": "12.29.2",
           "ClosedXML": "0.104.2",
           "Confluent.Kafka": "2.6.1",
           "Cronos": "0.10.0",
@@ -2326,6 +2392,7 @@
           "Dapper": "2.1.66",
           "Datadog.Trace": "3.53.0",
           "Destructurama.Attributed": "4.0.0",
+          "DocumentFormat.OpenXml": "3.1.1",
           "EFCore.BulkExtensions": "10.0.1",
           "EFCore.NamingConventions": "10.0.1",
           "EntityFrameworkCore.Projectables": "6.0.5",
@@ -2345,6 +2412,8 @@
           "Konscious.Security.Cryptography.Argon2": "1.3.1",
           "KubernetesClient": "19.0.2",
           "MailKit": "4.18.0",
+          "Markdig": "1.4.0",
+          "MaxMind.Db": "5.2.0",
           "MessagePack": "3.1.8",
           "Microsoft.AspNetCore.Authentication.Facebook": "10.0.3",
           "Microsoft.AspNetCore.Authentication.Google": "10.0.3",
@@ -2363,8 +2432,8 @@
           "Microsoft.EntityFrameworkCore.Relational": "10.0.3",
           "Microsoft.EntityFrameworkCore.SqlServer": "10.0.3",
           "Microsoft.EntityFrameworkCore.Sqlite": "10.0.3",
-          "Microsoft.Extensions.AI": "9.0.0-preview.9.24556.5",
-          "Microsoft.Extensions.AI.Abstractions": "9.0.0-preview.9.24556.5",
+          "Microsoft.Extensions.AI": "10.8.3",
+          "Microsoft.Extensions.AI.Abstractions": "10.8.3",
           "Microsoft.Extensions.Caching.Hybrid": "10.1.0",
           "Microsoft.Extensions.Caching.StackExchangeRedis": "10.0.3",
           "Microsoft.Extensions.Http.Resilience": "9.1.0",
@@ -2375,6 +2444,7 @@
           "Microsoft.IdentityModel.Tokens": "8.14.0",
           "Microsoft.ML.Tokenizers": "0.22.0",
           "MimeKit": "4.18.0",
+          "ModelContextProtocol.AspNetCore": "2.2.0",
           "NATS.Client.Core": "2.5.5",
           "NATS.Client.JetStream": "2.5.5",
           "NetEscapades.AspNetCore.SecurityHeaders": "1.0.0",
@@ -2382,7 +2452,7 @@
           "NodaTime.Serialization.SystemTextJson": "1.3.1",
           "Npgsql": "10.0.0",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "10.0.0",
-          "OllamaSharp": "4.0.7",
+          "OllamaSharp": "5.5.0",
           "OneOf": "3.0.271",
           "OpenFeature": "2.2.0",
           "OpenTelemetry": "1.15.3",
@@ -2399,6 +2469,8 @@
           "OpenTelemetry.Instrumentation.SqlClient": "1.10.0-beta.1",
           "OpenTelemetry.Instrumentation.StackExchangeRedis": "1.10.0-beta.1",
           "Otp.NET": "1.4.0",
+          "PDFsharp": "6.2.4",
+          "PdfPig": "0.1.16",
           "QRCoder": "1.8.0",
           "RabbitMQ.Client": "7.0.0",
           "Refit": "8.0.0",
@@ -2425,7 +2497,7 @@
           "Telegram.Bot": "22.10.0.1",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Backend.Beta.Data.Abstractions": "10.0.59-beta",
+          "WoW2.Sdk.Backend.Beta.Data.Abstractions": "10.0.64-beta",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",
           "dbup-mysql": "6.0.4",
