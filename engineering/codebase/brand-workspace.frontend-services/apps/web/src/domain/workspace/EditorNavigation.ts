@@ -1,7 +1,7 @@
 import type { DesignKind } from './EditorModels';
 
 const identifier = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const sections = new Set(['overview', 'catalogue', 'business-cards', 'content', 'brands', 'media', 'products', 'integrations']);
+const sections = new Set(['overview', 'catalogue', 'business-cards', 'content', 'brands', 'media', 'products', 'sourcing', 'integrations']);
 
 /** Decodes a saved-design destination without treating URL content as authority. */
 export function readDesignTarget(search: string) {
@@ -42,6 +42,8 @@ export function safeWorkspaceDestination(path: string): string {
     if (parts.length === 2) return `/organizations/${parts[1]}`;
     if (parts.length === 4 && parts[2] === 'drafts' && (parts[3] === 'new' || identifier.test(parts[3] ?? '')))
       return `/organizations/${parts[1]}/drafts/${parts[3]}`;
+    if (parts.length === 4 && parts[2] === 'sourcing' && (parts[3] === 'inbox' || identifier.test(parts[3] ?? '')))
+      return `/organizations/${parts[1]}/sourcing/${parts[3]}`;
     if (parts.length !== 3 || !sections.has(parts[2]!)) return '/';
     editor = parts[2] === 'catalogue' || parts[2] === 'business-cards';
   } else return '/';

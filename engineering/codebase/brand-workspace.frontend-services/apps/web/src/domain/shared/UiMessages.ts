@@ -1,6 +1,7 @@
 import { catalogueUiMessages } from './CatalogueUiMessages';
 import { productReviewUiMessages } from './ProductReviewUiMessages';
 import { designerUiMessages } from './DesignerUiMessages';
+import { sourcingUiMessages } from './SourcingUiMessages';
 
 /** Operator interface locales are independent from authored catalogue languages. */
 export type UiLocale = 'uz' | 'ru' | 'en';
@@ -1763,7 +1764,7 @@ export const operatorUiMessages: UiMessageTable = {
   }
 };
 
-export const uiMessages: UiMessageTable = { ...baseUiMessages, ...operatorUiMessages, ...designerUiMessages, ...productReviewUiMessages, ...catalogueUiMessages };
+export const uiMessages: UiMessageTable = { ...baseUiMessages, ...operatorUiMessages, ...designerUiMessages, ...productReviewUiMessages, ...catalogueUiMessages, ...sourcingUiMessages };
 
 /** Resolves exact interface phrases without interpreting or translating customer-authored data. */
 export function translateUi(source: string, locale: UiLocale, variables?: Record<string, string | number>): string {

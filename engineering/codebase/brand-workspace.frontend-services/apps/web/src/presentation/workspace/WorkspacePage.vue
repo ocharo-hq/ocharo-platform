@@ -24,6 +24,7 @@ import DraftEditorPage from './DraftEditorPage.vue';
 import DraftListPage from './DraftListPage.vue';
 import MediaPage from './MediaPage.vue';
 import OrganizationPage from './OrganizationPage.vue';
+import SourcingPage from './SourcingPage.vue';
 
 const { t } = useUiLocale();
 
@@ -85,7 +86,7 @@ function changeOrganization(event: Event): void {
           <nav :aria-label="t('Workspace sections')" class="flex flex-wrap gap-1">
             <template v-if="location.organizationId"
               ><Button
-                v-for="section in ['overview', 'products', 'catalogue', 'business-cards', 'content', 'media', 'brands', 'integrations'] as const"
+                v-for="section in ['overview', 'products', 'sourcing', 'catalogue', 'business-cards', 'content', 'media', 'brands', 'integrations'] as const"
                 :key="section"
                 size="sm"
                 :variant="location.section === section ? 'soft' : 'ghost'"
@@ -96,7 +97,7 @@ function changeOrganization(event: Event): void {
                     `/organizations/${location.organizationId}${section === 'overview' ? '' : `/${section}`}`,
                   )
                 "
-                >{{ t(({overview:'Overview',products:'Products & releases',integrations:'Connected apps',catalogue:'Catalogues','business-cards':'Business cards',content:'Content',media:'Media',brands:'Brands'})[section]) }}</Button
+                >{{ t(({overview:'Overview',products:'Products & releases',sourcing:'Sourcing',integrations:'Connected apps',catalogue:'Catalogues','business-cards':'Business cards',content:'Content',media:'Media',brands:'Brands'})[section]) }}</Button
               ></template
             >
             <Button size="sm" variant="ghost" :is-disabled="access.busy.value" @click="access.navigate('/system')"
@@ -105,7 +106,7 @@ function changeOrganization(event: Event): void {
           </nav>
         </div>
         <div>
-          <ContentSkeleton v-if="workspace.initialLoading.value" :variant="location.section === 'products' ? 'form' : location.section === 'media' || location.section === 'catalogue' ? 'gallery' : 'rows'" :label="t('Loading your workspace…')" />
+          <ContentSkeleton v-if="workspace.initialLoading.value" :variant="location.section === 'products' || location.section === 'sourcing' ? 'form' : location.section === 'media' || location.section === 'catalogue' ? 'gallery' : 'rows'" :label="t('Loading your workspace…')" />
           <div v-else :aria-busy="workspace.loading.value || workspace.refreshing.value">
           <p v-if="workspace.error.value" role="status" class="query-label">{{ t("Workspace unavailable") }}</p>
           <slot v-else-if="location.section === 'system'" name="diagnostics" />
@@ -118,6 +119,7 @@ function changeOrganization(event: Event): void {
           <CatalogueWorkspacePage v-else-if="location.section === 'catalogue'" :access="access" :workspace="workspace" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" :initial-mode="designTarget.mode" />
           <DesignEditorPage v-else-if="location.section === 'business-cards'" :access="access" :workspace="workspace" kind="business-card" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" />
           <CommercePage v-else-if="location.section === 'products'" :access="access" :workspace="workspace" />
+          <SourcingPage v-else-if="location.section === 'sourcing'" :access="access" :workspace="workspace" :initial-location="location.sourcing" />
           <IntegrationsPage v-else-if="location.section === 'integrations'" :access="access" :workspace="workspace" />
           <BrandsPage v-else-if="location.section === 'brands'" :access="access" :workspace="workspace" />
           <MediaPage v-else-if="location.section === 'media'" :access="access" :workspace="workspace" />
