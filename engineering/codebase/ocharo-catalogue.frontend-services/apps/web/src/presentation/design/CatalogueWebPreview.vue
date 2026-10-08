@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { EyeOff, Image as ImageIcon, ImageOff, TriangleAlert } from 'lucide-vue-next';
+import { useUiLocale } from '../../application/shared/UseUiLocale';
 import { catalogueLanguages, productLocale } from '../../domain/catalogue/CatalogueLanguages';
 import type { ProductDetail } from '../../domain/catalogue/CatalogueModels';
 import type { CatalogueWebPage, DesignSnapshot } from '../../domain/design/EditorModels';
@@ -13,27 +15,38 @@ import {
   publicPricing,
 } from '../../domain/design/CatalogueDesign';
 defineOptions({ name: 'CatalogueWebPreview' });
-const props = defineProps<{
-  snapshot: DesignSnapshot;
-  products: ProductDetail[];
-  title: string;
-  brandName?: string;
-  pageId?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    snapshot: DesignSnapshot;
+    products: ProductDetail[];
+    title: string;
+    brandName?: string;
+    pageId?: string;
+    /** Keeps draft pages and unapproved products visible only inside the editor. */
+    editing?: boolean;
+  }>(),
+  { editing: false, brandName: '', pageId: '' },
+);
+const { t, uiLocale } = useUiLocale();
 const metadata = computed(() => props.snapshot.catalogue!),
   settings = computed(() => catalogueSettings(props.snapshot)),
   copy = computed(() => catalogueCopy(props.snapshot));
 const direction = computed(() => catalogueLanguages.find((item) => item.code === props.snapshot.locale)?.dir ?? 'ltr');
+const pages = computed(() =>
+  metadata.value.web.pages.filter(
+    (page) =>
+      (!props.pageId || page.id === props.pageId) &&
+      (props.editing || (page.isActive && pageProducts(page).length > 0)),
+  ),
+);
 function pageProducts(page: CatalogueWebPage) {
   return page.productIds
     .map((id) => props.products.find((product) => product.document.id === id))
-    .filter((product): product is ProductDetail => !!product && productEligible(product, props.snapshot.locale));
+    .filter(
+      (product): product is ProductDetail =>
+        !!product && (props.editing || productEligible(product, props.snapshot.locale)),
+    );
 }
-const pages = computed(() =>
-  metadata.value.web.pages.filter(
-    (page) => page.isActive && (!props.pageId || page.id === props.pageId) && pageProducts(page).length > 0,
-  ),
-);
 function images(product: ProductDetail, layout: CatalogueWebPage['layout']) {
   return productMedia(product, settings.value.mediaGroup).slice(
     0,
@@ -41,7 +54,7 @@ function images(product: ProductDetail, layout: CatalogueWebPage['layout']) {
   );
 }
 function productCopy(product: ProductDetail, locale: string) {
-  return productLocale(product.document.locales, locale) ?? { name: '', fabric: '', description: '' };
+  return productLocale(product.document.locales, locale) ?? { name: '', fabric: '', decoration: '', description: '' };
 }
 function price(value: number, currency: string) {
   return amount(value, props.snapshot.locale) + ' ' + currency;
@@ -58,8 +71,13 @@ function price(value: number, currency: string) {
       <p>{{ metadata.description }}</p>
       <p v-if="copy.coverNote">{{ copy.coverNote }}</p>
     </div>
-    <section v-for="page in pages" :key="page.id" :class="['web-page', page.layout]">
-      <h2>{{ page.title }}</h2>
+    <section v-for="page in pages" :key="page.id" :class="['web-page', page.layout, { 'editing-page': editing }]">
+      <div class="page-heading">
+        <h2>{{ page.title }}</h2>
+        <span v-if="editing && !page.isActive" class="draft-badge" :lang="uiLocale">
+          <EyeOff :size="14" aria-hidden="true" />{{ t('Inactive page') }}
+        </span>
+      </div>
       <div class="products">
         <article v-for="product in pageProducts(page)" :key="product.document.id">
           <div class="photographs">
@@ -67,8 +85,12 @@ function price(value: number, currency: string) {
               v-if="!images(product, page.layout).length"
               class="image-empty"
               role="img"
-              :aria-label="productCopy(product, snapshot.locale).name || product.document.id"
-            />
+              :aria-label="t('No active image')"
+              :lang="uiLocale"
+            >
+              <ImageOff :size="28" aria-hidden="true" />
+              <span>{{ t('No active image') }}</span>
+            </div>
             <figure v-for="image in images(product, page.layout)" :key="image.sha256">
               <img
                 :src="mediaUrl(image)"
@@ -78,7 +100,14 @@ function price(value: number, currency: string) {
             </figure>
           </div>
           <div class="product-copy">
-            <h3>{{ productCopy(product, snapshot.locale).name }}</h3>
+            <span
+              v-if="editing && !productEligible(product, snapshot.locale)"
+              class="draft-badge needs-review"
+              :lang="uiLocale"
+            >
+              <TriangleAlert :size="14" aria-hidden="true" />{{ t('Needs review') }}
+            </span>
+            <h3>{{ productCopy(product, snapshot.locale).name || product.document.id }}</h3>
             <p v-if="page.layout !== 'grid'" class="description">
               {{ productCopy(product, snapshot.locale).description }}
             </p>
@@ -86,6 +115,10 @@ function price(value: number, currency: string) {
               <div>
                 <dt>{{ copy.materials }}</dt>
                 <dd>{{ productCopy(product, snapshot.locale).fabric }}</dd>
+              </div>
+              <div v-if="productCopy(product, snapshot.locale).decoration">
+                <dt>{{ copy.decoration }}</dt>
+                <dd>{{ productCopy(product, snapshot.locale).decoration }}</dd>
               </div>
               <div v-if="product.document.sizes.length">
                 <dt>{{ copy.sizes }}</dt>
@@ -123,6 +156,24 @@ function price(value: number, currency: string) {
             <p v-else-if="settings.priceDisplay.show" class="prices">{{ copy.priceOnRequest }}</p>
           </div>
         </article>
+        <template v-if="editing && !pageProducts(page).length">
+          <article
+            v-for="slot in page.layout === 'grid' ? 3 : 1"
+            :key="slot"
+            class="product-placeholder"
+            :lang="uiLocale"
+          >
+            <div class="photographs">
+              <div class="image-empty placeholder-image" aria-hidden="true">
+                <ImageIcon :size="36" />
+              </div>
+            </div>
+            <div class="product-copy">
+              <h3>{{ t('Product slot {number}', { number: slot }) }}</h3>
+              <p class="description">{{ t('Choose products to fill this layout.') }}</p>
+            </div>
+          </article>
+        </template>
       </div>
     </section>
     <footer>{{ copy.footer }}</footer>
@@ -175,6 +226,30 @@ function price(value: number, currency: string) {
 .web-page {
   border-top: 1px solid var(--line);
 }
+.page-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+.draft-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #b99b62;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #f5e8cc;
+  color: #725119;
+  font:
+    600 12px/1.5 'DM Sans',
+    system-ui,
+    sans-serif;
+  letter-spacing: normal;
+}
+.needs-review {
+  margin-bottom: 16px;
+}
 h1,
 h2,
 h3 {
@@ -218,9 +293,21 @@ h3 {
 .image-empty {
   grid-column: 1/-1;
   min-height: 220px;
-  border: 1px solid var(--line);
-  display: grid;
-  place-items: center;
+  aspect-ratio: 3/4;
+  border: 1px dashed var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgb(132 117 98 / 5%);
+  color: var(--muted);
+  font-size: 14px;
+}
+.placeholder-image {
+  max-height: 520px;
+}
+.product-placeholder .product-copy {
   color: var(--muted);
 }
 .photographs figure {

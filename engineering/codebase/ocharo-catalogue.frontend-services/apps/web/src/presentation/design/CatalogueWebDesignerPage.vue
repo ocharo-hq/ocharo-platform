@@ -4,6 +4,9 @@ import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/pres
 import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, ref } from 'vue';
+import { Columns2, Images, LayoutGrid } from 'lucide-vue-next';
+import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { SegmentedPicker, ToggleInput } from '@wow-two-beta/ui-vue/presentation/forms';
 import { useCatalogueDocument } from '../../application/design/UseCatalogueDocument';
 import { requestConfirmation } from '../../application/common/UseFeedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
@@ -12,6 +15,7 @@ import type { CatalogueWebPage } from '../../domain/design/EditorModels';
 import CatalogueDesignerBar from './CatalogueDesignerBar.vue';
 import CatalogueSharedSettings from './CatalogueSharedSettings.vue';
 import CatalogueWebPreview from './CatalogueWebPreview.vue';
+import CataloguePreviewViewport from './CataloguePreviewViewport.vue';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
 defineOptions({ name: 'CatalogueWebDesignerPage' });
@@ -31,18 +35,10 @@ const products = computed(() =>
         .includes(search.value.toLowerCase()),
   ),
 );
-const eligibleCount = computed(
-  () =>
-    page.value?.productIds.filter((id) =>
-      editor.source.value?.products.some(
-        (product) => product.document.id === id && productEligible(product, editor.snapshot.value!.locale),
-      ),
-    ).length ?? 0,
-);
 const layouts = computed(() => [
-  { value: 'spread', label: t('Product spread') },
-  { value: 'grid', label: t('Product grid') },
-  { value: 'collage', label: t('Photo collage') },
+  { value: 'spread', label: t('Product spread'), icon: Columns2 },
+  { value: 'grid', label: t('Product grid'), icon: LayoutGrid },
+  { value: 'collage', label: t('Photo collage'), icon: Images },
 ]);
 const themes = computed(() => [
   { value: 'editorial', label: t('Editorial') },
@@ -66,6 +62,9 @@ function edit(change: (page: CatalogueWebPage) => void) {
       const target = next.catalogue!.web.pages.find((item) => item.id === page.value!.id);
       if (target) change(target);
     });
+}
+function setLayout(value: string | readonly string[] | null) {
+  if (value === 'spread' || value === 'grid' || value === 'collage') edit((item) => (item.layout = value));
 }
 function move(index: number, delta: number) {
   editor.change((next) => {
@@ -141,7 +140,11 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
               <ol class="pages">
                 <li v-for="(item, index) in pages" :key="item.id" :class="{ selected: page?.id === item.id }">
                   <button class="page-name" @click="selected = item.id">
-                    {{ index + 1 }} · {{ item.title }} <small v-if="!item.isActive">{{ t('Inactive') }}</small>
+                    {{ index + 1 }} · {{ item.title }}
+                    <small class="text-muted-foreground">{{
+                      t('{count} products', { count: item.productIds.length })
+                    }}</small>
+                    <small v-if="!item.isActive">{{ t('Inactive') }}</small>
                   </button>
                   <div class="actions">
                     <button
@@ -168,15 +171,6 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                     class="field"
                     maxlength="160"
                     @change="edit((item) => (item.title = ($event.target as HTMLInputElement).value))" /></label
-                ><label
-                  >{{ t('Page template')
-                  }}<CatalogueSelect
-                    :model-value="page.layout"
-                    :options="layouts"
-                    :label="t('Page template')"
-                    @update:model-value="
-                      (value) => edit((item) => (item.layout = value as CatalogueWebPage['layout']))
-                    " /></label
                 ><label class="check"
                   ><input
                     type="checkbox"
@@ -193,7 +187,7 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                 </div>
                 <h3>{{ t('Products on this page') }}</h3>
                 <p class="hint">
-                  {{ t('Only active products with approved text and active images appear in this language.') }}
+                  {{ t('Selected products stay visible while you design. Review is required before publication.') }}
                 </p>
                 <input v-model="search" type="search" class="field" :placeholder="t('Find a product')" />
                 <div class="products">
@@ -232,33 +226,54 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
             </aside>
             <div class="preview-panel">
               <div class="preview-toolbar">
-                <h2>{{ t('Web preview') }}</h2>
-                <CatalogueSelect v-model="viewport" :options="sizes" :label="t('Preview size')" /><CatalogueSelect
-                  :model-value="editor.snapshot.value.catalogue!.web.theme"
-                  :options="themes"
-                  :label="t('Web theme')"
-                  @update:model-value="
-                    (value) => editor.change((next) => (next.catalogue!.web.theme = value as 'editorial' | 'grid'))
-                  "
-                />
-              </div>
-              <ResultEmpty v-if="!pages.length" :label="t('No pages yet. Add a page to start designing.')" />
-              <ResultEmpty
-                v-else-if="page && !eligibleCount"
-                :label="t('No approved products on this page yet. Choose products or finish their language review.')"
-              />
-              <div v-else class="viewport-scroll">
-                <div :style="{ width: viewport + 'px' }" class="viewport">
-                  <SkeletonStateSlot class="catalogue-value" :is-block="true"
-                    ><CatalogueWebPreview
-                      :snapshot="editor.snapshot.value"
-                      :products="editor.source.value?.products ?? []"
-                      :title="editor.title.value"
-                      :brand-name="editor.source.value?.settings.brandName"
-                      :page-id="page?.id"
-                  /></SkeletonStateSlot>
+                <h2 class="w-full">{{ t('Draft preview') }}</h2>
+                <div class="min-w-0 flex-1 basis-48">
+                  <CatalogueSelect v-model="viewport" :options="sizes" :label="t('Preview size')" />
+                </div>
+                <div class="min-w-0 flex-1 basis-48">
+                  <CatalogueSelect
+                    :model-value="editor.snapshot.value.catalogue!.web.theme"
+                    :options="themes"
+                    :label="t('Web theme')"
+                    @update:model-value="
+                      (value) => editor.change((next) => (next.catalogue!.web.theme = value as 'editorial' | 'grid'))
+                    "
+                  />
                 </div>
               </div>
+              <div v-if="page" class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <span class="text-sm font-medium">{{ page.title }}</span>
+                <SegmentedPicker
+                  :model-value="page.layout"
+                  :aria-label="t('Page template')"
+                  @update:model-value="setLayout"
+                >
+                  <ToggleInput
+                    v-for="layout in layouts"
+                    :key="layout.value"
+                    :value="layout.value"
+                    :aria-label="layout.label"
+                    :title="layout.label"
+                    :is-disabled="editor.busy.value"
+                    class="min-h-11 gap-2"
+                  >
+                    <Icon :icon="layout.icon" :size="16" />
+                    <span>{{ layout.label }}</span>
+                  </ToggleInput>
+                </SegmentedPicker>
+              </div>
+              <ResultEmpty v-if="!pages.length" :label="t('No pages yet. Add a page to start designing.')" />
+              <CataloguePreviewViewport v-else :width="Number(viewport)">
+                <SkeletonStateSlot class="catalogue-value" :is-block="true"
+                  ><CatalogueWebPreview
+                    :snapshot="editor.snapshot.value"
+                    :products="editor.source.value?.products ?? []"
+                    :title="editor.title.value"
+                    :brand-name="editor.source.value?.settings.brandName"
+                    :page-id="page?.id"
+                    editing
+                /></SkeletonStateSlot>
+              </CataloguePreviewViewport>
               <p class="hint">
                 {{ t('The public website reflows to the reader’s screen. PDF page dimensions are edited separately.') }}
               </p>
@@ -369,19 +384,6 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 15px;
-}
-.viewport-scroll {
-  overflow: auto;
-  background: var(--color-muted);
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 16px;
-  max-height: 1000px;
-}
-.viewport {
-  margin: auto;
-  min-width: 0;
-  box-shadow: 0 8px 30px #0002;
 }
 @media (max-width: 1050px) {
   .designer-grid {

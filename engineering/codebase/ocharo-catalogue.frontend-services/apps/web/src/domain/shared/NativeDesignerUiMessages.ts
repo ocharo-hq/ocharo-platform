@@ -1,5 +1,18 @@
 /** Native catalogue interface copy; never translates authored catalogue or product text. */
 export const nativeDesignerUiMessages: Record<string, { uz: string; ru: string }> = {
+  'Draft preview': { uz: 'Qoralama ko‘rinishi', ru: 'Предпросмотр черновика' },
+  '{count} products': { uz: '{count} ta mahsulot', ru: 'Товаров: {count}' },
+  'Selected products stay visible while you design. Review is required before publication.': {
+    uz: 'Tanlangan mahsulotlar tahrirlashda ko‘rinadi. Nashr qilishdan oldin ularni tasdiqlang.',
+    ru: 'Выбранные товары видны при оформлении. Перед публикацией их нужно проверить.',
+  },
+  'Inactive page': { uz: 'Faol bo‘lmagan sahifa', ru: 'Неактивная страница' },
+  'No active image': { uz: 'Faol rasm yo‘q', ru: 'Нет активного изображения' },
+  'Product slot {number}': { uz: '{number}-mahsulot uchun joy', ru: 'Место для товара {number}' },
+  'Choose products to fill this layout.': {
+    uz: 'Maketni to‘ldirish uchun mahsulotlarni tanlang.',
+    ru: 'Выберите товары для этого макета.',
+  },
   'Add a page to begin designing your PDF.': {
     uz: 'PDF maketini yaratishni boshlash uchun sahifa qo‘shing.',
     ru: 'Добавьте страницу, чтобы начать оформление PDF.',
