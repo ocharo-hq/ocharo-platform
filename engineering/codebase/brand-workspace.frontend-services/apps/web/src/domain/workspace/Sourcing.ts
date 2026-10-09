@@ -49,7 +49,7 @@ export interface RouteInput {
 export interface MediaUpdateInput { supplierId: string | null; capture: MediaCapture; caption: string }
 export interface SupplierFilter { query: string; stage: SupplierStage | '' }
 /** A media listing is either one supplier's gallery or the unassigned inbox. */
-export type MediaFilter = { kind: 'supplier'; supplierId: string } | { kind: 'inbox' };
+export type MediaFilter = { kind: 'supplier'; supplierId: string } | { kind: 'inbox' } | { kind: 'all' };
 
 /** Contract limits mirrored for early feedback; the server remains authoritative. */
 export const sourcingLimits = {
@@ -146,9 +146,10 @@ export function optionalText(value: string): string | null {
 }
 
 const identifier = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export interface SourcingLocation { view: 'suppliers' | 'inbox' | 'supplier'; supplierId: string | null }
+export interface SourcingLocation { view: 'suppliers' | 'materials' | 'inbox' | 'supplier'; supplierId: string | null }
 /** Reads the segments after `/organizations/{id}/sourcing`; unknown segments fall back to the supplier list. */
 export function readSourcingLocation(segments: readonly string[]): SourcingLocation {
+  if (segments.length === 1 && segments[0] === 'materials') return { view: 'materials', supplierId: null };
   if (segments.length === 1 && segments[0] === 'inbox') return { view: 'inbox', supplierId: null };
   if (segments.length === 1 && identifier.test(segments[0]!)) return { view: 'supplier', supplierId: segments[0]!.toLowerCase() };
   return { view: 'suppliers', supplierId: null };
@@ -156,6 +157,7 @@ export function readSourcingLocation(segments: readonly string[]): SourcingLocat
 export function sourcingPath(organizationId: string, location: SourcingLocation): string {
   if (!identifier.test(organizationId)) throw new Error('Invalid workspace destination.');
   const base = `/organizations/${organizationId}/sourcing`;
+  if (location.view === 'materials') return `${base}/materials`;
   if (location.view === 'inbox') return `${base}/inbox`;
   if (location.view === 'supplier' && location.supplierId && identifier.test(location.supplierId)) return `${base}/${location.supplierId}`;
   return base;

@@ -12,6 +12,8 @@ import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 import type { ContactRoute, SourcingLocation, SourcingMedia, Supplier, SupplierSummary } from '@/domain/workspace/Sourcing';
+import { createSourcingPreferencesStorage } from '@/integration/workspace/SourcingPreferencesStorage';
+import SourcingViewSettings from '@/presentation/workspace/SourcingViewSettings.vue';
 import SourcingPage from '@/presentation/workspace/SourcingPage.vue';
 
 const api = vi.hoisted(() => ({
@@ -55,6 +57,7 @@ const media = (index: number, over: Partial<SourcingMedia> = {}): SourcingMedia 
 let wrapper: VueWrapper | undefined;
 let client: ReturnType<typeof createQueryClient> | undefined;
 beforeEach(() => {
+  localStorage.clear();
   useUiLocale().setUiLocale('en');
   window.history.replaceState(null, '', '/');
   api.listSuppliers.mockResolvedValue(ResultExtensions.ok([summary({}), summary({ id: OTHER, name: 'Bukhara Silk', stage: 'lead', country: 'UZ', city: 'Bukhara', primaryRoute: null, mediaCount: 0 })]));
@@ -71,7 +74,7 @@ afterEach(() => {
 function render(role: 'owner' | 'editor' | 'viewer', initialLocation: SourcingLocation) {
   client = createQueryClient({ retry: { ...DefaultRetryPolicy, maxRetries: 0 } });
   const access = {
-    busy: ref(false), dirty: ref(false), session: ref({ csrfToken: 'token', sessionId: 'session' }),
+    busy: ref(false), dirty: ref(false), invalidated: ref(false), checking: ref(false), session: ref({ csrfToken: 'token', sessionId: 'session', authenticated: true, user: { id: PERSON } }),
     setDirty: vi.fn((value: boolean) => { access.dirty.value = value; }), recheck: vi.fn(),
     write: vi.fn((operation: (signal: AbortSignal) => unknown) => operation(new AbortController().signal)),
   };
@@ -307,5 +310,71 @@ describe('sourcing collection outcomes', () => {
     expect(wrapper!.findAll('.sourcing-tile')).toHaveLength(3);
     expect(wrapper!.find('.empty-state').exists()).toBe(false);
     expect(wrapper!.text()).not.toContain('unavailable');
+  });
+});
+
+
+describe('personal sourcing views', () => {
+  it('opens the material gallery and follows a supplier association', async () => {
+    api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1, { supplierId: SUPPLIER }), media(2, { supplierId: '55555555-5555-4555-8555-555555555555' }), media(3)]));
+    render('viewer', { view: 'suppliers', supplierId: null });
+    await flushPromises();
+    await button('Materials')!.trigger('click');
+    await flushPromises();
+    expect(window.location.pathname).toBe(`/organizations/${ORG}/sourcing/materials`);
+    expect(api.listMedia).toHaveBeenCalledWith(ORG, { kind: 'all' }, { limit: 100, offset: 0 }, expect.any(AbortSignal));
+    expect(button('Open supplier')).toBeDefined();
+    expect(wrapper!.text()).toContain('Unassigned');
+    await button('Sethi Weaves')!.trigger('click');
+    await flushPromises();
+    expect(window.location.pathname).toBe(`/organizations/${ORG}/sourcing/${SUPPLIER}`);
+    expect(wrapper!.get('[aria-labelledby="sourcing-routes-title"]').text()).toContain('Contacts');
+  });
+  it('restores default material entry but preserves explicit supplier routes', async () => {
+    const store = createSourcingPreferencesStorage({ userId: PERSON, organizationId: ORG });
+    expect(store.save({ start: 'materials', order: 'contacts-first', visible: ['contacts'] })).toBe(true);
+    api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1, { supplierId: SUPPLIER })]));
+    window.history.replaceState(null, '', `/organizations/${ORG}/sourcing`);
+    render('viewer', { view: 'suppliers', supplierId: null });
+    await flushPromises();
+    expect(wrapper!.find('#sourcing-materials-title').exists()).toBe(true);
+    expect(window.location.pathname).toBe(`/organizations/${ORG}/sourcing/materials`);
+    await button('Sethi Weaves')!.trigger('click');
+    await flushPromises();
+    expect(wrapper!.find('#sourcing-supplier-title').exists()).toBe(true);
+    window.history.replaceState(null, '', `/organizations/${ORG}/sourcing/materials`);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await flushPromises();
+    expect(wrapper!.find('#sourcing-materials-title').exists()).toBe(true);
+    wrapper!.unmount(); client!.clear();
+    render('viewer', { view: 'supplier', supplierId: SUPPLIER });
+    await flushPromises();
+    expect(wrapper!.find('#sourcing-supplier-title').exists()).toBe(true);
+    expect(wrapper!.find('#sourcing-routes-title').exists()).toBe(true);
+    expect(wrapper!.find('#sourcing-media-title').exists()).toBe(false);
+    expect(wrapper!.find('#sourcing-people-title').exists()).toBe(false);
+  });
+  it('saves view settings separately from supplier records and guards dirty forms', async () => {
+    const { access } = render('viewer', { view: 'supplier', supplierId: SUPPLIER });
+    await flushPromises();
+    access.dirty.value = true;
+    await button('View settings')!.trigger('click');
+    expect(wrapper!.findComponent(SourcingViewSettings).exists()).toBe(false);
+    access.dirty.value = false;
+    await button('View settings')!.trigger('click');
+    await flushPromises();
+    const settings = wrapper!.getComponent(SourcingViewSettings);
+    const updated = { start: 'suppliers', order: 'contacts-first', visible: ['contacts'] } as const;
+    access.invalidated.value = true;
+    expect(settings.props('save')({ ...updated, visible: [...updated.visible] })).toBe(false);
+    access.invalidated.value = false;
+    access.session.value.user.id = OTHER;
+    expect(settings.props('save')({ ...updated, visible: [...updated.visible] })).toBe(false);
+    access.session.value.user.id = PERSON;
+    expect(settings.props('save')({ ...updated, visible: [...updated.visible] })).toBe(true);
+    await flushPromises();
+    expect(wrapper!.find('#sourcing-media-title').exists()).toBe(false);
+    expect(wrapper!.find('#sourcing-supplier-title').exists()).toBe(true);
+    expect(api.updateSupplier).not.toHaveBeenCalled();
   });
 });

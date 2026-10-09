@@ -20,7 +20,7 @@ describe('sourcing locations', () => {
   });
 
   it('builds addresses that read back to the same location and survive sign-in', () => {
-    for (const location of [{ view: 'suppliers', supplierId: null }, { view: 'inbox', supplierId: null }, { view: 'supplier', supplierId: supplier }] as const) {
+    for (const location of [{ view: 'materials', supplierId: null }, { view: 'suppliers', supplierId: null }, { view: 'inbox', supplierId: null }, { view: 'supplier', supplierId: supplier }] as const) {
       const path = sourcingPath(organization, location);
       expect(readWorkspaceLocation(path).sourcing).toEqual(location);
       expect(safeWorkspaceDestination(path)).toBe(path);

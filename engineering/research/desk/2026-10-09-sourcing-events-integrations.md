@@ -25,7 +25,7 @@ cost descriptions and a decision pipeline. Existing imports preserve Desk edits 
 
 ## Recommended UI
 
-### Sourcing: begin with a material request
+### Sourcing: support materials and suppliers as equal starting points
 
 The main working question is “which material can satisfy this design at this quantity?”
 A supplier directory alone cannot answer it. Keep suppliers as reusable records while adding materials and offers.
@@ -49,9 +49,11 @@ Do not compare a metre price with a piece price without an explicit conversion b
 Do not label a landed total complete while freight or required taxes remain unknown.
 FX rates need provider, rate date and a saved snapshot; changing rates must not rewrite accepted quotations.
 
-Alternative considered: supplier-first contact workbench. It fits outreach, but obscures comparisons across
-suppliers for one material. Recommendation: material-first default, with the existing supplier view retained.
-This is a UI/domain proposal; offer comparison and purchase approval were not implemented in this iteration.
+Decision on 2026-10-09: the owner wants both starting points. Materials answers “what can satisfy this design?”;
+Suppliers answers “what has this supplier shared, and how do I reach them?”. Keep both visible and allow a
+personal default starting view. The current media records support a shared materials/files gallery; they do
+not yet constitute structured fabrics or comparable supplier offers. Offer comparison and purchase approval
+remain a domain proposal. See [supplier information and personal views](2026-10-09-supplier-information-and-personal-views.md).
 
 ### Events: prioritize decisions and deadlines
 
@@ -180,7 +182,7 @@ Provider credentials must remain separate from MCP client tokens, following
 
 ## Implementation sequence
 
-1. Review the proposed material-first and deadline-first UI with the owner.
+1. Deliver the decided dual Materials/Suppliers entry and personal supplier views; retain owner UI review.
 2. Add `MaterialRequest`, `SupplierOffer`, sample review and immutable quote evidence.
 3. Add source observations and reviewed import candidates, including event edition and cancellation handling.
 4. Add one verified provider/feed adapter and a controllable discovery run with receipts.

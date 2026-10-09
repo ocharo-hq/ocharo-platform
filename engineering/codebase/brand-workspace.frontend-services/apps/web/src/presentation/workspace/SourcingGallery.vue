@@ -17,6 +17,7 @@ import WorkspaceCollectionSkeleton from './WorkspaceCollectionSkeleton.vue';
 /** One supplier's media or the inbox: upload, view, sort and tidy. */
 defineOptions({ name: 'SourcingGallery' });
 const props = defineProps<{ access: AccessControls; sourcing: SourcingControls; filter: MediaFilter }>();
+const emit = defineEmits<{ openSupplier: [id: string]; openInbox: [] }>();
 const { t } = useUiLocale();
 const media = useSourcingMedia(props.sourcing, () => props.filter);
 const uploads = useSourcingUploads(props.sourcing);
@@ -28,6 +29,8 @@ const selected = reactive(new Set<string>());
 const target = ref('');
 const moved = ref('');
 const viewing = ref<number | null>(null);
+watch(() => props.filter, () => { viewing.value = null; stopSelecting(); });
+const supplierName = (id: string) => suppliers.suppliers.value?.find(supplier => supplier.id === id)?.name ?? t('Open supplier');
 const targets = computed(() => (suppliers.suppliers.value ?? []).filter(supplier => supplier.id !== supplierId.value));
 const canEdit = computed(() => props.sourcing.canEdit.value);
 const refreshing = ref(false);
@@ -89,6 +92,7 @@ async function remove(item: SourcingMedia): Promise<boolean> {
 <template>
   <div class="space-y-4">
     <SourcingUploader v-if="canEdit" :access="access" :uploads="uploads" :supplier-id="supplierId" />
+    <p v-if="filter.kind === 'all' && canEdit" class="text-xs text-muted-foreground">{{ t('New files enter the inbox until you assign a supplier.') }}</p>
     <div class="flex flex-wrap items-center justify-between gap-3">
       <p class="text-sm text-muted-foreground">{{ !hasRead ? t("Media") : t("{count} files shown", { count: items.length }) }}</p>
       <div class="flex items-center gap-2">
@@ -132,9 +136,11 @@ async function remove(item: SourcingMedia): Promise<boolean> {
             <MapPin :size="12" aria-hidden="true" /><span class="sr-only">{{ t("Contains location data") }}</span>
           </span>
           <p class="sourcing-tile-name" :title="item.caption || item.originalName">{{ item.caption || item.originalName }}</p>
+          <button v-if="filter.kind === 'all' && item.supplierId" type="button" class="mt-1 block max-w-full truncate text-xs text-primary underline-offset-4 hover:underline disabled:opacity-50" :disabled="access.busy.value" @click="emit('openSupplier', item.supplierId)">{{ supplierName(item.supplierId) }}</button>
+          <button v-else-if="filter.kind === 'all'" type="button" class="mt-1 block text-xs text-primary underline-offset-4 hover:underline disabled:opacity-50" :disabled="access.busy.value" @click="emit('openInbox')">{{ t('Unassigned') }} · {{ t('Inbox') }}</button>
         </li>
       </ul>
-      <p v-else-if="hasRead && !media.loading.value" class="empty-state">{{ supplierId ? t("No media for this supplier yet.") : t("The inbox is empty.") }}</p>
+      <p v-else-if="hasRead && !media.loading.value" class="empty-state">{{ supplierId ? t("No media for this supplier yet.") : filter.kind === 'all' ? t("No shared materials or files yet.") : t("The inbox is empty.") }}</p>
     </div>
     <div v-if="media.hasNextPage.value" class="flex justify-center">
       <Button variant="outline" :is-loading="media.isFetchingNextPage.value" @click="media.fetchNextPage()">{{ t("Load more") }}</Button>

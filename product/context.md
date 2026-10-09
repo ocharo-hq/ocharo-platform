@@ -1,6 +1,18 @@
 # Ocharo Platform — current state
 
-*Last updated: 2026-09-29 03:38 PM +05*
+*Last updated: 2026-10-09*
+
+## Desk Sourcing direction — 2026-10-09
+
+The owner chose both Materials and Suppliers as starting points. Supplier profiles bring together identity,
+relationship stage, contacts, people and shared materials/files. Personal view settings control the starting
+view and optional supplier sections; organization supplier facts remain shared and access-controlled.
+The initial preference scope is the signed-in account plus organization in the current browser.
+
+[Supplier information and personal views](../engineering/research/desk/2026-10-09-supplier-information-and-personal-views.md)
+records the field hierarchy, presentation boundary and structured-offer gaps. Materials currently means
+shared reference media; composition, quotations, samples and comparable offers require their own domain records.
+Owner acceptance of the populated screen remains a separate verification step.
 
 ## Dedicated Catalogue app — current review target
 

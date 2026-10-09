@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { RefreshCw } from 'lucide-vue-next';
+import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { failureMessage } from '@/application/workspace/UseAccess';
+import { useErrorToast } from '@/application/shared/UseFeedback';
+import { orderedSourcingSections, type SourcingPreferences } from '@/domain/workspace/SourcingPreferences';
 import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
@@ -18,9 +23,17 @@ import SourcingSupplierForm from './SourcingSupplierForm.vue';
 
 /** One supplier: its own fields, contact routes, people and shared media. */
 defineOptions({ name: 'SourcingSupplierDetail' });
-const props = defineProps<{ access: AccessControls; sourcing: SourcingControls; supplierId: string }>();
+const props = defineProps<{ access: AccessControls; sourcing: SourcingControls; supplierId: string; preferences: SourcingPreferences }>();
 const { t } = useUiLocale();
 const { supplier, loading, error } = useSupplier(props.sourcing, () => props.supplierId);
+const sections = computed(() => orderedSourcingSections(props.preferences));
+useErrorToast(computed(() => error.value ? failureMessage(error.value) : null));
+const refreshing = ref(false);
+async function refresh(): Promise<void> {
+  if (refreshing.value || props.access.dirty.value) return;
+  refreshing.value = true;
+  try { await props.sourcing.refreshSupplier(props.supplierId); } finally { refreshing.value = false; }
+}
 const editing = ref(false);
 const formVersion = ref(0);
 const stageConflict = ref(false);
@@ -42,9 +55,11 @@ async function changeStage(event: Event): Promise<void> {
   const select = event.target as HTMLSelectElement;
   const current = supplier.value;
   if (!current || !isSupplierStage(select.value) || select.value === current.stage) return;
+  const stage = select.value;
+  select.value = current.stage;
   stageSaving.value = true;
   try {
-    const outcome = saveOutcome(await props.sourcing.updateSupplier(current.id, current.revision, { ...fields(current), stage: select.value }));
+    const outcome = saveOutcome(await props.sourcing.updateSupplier(current.id, current.revision, { ...fields(current), stage }));
     stageConflict.value = outcome === 'conflict';
     if (outcome !== 'saved') select.value = current.stage;
   } finally { stageSaving.value = false; }
@@ -57,12 +72,14 @@ async function reload(): Promise<void> {
 </script>
 
 <template>
-  <p v-if="loading && !supplier" role="status" class="query-label">{{ t("Loading supplier…") }}</p>
-  <section v-else-if="!supplier" role="status" class="query-label">
-    <h2 class="text-xl font-semibold">{{ t("Supplier unavailable") }}</h2>
-    <p class="mt-3 text-sm text-muted-foreground">{{ error?.status === 404 ? t("This record is unavailable in this organization.") : t("Content unavailable. Try refreshing.") }}</p>
-  </section>
-  <div v-else class="space-y-5">
+  <div class="min-h-72 space-y-4">
+    <div class="flex justify-end"><Button size="sm" variant="ghost" :is-loading="refreshing" :is-disabled="access.busy.value || access.dirty.value || loading" @click="refresh"><RefreshCw :size="16" aria-hidden="true" />{{ t('Refresh supplier') }}</Button></div>
+    <div v-if="loading && !supplier" class="space-y-5" aria-busy="true">
+      <span role="status" class="sr-only">{{ t('Loading supplier…') }}</span>
+      <div class="workspace-card space-y-4 p-6" aria-hidden="true"><SkeletonState class="h-7 w-1/2 motion-reduce:animate-none" /><SkeletonState class="h-4 w-1/3 motion-reduce:animate-none" /><SkeletonState class="h-4 w-2/3 motion-reduce:animate-none" /></div>
+      <div class="grid grid-cols-2 gap-4" aria-hidden="true"><SkeletonState v-for="index in 4" :key="index" class="aspect-square rounded-xl motion-reduce:animate-none" /></div>
+    </div>
+  <div v-else-if="supplier" class="space-y-5">
     <article class="workspace-card space-y-4 p-5 sm:p-6" aria-labelledby="sourcing-supplier-title">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
@@ -87,7 +104,12 @@ async function reload(): Promise<void> {
         v-if="editing" :key="formVersion" :sourcing="sourcing" :dirty-key="`supplier-${supplier.id}`" :initial="supplier"
         :disabled="access.busy.value" :submit-label="t('Save supplier')" :save="saveDetails" @cancel="editing = false" @reload="reload"
       />
-      <dl v-else class="grid gap-4 text-sm sm:grid-cols-2">
+
+    </article>
+    <template v-for="section in sections" :key="section">
+      <section v-if="section === 'overview' && !editing" class="workspace-card space-y-4 p-5 sm:p-6" aria-labelledby="sourcing-details-title">
+        <h3 id="sourcing-details-title" class="text-lg font-semibold">{{ t('Supplier details') }}</h3>
+      <dl class="grid gap-4 text-sm sm:grid-cols-2">
         <div class="min-w-0">
           <dt class="text-xs text-muted-foreground">{{ t("Website") }}</dt>
           <dd class="mt-1 break-all">
@@ -104,14 +126,14 @@ async function reload(): Promise<void> {
           <dd class="mt-1 whitespace-pre-wrap break-words leading-6">{{ supplier.notes || '—' }}</dd>
         </div>
       </dl>
-    </article>
-    <div class="grid items-start gap-5 xl:grid-cols-2">
-      <SourcingRoutes :access="access" :sourcing="sourcing" :supplier="supplier" />
-      <SourcingPeople :access="access" :sourcing="sourcing" :supplier="supplier" />
-    </div>
-    <section class="space-y-4" aria-labelledby="sourcing-media-title">
-      <h3 id="sourcing-media-title" class="text-lg font-semibold">{{ t("Shared media") }}</h3>
-      <SourcingGallery :access="access" :sourcing="sourcing" :filter="filter" />
-    </section>
+      </section>
+      <SourcingRoutes v-else-if="section === 'contacts'" :access="access" :sourcing="sourcing" :supplier="supplier" />
+      <SourcingPeople v-else-if="section === 'people'" :access="access" :sourcing="sourcing" :supplier="supplier" />
+      <section v-else-if="section === 'media'" class="space-y-4" aria-labelledby="sourcing-media-title">
+        <h3 id="sourcing-media-title" class="text-lg font-semibold">{{ t('Shared materials and files') }}</h3>
+        <SourcingGallery :access="access" :sourcing="sourcing" :filter="filter" />
+      </section>
+    </template>
+  </div>
   </div>
 </template>

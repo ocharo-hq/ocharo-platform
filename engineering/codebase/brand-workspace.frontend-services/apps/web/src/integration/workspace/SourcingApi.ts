@@ -81,7 +81,7 @@ export function createSourcingApi(csrf: () => string, unauthorized: () => void) 
     listMedia: (o: string, filter: MediaFilter, page: { limit: number; offset: number }, signal: AbortSignal) => {
       const query = new URLSearchParams();
       if (filter.kind === 'supplier') query.set('supplierId', filter.supplierId);
-      else query.set('unassigned', 'true');
+      else if (filter.kind === 'inbox') query.set('unassigned', 'true');
       query.set('limit', String(page.limit));
       query.set('offset', String(page.offset));
       return client.get(`${base(o)}/media?${query}`, { signal, decode: decode(list(isSourcingMedia)) });

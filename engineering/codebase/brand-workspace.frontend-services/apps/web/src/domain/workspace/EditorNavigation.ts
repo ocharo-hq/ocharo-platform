@@ -42,7 +42,7 @@ export function safeWorkspaceDestination(path: string): string {
     if (parts.length === 2) return `/organizations/${parts[1]}`;
     if (parts.length === 4 && parts[2] === 'drafts' && (parts[3] === 'new' || identifier.test(parts[3] ?? '')))
       return `/organizations/${parts[1]}/drafts/${parts[3]}`;
-    if (parts.length === 4 && parts[2] === 'sourcing' && (parts[3] === 'inbox' || identifier.test(parts[3] ?? '')))
+    if (parts.length === 4 && parts[2] === 'sourcing' && (parts[3] === 'inbox' || parts[3] === 'materials' || identifier.test(parts[3] ?? '')))
       return `/organizations/${parts[1]}/sourcing/${parts[3]}`;
     if (parts.length === 4 && parts[2] === 'events' && identifier.test(parts[3] ?? ''))
       return `/organizations/${parts[1]}/events/${parts[3]}`;
