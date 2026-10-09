@@ -48,7 +48,7 @@ async function review(status: EventStatus): Promise<void> {
       <div class="min-w-0 space-y-1">
         <p v-if="event.status === 'candidate'" class="event-new">{{ t("New — review") }}</p>
         <h4 :id="`event-card-${event.id}`" class="break-words text-base font-semibold leading-6">
-          <a :href="href" class="hover:underline underline-offset-4" @click="follow">{{ event.title }}</a>
+          <a :href="href" class="block rounded-sm underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" @click="follow">{{ event.title }}</a>
         </h4>
         <p v-if="event.organizer" class="break-words text-sm text-muted-foreground">{{ event.organizer }}</p>
         <p v-if="place" class="text-sm text-muted-foreground">{{ place }}</p>
