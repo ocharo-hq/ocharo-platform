@@ -30,7 +30,7 @@ function follow(event: MouseEvent, item: ShowcaseEvent): void {
     <h2 id="events-deadlines-title" class="text-base font-semibold">{{ t("Next deadlines") }}</h2>
     <div class="min-h-28" :aria-busy="loading">
       <WorkspaceCollectionSkeleton v-if="loading && !summary" shape="deadlines" :label="t('Loading deadlines…')" />
-      <p v-else-if="summary && !summary.upcomingDeadlines.length" class="flex min-h-28 items-center justify-center text-center text-sm text-muted-foreground">{{ t("No upcoming application deadlines.") }}</p>
+      <p v-else-if="summary && !summary.upcomingDeadlines.length && !failed" class="flex min-h-28 items-center justify-center text-center text-sm text-muted-foreground">{{ t("No upcoming application deadlines.") }}</p>
       <ol v-else-if="summary?.upcomingDeadlines.length" class="events-deadlines">
         <li v-for="item in summary.upcomingDeadlines.filter(entry => entry.applicationDeadline)" :key="item.id" class="events-deadline" data-test="deadline">
           <a :href="href(item)" class="events-deadline-title" @click="follow($event, item)">{{ item.title }}</a>

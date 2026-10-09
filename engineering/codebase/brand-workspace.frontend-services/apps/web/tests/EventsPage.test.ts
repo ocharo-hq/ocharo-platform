@@ -347,3 +347,148 @@ describe('event collection outcomes', () => {
     expect(wrapper!.text()).not.toContain('unavailable');
   });
 });
+
+
+describe('event review safety', () => {
+  it('saves a draft against the revision it opened even after another read changes the record', async () => {
+    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    await buttonIn(detail(), 'Edit details')!.trigger('click');
+    await detail().get('form input').setValue('My draft title');
+    api.getEvent.mockResolvedValue(ResultExtensions.ok(showcase({ revision: 4, title: 'Another editor title', notes: 'New note' })));
+    await buttonIn(wrapper!, 'Refresh')!.trigger('click');
+    await flushPromises();
+    expect((detail().get('form input').element as HTMLInputElement).value).toBe('My draft title');
+    api.updateEvent.mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('http', { status: 409, headers: new Headers() })));
+    await detail().get('form').trigger('submit');
+    await flushPromises();
+    expect(api.updateEvent).toHaveBeenLastCalledWith(ORG, FASHION_WEEK, 3,
+      expect.objectContaining({ title: 'My draft title', notes: fashionWeek().notes }), expect.any(AbortSignal));
+    expect(detail().text()).toContain('This record changed. Your edits are still here.');
+  });
+
+  it('keeps a conflicting draft when reload fails and accepts the new revision only after a successful reload', async () => {
+    const { access } = render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    await buttonIn(detail(), 'Edit details')!.trigger('click');
+    await detail().get('form input').setValue('Keep this draft');
+    api.updateEvent.mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('http', { status: 409, headers: new Headers() })));
+    await detail().get('form').trigger('submit');
+    await flushPromises();
+    api.getEvent.mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() })));
+    await buttonIn(detail(), 'Discard my edits and reload')!.trigger('click');
+    await flushPromises();
+    expect((detail().get('form input').element as HTMLInputElement).value).toBe('Keep this draft');
+    expect(access.dirty.value).toBe(true);
+    expect(buttonIn(detail(), 'Discard my edits and reload')).toBeDefined();
+    api.getEvent.mockResolvedValue(ResultExtensions.ok(showcase({ revision: 4, title: 'Latest confirmed title' })));
+    await buttonIn(detail(), 'Discard my edits and reload')!.trigger('click');
+    await flushPromises();
+    expect((detail().get('form input').element as HTMLInputElement).value).toBe('Latest confirmed title');
+    expect(access.dirty.value).toBe(false);
+    await detail().get('form input').setValue('Edited after reload');
+    await detail().get('form').trigger('submit');
+    await flushPromises();
+    expect(api.updateEvent).toHaveBeenLastCalledWith(ORG, FASHION_WEEK, 4,
+      expect.objectContaining({ title: 'Edited after reload' }), expect.any(AbortSignal));
+  });
+
+  it('blocks a submitted form while another command owns the workspace', async () => {
+    const { access } = render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    await buttonIn(detail(), 'Edit details')!.trigger('click');
+    await detail().get('form input').setValue('Pending edit');
+    access.busy.value = true;
+    await flushPromises();
+    await detail().get('form').trigger('submit');
+    await flushPromises();
+    expect(api.updateEvent).not.toHaveBeenCalled();
+    expect(access.dirty.value).toBe(true);
+  });
+
+  it('shows a neutral missing detail and a working refresh action after a failed initial read', async () => {
+    api.getEvent.mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('http', { status: 500, headers: new Headers() })));
+    render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    expect(wrapper!.text()).toContain('Event unavailable');
+    expect(wrapper!.text()).not.toContain('Content unavailable. Try refreshing.');
+    expect(buttonIn(wrapper!, 'Refresh')).toBeDefined();
+    api.getEvent.mockResolvedValue(ResultExtensions.ok(fashionWeek()));
+    await buttonIn(wrapper!, 'Refresh')!.trigger('click');
+    await flushPromises();
+    expect(detail().text()).toContain('Tashkent Fashion Week');
+  });
+});
+
+describe('event feed day and empty states', () => {
+  it('updates date filters and open detail deadlines when a sleeping tab regains focus', async () => {
+    render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    expect(detail().text()).toContain('7 days left');
+    vi.setSystemTime(new Date(2026, 9, 9, 10, 0));
+    window.dispatchEvent(new Event('focus'));
+    await flushPromises();
+    expect(api.listEvents).toHaveBeenLastCalledWith(ORG, { ...unfiltered, from: '2026-10-09' }, expect.any(AbortSignal));
+    expect(api.summary).toHaveBeenLastCalledWith(ORG, '2026-10-09', expect.any(AbortSignal));
+    expect(detail().text()).toContain('6 days left');
+  });
+
+  it('updates the feed at local midnight without waiting for another interaction', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
+    vi.setSystemTime(new Date(2026, 9, 8, 23, 59, 59));
+    render('viewer', feed);
+    await flushPromises();
+    await vi.advanceTimersByTimeAsync(1000);
+    await flushPromises();
+    expect(api.listEvents).toHaveBeenLastCalledWith(ORG, { ...unfiltered, from: '2026-10-09' }, expect.any(AbortSignal));
+  });
+
+  it('does not label a failed filter or deadline refresh as an empty result', async () => {
+    api.listEvents.mockResolvedValue(ResultExtensions.ok([]));
+    api.summary.mockResolvedValue(ResultExtensions.ok({ byStatus: {}, upcomingDeadlines: [] }));
+    render('viewer', feed);
+    await flushPromises();
+    expect(wrapper!.text()).toContain('No upcoming application deadlines.');
+    const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() }));
+    api.listEvents.mockResolvedValue(failure);
+    api.summary.mockResolvedValue(failure);
+    await wrapper!.findAll('.events-chip')[1]!.trigger('click');
+    await flushPromises();
+    expect(wrapper!.text()).not.toContain('No events match these filters.');
+    await buttonIn(wrapper!, 'Refresh events')!.trigger('click');
+    await flushPromises();
+    expect(wrapper!.text()).not.toContain('No upcoming application deadlines.');
+    expect(wrapper!.get('input[type="search"]').attributes('maxlength')).toBe('120');
+  });
+});
+
+
+describe('event date precision editing', () => {
+  it('carries edited months and days across precision changes without restoring stale hidden dates', async () => {
+    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    await buttonIn(detail(), 'Edit details')!.trigger('click');
+    const form = detail().get('form');
+    await chooseDeskValue(wrapper!, 'Date precision', 'month');
+    expect((form.findAll('input[type="month"]')[0]!.element as HTMLInputElement).value).toBe('2026-10');
+    await form.findAll('input[type="month"]')[0]!.setValue('2026-11');
+    await form.findAll('input[type="month"]')[1]!.setValue('2026-12');
+    await chooseDeskValue(wrapper!, 'Date precision', 'day');
+    expect(form.findAll('input[type="date"]').slice(0, 2).map(input => (input.element as HTMLInputElement).value))
+      .toEqual(['2026-11-01', '2026-12-01']);
+    await form.findAll('input[type="date"]')[0]!.setValue('2026-12-17');
+    await form.findAll('input[type="date"]')[1]!.setValue('2026-12-19');
+    await chooseDeskValue(wrapper!, 'Date precision', 'unknown');
+    await chooseDeskValue(wrapper!, 'Date precision', 'estimated');
+    expect(form.findAll('input[type="month"]').map(input => (input.element as HTMLInputElement).value))
+      .toEqual(['2026-12', '']);
+    await chooseDeskValue(wrapper!, 'Date precision', 'day');
+    expect(form.findAll('input[type="date"]').slice(0, 2).map(input => (input.element as HTMLInputElement).value))
+      .toEqual(['2026-12-17', '2026-12-19']);
+    api.updateEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), revision: 4 }));
+    await form.trigger('submit');
+    await flushPromises();
+    expect(api.updateEvent).toHaveBeenLastCalledWith(ORG, FASHION_WEEK, 3,
+      expect.objectContaining({ startsOn: '2026-12-17', endsOn: '2026-12-19', datePrecision: 'day' }), expect.any(AbortSignal));
+  });
+});

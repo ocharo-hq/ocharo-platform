@@ -7,9 +7,9 @@ import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
-import { eventSaveOutcome, useEventList, useEventSummary, type EventSaveOutcome, type EventsControls } from '@/application/workspace/UseEvents';
+import { eventSaveOutcome, useEventList, useEventSummary, useEventToday, type EventSaveOutcome, type EventsControls } from '@/application/workspace/UseEvents';
 import {
-  eventFormats, eventScopes, eventStatuses, formatLabels, groupEventsByMonth, localIsoDate, monthHeading, scopeLabels, statusLabels, undatedGroupKey,
+  eventFormats, eventLimits, eventScopes, eventStatuses, formatLabels, groupEventsByMonth, monthHeading, scopeLabels, statusLabels, undatedGroupKey,
   type EventFilter, type EventFormat, type EventInput, type EventScope, type EventsLocation, type EventStatus,
 } from '@/domain/workspace/Events';
 
@@ -24,7 +24,7 @@ const props = defineProps<{ access: AccessControls; events: EventsControls; acti
 const emit = defineEmits<{ open: [location: EventsLocation] }>();
 const { t, uiLocale } = useUiLocale();
 // The operator's own calendar day: past events and deadlines are judged against it.
-const today = ref(localIsoDate());
+const today = useEventToday();
 const search = ref('');
 const query = ref('');
 const scope = ref<EventScope | ''>('');
@@ -99,7 +99,7 @@ async function create(input: EventInput): Promise<EventSaveOutcome> {
 
       <div class="events-filters" role="search" :aria-label="t('Filter events')">
         <label class="events-field events-filter-search">{{ t("Search events") }}
-          <input v-model="search" type="search" class="events-input" :placeholder="t('Title, organizer, city or country')" autocomplete="off" />
+          <input v-model="search" type="search" class="events-input" :maxlength="eventLimits.query" :placeholder="t('Title, organizer, city or country')" autocomplete="off" />
         </label>
         <div class="events-field events-filter-scope">
           <span id="events-scope-label">{{ t("Scope") }}</span>
@@ -133,7 +133,7 @@ async function create(input: EventInput): Promise<EventSaveOutcome> {
               </li>
             </ul>
           </section>
-          <p v-if="!groups.length && list.events.value && !list.loading.value" class="empty-state">
+          <p v-if="!groups.length && list.events.value && !list.loading.value && !list.error.value" class="empty-state">
             {{ filtered ? t("No events match these filters.") : showPast ? t("No events recorded yet.") : t("No upcoming events. Turn on past events to see earlier ones.") }}
           </p>
           <p v-if="list.truncated.value" class="text-xs text-muted-foreground">{{ t("Showing the first 200 events. Search or filter to narrow the list.") }}</p>

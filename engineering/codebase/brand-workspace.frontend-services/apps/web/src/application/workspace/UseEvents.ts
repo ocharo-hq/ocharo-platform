@@ -7,7 +7,7 @@ import { useAppQuery, useQueryCache } from '@wow-two-beta/ui-vue/query';
 import { notifyError, requestConfirmation } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import {
-  eventInput, eventLimits, eventsPath,
+  eventInput, eventLimits, eventsPath, localIsoDate,
   type EventFilter, type EventInput, type EventPriority, type EventsLocation, type EventStatus, type ShowcaseEvent,
 } from '@/domain/workspace/Events';
 import { readWorkspaceLocation } from '@/domain/workspace/Models';
@@ -24,6 +24,28 @@ export function eventSaveOutcome(result: Result<unknown, ApiFailure>): EventSave
   if (result.failure.status === 409) return 'conflict';
   if (result.failure.code !== 'cancelled') notifyError(failureMessage(result.failure));
   return 'failed';
+}
+
+/** Keeps deadline labels and date filters current across midnight and sleeping browser tabs. */
+export function useEventToday() {
+  const today = ref(localIsoDate());
+  let timer: ReturnType<typeof setTimeout>;
+  function update(): void {
+    clearTimeout(timer);
+    const now = new Date();
+    today.value = localIsoDate(now);
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    timer = setTimeout(update, Math.max(1, midnight.getTime() - now.getTime()));
+  }
+  update();
+  window.addEventListener('focus', update);
+  document.addEventListener('visibilitychange', update);
+  onScopeDispose(() => {
+    clearTimeout(timer);
+    window.removeEventListener('focus', update);
+    document.removeEventListener('visibilitychange', update);
+  });
+  return today;
 }
 
 /** Owns Events transport, cache keys and server-confirmed commands for one organization document. */

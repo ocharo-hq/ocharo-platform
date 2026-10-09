@@ -124,6 +124,15 @@ public sealed class EventValidationTests
     }
 
     [Fact]
+    public void Filter_ShouldRejectAReversedDateRange()
+    {
+        Action act = () => _validation.Filter(null, null, null, null, "2026-11-01", "2026-10-01", true);
+        act.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        _validation.Filter(null, null, null, null, "2026-10-01", "2026-10-01", true)
+            .From.Should().Be(new DateOnly(2026, 10, 1));
+    }
+
+    [Fact]
     public void Key_ShouldAcceptOnlyLowercaseSlugs()
     {
         _validation.Key("tfw-2026").Should().Be("tfw-2026");

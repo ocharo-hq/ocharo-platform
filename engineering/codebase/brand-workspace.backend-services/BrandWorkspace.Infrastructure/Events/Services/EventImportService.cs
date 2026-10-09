@@ -64,15 +64,18 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
         }
         if (document is null || document.Format != Format)
             throw new PreparationException("validation", $"The bundle format must be {Format}.");
+        if (document.Events is null)
+            throw new PreparationException("validation", "The bundle must contain an events array; nothing was imported.");
         var errors = new List<string>();
         var events = new List<PlannedEvent>();
         var keys = new HashSet<string>(StringComparer.Ordinal);
-        for (int index = 0; index < (document.Events?.Count ?? 0); index++)
+        for (int index = 0; index < document.Events.Count; index++)
         {
-            BundleEvent item = document.Events![index];
-            string reference = $"events[{index}] {item.Key}".TrimEnd();
+            BundleEvent? item = document.Events[index];
+            string reference = $"events[{index}] {item?.Key}".TrimEnd();
             try
             {
+                if (item is null) throw new PreparationException("validation", "Each event must be an object.");
                 string key = validation.Key(item.Key) ?? throw new PreparationException("validation", "An event key is required.");
                 if (!keys.Add(key)) throw new PreparationException("validation", $"Event key '{key}' is repeated.");
                 ShowcaseEventInput input = validation.Event(new EventFields(
@@ -92,7 +95,7 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
     private sealed record PlannedBundle(string? Source, IReadOnlyList<PlannedEvent> Events);
     private sealed record PlannedEvent(string Reference, string Key, ShowcaseEventInput Input);
 
-    private sealed record BundleDocument(string? Format, string? Source, IReadOnlyList<BundleEvent>? Events);
+    private sealed record BundleDocument(string? Format, string? Source, IReadOnlyList<BundleEvent?>? Events);
     private sealed record BundleEvent(
         string? Key, string? Title, string? Organizer, string? Scope, string? Format, string? Country, string? City, string? Venue,
         string? StartsOn, string? EndsOn, string? DatePrecision, string? ApplicationDeadline, string? Participation, string? Cost,

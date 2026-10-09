@@ -29,7 +29,7 @@ export interface EventFilter { query: string; scope: EventScope | ''; format: Ev
 
 /** Contract limits mirrored for early feedback; the server remains authoritative. */
 export const eventLimits = {
-  title: 200, organizer: 160, city: 120, venue: 200, participation: 2000, cost: 500, url: 2048, notes: 8000,
+  query: 120, title: 200, organizer: 160, city: 120, venue: 200, participation: 2000, cost: 500, url: 2048, notes: 8000,
   page: 200, minDate: '2000-01-01', maxDate: '2100-12-31', urgentDays: 14,
 } as const;
 

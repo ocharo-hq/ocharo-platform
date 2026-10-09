@@ -35,22 +35,29 @@ const monthly = computed(() => draft.datePrecision === 'month' || draft.datePrec
 const minMonth = eventLimits.minDate.slice(0, 7);
 const maxMonth = eventLimits.maxDate.slice(0, 7);
 
-// Switching precision carries the chosen month across, so no date is retyped.
-watch(() => draft.datePrecision, (next: DatePrecision, previous: DatePrecision) => {
-  const wasMonthly = previous === 'month' || previous === 'estimated';
+// Keep the visible date authoritative when changing precision; hidden draft fields may be older.
+let previousDatedPrecision: DatePrecision = draft.datePrecision;
+const dayInMonth = (day: string, month: string): string => !month ? '' : day.startsWith(`${month}-`) ? day : `${month}-01`;
+watch(() => draft.datePrecision, (next: DatePrecision) => {
+  if (next === 'unknown') return;
+  const wasMonthly = previousDatedPrecision === 'month' || previousDatedPrecision === 'estimated';
   const isMonthly = next === 'month' || next === 'estimated';
   if (isMonthly && !wasMonthly) {
-    if (!draft.startMonth && draft.startDay) draft.startMonth = draft.startDay.slice(0, 7);
-    if (!draft.endMonth && draft.endDay && draft.endDay.slice(0, 7) !== draft.startMonth) draft.endMonth = draft.endDay.slice(0, 7);
-  } else if (next === 'day' && wasMonthly && !draft.startDay && draft.startMonth) {
-    draft.startDay = `${draft.startMonth}-01`;
+    draft.startMonth = draft.startDay.slice(0, 7);
+    draft.endMonth = draft.endDay.slice(0, 7) === draft.startMonth ? '' : draft.endDay.slice(0, 7);
+  } else if (next === 'day' && wasMonthly) {
+    draft.startDay = dayInMonth(draft.startDay, draft.startMonth);
+    draft.endDay = draft.endMonth ? dayInMonth(draft.endDay, draft.endMonth)
+      : draft.endDay.startsWith(`${draft.startMonth}-`) ? draft.endDay : '';
   }
+  previousDatedPrecision = next;
 });
 
 async function submit(): Promise<void> {
+  if (props.disabled || saving.value || !props.events.canEdit.value) return;
   const { input, problems } = validateEventDraft(draft, props.initial);
   errors.value = problems;
-  if (!input || saving.value) return;
+  if (!input) return;
   saving.value = true;
   try {
     const outcome = await props.save(input);

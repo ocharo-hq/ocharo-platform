@@ -74,13 +74,16 @@ public sealed partial class EventValidationService
     public ShowcaseEventFilter Filter(
         string? query, string? scope, string? format, string? status, string? from, string? to, bool includeUndated)
     {
+        DateOnly? fromDate = Date(from, "From date");
+        DateOnly? toDate = Date(to, "To date");
+        if (fromDate > toDate) throw Invalid("The to date must be on or after the from date.");
         return new ShowcaseEventFilter(
             Optional(query, "Search", 120),
             string.IsNullOrWhiteSpace(scope) ? null : Scope(scope),
             string.IsNullOrWhiteSpace(format) ? null : Format(format),
             string.IsNullOrWhiteSpace(status) ? null : Status(status),
-            Date(from, "From date"),
-            Date(to, "To date"),
+            fromDate,
+            toDate,
             includeUndated);
     }
 
