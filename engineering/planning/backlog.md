@@ -67,3 +67,14 @@ and [owner review scenarios](version-track/v0.1/v0.1.md#iteration-6--catalogue-a
 The public reader consumes explicitly published releases. Draft edits do not publish themselves.
 Archiving a native catalogue or explicitly withdrawing it removes its public availability while
 retaining stored history; re-publication requires fresh preparation.
+
+## Desk sourcing and event integrations — 2026-10-09
+
+Design and sources: [analysis](../research/desk/2026-10-09-sourcing-events-integrations.md).
+
+- [ ] Add material requests, supplier offers, quotation evidence and sample review before price comparison.
+- [ ] Add event editions, source observations and reviewable import candidates without overwriting confirmed facts.
+- [ ] Add one verified feed/provider adapter with provenance, cancellation handling and bounded requests.
+- [ ] Add client authorization/refresh for unattended MCP; current access lasts five minutes.
+- [ ] Add calendar OAuth only after calendar selection and outbound synchronization rules are agreed.
+- [ ] Adopt SDK refresh timing in Desk; the current 0.0.6 package lacks the required orchestration exports.

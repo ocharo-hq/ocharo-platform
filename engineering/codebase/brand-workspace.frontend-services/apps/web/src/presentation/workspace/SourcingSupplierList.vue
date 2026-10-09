@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { onScopeDispose, ref, watch } from 'vue';
-import { Inbox, Plus } from 'lucide-vue-next';
+import { computed, onScopeDispose, ref, watch } from 'vue';
+import { Inbox, Plus, RefreshCw } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
 
-import { notifyError } from '@/application/shared/UseFeedback';
+import { notifyError, useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { useSupplierList, type SaveOutcome, type SourcingControls } from '@/application/workspace/UseSourcing';
@@ -14,6 +14,7 @@ import {
 } from '@/domain/workspace/Sourcing';
 
 import SourcingSupplierForm from './SourcingSupplierForm.vue';
+import WorkspaceCollectionSkeleton from './WorkspaceCollectionSkeleton.vue';
 
 /** Lists suppliers with search and stage filters; the inbox sits above them. */
 defineOptions({ name: 'SourcingSupplierList' });
@@ -31,6 +32,15 @@ watch(search, value => {
 });
 onScopeDispose(() => clearTimeout(timer));
 const list = useSupplierList(props.sourcing, () => ({ query: query.value, stage: stage.value }));
+
+const refreshing = ref(false);
+useErrorToast(computed(() => list.error.value ? failureMessage(list.error.value) : null));
+async function refresh(): Promise<void> {
+  if (refreshing.value) return;
+  refreshing.value = true;
+  try { await list.refetch(); }
+  finally { refreshing.value = false; }
+}
 
 function place(country: string | null, city: string | null): string {
   return [city, country].filter(Boolean).join(', ');
@@ -52,9 +62,14 @@ async function create(input: SupplierInput): Promise<SaveOutcome> {
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-3">
       <h2 class="text-lg font-semibold">{{ t("Suppliers") }}</h2>
-      <Button v-if="sourcing.canEdit.value && !adding" size="sm" variant="outline" :is-disabled="access.busy.value" @click="adding = true">
-        <Plus :size="16" aria-hidden="true" />{{ t("Add supplier") }}
-      </Button>
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <Button size="sm" variant="ghost" :is-loading="refreshing" :is-disabled="access.busy.value || list.loading.value" @click="refresh">
+          <RefreshCw :size="16" aria-hidden="true" />{{ t("Refresh suppliers") }}
+        </Button>
+        <Button v-if="sourcing.canEdit.value && !adding" size="sm" variant="outline" :is-disabled="access.busy.value" @click="adding = true">
+          <Plus :size="16" aria-hidden="true" />{{ t("Add supplier") }}
+        </Button>
+      </div>
     </div>
     <section v-if="adding" class="workspace-card p-4" :aria-label="t('New supplier')">
       <h3 class="mb-3 font-semibold">{{ t("New supplier") }}</h3>
@@ -82,33 +97,34 @@ async function create(input: SupplierInput): Promise<SaveOutcome> {
           <span class="block text-xs text-muted-foreground">{{ unassigned === null ? t("Unsorted media") : t("{count} unsorted files", { count: unassigned }) }}</span>
         </span>
       </button>
-      <p v-if="list.loading.value && !list.suppliers.value" role="status" class="px-3 py-6 text-sm text-muted-foreground">{{ t("Loading suppliers…") }}</p>
-      <p v-else-if="list.error.value && !list.suppliers.value" role="status" class="px-3 py-6 text-sm text-muted-foreground">{{ t("Suppliers unavailable. Try refreshing.") }}</p>
-      <template v-else>
-        <button
-          v-for="supplier in list.suppliers.value" :key="supplier.id" type="button" class="sourcing-row"
-          :aria-current="current.view === 'supplier' && current.supplierId === supplier.id ? 'page' : undefined" :disabled="access.busy.value"
-          @click="emit('open', { view: 'supplier', supplierId: supplier.id })"
-        >
-          <span class="sourcing-avatar" aria-hidden="true">
-            <img v-if="supplier.coverMediaId" :src="sourcing.thumbnailUrl(supplier.coverMediaId)" alt="" loading="lazy" />
-            <template v-else>{{ supplierInitial(supplier.name) }}</template>
-          </span>
-          <span class="min-w-0 space-y-1">
-            <span class="flex min-w-0 items-center justify-between gap-2">
-              <b class="truncate text-sm">{{ supplier.name }}</b>
-              <Badge size="sm" :variant="supplier.stage === 'qualified' ? 'success' : supplier.stage === 'dropped' ? 'neutral' : 'brand'">{{ t(stageLabels[supplier.stage]) }}</Badge>
+      <div class="min-h-72" :aria-busy="list.loading.value || refreshing">
+        <WorkspaceCollectionSkeleton v-if="list.loading.value && !list.suppliers.value" shape="suppliers" :label="t('Loading suppliers…')" />
+        <template v-else>
+          <button
+            v-for="supplier in list.suppliers.value" :key="supplier.id" type="button" class="sourcing-row"
+            :aria-current="current.view === 'supplier' && current.supplierId === supplier.id ? 'page' : undefined" :disabled="access.busy.value"
+            @click="emit('open', { view: 'supplier', supplierId: supplier.id })"
+          >
+            <span class="sourcing-avatar" aria-hidden="true">
+              <img v-if="supplier.coverMediaId" :src="sourcing.thumbnailUrl(supplier.coverMediaId)" alt="" loading="lazy" />
+              <template v-else>{{ supplierInitial(supplier.name) }}</template>
             </span>
-            <span class="block truncate text-xs text-muted-foreground">
-              {{ [place(supplier.country, supplier.city), supplier.primaryRoute ? t(channelLabels[supplier.primaryRoute.channel]) : '', t("{count} media", { count: supplier.mediaCount })].filter(Boolean).join(' · ') }}
+            <span class="min-w-0 space-y-1">
+              <span class="flex min-w-0 items-center justify-between gap-2">
+                <b class="truncate text-sm">{{ supplier.name }}</b>
+                <Badge size="sm" :variant="supplier.stage === 'qualified' ? 'success' : supplier.stage === 'dropped' ? 'neutral' : 'brand'">{{ t(stageLabels[supplier.stage]) }}</Badge>
+              </span>
+              <span class="block truncate text-xs text-muted-foreground">
+                {{ [place(supplier.country, supplier.city), supplier.primaryRoute ? t(channelLabels[supplier.primaryRoute.channel]) : '', t("{count} media", { count: supplier.mediaCount })].filter(Boolean).join(' · ') }}
+              </span>
             </span>
-          </span>
-        </button>
-        <p v-if="!list.suppliers.value?.length" class="px-3 py-6 text-sm text-muted-foreground">
-          {{ query || stage ? t("No suppliers match this search.") : t("No suppliers yet.") }}
-        </p>
-        <p v-if="list.truncated.value" class="px-3 text-xs text-muted-foreground">{{ t("Showing the first 200 suppliers. Search to narrow the list.") }}</p>
-      </template>
+          </button>
+          <p v-if="list.suppliers.value && !list.suppliers.value.length && !list.loading.value" class="empty-state">
+            {{ query || stage ? t("No suppliers match this search.") : t("No suppliers yet.") }}
+          </p>
+          <p v-if="list.truncated.value" class="px-3 text-xs text-muted-foreground">{{ t("Showing the first 200 suppliers. Search to narrow the list.") }}</p>
+        </template>
+      </div>
     </nav>
   </div>
 </template>

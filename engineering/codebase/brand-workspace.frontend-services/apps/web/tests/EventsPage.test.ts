@@ -6,7 +6,7 @@ import { DefaultRetryPolicy } from '@wow-two-beta/ui-vue/foundation/resilience';
 import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
 import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
 
-import { resolveConfirmation } from '@/application/shared/UseFeedback';
+import { feedbackBus, resolveConfirmation } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
@@ -273,5 +273,60 @@ describe('event detail', () => {
     await flushPromises();
     expect(api.deleteEvent).toHaveBeenCalledWith(ORG, SILK_FAIR, 1, expect.any(AbortSignal));
     expect(window.location.pathname).toBe(`/organizations/${ORG}/events`);
+  });
+});
+
+
+describe('event collection outcomes', () => {
+  it('keeps controls visible while matching feed and deadline skeletons load', async () => {
+    let finishEvents!: (value: ReturnType<typeof ResultExtensions.ok<ShowcaseEvent[]>>) => void;
+    api.listEvents.mockImplementation(() => new Promise(resolve => { finishEvents = resolve; }));
+    api.summary.mockImplementation(() => new Promise(() => {}));
+    render('viewer', feed);
+    await flushPromises();
+    expect(wrapper!.findAll('.events-list .event-card')).toHaveLength(3);
+    expect(wrapper!.findAll('.events-deadlines .events-deadline')).toHaveLength(3);
+    expect(wrapper!.findAll('[role="status"]').every(item => item.classes().includes('sr-only'))).toBe(true);
+    expect(buttonIn(wrapper!, 'Refresh events')).toBeDefined();
+    expect(wrapper!.find('input[type="search"]').exists()).toBe(true);
+    expect(wrapper!.text()).not.toContain('No upcoming events.');
+    finishEvents(ResultExtensions.ok([]));
+    await flushPromises();
+    expect(wrapper!.get('.empty-state').text()).toContain('No upcoming events.');
+    expect(wrapper!.find('.editor-prompt').exists()).toBe(false);
+  });
+
+  it('toasts a failed first read without an error panel or false empty result', async () => {
+    const notice = vi.spyOn(feedbackBus, 'notify');
+    const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 500, headers: new Headers() }));
+    api.listEvents.mockResolvedValue(failure);
+    api.summary.mockResolvedValue(failure);
+    render('viewer', feed);
+    await flushPromises();
+    expect(notice).toHaveBeenCalledWith(expect.objectContaining({ tone: 'danger' }));
+    expect(wrapper!.text()).not.toContain('unavailable');
+    expect(wrapper!.text()).not.toContain('No upcoming');
+    expect(wrapper!.find('[aria-busy="true"]').exists()).toBe(false);
+    expect(buttonIn(wrapper!, 'Refresh events')).toBeDefined();
+    api.listEvents.mockResolvedValue(ResultExtensions.ok([fashionWeek()]));
+    api.summary.mockResolvedValue(ResultExtensions.ok({ byStatus: { candidate: 1 }, upcomingDeadlines: [] }));
+    await buttonIn(wrapper!, 'Refresh events')!.trigger('click');
+    await flushPromises();
+    expect(card('Tashkent Fashion Week')).toBeDefined();
+    notice.mockRestore();
+  });
+
+  it('retains loaded cards and deadlines when a later refresh fails', async () => {
+    render('viewer', feed);
+    await flushPromises();
+    const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() }));
+    api.listEvents.mockResolvedValue(failure);
+    api.summary.mockResolvedValue(failure);
+    await buttonIn(wrapper!, 'Refresh events')!.trigger('click');
+    await flushPromises();
+    expect(card('Tashkent Fashion Week')).toBeDefined();
+    expect(wrapper!.findAll('[data-test="deadline"]')).toHaveLength(2);
+    expect(wrapper!.find('.empty-state').exists()).toBe(false);
+    expect(wrapper!.text()).not.toContain('unavailable');
   });
 });

@@ -128,6 +128,7 @@ export function useSupplierList(sourcing: SourcingControls, filter: () => Suppli
     suppliers: computed(() => query.data.value ?? previous.value),
     loading: query.loading,
     error: query.error,
+    refetch: query.refetch,
     truncated: computed(() => (query.data.value?.length ?? 0) >= sourcingLimits.supplierPage),
   };
 }

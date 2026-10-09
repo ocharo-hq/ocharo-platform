@@ -20,6 +20,8 @@ using BrandWorkspace.Application.Sourcing.Repositories;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
 using BrandWorkspace.Persistence.Sourcing.Repositories;
 using BrandWorkspace.Api.Events;
+using BrandWorkspace.Api.Mcp;
+using WoW.Two.Sdk.Backend.Beta.Ai.Mcp;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Infrastructure.Events.Services;
 using BrandWorkspace.Persistence.Events.Repositories;
@@ -66,6 +68,7 @@ public static partial class HostConfiguration
         foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Integrations__SigningKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
                      "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password" })
             if (Environment.GetEnvironmentVariable(key) is { } value) values[key.Replace("__", ":")] = value;
+        if (Environment.GetEnvironmentVariable("MCP_ENABLED") is { } mcpEnabled) values["Mcp:Enabled"] = mcpEnabled;
         builder.Configuration.AddInMemoryCollection(values);
         return builder;
     }
@@ -241,6 +244,25 @@ public static partial class HostConfiguration
         return builder;
     }
 
+    /// <summary>Registers opt-in read-only MCP with audience-bound delegated tickets.</summary>
+    private static WebApplicationBuilder AddDeskMcp(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton(services => new DeskMcpSettings(
+            services.GetRequiredService<IConfiguration>().GetValue<bool>("Mcp:Enabled")));
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, DeskMcpAuthenticationHandler>(
+            DeskMcpAuthenticationHandler.SchemeName, null);
+        builder.Services.AddAuthorizationBuilder().AddPolicy(DeskMcpEndpoints.Policy, policy => policy
+            .AddAuthenticationSchemes(DeskMcpAuthenticationHandler.SchemeName)
+            .RequireAuthenticatedUser());
+        var json = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)
+        {
+            TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver()
+        };
+        builder.Services.AddStatelessMcpServer().WithTools<DeskReadTools>(json);
+        return builder;
+    }
+
     /// <summary>Registers JSON errors for the HTTP surface.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
@@ -255,6 +277,7 @@ public static partial class HostConfiguration
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseRouting();
+        app.UseDeskMcpBoundary();
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.StartsWithSegments("/api/auth") || context.Request.Path.StartsWithSegments("/api/organizations"))

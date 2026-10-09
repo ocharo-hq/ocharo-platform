@@ -1,0 +1,20 @@
+/** Public discovery entry points; these are reviewed links, not connected or synchronized feeds. */
+export const sourceDirectory = [
+  { name: 'Texworld / Apparel Sourcing Tashkent', url: 'https://texworld-apparel.uz/eng',
+    area: 'both', kind: 'Organizer and exhibitor leads' },
+  { name: 'Hunarmand', url: 'https://craftfair.uz/?lang=en', area: 'events', kind: 'Craft festivals' },
+  { name: 'Uzexpocentre', url: 'https://www.uzexpocentre.uz/en/menu/krgazmalar-rezhasi',
+    area: 'events', kind: 'Venue calendar' },
+  { name: 'Kazakhstan Fashion Week', url: 'https://kfw.kz/page/o-nedele',
+    area: 'events', kind: 'Application requirements' },
+  { name: 'Tashkent Fashion & Textile Expo', url: 'https://tftexpo.com/en',
+    area: 'both', kind: 'Organizer and exhibitor leads' },
+  { name: 'Central Asia Fashion', url: 'https://fashionexpo.kz/en/',
+    area: 'both', kind: 'Organizer and exhibitor leads' },
+  { name: 'TextileExpo Uzbekistan', url: 'https://textileexpo.uz/',
+    area: 'both', kind: 'Organizer and exhibitor leads' },
+  { name: 'P L Industries / KRITI', url: 'https://www.plshawlstoles.com/ladies-stole.html',
+    area: 'sourcing', kind: 'Supplier catalogue' },
+  { name: 'Lucky Enterprises', url: 'https://www.shawlsandcarpets.com/cashmilon-kashmiri-shawls-and-stoles.html',
+    area: 'sourcing', kind: 'Supplier catalogue' },
+] as const;

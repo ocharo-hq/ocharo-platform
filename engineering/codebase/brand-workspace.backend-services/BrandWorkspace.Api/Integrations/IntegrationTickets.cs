@@ -13,8 +13,10 @@ namespace BrandWorkspace.Api.Integrations;
 public sealed class IntegrationTickets(IConfiguration configuration, TimeProvider time, IAccessRepository access)
 {
     private const string Issuer = "ocharo-platform/integration-v1";
-    public static bool ValidAudience(string? audience) => audience is "ocharo-studio" or "ocharo-marketing";
+    public static bool ValidAudience(string? audience) => audience is "ocharo-studio" or "ocharo-marketing" or "ocharo-desk-mcp";
     private string? SigningKey => configuration["Integrations:SigningKey"] is { } key && Encoding.UTF8.GetByteCount(key) >= 32 ? key : null;
+    /// <summary>Reports whether delegated access can be signed, without exposing its key.</summary>
+    public bool IsConfigured => SigningKey is not null;
     public object? Issue(string audience, OrganizationAccess member, Guid sessionId)
     {
         if (SigningKey is not { } key) return null;

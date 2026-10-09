@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import { Plus } from 'lucide-vue-next';
+import { Plus, RefreshCw } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 
+import { useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import type { AccessControls } from '@/application/workspace/UseAccess';
+import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { eventSaveOutcome, useEventList, useEventSummary, type EventSaveOutcome, type EventsControls } from '@/application/workspace/UseEvents';
 import {
   eventFormats, eventScopes, eventStatuses, formatLabels, groupEventsByMonth, localIsoDate, monthHeading, scopeLabels, statusLabels, undatedGroupKey,
@@ -14,6 +15,7 @@ import {
 import EventCard from './EventCard.vue';
 import EventForm from './EventForm.vue';
 import EventsDeadlines from './EventsDeadlines.vue';
+import WorkspaceCollectionSkeleton from './WorkspaceCollectionSkeleton.vue';
 
 /** The feed: next deadlines, filters, and every event grouped by the month it starts in. */
 defineOptions({ name: 'EventsFeed' });
@@ -43,6 +45,15 @@ const filter = computed<EventFilter>(() => ({
 }));
 const list = useEventList(props.events, () => filter.value);
 const summary = useEventSummary(props.events, () => today.value);
+const refreshing = ref(false);
+useErrorToast(computed(() => list.error.value ? failureMessage(list.error.value) : null));
+useErrorToast(computed(() => summary.error.value ? failureMessage(summary.error.value) : null));
+async function refresh(): Promise<void> {
+  if (refreshing.value) return;
+  refreshing.value = true;
+  try { await Promise.all([list.refetch(), summary.refetch()]); }
+  finally { refreshing.value = false; }
+}
 const groups = computed(() => groupEventsByMonth(list.events.value ?? []));
 const filtered = computed(() => Boolean(query.value || scope.value || format.value || status.value));
 const statusCount = (value: EventStatus) => summary.summary.value?.byStatus[value] ?? 0;
@@ -71,9 +82,14 @@ async function create(input: EventInput): Promise<EventSaveOutcome> {
     <section class="space-y-4" aria-labelledby="events-feed-title">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h2 id="events-feed-title" class="text-lg font-semibold">{{ t("Event feed") }}</h2>
-        <Button v-if="events.canEdit.value && !adding" size="sm" variant="outline" :is-disabled="access.busy.value" @click="adding = true">
-          <Plus :size="16" aria-hidden="true" />{{ t("Add event") }}
-        </Button>
+        <div class="flex items-center gap-2">
+          <Button size="sm" variant="ghost" :is-loading="refreshing" :is-disabled="access.busy.value || list.loading.value || summary.loading.value" @click="refresh">
+            <RefreshCw :size="16" aria-hidden="true" />{{ t("Refresh events") }}
+          </Button>
+          <Button v-if="events.canEdit.value && !adding" size="sm" variant="outline" :is-disabled="access.busy.value" @click="adding = true">
+            <Plus :size="16" aria-hidden="true" />{{ t("Add event") }}
+          </Button>
+        </div>
       </div>
       <section v-if="adding" class="workspace-card p-4 sm:p-6" :aria-label="t('New event')">
         <h3 class="mb-3 font-semibold">{{ t("New event") }}</h3>
@@ -111,22 +127,23 @@ async function create(input: EventInput): Promise<EventSaveOutcome> {
         </label>
       </div>
 
-      <p v-if="list.loading.value && !list.events.value" role="status" class="py-6 text-sm text-muted-foreground">{{ t("Loading events…") }}</p>
-      <p v-else-if="list.error.value && !list.events.value" role="status" class="py-6 text-sm text-muted-foreground">{{ t("Events unavailable. Try refreshing.") }}</p>
-      <template v-else>
-        <section v-for="group in groups" :key="group.key" class="space-y-3" :aria-labelledby="`events-group-${group.key}`" data-test="event-group">
-          <h3 :id="`events-group-${group.key}`" class="events-group-title">{{ heading(group.key) }}</h3>
-          <ul class="events-list">
-            <li v-for="item in group.events" :key="item.id" class="min-w-0">
-              <EventCard :access="access" :events="events" :event="item" :today="today" @open="location => emit('open', location)" />
-            </li>
-          </ul>
-        </section>
-        <p v-if="!groups.length" class="editor-prompt">
-          {{ filtered ? t("No events match these filters.") : showPast ? t("No events recorded yet.") : t("No upcoming events. Turn on past events to see earlier ones.") }}
-        </p>
-        <p v-if="list.truncated.value" class="text-xs text-muted-foreground">{{ t("Showing the first 200 events. Search or filter to narrow the list.") }}</p>
-      </template>
+      <div class="min-h-72 space-y-4" :aria-busy="list.loading.value || refreshing">
+        <WorkspaceCollectionSkeleton v-if="list.loading.value && !list.events.value" shape="events" :label="t('Loading events…')" />
+        <template v-else>
+          <section v-for="group in groups" :key="group.key" class="space-y-3" :aria-labelledby="`events-group-${group.key}`" data-test="event-group">
+            <h3 :id="`events-group-${group.key}`" class="events-group-title">{{ heading(group.key) }}</h3>
+            <ul class="events-list">
+              <li v-for="item in group.events" :key="item.id" class="min-w-0">
+                <EventCard :access="access" :events="events" :event="item" :today="today" @open="location => emit('open', location)" />
+              </li>
+            </ul>
+          </section>
+          <p v-if="!groups.length && list.events.value && !list.loading.value" class="empty-state">
+            {{ filtered ? t("No events match these filters.") : showPast ? t("No events recorded yet.") : t("No upcoming events. Turn on past events to see earlier ones.") }}
+          </p>
+          <p v-if="list.truncated.value" class="text-xs text-muted-foreground">{{ t("Showing the first 200 events. Search or filter to narrow the list.") }}</p>
+        </template>
+      </div>
       <p class="text-xs leading-5 text-muted-foreground">{{ t("Desk only records where Ocharo stands. Applications, registrations and payments happen outside Desk.") }}</p>
     </section>
   </div>

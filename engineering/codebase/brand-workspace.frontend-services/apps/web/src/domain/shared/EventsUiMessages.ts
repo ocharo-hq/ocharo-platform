@@ -26,6 +26,7 @@ export const eventsUiMessages: UiMessageTable = {
   '{count} days left': { uz: '{count} kun qoldi', ru: 'Осталось дней: {count}' },
 
   // Feed and filters
+  'Refresh events': { uz: 'Tadbirlarni yangilash', ru: 'Обновить мероприятия' },
   'Event feed': { uz: 'Tadbirlar lentasi', ru: 'Лента мероприятий' },
   'Add event': { uz: 'Tadbir qo‘shish', ru: 'Добавить мероприятие' },
   'New event': { uz: 'Yangi tadbir', ru: 'Новое мероприятие' },

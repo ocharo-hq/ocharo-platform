@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue';
-import { FileText, Film, ImageIcon, MapPin } from 'lucide-vue-next';
+import { FileText, Film, ImageIcon, MapPin, RefreshCw } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 
-import { notifyError, requestConfirmation } from '@/application/shared/UseFeedback';
+import { notifyError, requestConfirmation, useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { saveOutcome, useSourcingMedia, useSupplierList, type SaveOutcome, type SourcingControls } from '@/application/workspace/UseSourcing';
@@ -12,6 +12,7 @@ import { mediaKind, type MediaCapture, type MediaFilter, type SourcingMedia } fr
 
 import SourcingLightbox from './SourcingLightbox.vue';
 import SourcingUploader from './SourcingUploader.vue';
+import WorkspaceCollectionSkeleton from './WorkspaceCollectionSkeleton.vue';
 
 /** One supplier's media or the inbox: upload, view, sort and tidy. */
 defineOptions({ name: 'SourcingGallery' });
@@ -29,6 +30,19 @@ const moved = ref('');
 const viewing = ref<number | null>(null);
 const targets = computed(() => (suppliers.suppliers.value ?? []).filter(supplier => supplier.id !== supplierId.value));
 const canEdit = computed(() => props.sourcing.canEdit.value);
+const refreshing = ref(false);
+const hasRead = ref(false);
+watch(() => props.filter, () => { hasRead.value = false; }, { flush: 'sync' });
+watch([media.loading, media.error], ([loading, error]) => {
+  if (props.sourcing.enabled() && !loading && !error) hasRead.value = true;
+}, { immediate: true });
+useErrorToast(computed(() => media.error.value ? failureMessage(media.error.value) : null));
+async function refresh(): Promise<void> {
+  if (refreshing.value) return;
+  refreshing.value = true;
+  try { await media.refetch(); }
+  finally { refreshing.value = false; }
+}
 
 // Selections only refer to loaded items; drop any that left this gallery.
 watch(items, list => {
@@ -76,8 +90,13 @@ async function remove(item: SourcingMedia): Promise<boolean> {
   <div class="space-y-4">
     <SourcingUploader v-if="canEdit" :access="access" :uploads="uploads" :supplier-id="supplierId" />
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <p class="text-sm text-muted-foreground">{{ t("{count} files shown", { count: items.length }) }}</p>
-      <Button v-if="canEdit && items.length && !selecting" size="sm" variant="outline" :is-disabled="access.busy.value" @click="selecting = true; moved = ''">{{ t("Select files") }}</Button>
+      <p class="text-sm text-muted-foreground">{{ !hasRead ? t("Media") : t("{count} files shown", { count: items.length }) }}</p>
+      <div class="flex items-center gap-2">
+        <Button size="sm" variant="ghost" :is-loading="refreshing" :is-disabled="access.busy.value || media.loading.value" @click="refresh">
+          <RefreshCw :size="16" aria-hidden="true" />{{ t("Refresh media") }}
+        </Button>
+        <Button v-if="canEdit && items.length && !selecting" size="sm" variant="outline" :is-disabled="access.busy.value" @click="selecting = true; moved = ''">{{ t("Select files") }}</Button>
+      </div>
     </div>
     <p v-if="moved" role="status" class="rounded-lg bg-muted p-3 text-sm">{{ moved }}</p>
     <div v-if="selecting" class="workspace-card flex flex-wrap items-center gap-3 p-3" role="toolbar" :aria-label="t('Selected files')">
@@ -91,31 +110,32 @@ async function remove(item: SourcingMedia): Promise<boolean> {
       <Button v-if="supplierId" size="sm" variant="outline" :is-disabled="access.busy.value || !selected.size" @click="assign(null)">{{ t("Return to inbox") }}</Button>
       <Button size="sm" variant="ghost" @click="stopSelecting">{{ t("Done") }}</Button>
     </div>
-    <p v-if="media.loading.value" role="status" class="py-10 text-center text-sm text-muted-foreground">{{ t("Loading media…") }}</p>
-    <p v-else-if="media.error.value && !items.length" role="status" class="py-10 text-center text-sm text-muted-foreground">{{ t("Media unavailable. Try refreshing.") }}</p>
-    <ul v-else-if="items.length" class="sourcing-gallery" :aria-label="t('Media')">
-      <li v-for="(item, index) in items" :key="item.id" class="sourcing-tile" :data-selected="selecting && selected.has(item.id) ? 'true' : undefined">
-        <button
-          type="button" class="sourcing-tile-button" :aria-pressed="selecting ? selected.has(item.id) : undefined"
-          :aria-label="selecting ? t('Select {name}', { name: item.caption || item.originalName }) : t('Open {name}', { name: item.caption || item.originalName })"
-          @click="activate(index, item)"
-        >
-          <img v-if="mediaKind(item.contentType) === 'image' && item.hasThumbnail" :src="sourcing.thumbnailUrl(item.id)" alt="" loading="lazy" decoding="async" width="240" height="240" />
-          <span v-else class="sourcing-typed">
-            <FileText v-if="mediaKind(item.contentType) === 'pdf'" :size="28" aria-hidden="true" />
-            <Film v-else-if="mediaKind(item.contentType) === 'video'" :size="28" aria-hidden="true" />
-            <ImageIcon v-else :size="28" aria-hidden="true" />
-            <span class="line-clamp-2">{{ item.originalName }}</span>
+    <div class="min-h-72" :aria-busy="media.loading.value || refreshing">
+      <WorkspaceCollectionSkeleton v-if="media.loading.value && !items.length" shape="media" :label="t('Loading media…')" />
+      <ul v-else-if="items.length" class="sourcing-gallery" :aria-label="t('Media')">
+        <li v-for="(item, index) in items" :key="item.id" class="sourcing-tile" :data-selected="selecting && selected.has(item.id) ? 'true' : undefined">
+          <button
+            type="button" class="sourcing-tile-button" :aria-pressed="selecting ? selected.has(item.id) : undefined"
+            :aria-label="selecting ? t('Select {name}', { name: item.caption || item.originalName }) : t('Open {name}', { name: item.caption || item.originalName })"
+            @click="activate(index, item)"
+          >
+            <img v-if="mediaKind(item.contentType) === 'image' && item.hasThumbnail" :src="sourcing.thumbnailUrl(item.id)" alt="" loading="lazy" decoding="async" width="240" height="240" />
+            <span v-else class="sourcing-typed">
+              <FileText v-if="mediaKind(item.contentType) === 'pdf'" :size="28" aria-hidden="true" />
+              <Film v-else-if="mediaKind(item.contentType) === 'video'" :size="28" aria-hidden="true" />
+              <ImageIcon v-else :size="28" aria-hidden="true" />
+              <span class="line-clamp-2">{{ item.originalName }}</span>
+            </span>
+          </button>
+          <input v-if="selecting" type="checkbox" class="sourcing-tile-check" :checked="selected.has(item.id)" tabindex="-1" aria-hidden="true" @change="toggle(item.id)" />
+          <span v-if="item.hasLocation" class="sourcing-tile-badge right-1.5" :title="t('Contains location data')">
+            <MapPin :size="12" aria-hidden="true" /><span class="sr-only">{{ t("Contains location data") }}</span>
           </span>
-        </button>
-        <input v-if="selecting" type="checkbox" class="sourcing-tile-check" :checked="selected.has(item.id)" tabindex="-1" aria-hidden="true" @change="toggle(item.id)" />
-        <span v-if="item.hasLocation" class="sourcing-tile-badge right-1.5" :title="t('Contains location data')">
-          <MapPin :size="12" aria-hidden="true" /><span class="sr-only">{{ t("Contains location data") }}</span>
-        </span>
-        <p class="sourcing-tile-name" :title="item.caption || item.originalName">{{ item.caption || item.originalName }}</p>
-      </li>
-    </ul>
-    <p v-else class="empty-state">{{ supplierId ? t("No media for this supplier yet.") : t("The inbox is empty.") }}</p>
+          <p class="sourcing-tile-name" :title="item.caption || item.originalName">{{ item.caption || item.originalName }}</p>
+        </li>
+      </ul>
+      <p v-else-if="hasRead && !media.loading.value" class="empty-state">{{ supplierId ? t("No media for this supplier yet.") : t("The inbox is empty.") }}</p>
+    </div>
     <div v-if="media.hasNextPage.value" class="flex justify-center">
       <Button variant="outline" :is-loading="media.isFetchingNextPage.value" @click="media.fetchNextPage()">{{ t("Load more") }}</Button>
     </div>

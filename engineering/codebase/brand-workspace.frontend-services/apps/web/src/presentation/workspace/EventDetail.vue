@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Star } from 'lucide-vue-next';
+import { CalendarDays, Star } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
 
 import { notifyError, requestConfirmation } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
+import { createEventCalendar, downloadEventCalendar } from '@/application/workspace/EventCalendar';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { eventSaveOutcome, useShowcaseEvent, type EventSaveOutcome, type EventsControls } from '@/application/workspace/UseEvents';
+import { eventCalendarUiMessages } from '@/domain/shared/EventCalendarUiMessages';
 import {
   countryName, daysLeftLabel, daysUntil, deadlineTone, eventPriorities, eventStatuses, formatDay, formatEventDates, formatLabels,
   isEventPriority, isEventStatus, isIsoDate, localIsoDate, precisionLabels, priorityLabels, safeEventUrl, scopeLabels, statusLabels, statusTones,
@@ -27,6 +29,8 @@ const editing = ref(false);
 const formVersion = ref(0);
 const fieldConflict = ref(false);
 const fieldSaving = ref(false);
+const calendarMessages = computed(() => eventCalendarUiMessages[uiLocale.value]);
+const calendar = computed(() => event.value ? createEventCalendar(event.value, uiLocale.value) : undefined);
 const website = computed(() => safeEventUrl(event.value?.website));
 const source = computed(() => safeEventUrl(event.value?.sourceUrl));
 const where = computed(() => event.value
@@ -44,6 +48,10 @@ async function saveDetails(input: EventInput): Promise<EventSaveOutcome> {
   const outcome = eventSaveOutcome(await props.events.updateEvent(current, input));
   if (outcome === 'saved') editing.value = false;
   return outcome;
+}
+/** Downloads the currently recorded exact dates for any authorized reader. */
+function exportCalendar(): void {
+  if (calendar.value && !downloadEventCalendar(calendar.value)) notifyError(calendarMessages.value.downloadFailed);
 }
 /** Status and priority save as soon as they change; a conflict restores the shown value. */
 async function changeField(field: 'status' | 'priority', domEvent: Event): Promise<void> {
@@ -176,9 +184,16 @@ async function remove(): Promise<void> {
           <dd class="mt-1">{{ t("Revision {revision} · {date}", { revision: event.revision, date: updatedOn }) }}</dd>
         </div>
       </dl>
-      <div v-if="events.canEdit.value" class="flex flex-wrap gap-3 border-t border-border pt-4">
-        <Button size="sm" variant="outline" :is-disabled="access.busy.value" @click="editing = true">{{ t("Edit details") }}</Button>
-        <Button size="sm" variant="ghost" tone="danger" :is-disabled="access.busy.value" @click="remove">{{ t("Delete event") }}</Button>
+      <div class="flex flex-wrap items-center gap-3 border-t border-border pt-4">
+        <Button size="sm" variant="outline" :is-disabled="!calendar" @click="exportCalendar">
+          <CalendarDays :size="16" aria-hidden="true" />
+          {{ calendar && !calendar.hasOccurrence ? calendarMessages.downloadDeadline : calendarMessages.download }}
+        </Button>
+        <p v-if="!calendar" class="text-sm text-muted-foreground">{{ calendarMessages.exactDateNeeded }}</p>
+        <template v-if="events.canEdit.value">
+          <Button size="sm" variant="outline" :is-disabled="access.busy.value" @click="editing = true">{{ t("Edit details") }}</Button>
+          <Button size="sm" variant="ghost" tone="danger" :is-disabled="access.busy.value" @click="remove">{{ t("Delete event") }}</Button>
+        </template>
       </div>
     </template>
     <p class="text-xs leading-5 text-muted-foreground">{{ t("Desk only records where Ocharo stands. Applications, registrations and payments happen outside Desk.") }}</p>

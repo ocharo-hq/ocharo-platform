@@ -9,6 +9,8 @@ import {
   type EventsLocation, type EventSummary, type ShowcaseEvent,
 } from '@/domain/workspace/Events';
 
+import WorkspaceCollectionSkeleton from './WorkspaceCollectionSkeleton.vue';
+
 /** The next application deadlines, soonest first, as the summary reports them. */
 defineOptions({ name: 'EventsDeadlines' });
 const props = defineProps<{ access: AccessControls; events: EventsControls; summary: EventSummary | undefined; loading: boolean; failed: boolean; today: string }>();
@@ -26,18 +28,19 @@ function follow(event: MouseEvent, item: ShowcaseEvent): void {
 <template>
   <section class="workspace-card space-y-3 p-4 sm:p-5" aria-labelledby="events-deadlines-title">
     <h2 id="events-deadlines-title" class="text-base font-semibold">{{ t("Next deadlines") }}</h2>
-    <p v-if="loading && !summary" role="status" class="text-sm text-muted-foreground">{{ t("Loading deadlines…") }}</p>
-    <p v-else-if="!summary" role="status" class="text-sm text-muted-foreground">{{ failed ? t("Deadlines unavailable. Try refreshing.") : t("Loading deadlines…") }}</p>
-    <p v-else-if="!summary.upcomingDeadlines.length" class="text-sm text-muted-foreground">{{ t("No upcoming application deadlines.") }}</p>
-    <ol v-else class="events-deadlines">
-      <li v-for="item in summary.upcomingDeadlines.filter(entry => entry.applicationDeadline)" :key="item.id" class="events-deadline" data-test="deadline">
-        <a :href="href(item)" class="events-deadline-title" @click="follow($event, item)">{{ item.title }}</a>
-        <span class="text-xs text-muted-foreground">{{ t("Apply by {date}", { date: formatDay(item.applicationDeadline!, uiLocale) }) }}</span>
-        <span class="flex flex-wrap items-center gap-2">
-          <span class="events-days text-xs" :data-tone="deadlineTone(days(item))">{{ daysLeftLabel(days(item), uiLocale) }}</span>
-          <Badge size="sm" :variant="statusTones[item.status]">{{ t(statusLabels[item.status]) }}</Badge>
-        </span>
-      </li>
-    </ol>
+    <div class="min-h-28" :aria-busy="loading">
+      <WorkspaceCollectionSkeleton v-if="loading && !summary" shape="deadlines" :label="t('Loading deadlines…')" />
+      <p v-else-if="summary && !summary.upcomingDeadlines.length" class="flex min-h-28 items-center justify-center text-center text-sm text-muted-foreground">{{ t("No upcoming application deadlines.") }}</p>
+      <ol v-else-if="summary?.upcomingDeadlines.length" class="events-deadlines">
+        <li v-for="item in summary.upcomingDeadlines.filter(entry => entry.applicationDeadline)" :key="item.id" class="events-deadline" data-test="deadline">
+          <a :href="href(item)" class="events-deadline-title" @click="follow($event, item)">{{ item.title }}</a>
+          <span class="text-xs text-muted-foreground">{{ t("Apply by {date}", { date: formatDay(item.applicationDeadline!, uiLocale) }) }}</span>
+          <span class="flex flex-wrap items-center gap-2">
+            <span class="events-days text-xs" :data-tone="deadlineTone(days(item))">{{ daysLeftLabel(days(item), uiLocale) }}</span>
+            <Badge size="sm" :variant="statusTones[item.status]">{{ t(statusLabels[item.status]) }}</Badge>
+          </span>
+        </li>
+      </ol>
+    </div>
   </section>
 </template>

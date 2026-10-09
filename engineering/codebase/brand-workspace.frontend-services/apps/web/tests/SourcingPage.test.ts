@@ -7,6 +7,7 @@ import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
 import { FileUploadPicker } from '@wow-two-beta/ui-vue/presentation/forms';
 import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
 
+import { feedbackBus } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
@@ -230,5 +231,81 @@ describe('sourcing inbox', () => {
     await dialog().trigger('keydown', { key: 'Escape' });
     expect(dialog().exists()).toBe(false);
     expect(document.activeElement).toBe(tile.element);
+  });
+});
+
+
+describe('sourcing collection outcomes', () => {
+  it('loads supplier rows and media tiles without replacing their toolbars', async () => {
+    let finishSuppliers!: (value: ReturnType<typeof ResultExtensions.ok<SupplierSummary[]>>) => void;
+    let finishMedia!: (value: ReturnType<typeof ResultExtensions.ok<SourcingMedia[]>>) => void;
+    api.listSuppliers.mockImplementation(() => new Promise(resolve => { finishSuppliers = resolve; }));
+    api.listMedia.mockImplementation(() => new Promise(resolve => { finishMedia = resolve; }));
+    render('viewer', { view: 'inbox', supplierId: null });
+    await flushPromises();
+    expect(wrapper!.findAll('nav[aria-label="Suppliers"] div.sourcing-row')).toHaveLength(4);
+    expect(wrapper!.get('.sourcing-gallery').findAll(':scope > div')).toHaveLength(6);
+    expect(wrapper!.findAll('[role="status"]').every(item => item.classes().includes('sr-only'))).toBe(true);
+    expect(button('Refresh suppliers')).toBeDefined();
+    expect(button('Refresh media')).toBeDefined();
+    expect(wrapper!.text()).not.toContain('0 files shown');
+    expect(wrapper!.text()).not.toContain('The inbox is empty.');
+    finishSuppliers(ResultExtensions.ok([]));
+    finishMedia(ResultExtensions.ok([]));
+    await flushPromises();
+    const labels = wrapper!.findAll('.empty-state');
+    expect(labels.map(label => label.text())).toEqual(['No suppliers yet.', 'The inbox is empty.']);
+    expect(labels.every(label => !label.classes().includes('editor-prompt'))).toBe(true);
+  });
+
+  it('toasts initial failures and keeps refresh separate from empty results', async () => {
+    const notice = vi.spyOn(feedbackBus, 'notify');
+    const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 500, headers: new Headers() }));
+    api.listSuppliers.mockResolvedValue(failure);
+    api.listMedia.mockResolvedValue(failure);
+    render('viewer', { view: 'inbox', supplierId: null });
+    await flushPromises();
+    expect(notice).toHaveBeenCalledWith(expect.objectContaining({ tone: 'danger' }));
+    expect(wrapper!.text()).not.toContain('unavailable');
+    expect(wrapper!.text()).not.toContain('No suppliers yet.');
+    expect(wrapper!.text()).not.toContain('The inbox is empty.');
+    expect(wrapper!.find('[aria-busy="true"]').exists()).toBe(false);
+    api.listSuppliers.mockResolvedValue(ResultExtensions.ok([summary({})]));
+    api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1)]));
+    await button('Refresh suppliers')!.trigger('click');
+    await button('Refresh media')!.trigger('click');
+    await flushPromises();
+    expect(wrapper!.text()).toContain('Sethi Weaves');
+    expect(wrapper!.text()).toContain('photo-1.jpg');
+    notice.mockRestore();
+  });
+
+  it('retains a confirmed empty collection when refresh fails', async () => {
+    api.listSuppliers.mockResolvedValue(ResultExtensions.ok([]));
+    api.listMedia.mockResolvedValue(ResultExtensions.ok([]));
+    render('viewer', { view: 'inbox', supplierId: null });
+    await flushPromises();
+    const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() }));
+    api.listSuppliers.mockResolvedValue(failure);
+    api.listMedia.mockResolvedValue(failure);
+    await button('Refresh suppliers')!.trigger('click');
+    await button('Refresh media')!.trigger('click');
+    await flushPromises();
+    expect(wrapper!.findAll('.empty-state').map(label => label.text())).toEqual(['No suppliers yet.', 'The inbox is empty.']);
+  });
+
+  it('preserves loaded suppliers and media after a failed refetch', async () => {
+    render('viewer', { view: 'inbox', supplierId: null });
+    await flushPromises();
+    const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() }));
+    api.listSuppliers.mockResolvedValue(failure);
+    api.listMedia.mockResolvedValue(failure);
+    await button('Refresh suppliers')!.trigger('click');
+    await button('Refresh media')!.trigger('click');
+    await flushPromises();
+    expect(wrapper!.text()).toContain('Sethi Weaves');
+    expect(wrapper!.findAll('.sourcing-tile')).toHaveLength(3);
+    expect(wrapper!.find('.empty-state').exists()).toBe(false);
+    expect(wrapper!.text()).not.toContain('unavailable');
   });
 });

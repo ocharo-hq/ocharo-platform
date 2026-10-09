@@ -8,6 +8,8 @@ export const sourcingUiMessages: UiMessageTable = {
     uz: 'Material ta’minotchilarini, ular bilan bog‘lanish yo‘llarini hamda ular yuborgan rasm va fayllarni qayd eting. Desk muloqotni faqat qayd etadi; hech qachon xabar yubormaydi.',
     ru: 'Записывайте поставщиков материалов, способы связи с ними и присланные ими фото и файлы. Desk только фиксирует переписку и никогда не отправляет сообщения.',
   },
+  'Refresh suppliers': { uz: 'Ta’minotchilarni yangilash', ru: 'Обновить поставщиков' },
+  'Refresh media': { uz: 'Mediani yangilash', ru: 'Обновить медиа' },
   'Suppliers': { uz: 'Ta’minotchilar', ru: 'Поставщики' },
   'All suppliers': { uz: 'Barcha ta’minotchilar', ru: 'Все поставщики' },
   'Inbox': { uz: 'Kiruvchilar', ru: 'Входящие' },

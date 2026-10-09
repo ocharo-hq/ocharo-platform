@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import McpAccessPanel from './McpAccessPanel.vue';
+import SourceDirectoryPanel from './SourceDirectoryPanel.vue';
 import { requestConfirmation, useErrorToast } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
@@ -99,7 +101,10 @@ async function importFiles(): Promise<void> {
 
 <template>
   <section class="space-y-7">
-    <header class="space-y-2"><p class="eyebrow">{{ t("Your creative workspace") }}</p><h1 class="page-title">{{ t("Connected apps") }}</h1><p class="max-w-2xl text-muted-foreground">{{ t("Open an app with your current organization. Access lasts five minutes; reconnect here when it expires.") }}</p></header>
+    <header class="space-y-2"><p class="eyebrow">{{ t("Your creative workspace") }}</p><h1 class="page-title">{{ t("Integrations") }}</h1><p class="max-w-2xl text-muted-foreground">{{ t("Open an app with your current organization. Access lasts five minutes; reconnect here when it expires.") }}</p></header>
+
+    <SourceDirectoryPanel />
+    <McpAccessPanel :access="access" :workspace="workspace" />
 
     <p v-if="message" role="status" class="rounded-lg bg-muted p-4 text-sm">{{ t(message) }}</p>
     <div class="grid gap-5 lg:grid-cols-3">

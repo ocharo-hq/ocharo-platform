@@ -99,6 +99,7 @@ export function useEventList(events: EventsControls, filter: () => EventFilter) 
     events: computed(() => query.data.value ?? previous.value),
     loading: query.loading,
     error: query.error,
+    refetch: query.refetch,
     truncated: computed(() => (query.data.value?.length ?? 0) >= eventLimits.page),
   };
 }
@@ -109,7 +110,7 @@ export function useEventSummary(events: EventsControls, today: () => string) {
     enabled: events.enabled,
     queryFn: ({ signal }) => events.api.summary(events.organizationId(), today(), signal),
   });
-  return { summary: query.data, loading: query.loading, error: query.error };
+  return { summary: query.data, loading: query.loading, error: query.error, refetch: query.refetch };
 }
 
 export function useShowcaseEvent(events: EventsControls, id: () => string | null) {
