@@ -1,10 +1,16 @@
+// @vitest-environment node
 import { ESLint } from 'eslint';
 import { parse } from '@vue/compiler-sfc';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 describe('frontend dependency rules', () => {
+  const eslint = new ESLint();
+
+  // Load the real lint configuration once, outside individual rule assertions.
+  beforeAll(async () => {
+    await eslint.calculateConfigForFile('src/presentation/system/Forbidden.ts');
+  }, 15_000);
   it('rejects direct presentation-to-integration imports', async () => {
-    const eslint = new ESLint();
     const [result] = await eslint.lintText(
       "import { systemApi } from '@/integration/system/SystemApi';\nexport const api = systemApi;\n",
       { filePath: 'src/presentation/system/Forbidden.ts' },
@@ -13,7 +19,6 @@ describe('frontend dependency rules', () => {
   });
 
   it('allows the same-domain application-to-integration edge', async () => {
-    const eslint = new ESLint();
     const [result] = await eslint.lintText(
       "import { systemApi } from '@/integration/system/SystemApi';\nexport const api = systemApi;\n",
       { filePath: 'src/application/system/Allowed.ts' },
@@ -22,7 +27,6 @@ describe('frontend dependency rules', () => {
   });
 
   it('rejects another domain slice even through a relative dynamic import', async () => {
-    const eslint = new ESLint();
     const [result] = await eslint.lintText(
       "export const load = () => import('../other/Unrelated');\n",
       { filePath: 'src/application/system/Forbidden.ts' },
