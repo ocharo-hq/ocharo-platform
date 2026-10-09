@@ -120,7 +120,7 @@ async function create(input: SupplierInput): Promise<SaveOutcome> {
           <p v-if="list.suppliers.value && !list.suppliers.value.length && !list.loading.value" class="empty-state">
             {{ query || stage ? t("No suppliers match this search.") : t("No suppliers yet.") }}
           </p>
-          <p v-if="list.truncated.value" class="px-3 text-xs text-muted-foreground">{{ t("Showing the first 200 suppliers. Search to narrow the list.") }}</p>
+          <Button v-if="list.hasNextPage.value" size="sm" variant="outline" :is-disabled="access.busy.value || list.loading.value" :is-loading="list.isFetchingNextPage.value" @click="list.fetchNextPage()">{{ t("Load more suppliers") }}</Button>
         </template>
       </div>
     </nav>

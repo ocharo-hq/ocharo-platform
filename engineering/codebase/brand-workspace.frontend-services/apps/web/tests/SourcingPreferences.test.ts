@@ -23,6 +23,13 @@ describe('personal sourcing preferences', () => {
     expect(JSON.stringify(persisted)).not.toContain('private');
     expect(orderedSourcingSections(store.read())).toEqual(['contacts', 'media']);
   });
+  it('drops unexpected persisted fields when reading a valid preference record', () => {
+    const broker = memoryStorageBroker();
+    broker.write(`ocharo.sourcing-view.v1:${userId}:${organizationId}`, {
+      schemaVersion: 1, ...scope, preferences: { ...customized, supplierNotes: 'Do not load content as preferences' },
+    });
+    expect(createSourcingPreferencesStorage(scope, broker).read()).toEqual(customized);
+  });
   it('rejects malformed, future-version and cross-scope payloads', () => {
     const broker = memoryStorageBroker();
     const key = `ocharo.sourcing-view.v1:${userId}:${organizationId}`;

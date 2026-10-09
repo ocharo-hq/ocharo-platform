@@ -26,7 +26,7 @@ import SourcingSupplierForm from './SourcingSupplierForm.vue';
 defineOptions({ name: 'SourcingSupplierDetail' });
 const props = defineProps<{ access: AccessControls; sourcing: SourcingControls; supplierId: string; preferences: SourcingPreferences }>();
 const { t } = useUiLocale();
-const { supplier, loading, error } = useSupplier(props.sourcing, () => props.supplierId);
+const { supplier, loading, error, refetch } = useSupplier(props.sourcing, () => props.supplierId);
 const sections = computed(() => orderedSourcingSections(props.preferences));
 useErrorToast(computed(() => error.value ? failureMessage(error.value) : null));
 const refreshing = ref(false);
@@ -45,10 +45,10 @@ const website = computed(() => safeHttpUrl(supplier.value?.website));
 
 const fields = (value: Supplier): SupplierInput =>
   ({ name: value.name, stage: value.stage, country: value.country, city: value.city, website: value.website, notes: value.notes });
-async function saveDetails(input: SupplierInput): Promise<SaveOutcome> {
+async function saveDetails(input: SupplierInput, expectedRevision?: number): Promise<SaveOutcome> {
   const current = supplier.value;
-  if (!current) return 'failed';
-  const outcome = saveOutcome(await props.sourcing.updateSupplier(current.id, current.revision, input));
+  if (!current || expectedRevision === undefined) return 'failed';
+  const outcome = saveOutcome(await props.sourcing.updateSupplier(current.id, expectedRevision, input));
   if (outcome === 'saved') editing.value = false;
   return outcome;
 }
@@ -61,8 +61,14 @@ async function changeStage(stage: string): Promise<void> {
     stageConflict.value = outcome === 'conflict';
   } finally { stageSaving.value = false; }
 }
+async function reloadSupplier(): Promise<boolean> {
+  if (refreshing.value || props.access.busy.value) return false;
+  refreshing.value = true;
+  try { await refetch(); return error.value === null && !!supplier.value; }
+  finally { refreshing.value = false; }
+}
 async function reload(): Promise<void> {
-  await props.sourcing.refreshSupplier(props.supplierId);
+  if (!await reloadSupplier()) return;
   stageConflict.value = false;
   formVersion.value += 1;
 }
@@ -97,7 +103,7 @@ async function reload(): Promise<void> {
       </div>
       <SourcingSupplierForm
         v-if="editing" :key="formVersion" :sourcing="sourcing" :dirty-key="`supplier-${supplier.id}`" :initial="supplier"
-        :disabled="access.busy.value" :submit-label="t('Save supplier')" :save="saveDetails" @cancel="editing = false" @reload="reload"
+        :disabled="access.busy.value || refreshing" :submit-label="t('Save supplier')" :save="saveDetails" @cancel="editing = false" @reload="reload"
       />
 
     </article>
@@ -122,8 +128,8 @@ async function reload(): Promise<void> {
         </div>
       </dl>
       </section>
-      <SourcingRoutes v-else-if="section === 'contacts'" :access="access" :sourcing="sourcing" :supplier="supplier" />
-      <SourcingPeople v-else-if="section === 'people'" :access="access" :sourcing="sourcing" :supplier="supplier" />
+      <SourcingRoutes v-else-if="section === 'contacts'" :access="access" :sourcing="sourcing" :supplier="supplier" :reload="reloadSupplier" :refreshing="refreshing" />
+      <SourcingPeople v-else-if="section === 'people'" :access="access" :sourcing="sourcing" :supplier="supplier" :reload="reloadSupplier" :refreshing="refreshing" />
       <section v-else-if="section === 'media'" class="space-y-4" aria-labelledby="sourcing-media-title">
         <h3 id="sourcing-media-title" class="text-lg font-semibold">{{ t('Shared materials and files') }}</h3>
         <SourcingGallery :access="access" :sourcing="sourcing" :filter="filter" />

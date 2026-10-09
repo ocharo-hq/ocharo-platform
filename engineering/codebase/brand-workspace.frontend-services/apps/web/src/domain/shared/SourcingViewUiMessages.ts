@@ -2,6 +2,12 @@ import type { UiMessageTable } from './UiMessages';
 
 /** Personal Sourcing navigation and supplier presentation preferences. */
 export const sourcingViewUiMessages: UiMessageTable = {
+  "This item is no longer in this view. Your edits are still here; copy them before closing.": {
+    "uz": "Bu yozuv endi bu ko‘rinishda yo‘q. Tahrirlaringiz saqlanib turibdi; yopishdan oldin ularni nusxalang.",
+    "ru": "Этого элемента больше нет в текущем виде. Ваши правки сохранены здесь; скопируйте их перед закрытием."
+  },
+  "Load more suppliers": { "uz": "Yana ta’minotchilarni yuklash", "ru": "Загрузить ещё поставщиков" },
+  "Discard unsaved changes?": { "uz": "Saqlanmagan o‘zgarishlar bekor qilinsinmi?", "ru": "Отменить несохранённые изменения?" },
   "Sourcing view settings": {
     "uz": "Ta’minot ko‘rinishi sozlamalari",
     "ru": "Настройки вида снабжения"

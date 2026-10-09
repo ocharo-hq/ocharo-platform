@@ -18,7 +18,7 @@ const props = defineProps<{
   initial?: Supplier | null | undefined;
   disabled: boolean;
   submitLabel: string;
-  save: (input: SupplierInput) => Promise<SaveOutcome>;
+  save: (input: SupplierInput, expectedRevision?: number) => Promise<SaveOutcome>;
 }>();
 const emit = defineEmits<{ cancel: []; reload: [] }>();
 const { t } = useUiLocale();
@@ -28,6 +28,8 @@ const baseline = () => ({
 });
 const draft = reactive(baseline());
 const original = JSON.stringify(baseline());
+// The draft belongs to this revision until an explicit successful reload remounts it.
+const expectedRevision = props.initial?.revision;
 const errors = ref<string[]>([]);
 const saving = ref(false);
 const conflict = ref(false);
@@ -50,10 +52,10 @@ function validate(): SupplierInput | null {
 }
 async function submit(): Promise<void> {
   const input = validate();
-  if (!input || saving.value) return;
+  if (!input || saving.value || props.disabled) return;
   saving.value = true;
   try {
-    const outcome = await props.save(input);
+    const outcome = await props.save(input, expectedRevision);
     conflict.value = outcome === 'conflict';
     if (outcome === 'saved') props.sourcing.setFormDirty(props.dirtyKey, false);
   } finally { saving.value = false; }
@@ -84,14 +86,14 @@ async function submit(): Promise<void> {
     </fieldset>
     <div v-if="conflict" role="alert" class="sourcing-alert space-y-2">
       <p>{{ t("This record changed. Your edits are still here. Reload the latest version before trying again.") }}</p>
-      <Button size="sm" variant="outline" :is-disabled="saving" @click="emit('reload')">{{ t("Discard my edits and reload") }}</Button>
+      <Button size="sm" variant="outline" :is-disabled="disabled || saving" @click="emit('reload')">{{ t("Discard my edits and reload") }}</Button>
     </div>
     <ul v-if="errors.length" role="alert" class="space-y-1">
       <li v-for="error in errors" :key="error" class="form-error">{{ t(error) }}</li>
     </ul>
     <div class="flex flex-wrap gap-3">
       <Button type="submit" size="sm" :is-loading="saving" :is-disabled="disabled">{{ submitLabel }}</Button>
-      <Button size="sm" variant="ghost" :is-disabled="saving" @click="emit('cancel')">{{ t("Cancel") }}</Button>
+      <Button size="sm" variant="ghost" :is-disabled="disabled || saving" @click="emit('cancel')">{{ t("Cancel") }}</Button>
     </div>
   </form>
 </template>

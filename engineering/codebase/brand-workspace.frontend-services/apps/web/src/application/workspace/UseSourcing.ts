@@ -115,21 +115,35 @@ export function useSourcing(access: AccessControls, workspace: WorkspaceControls
 }
 export type SourcingControls = ReturnType<typeof useSourcing>;
 
-/** Lists suppliers for a filter, keeping the previous rows visible while a new filter loads. */
+/** Offset boundaries can move between reads; display each ID once without changing raw page offsets. */
+function uniqueItems<T extends { id: string }>(items: readonly T[]): T[] {
+  return [...new Map(items.map(item => [item.id, item] as const)).values()];
+}
+
+/** Pages suppliers for a filter, keeping the last successful rows visible through refresh failures. */
 export function useSupplierList(sourcing: SourcingControls, filter: () => SupplierFilter) {
-  const query = useAppQuery({
+  const pageSize = sourcingLimits.supplierPage;
+  const query = useAppInfiniteQuery<SupplierSummary, SupplierSummary[]>({
     key: () => sourcing.keys.supplierList(filter()),
     enabled: sourcing.enabled,
-    queryFn: ({ signal }) => sourcing.api.listSuppliers(sourcing.organizationId(), { ...filter(), limit: sourcingLimits.supplierPage, offset: 0 }, signal),
+    initialPageParam: 0,
+    queryFn: ({ pageParam, signal }) => sourcing.api.listSuppliers(sourcing.organizationId(),
+      { ...filter(), limit: pageSize, offset: Number(pageParam) || 0 }, signal),
+    getNextPageParam: (last, all) => last.length < pageSize ? undefined : all.length * pageSize,
   });
-  const previous = shallowRef<SupplierSummary[]>();
-  watch(query.data, value => { if (value) previous.value = value; }, { immediate: true });
+  const items = computed(() => uniqueItems(query.items.value));
+  const previous = shallowRef<readonly SupplierSummary[]>();
+  watch([items, query.loading, query.error], ([items, loading, error]) => {
+    if (!loading && !error) previous.value = items;
+  }, { immediate: true });
   return {
-    suppliers: computed(() => query.data.value ?? previous.value),
+    suppliers: computed(() => query.loading.value || query.error.value ? previous.value : items.value),
     loading: query.loading,
     error: query.error,
     refetch: query.refetch,
-    truncated: computed(() => (query.data.value?.length ?? 0) >= sourcingLimits.supplierPage),
+    hasNextPage: query.hasNextPage,
+    fetchNextPage: query.fetchNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
   };
 }
 
@@ -154,7 +168,7 @@ export function useMediaSummary(sourcing: SourcingControls) {
 /** Pages one gallery 100 items at a time; invalidation refreshes every loaded page. */
 export function useSourcingMedia(sourcing: SourcingControls, filter: () => MediaFilter) {
   const pageSize = sourcingLimits.mediaPage;
-  return useAppInfiniteQuery<SourcingMedia, SourcingMedia[]>({
+  const query = useAppInfiniteQuery<SourcingMedia, SourcingMedia[]>({
     key: () => sourcing.keys.mediaList(filter()),
     enabled: sourcing.enabled,
     initialPageParam: 0,
@@ -162,6 +176,7 @@ export function useSourcingMedia(sourcing: SourcingControls, filter: () => Media
       sourcing.api.listMedia(sourcing.organizationId(), filter(), { limit: pageSize, offset: Number(pageParam) || 0 }, signal),
     getNextPageParam: (last, all) => last.length < pageSize ? undefined : all.length * pageSize,
   });
+  return { ...query, items: computed(() => uniqueItems(query.items.value)) };
 }
 
 /** Moves between the list, inbox and suppliers inside one document, guarding unsaved forms. */

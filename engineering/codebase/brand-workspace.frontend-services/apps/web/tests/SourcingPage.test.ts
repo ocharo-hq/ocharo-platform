@@ -8,7 +8,7 @@ import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
 import { FileUploadPicker } from '@wow-two-beta/ui-vue/presentation/forms';
 import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
 
-import { feedbackBus } from '@/application/shared/UseFeedback';
+import { confirmation, feedbackBus, resolveConfirmation } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
@@ -67,6 +67,7 @@ beforeEach(() => {
   api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1), media(2, { hasLocation: true }), media(3, { contentType: 'application/pdf', hasThumbnail: false, originalName: 'price-list.pdf' })]));
 });
 afterEach(() => {
+  resolveConfirmation(false);
   wrapper?.unmount();
   wrapper = undefined;
   client?.clear();
@@ -395,5 +396,249 @@ describe('personal sourcing views', () => {
     expect(wrapper!.find('#sourcing-media-title').exists()).toBe(false);
     expect(wrapper!.find('#sourcing-supplier-title').exists()).toBe(true);
     expect(api.updateSupplier).not.toHaveBeenCalled();
+  });
+});
+
+
+describe('sourcing pagination and editing recovery', () => {
+  const supplierKey = ['session', ORG, 'sourcing', 'supplier', SUPPLIER];
+  const inboxKey = ['session', ORG, 'sourcing', 'media', 'inbox', null];
+  const failure = (status: number) => ResultExtensions.fail(ApiFailureFactory.create('http', { status, headers: new Headers() }));
+  const dialog = () => wrapper!.get('.sourcing-lightbox');
+  const dialogButton = (label: string) => dialog().findAll('button').find(item => item.text() === label)!;
+  async function editMedia() {
+    render('editor', { view: 'inbox', supplierId: null });
+    await flushPromises();
+    await wrapper!.findAll('.sourcing-tile-button')[1]!.trigger('click');
+    await flushPromises();
+    await dialogButton('Edit details').trigger('click');
+    await dialog().get('textarea').setValue('My caption');
+  }
+
+  it('loads suppliers beyond the first page and resets pagination for a new filter', async () => {
+    const first = Array.from({ length: 200 }, (_, index) => summary({ id: `supplier-${index}`, name: `Supplier ${index}` }));
+    api.listSuppliers.mockImplementation((_org, filter) => Promise.resolve(ResultExtensions.ok(filter.stage === 'lead'
+      ? [summary({ name: 'Filtered supplier' })]
+      : filter.offset === 0 ? first : [summary({ name: 'Last supplier' })])));
+    render('viewer', { view: 'suppliers', supplierId: null });
+    await flushPromises();
+    expect(button('Load more suppliers')).toBeDefined();
+    await button('Load more suppliers')!.trigger('click');
+    await flushPromises();
+    expect(api.listSuppliers).toHaveBeenLastCalledWith(ORG, { query: '', stage: '', limit: 200, offset: 200 }, expect.any(AbortSignal));
+    expect(wrapper!.get('nav[aria-label="Suppliers"]').text()).toContain('Last supplier');
+    expect(button('Load more suppliers')).toBeUndefined();
+    await chooseDeskValue(wrapper!, 'Stage', 'lead');
+    await flushPromises();
+    expect(api.listSuppliers).toHaveBeenLastCalledWith(ORG, { query: '', stage: 'lead', limit: 200, offset: 0 }, expect.any(AbortSignal));
+    expect(wrapper!.text()).toContain('Filtered supplier');
+    expect(wrapper!.text()).not.toContain('Last supplier');
+  });
+
+  it('deduplicates adjacent supplier pages without changing server offsets', async () => {
+    api.listSuppliers.mockImplementation((_org, filter) => Promise.resolve(ResultExtensions.ok(
+      filter.offset < 400 ? Array.from({ length: 200 }, (_, index) => summary({
+        id: `supplier-${index + (filter.offset === 200 ? 199 : 0)}`, name: `Supplier ${index + filter.offset}`,
+      })) : [],
+    )));
+    render('viewer', { view: 'suppliers', supplierId: null });
+    await flushPromises();
+    await button('Load more suppliers')!.trigger('click');
+    await flushPromises();
+    // 399 unique suppliers plus the Inbox entry. The boundary duplicate uses its newer fields.
+    expect(wrapper!.findAll('nav[aria-label="Suppliers"] button.sourcing-row')).toHaveLength(400);
+    expect(wrapper!.text()).not.toContain('Supplier 199');
+    expect(wrapper!.text()).toContain('Supplier 200');
+    await button('Load more suppliers')!.trigger('click');
+    await flushPromises();
+    expect(api.listSuppliers).toHaveBeenLastCalledWith(ORG, { query: '', stage: '', limit: 200, offset: 400 }, expect.any(AbortSignal));
+    expect(button('Load more suppliers')).toBeUndefined();
+  });
+
+  it('deduplicates adjacent media pages while requesting the next raw offset', async () => {
+    api.listMedia.mockImplementation((_org, _filter, page) => Promise.resolve(ResultExtensions.ok(
+      page.offset < 200 ? Array.from({ length: 100 }, (_, index) => media(index + (page.offset === 100 ? 99 : 0))) : [],
+    )));
+    render('viewer', { view: 'inbox', supplierId: null });
+    await flushPromises();
+    await button('Load more')!.trigger('click');
+    await flushPromises();
+    expect(wrapper!.findAll('.sourcing-tile')).toHaveLength(199);
+    await button('Load more')!.trigger('click');
+    await flushPromises();
+    expect(api.listMedia).toHaveBeenLastCalledWith(ORG, { kind: 'inbox' }, { limit: 100, offset: 200 }, expect.any(AbortSignal));
+    expect(button('Load more')).toBeUndefined();
+  });
+
+  it('retains supplier drafts and their original revision through refresh and failed conflict reload', async () => {
+    render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await flushPromises();
+    await button('Edit details')!.trigger('click');
+    await wrapper!.get('form input').setValue('My supplier edit');
+    client!.setQueryData(supplierKey, { ...supplier(), name: 'Changed elsewhere', revision: 5 });
+    await flushPromises();
+    api.updateSupplier.mockResolvedValue(failure(409));
+    await wrapper!.get('form').trigger('submit');
+    await flushPromises();
+    expect(api.updateSupplier).toHaveBeenLastCalledWith(ORG, SUPPLIER, 4, expect.objectContaining({ name: 'My supplier edit' }), expect.any(AbortSignal));
+    api.getSupplier.mockResolvedValue(failure(503));
+    await button('Discard my edits and reload')!.trigger('click');
+    await flushPromises();
+    expect((wrapper!.get('form input').element as HTMLInputElement).value).toBe('My supplier edit');
+    expect(wrapper!.get('form').text()).toContain('This record changed.');
+    api.getSupplier.mockResolvedValue(ResultExtensions.ok({ ...supplier(), name: 'Latest supplier', revision: 6 }));
+    await button('Discard my edits and reload')!.trigger('click');
+    await flushPromises();
+    expect((wrapper!.get('form input').element as HTMLInputElement).value).toBe('Latest supplier');
+    await wrapper!.get('form').trigger('submit');
+    await flushPromises();
+    expect(api.updateSupplier).toHaveBeenLastCalledWith(ORG, SUPPLIER, 6, expect.any(Object), expect.any(AbortSignal));
+  });
+
+  it.each(['person', 'route'] as const)('uses the edited %s revision after supplier data changes', async kind => {
+    render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await flushPromises();
+    const section = wrapper!.get(`[aria-labelledby="sourcing-${kind === 'person' ? 'people' : 'routes'}-title"]`);
+    await section.findAll('button').find(item => item.text() === 'Edit')!.trigger('click');
+    await section.get('form input.sourcing-input').setValue(kind === 'person' ? 'My person edit' : '+91 99999 88888');
+    const latest = supplier();
+    latest.people[0]!.revision = 2;
+    latest.routes[0]!.revision = 2;
+    client!.setQueryData(supplierKey, latest);
+    await flushPromises();
+    const update = kind === 'person' ? api.updatePerson : api.updateRoute;
+    update.mockResolvedValue(failure(409));
+    await section.get('form').trigger('submit');
+    await flushPromises();
+    expect(update).toHaveBeenLastCalledWith(ORG, kind === 'person' ? PERSON : 'route-1', 1, expect.any(Object), expect.any(AbortSignal));
+    api.getSupplier.mockResolvedValue(failure(503));
+    await section.findAll('button').find(item => item.text() === 'Discard my edits and reload')!.trigger('click');
+    await flushPromises();
+    expect((section.get('form input.sourcing-input').element as HTMLInputElement).value).toBe(kind === 'person' ? 'My person edit' : '+91 99999 88888');
+  });
+
+  it.each(['person', 'route'] as const)('retains a dirty %s after a remote removal and a successful missing-record reload', async kind => {
+    const { access } = render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await flushPromises();
+    const section = wrapper!.get(`[aria-labelledby="sourcing-${kind === 'person' ? 'people' : 'routes'}-title"]`);
+    await section.findAll('button').find(item => item.text() === 'Edit')!.trigger('click');
+    const draft = kind === 'person' ? 'Retained person draft' : '+91 99999 88888';
+    await section.get('form input.sourcing-input').setValue(draft);
+    const removed = supplier();
+    if (kind === 'person') removed.people = [];
+    else removed.routes = [];
+    client!.setQueryData(supplierKey, removed);
+    await flushPromises();
+    expect((section.get('form input.sourcing-input').element as HTMLInputElement).value).toBe(draft);
+    expect(section.text()).toContain('This item is no longer in this view.');
+    expect(access.dirty.value).toBe(true);
+    api.getSupplier.mockResolvedValue(ResultExtensions.ok(removed));
+    await section.findAll('button').find(item => item.text() === 'Reload latest')!.trigger('click');
+    await flushPromises();
+    expect((section.get('form input.sourcing-input').element as HTMLInputElement).value).toBe(draft);
+    const update = kind === 'person' ? api.updatePerson : api.updateRoute;
+    update.mockResolvedValue(failure(404));
+    const notice = vi.spyOn(feedbackBus, 'notify');
+    await section.get('form').trigger('submit');
+    await flushPromises();
+    expect(update).toHaveBeenLastCalledWith(ORG, kind === 'person' ? PERSON : 'route-1', 1, expect.any(Object), expect.any(AbortSignal));
+    expect(notice).toHaveBeenCalledWith(expect.objectContaining({ tone: 'danger' }));
+    expect((section.get('form input.sourcing-input').element as HTMLInputElement).value).toBe(draft);
+    expect(access.dirty.value).toBe(true);
+    notice.mockRestore();
+    await section.findAll('button').find(item => item.text() === 'Cancel')!.trigger('click');
+    expect(section.find('form').exists()).toBe(false);
+    expect(access.dirty.value).toBe(false);
+  });
+
+  it('retains a media draft after its file leaves the gallery and cannot be found by reload', async () => {
+    await editMedia();
+    client!.setQueryData(inboxKey, { pages: [[media(1), media(3)]], pageParams: [0] });
+    await flushPromises();
+    expect((dialog().get('textarea').element as HTMLTextAreaElement).value).toBe('My caption');
+    expect(dialog().text()).toContain('This item is no longer in this view.');
+    expect(wrapper!.findAll('.sourcing-tile')).toHaveLength(2);
+    api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1), media(3)]));
+    await dialogButton('Reload latest').trigger('click');
+    await flushPromises();
+    expect((dialog().get('textarea').element as HTMLTextAreaElement).value).toBe('My caption');
+    api.updateMedia.mockResolvedValue(failure(404));
+    const notice = vi.spyOn(feedbackBus, 'notify');
+    await dialog().get('form').trigger('submit');
+    await flushPromises();
+    expect(notice).toHaveBeenCalledWith(expect.objectContaining({ tone: 'danger' }));
+    expect((dialog().get('textarea').element as HTMLTextAreaElement).value).toBe('My caption');
+    expect(api.updateMedia).toHaveBeenLastCalledWith(ORG, 'media-2', 1, expect.objectContaining({ caption: 'My caption' }), expect.any(AbortSignal));
+    notice.mockRestore();
+    await dialog().get('button[aria-label="Close"]').trigger('click');
+    resolveConfirmation(true);
+    await flushPromises();
+    expect(wrapper!.find('.sourcing-lightbox').exists()).toBe(false);
+  });
+
+  it.each([true, false])('closes the viewer only after a confirmed own delete (success=%s)', async succeeded => {
+    render('editor', { view: 'inbox', supplierId: null });
+    await flushPromises();
+    await wrapper!.findAll('.sourcing-tile-button')[1]!.trigger('click');
+    await flushPromises();
+    api.deleteMedia.mockResolvedValue(succeeded ? ResultExtensions.ok(undefined) : failure(404));
+    api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1), media(3)]));
+    await dialogButton('Delete').trigger('click');
+    expect(confirmation.value?.confirmLabel).toBe('Delete');
+    resolveConfirmation(true);
+    await flushPromises();
+    expect(api.deleteMedia).toHaveBeenLastCalledWith(ORG, 'media-2', 1, expect.any(AbortSignal));
+    expect(wrapper!.find('.sourcing-lightbox').exists()).toBe(!succeeded);
+    if (succeeded) expect(wrapper!.findAll('.sourcing-tile')).toHaveLength(2);
+    else expect(dialog().get('img').attributes('src')).toBe('/content/media-2');
+  });
+
+  it('asks before discarding media edits and preserves them when dismissal is declined', async () => {
+    await editMedia();
+    await dialog().get('button[aria-label="Close"]').trigger('click');
+    expect(confirmation.value?.message).toBe('Discard unsaved changes?');
+    resolveConfirmation(false);
+    await flushPromises();
+    expect((dialog().get('textarea').element as HTMLTextAreaElement).value).toBe('My caption');
+    await dialog().trigger('keydown', { key: 'Escape' });
+    expect(confirmation.value?.message).toBe('Discard unsaved changes?');
+    resolveConfirmation(true);
+    await flushPromises();
+    expect(dialog().find('textarea').exists()).toBe(false);
+    expect(dialog().text()).not.toContain('My caption');
+    await dialog().get('button[aria-label="Close"]').trigger('click');
+    await flushPromises();
+    expect(wrapper!.find('.sourcing-lightbox').exists()).toBe(false);
+  });
+
+  it('keeps the viewed file and edit revision when refreshed media are inserted ahead of it', async () => {
+    await editMedia();
+    client!.setQueryData(inboxKey, { pages: [[media(9), media(1), media(2, { caption: 'Remote caption', revision: 2 }), media(3)]], pageParams: [0] });
+    await flushPromises();
+    expect(dialog().get('img').attributes('src')).toBe('/content/media-2');
+    expect(dialog().text()).toContain('3 of 4');
+    expect((dialog().get('textarea').element as HTMLTextAreaElement).value).toBe('My caption');
+    api.updateMedia.mockResolvedValue(failure(409));
+    await dialog().get('form').trigger('submit');
+    await flushPromises();
+    expect(api.updateMedia).toHaveBeenLastCalledWith(ORG, 'media-2', 1, expect.objectContaining({ caption: 'My caption' }), expect.any(AbortSignal));
+  });
+
+  it('preserves media drafts after failed conflict reload and adopts the revision only after success', async () => {
+    await editMedia();
+    api.updateMedia.mockResolvedValue(failure(409));
+    await dialog().get('form').trigger('submit');
+    await flushPromises();
+    api.listMedia.mockResolvedValue(failure(503));
+    await dialogButton('Discard my edits and reload').trigger('click');
+    await flushPromises();
+    expect((dialog().get('textarea').element as HTMLTextAreaElement).value).toBe('My caption');
+    api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1), media(2, { caption: 'Latest caption', revision: 3 })]));
+    await dialogButton('Discard my edits and reload').trigger('click');
+    await flushPromises();
+    expect((dialog().get('textarea').element as HTMLTextAreaElement).value).toBe('Latest caption');
+    await dialog().get('form').trigger('submit');
+    await flushPromises();
+    expect(api.updateMedia).toHaveBeenLastCalledWith(ORG, 'media-2', 3, expect.objectContaining({ caption: 'Latest caption' }), expect.any(AbortSignal));
   });
 });

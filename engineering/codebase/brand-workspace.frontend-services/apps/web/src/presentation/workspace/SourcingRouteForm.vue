@@ -18,7 +18,8 @@ const props = defineProps<{
   people: readonly SupplierPerson[];
   initial?: ContactRoute | null | undefined;
   disabled: boolean;
-  save: (input: RouteInput) => Promise<SaveOutcome>;
+  unavailable?: boolean;
+  save: (input: RouteInput, expectedRevision?: number) => Promise<SaveOutcome>;
 }>();
 const emit = defineEmits<{ cancel: []; reload: [] }>();
 const { t } = useUiLocale();
@@ -29,6 +30,8 @@ const baseline = () => ({
 });
 const draft = reactive(baseline());
 const original = JSON.stringify(baseline());
+// The draft belongs to this revision until an explicit successful reload remounts it.
+const expectedRevision = props.initial?.revision;
 const errors = ref<string[]>([]);
 const saving = ref(false);
 const conflict = ref(false);
@@ -53,10 +56,10 @@ function validate(): RouteInput | null {
 }
 async function submit(): Promise<void> {
   const input = validate();
-  if (!input || saving.value) return;
+  if (!input || saving.value || props.disabled) return;
   saving.value = true;
   try {
-    const outcome = await props.save(input);
+    const outcome = await props.save(input, expectedRevision);
     conflict.value = outcome === 'conflict';
     if (outcome === 'saved') props.sourcing.setFormDirty(props.dirtyKey, false);
   } finally { saving.value = false; }
@@ -65,6 +68,7 @@ async function submit(): Promise<void> {
 
 <template>
   <form class="space-y-4" novalidate @submit.prevent="submit">
+    <div v-if="unavailable" role="alert" class="sourcing-alert space-y-2"><p>{{ t("This item is no longer in this view. Your edits are still here; copy them before closing.") }}</p><Button size="sm" variant="outline" :is-disabled="disabled || saving" @click="emit('reload')">{{ t("Reload latest") }}</Button></div>
     <fieldset :disabled="disabled || saving" class="grid min-w-0 gap-4 sm:grid-cols-2">
       <label class="sourcing-field">{{ t("Channel") }}
         <DeskSelect v-model="draft.channel" :label="t('Channel')" :disabled="disabled || saving" :options="[...(contactChannels).map(channel => ({ value: channel, label: (t(channelLabels[channel])) }))]" />
@@ -91,14 +95,14 @@ async function submit(): Promise<void> {
     </fieldset>
     <div v-if="conflict" role="alert" class="sourcing-alert space-y-2">
       <p>{{ t("This record changed. Your edits are still here. Reload the latest version before trying again.") }}</p>
-      <Button size="sm" variant="outline" :is-disabled="saving" @click="emit('reload')">{{ t("Discard my edits and reload") }}</Button>
+      <Button size="sm" variant="outline" :is-disabled="disabled || saving" @click="emit('reload')">{{ t("Discard my edits and reload") }}</Button>
     </div>
     <ul v-if="errors.length" role="alert" class="space-y-1">
       <li v-for="error in errors" :key="error" class="form-error">{{ t(error) }}</li>
     </ul>
     <div class="flex flex-wrap gap-3">
       <Button type="submit" size="sm" :is-loading="saving" :is-disabled="disabled">{{ initial ? t("Save route") : t("Add route") }}</Button>
-      <Button size="sm" variant="ghost" :is-disabled="saving" @click="emit('cancel')">{{ t("Cancel") }}</Button>
+      <Button size="sm" variant="ghost" :is-disabled="disabled || saving" @click="emit('cancel')">{{ t("Cancel") }}</Button>
     </div>
   </form>
 </template>

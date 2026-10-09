@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
 
@@ -13,29 +13,34 @@ import SourcingRouteForm from './SourcingRouteForm.vue';
 
 /** Lists the recorded ways to reach a supplier. Links open the operator's own apps; Desk sends nothing. */
 defineOptions({ name: 'SourcingRoutes' });
-const props = defineProps<{ access: AccessControls; sourcing: SourcingControls; supplier: Supplier }>();
+const props = defineProps<{ access: AccessControls; sourcing: SourcingControls; supplier: Supplier; reload: () => Promise<boolean>; refreshing: boolean }>();
 const { t } = useUiLocale();
 const editing = ref<string | null>(null);
+const editSnapshot = shallowRef<ContactRoute | null>(null);
+const missingEdit = computed(() => !!editing.value && editing.value !== 'new' && !props.supplier.routes.some(item => item.id === editing.value));
+function edit(item: ContactRoute): void {
+  editSnapshot.value = { ...item };
+  editing.value = item.id;
+}
 const formVersion = ref(0);
-const routes = computed(() => [...props.supplier.routes].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary)));
+const routes = computed(() => {
+  const visible = missingEdit.value && editSnapshot.value ? [...props.supplier.routes, editSnapshot.value] : props.supplier.routes;
+  return [...visible].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
+});
 const personName = (id: string | null) => props.supplier.people.find(person => person.id === id)?.name ?? null;
 
-async function save(route: ContactRoute | null, input: RouteInput): Promise<SaveOutcome> {
+async function save(route: ContactRoute | null, input: RouteInput, expectedRevision?: number): Promise<SaveOutcome> {
+  if (route && expectedRevision === undefined) return 'failed';
   const result = route
-    ? await props.sourcing.updateRoute(props.supplier.id, route.id, route.revision, input)
+    ? await props.sourcing.updateRoute(props.supplier.id, route.id, expectedRevision!, input)
     : await props.sourcing.createRoute(props.supplier.id, input);
   const outcome = saveOutcome(result);
   if (outcome === 'saved') editing.value = null;
   return outcome;
 }
-async function reload(): Promise<void> {
-  await props.sourcing.refreshSupplier(props.supplier.id);
-  formVersion.value += 1;
+async function reloadForm(): Promise<void> {
+  if (await props.reload() && !missingEdit.value) formVersion.value += 1;
 }
-// A route deleted elsewhere closes its form instead of leaving the card in edit mode.
-watch(() => props.supplier.routes, routes => {
-  if (editing.value && editing.value !== 'new' && !routes.some(route => route.id === editing.value)) editing.value = null;
-});
 async function remove(route: ContactRoute): Promise<void> {
   if (!await requestConfirmation('Delete this contact route? This cannot be undone.', { confirmLabel: 'Delete' })) return;
   const result = await props.sourcing.deleteRoute(props.supplier.id, route.id, route.revision);
@@ -53,14 +58,14 @@ async function remove(route: ContactRoute): Promise<void> {
     </div>
     <SourcingRouteForm
       v-if="editing === 'new'" :key="`new-${formVersion}`" :sourcing="sourcing" dirty-key="route-new" :people="supplier.people"
-      :disabled="access.busy.value" :save="input => save(null, input)" @cancel="editing = null" @reload="reload"
+      :disabled="access.busy.value || refreshing" :save="input => save(null, input)" @cancel="editing = null" @reload="reloadForm"
     />
     <ul class="divide-y divide-border">
       <li v-for="route in routes" :key="route.id" class="space-y-2 py-3 first:pt-0 last:pb-0">
         <SourcingRouteForm
           v-if="editing === route.id" :key="`${route.id}-${formVersion}`" :sourcing="sourcing" :dirty-key="`route-${route.id}`"
-          :people="supplier.people" :initial="route" :disabled="access.busy.value" :save="input => save(route, input)"
-          @cancel="editing = null" @reload="reload"
+          :people="supplier.people" :initial="route" :unavailable="missingEdit" :disabled="access.busy.value || refreshing" :save="(input, revision) => save(route, input, revision)"
+          @cancel="editing = null" @reload="reloadForm"
         />
         <template v-else>
           <div class="flex flex-wrap items-center gap-2">
@@ -84,14 +89,14 @@ async function remove(route: ContactRoute): Promise<void> {
           <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             <a v-if="safeHttpUrl(route.sourceUrl)" :href="safeHttpUrl(route.sourceUrl)!" target="_blank" rel="noopener noreferrer" class="text-muted-foreground underline underline-offset-4">{{ t("Where this contact was found") }}</a>
             <template v-if="sourcing.canEdit.value && editing === null">
-              <Button size="sm" variant="ghost" :is-disabled="access.busy.value" @click="editing = route.id">{{ t("Edit") }}</Button>
+              <Button size="sm" variant="ghost" :is-disabled="access.busy.value" @click="edit(route)">{{ t("Edit") }}</Button>
               <Button size="sm" variant="ghost" tone="danger" :is-disabled="access.busy.value" @click="remove(route)">{{ t("Delete") }}</Button>
             </template>
           </div>
         </template>
       </li>
     </ul>
-    <p v-if="!supplier.routes.length && editing !== 'new'" class="text-sm text-muted-foreground">{{ t("No contact routes recorded yet.") }}</p>
+    <p v-if="!routes.length && editing !== 'new'" class="text-sm text-muted-foreground">{{ t("No contact routes recorded yet.") }}</p>
     <p class="text-xs leading-5 text-muted-foreground">{{ t("Links open your own apps. Desk never sends messages to suppliers.") }}</p>
   </section>
 </template>

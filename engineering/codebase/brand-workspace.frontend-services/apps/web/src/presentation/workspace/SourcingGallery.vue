@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, shallowRef, watch } from 'vue';
 import { FileText, Film, ImageIcon, MapPin, RefreshCw } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 
@@ -29,7 +29,11 @@ const selecting = ref(false);
 const selected = reactive(new Set<string>());
 const target = ref('');
 const moved = ref('');
-const viewing = ref<number | null>(null);
+const viewing = shallowRef<SourcingMedia | null>(null);
+const missingViewed = computed(() => !!viewing.value && !items.value.some(item => item.id === viewing.value!.id));
+// Keep the opened file available for copying drafts when a background refresh removes it from this gallery.
+const viewedItems = computed(() => missingViewed.value && viewing.value ? [...items.value, viewing.value] : items.value);
+const viewedIndex = computed(() => viewing.value === null ? -1 : viewedItems.value.findIndex(item => item.id === viewing.value!.id));
 watch(() => props.filter, () => { viewing.value = null; stopSelecting(); });
 const supplierName = (id: string) => suppliers.suppliers.value?.find(supplier => supplier.id === id)?.name ?? t('Open supplier');
 const targets = computed(() => (suppliers.suppliers.value ?? []).filter(supplier => supplier.id !== supplierId.value));
@@ -41,6 +45,7 @@ watch([media.loading, media.error], ([loading, error]) => {
   if (props.sourcing.enabled() && !loading && !error) hasRead.value = true;
 }, { immediate: true });
 useErrorToast(computed(() => media.error.value ? failureMessage(media.error.value) : null));
+useErrorToast(computed(() => suppliers.error.value ? failureMessage(suppliers.error.value) : null));
 async function refresh(): Promise<void> {
   if (refreshing.value) return;
   refreshing.value = true;
@@ -53,9 +58,9 @@ watch(items, list => {
   const present = new Set(list.map(item => item.id));
   for (const id of [...selected]) if (!present.has(id)) selected.delete(id);
 });
-function activate(index: number, item: SourcingMedia): void {
+function activate(item: SourcingMedia): void {
   if (selecting.value) toggle(item.id);
-  else viewing.value = index;
+  else viewing.value = { ...item };
 }
 function toggle(id: string): void {
   if (selected.has(id)) selected.delete(id); else selected.add(id);
@@ -78,6 +83,10 @@ async function assign(destination: string | null): Promise<void> {
     ? t('{count} files moved to {name}.', { count: result.value.updated, name })
     : t('{count} files returned to the inbox.', { count: result.value.updated });
   stopSelecting();
+}
+async function reloadMedia(): Promise<boolean> {
+  await media.refetch();
+  return media.error.value === null;
 }
 function save(item: SourcingMedia, input: { capture: MediaCapture; caption: string }): Promise<SaveOutcome> {
   return props.sourcing.updateMedia(item, { supplierId: item.supplierId, ...input }).then(saveOutcome);
@@ -108,6 +117,7 @@ async function remove(item: SourcingMedia): Promise<boolean> {
       <span class="text-sm font-medium">{{ t("{count} selected", { count: selected.size }) }}</span>
       <Button size="sm" variant="ghost" @click="items.forEach(item => selected.add(item.id))">{{ t("Select all shown") }}</Button>
       <DeskSelect v-model="target" class="w-auto max-w-full" :label="t('Destination supplier')" :options="[({ value: '' as const, label: (supplierId ? t('Move to supplier…') : t('Assign to supplier…')) }), ...(targets).map(supplier => ({ value: supplier.id, label: (supplier.name) }))]" />
+      <Button v-if="suppliers.hasNextPage.value" size="sm" variant="ghost" :is-loading="suppliers.isFetchingNextPage.value" :is-disabled="access.busy.value" @click="suppliers.fetchNextPage()">{{ t("Load more suppliers") }}</Button>
       <Button size="sm" :is-disabled="access.busy.value || !selected.size || !target" @click="assign(target)">{{ supplierId ? t("Move") : t("Assign") }}</Button>
       <Button v-if="supplierId" size="sm" variant="outline" :is-disabled="access.busy.value || !selected.size" @click="assign(null)">{{ t("Return to inbox") }}</Button>
       <Button size="sm" variant="ghost" @click="stopSelecting">{{ t("Done") }}</Button>
@@ -115,11 +125,11 @@ async function remove(item: SourcingMedia): Promise<boolean> {
     <div class="min-h-72" :aria-busy="media.loading.value || refreshing">
       <WorkspaceCollectionSkeleton v-if="media.loading.value && !items.length" shape="media" :label="t('Loading media…')" />
       <ul v-else-if="items.length" class="sourcing-gallery" :aria-label="t('Media')">
-        <li v-for="(item, index) in items" :key="item.id" class="sourcing-tile" :data-selected="selecting && selected.has(item.id) ? 'true' : undefined">
+        <li v-for="item in items" :key="item.id" class="sourcing-tile" :data-selected="selecting && selected.has(item.id) ? 'true' : undefined">
           <button
             type="button" class="sourcing-tile-button" :aria-pressed="selecting ? selected.has(item.id) : undefined"
             :aria-label="selecting ? t('Select {name}', { name: item.caption || item.originalName }) : t('Open {name}', { name: item.caption || item.originalName })"
-            @click="activate(index, item)"
+            @click="activate(item)"
           >
             <img v-if="mediaKind(item.contentType) === 'image' && item.hasThumbnail" :src="sourcing.thumbnailUrl(item.id)" alt="" loading="lazy" decoding="async" width="240" height="240" />
             <span v-else class="sourcing-typed">
@@ -144,8 +154,8 @@ async function remove(item: SourcingMedia): Promise<boolean> {
       <Button variant="outline" :is-loading="media.isFetchingNextPage.value" @click="media.fetchNextPage()">{{ t("Load more") }}</Button>
     </div>
     <SourcingLightbox
-      v-if="viewing !== null && items.length" :sourcing="sourcing" :items="items" :index="viewing" :can-edit="canEdit" :busy="access.busy.value"
-      :save="save" :remove="remove" @update:index="value => viewing = value" @close="viewing = null"
+      v-if="viewedIndex >= 0" :sourcing="sourcing" :items="viewedItems" :index="viewedIndex" :unavailable="missingViewed" :can-edit="canEdit" :busy="access.busy.value"
+      :save="save" :remove="remove" :reload="reloadMedia" @update:index="value => viewing = viewedItems[value] ?? null" @close="viewing = null"
     />
   </div>
 </template>
