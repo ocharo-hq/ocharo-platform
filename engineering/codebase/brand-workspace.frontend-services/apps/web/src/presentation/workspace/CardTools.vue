@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed } from 'vue';
 import { cloneSnapshot, type DesignSnapshot } from '@/domain/workspace/EditorModels';
@@ -83,7 +84,7 @@ function photoBackground(show: boolean): void {
     <label v-if="photo" class="descriptor-toggle"><input type="checkbox" :checked="photo.opacity !== 0" @change="photoBackground(($event.target as HTMLInputElement).checked)"> {{ t("Use photographic background") }}</label>
     <button v-if="photo && front" type="button" class="photo-control" @click="emit('update:pageId', front.id); emit('update:selectedId', photo.id)">{{ t("Edit front photograph") }}</button>
     <div class="palette-options" :aria-label="t('Card color palettes')"><button type="button" :title="t('Restore original Charcoal veil colors')" @click="palette(null)">{{ t("Original v5") }}</button><button v-for="theme in palettes" :key="theme.name" type="button" :style="{background: theme.front, color: theme.logo === 'charcoal' ? '#302B25' : '#F6F0E5'}" @click="palette(theme)">{{ t(theme.name) }}</button></div>
-    <label v-if="logo" class="field-label">{{ t("Logo color") }}<select :value="logo.src" @change="setLogo(($event.target as HTMLSelectElement).value)"><option :value="brandAssets.whiteLogo">{{ t("Original white") }}</option><option :value="brandAssets.blackLogo">{{ t("Original black") }}</option><option v-for="(src, name) in brandAssets.logoColors" :key="name" :value="src">{{ name }}</option></select></label>
+    <label v-if="logo" class="field-label">{{ t("Logo color") }}<DeskSelect :model-value="logo.src ?? null" @update:model-value="setLogo($event)" :label="t('Logo color')" :options="[({ value: brandAssets.whiteLogo, label: (t('Original white')) }), ({ value: brandAssets.blackLogo, label: (t('Original black')) }), ...Object.entries(brandAssets.logoColors).map(([name, src]) => ({ value: src, label: (name) }))]" /></label>
     <label v-for="field in fields" :key="field.id" class="field-label">{{ t(labels[field.id] ?? field.label) }}<input type="text" :value="field.text" @change="patch(field.id, {text: ($event.target as HTMLInputElement).value})"></label>
     <p class="template-help">{{ t("85 × 55 mm. The logo remains the original artwork. Change the front photo or back color with the page controls.") }}</p>
     <p class="template-source">{{ t("Based on Charcoal veil v5 ·") }} {{ snapshot.locale.toUpperCase() }}</p>

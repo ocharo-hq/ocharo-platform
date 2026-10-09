@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { useErrorToast } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { computed, onScopeDispose, ref, watch } from 'vue';
@@ -84,11 +85,11 @@ function add(): void {
   <section class="catalogue-builder" :aria-label="t('Catalogue builder')">
     <header><div><p class="eyebrow">{{ t("Build your edition") }}</p><h2>{{ t("Products, photographs, pages.") }}</h2><p>{{ t("Choose your source, select garments, and give each one a layout.") }}</p></div><button type="button" class="quiet-button" @click="emit('close')">{{ t("Close builder") }}</button></header>
     <div class="builder-controls">
-      <label class="field-label">{{ t("Catalogue brand") }}<select :aria-label="t('Catalogue brand')" v-model="brandId" :disabled="loading || disabled"><option value="">{{ t("Choose brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
-      <label class="field-label">{{ t("Product source") }}<select :aria-label="t('Product source')" v-model="releaseId" :disabled="loading || disabled"><option value="draft">{{ t("Current saved draft") }}{{ draft ? ` · ${t('Revision')} ${draft.revision}` : '' }}</option><option v-for="release in releases.filter(item => !item.withdrawnAt)" :key="release.id" :value="release.id">{{ t("Published release") }} {{ release.revision }}</option></select></label>
+      <label class="field-label">{{ t("Catalogue brand") }}<DeskSelect :label="t('Catalogue brand')" v-model="brandId" :disabled="loading || disabled" :options="[({ value: '' as const, label: (t('Choose brand')) }), ...(workspace.brands.value ?? []).map(brand => ({ value: brand.id, label: (brand.name) }))]" /></label>
+      <label class="field-label">{{ t("Product source") }}<DeskSelect :label="t('Product source')" v-model="releaseId" :disabled="loading || disabled" :options="[({ value: 'draft' as const, label: (t('Current saved draft')) + (draft ? ` · ${t('Revision')} ${draft.revision}` : '') }), ...(releases.filter(item => !item.withdrawnAt)).map(release => ({ value: release.id, label: (t('Published release')) + ' ' + (release.revision) }))]" /></label>
       <label class="field-label">{{ t("Find products") }}<input :aria-label="t('Find products')" v-model="query" :placeholder="t('Name or product ID')"></label>
     </div>
-    <label class="field-label">{{ t('Photo group for all products') }}<select v-model="mediaGroup"><option v-for="group in catalogueMediaGroups" :key="group" :value="group">{{ t(group) }}</option></select></label>
+    <label class="field-label">{{ t('Photo group for all products') }}<DeskSelect v-model="mediaGroup" :label="t('Photo group for all products')" :disabled="disabled" :options="[...(catalogueMediaGroups).map(group => ({ value: group, label: (t(group)) }))]" /></label>
     <fieldset class="layout-picker" :disabled="disabled"><legend>{{ t("Page template") }}</legend><label v-for="option in catalogueLayouts" :key="option.id" :class="{ chosen: layout === option.id }"><input v-model="layout" type="radio" name="catalogue-layout" :value="option.id"><strong>{{ t(option.title) }}</strong><span>{{ t(option.description) }}</span></label></fieldset>
     <Button variant="outline" :is-disabled="disabled||loading||!brandId" :is-loading="loading" @click="load">{{t("Refresh")}}</Button>
     <ContentSkeleton v-if="loading&&!hasLoaded" variant="rows" :cards="2" :label="t('Loading saved products…')"/><p v-else-if="!hasLoaded&&error" class="query-label" role="status">{{t("Saved products unavailable")}}</p>

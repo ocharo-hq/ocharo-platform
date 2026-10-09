@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, reactive, ref, watch } from 'vue';
 import { FileText, Film, ImageIcon, MapPin, RefreshCw } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
@@ -106,10 +107,7 @@ async function remove(item: SourcingMedia): Promise<boolean> {
     <div v-if="selecting" class="workspace-card flex flex-wrap items-center gap-3 p-3" role="toolbar" :aria-label="t('Selected files')">
       <span class="text-sm font-medium">{{ t("{count} selected", { count: selected.size }) }}</span>
       <Button size="sm" variant="ghost" @click="items.forEach(item => selected.add(item.id))">{{ t("Select all shown") }}</Button>
-      <select v-model="target" class="sourcing-input w-auto max-w-full" :aria-label="t('Destination supplier')">
-        <option value="">{{ supplierId ? t("Move to supplier…") : t("Assign to supplier…") }}</option>
-        <option v-for="supplier in targets" :key="supplier.id" :value="supplier.id">{{ supplier.name }}</option>
-      </select>
+      <DeskSelect v-model="target" class="w-auto max-w-full" :label="t('Destination supplier')" :options="[({ value: '' as const, label: (supplierId ? t('Move to supplier…') : t('Assign to supplier…')) }), ...(targets).map(supplier => ({ value: supplier.id, label: (supplier.name) }))]" />
       <Button size="sm" :is-disabled="access.busy.value || !selected.size || !target" @click="assign(target)">{{ supplierId ? t("Move") : t("Assign") }}</Button>
       <Button v-if="supplierId" size="sm" variant="outline" :is-disabled="access.busy.value || !selected.size" @click="assign(null)">{{ t("Return to inbox") }}</Button>
       <Button size="sm" variant="ghost" @click="stopSelecting">{{ t("Done") }}</Button>

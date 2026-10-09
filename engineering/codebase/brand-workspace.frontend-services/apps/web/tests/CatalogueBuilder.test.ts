@@ -1,3 +1,4 @@
+import { chooseDeskValue } from './helpers/DeskSelect';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -27,7 +28,7 @@ describe('catalogue selection workflow',()=>{
  it('uses the selected immutable release and resets stale selection',async()=>{
   const draft=fixture();api.releases.mockResolvedValue(ResultExtensions.ok([{...draft,id:'release',revision:1,sourceRevision:3,publishedAt:'2026-09-28',withdrawnAt:null,note:'Reviewed'}]));
   mountBuilder();await flushPromises();await wrapper.get('.product-choice input').setValue(true);
-  await wrapper.findAll('select')[1]!.setValue('release');
+  await chooseDeskValue(wrapper, 'Product source', 'release');
   expect(wrapper.text()).toContain('0 products selected');await wrapper.get('.product-choice input').setValue(true);
   await wrapper.findAll('button').find(button=>button.text()==='Create catalogue')!.trigger('click');
   const pages=wrapper.emitted('pages')?.[0]?.[0] as Array<{catalogueSource:{revision:number}}>;

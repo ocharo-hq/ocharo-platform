@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref } from 'vue';
 import { CalendarDays, Star } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
@@ -53,20 +54,18 @@ async function saveDetails(input: EventInput): Promise<EventSaveOutcome> {
 function exportCalendar(): void {
   if (calendar.value && !downloadEventCalendar(calendar.value)) notifyError(calendarMessages.value.downloadFailed);
 }
-/** Status and priority save as soon as they change; a conflict restores the shown value. */
-async function changeField(field: 'status' | 'priority', domEvent: Event): Promise<void> {
-  const select = domEvent.target as HTMLSelectElement;
+/** Committed status and priority remain visible until the server confirms the change. */
+async function changeField(field: 'status' | 'priority', value: string): Promise<void> {
   const current = event.value;
-  if (!current || select.value === current[field]) return;
+  if (!current || fieldSaving.value || props.access.busy.value || value === current[field]) return;
   const changes: { status?: EventStatus; priority?: EventPriority } = {};
-  if (field === 'status' && isEventStatus(select.value)) changes.status = select.value;
-  else if (field === 'priority' && isEventPriority(select.value)) changes.priority = select.value;
-  else { select.value = current[field]; return; }
+  if (field === 'status' && isEventStatus(value)) changes.status = value;
+  else if (field === 'priority' && isEventPriority(value)) changes.priority = value;
+  else return;
   fieldSaving.value = true;
   try {
     const outcome = eventSaveOutcome(await props.events.patchEvent(current, changes));
     fieldConflict.value = outcome === 'conflict';
-    if (outcome !== 'saved') select.value = current[field];
   } finally { fieldSaving.value = false; }
 }
 async function reload(): Promise<void> {
@@ -101,14 +100,10 @@ async function remove(): Promise<void> {
       </div>
       <div v-if="events.canEdit.value && !editing" class="flex flex-wrap items-center gap-3">
         <label class="flex items-center gap-2 text-sm text-muted-foreground">{{ t("Status") }}
-          <select class="events-input w-auto" :value="event.status" :disabled="access.busy.value || fieldSaving" @change="changeField('status', $event)">
-            <option v-for="item in eventStatuses" :key="item" :value="item">{{ t(statusLabels[item]) }}</option>
-          </select>
+          <DeskSelect class="w-auto" :model-value="event.status" :disabled="access.busy.value || fieldSaving" @update:model-value="changeField('status', $event)" :label="t('Status')" :options="[...(eventStatuses).map(item => ({ value: item, label: (t(statusLabels[item])) }))]" />
         </label>
         <label class="flex items-center gap-2 text-sm text-muted-foreground">{{ t("Priority") }}
-          <select class="events-input w-auto" :value="event.priority" :disabled="access.busy.value || fieldSaving" @change="changeField('priority', $event)">
-            <option v-for="item in eventPriorities" :key="item" :value="item">{{ t(priorityLabels[item]) }}</option>
-          </select>
+          <DeskSelect class="w-auto" :model-value="event.priority" :disabled="access.busy.value || fieldSaving" @update:model-value="changeField('priority', $event)" :label="t('Priority')" :options="[...(eventPriorities).map(item => ({ value: item, label: (t(priorityLabels[item])) }))]" />
         </label>
       </div>
       <div v-else-if="!events.canEdit.value" class="flex flex-wrap items-center gap-2">

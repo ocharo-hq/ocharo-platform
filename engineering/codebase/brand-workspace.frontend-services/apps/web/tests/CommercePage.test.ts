@@ -1,3 +1,4 @@
+import { deskSelect } from './helpers/DeskSelect';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -34,12 +35,12 @@ describe('commerce draft safety', () => {
     const notification = vi.spyOn(feedbackBus, 'notify');
     const {access} = page(); await flushPromises();
     await button('Brand identity').trigger('click');
-    await wrapper.findAll('input')[0]!.setValue('Edited brand');
+    await wrapper.findAll('label').find(item => item.text().startsWith('Brand name'))!.get('input').setValue('Edited brand');
     expect(access.setDirty).toHaveBeenLastCalledWith(true);
-    expect(wrapper.find('select').attributes('disabled')).toBeDefined();
+    expect(deskSelect(wrapper, 'Brand').props('disabled')).toBe(true);
     api.save.mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('http',{status:409,headers:new Headers()})));
     await button('Save draft').trigger('click');await flushPromises();
-    expect((wrapper.findAll('input')[0]!.element as HTMLInputElement).value).toBe('Edited brand');
+    expect((wrapper.findAll('label').find(item => item.text().startsWith('Brand name'))!.get('input').element as HTMLInputElement).value).toBe('Edited brand');
     expect(wrapper.text()).toContain('Unsaved changes');
     expect(notification).toHaveBeenCalledWith(expect.objectContaining({tone:'danger',description:expect.stringContaining('This record changed')}));
     notification.mockRestore();

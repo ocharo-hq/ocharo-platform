@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 
@@ -66,9 +67,7 @@ async function submit(): Promise<void> {
   <form class="space-y-4" novalidate @submit.prevent="submit">
     <fieldset :disabled="disabled || saving" class="grid min-w-0 gap-4 sm:grid-cols-2">
       <label class="sourcing-field">{{ t("Channel") }}
-        <select v-model="draft.channel" class="sourcing-input">
-          <option v-for="channel in contactChannels" :key="channel" :value="channel">{{ t(channelLabels[channel]) }}</option>
-        </select>
+        <DeskSelect v-model="draft.channel" :label="t('Channel')" :disabled="disabled || saving" :options="[...(contactChannels).map(channel => ({ value: channel, label: (t(channelLabels[channel])) }))]" />
       </label>
       <label class="sourcing-field">{{ t("Destination") }}
         <input v-model="draft.destination" class="sourcing-input" required :maxlength="sourcingLimits.destination" autocomplete="off" :placeholder="t('Number, address or link')" />
@@ -77,10 +76,7 @@ async function submit(): Promise<void> {
         <input v-model="draft.label" class="sourcing-input" :maxlength="sourcingLimits.label" autocomplete="off" :placeholder="t('e.g. Sales desk')" />
       </label>
       <label class="sourcing-field">{{ t("Person") }}
-        <select v-model="draft.personId" class="sourcing-input">
-          <option value="">{{ t("No person") }}</option>
-          <option v-for="person in people" :key="person.id" :value="person.id">{{ person.name }}</option>
-        </select>
+        <DeskSelect v-model="draft.personId" :label="t('Person')" :disabled="disabled || saving" :options="[({ value: '' as const, label: (t('No person')) }), ...(people).map(person => ({ value: person.id, label: (person.name) }))]" />
       </label>
       <label class="sourcing-field sm:col-span-2">{{ t("Where this contact was found") }}
         <input v-model="draft.sourceUrl" type="url" class="sourcing-input" :maxlength="sourcingLimits.url" placeholder="https://" autocomplete="off" />

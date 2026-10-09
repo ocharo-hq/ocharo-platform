@@ -1,3 +1,4 @@
+import { deskSelect, chooseDeskValue } from './helpers/DeskSelect';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -109,8 +110,7 @@ describe('sourcing supplier list', () => {
     await new Promise(resolve => setTimeout(resolve, 300));
     await flushPromises();
     expect(api.listSuppliers).toHaveBeenLastCalledWith(ORG, { query: 'silk', stage: '', limit: 200, offset: 0 }, expect.any(AbortSignal));
-    const stage = wrapper!.findAll('select').find(select => select.text().includes('All stages'))!;
-    await stage.setValue('lead');
+    await chooseDeskValue(wrapper!, 'Stage', 'lead');
     await flushPromises();
     expect(api.listSuppliers).toHaveBeenLastCalledWith(ORG, { query: 'silk', stage: 'lead', limit: 200, offset: 0 }, expect.any(AbortSignal));
     expect(wrapper!.get('nav[aria-label="Suppliers"]').text()).not.toContain('Sethi Weaves');
@@ -145,7 +145,26 @@ describe('sourcing supplier detail', () => {
     expect(wrapper!.text()).toContain('photo-1.jpg');
     for (const label of ['Add supplier', 'Edit details', 'Add route', 'Add person', 'Edit', 'Delete', 'Select files']) expect(button(label)).toBeUndefined();
     expect(wrapper!.findComponent(FileUploadPicker).exists()).toBe(false);
-    expect(wrapper!.findAll('select').some(select => select.text().includes('Qualified') && !select.text().includes('All stages'))).toBe(false);
+    expect(wrapper!.findComponent({ name: 'SourcingSupplierDetail' }).findAllComponents({ name: 'DeskSelect' }).some(select => select.props('label') === 'Stage')).toBe(false);
+  });
+
+  it('retains the committed stage throughout a pending and rejected update', async () => {
+    render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await flushPromises();
+    const detail = wrapper!.findComponent({ name: 'SourcingSupplierDetail' });
+    const picker = deskSelect(detail, 'Stage');
+    const committed = picker.props('modelValue');
+    let finish!: (value: unknown) => void;
+    api.updateSupplier.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await chooseDeskValue(detail, 'Stage', 'qualified');
+    expect(api.updateSupplier).toHaveBeenCalledTimes(1);
+    expect(picker.props('modelValue')).toBe(committed);
+    expect(picker.props('disabled')).toBe(true);
+    finish(ResultExtensions.fail(ApiFailureFactory.create('http', { status: 409, headers: new Headers() })));
+    await flushPromises();
+    expect(picker.props('modelValue')).toBe(committed);
+    expect(picker.props('disabled')).toBe(false);
+    expect(detail.text()).toContain('This record changed. Reload the latest version before trying again.');
   });
 
   it('shows the edit controls to editors', async () => {
@@ -199,7 +218,7 @@ describe('sourcing inbox', () => {
     await tiles[0]!.trigger('click');
     await tiles[2]!.trigger('click');
     expect(wrapper!.text()).toContain('2 selected');
-    await wrapper!.get('select[aria-label="Destination supplier"]').setValue(OTHER);
+    await chooseDeskValue(wrapper!, 'Destination supplier', OTHER);
     await button('Assign')!.trigger('click');
     await flushPromises();
     expect(api.assignMedia).toHaveBeenCalledWith(ORG, ['media-1', 'media-3'], OTHER, expect.any(AbortSignal));
@@ -248,7 +267,7 @@ describe('sourcing collection outcomes', () => {
     await flushPromises();
     expect(wrapper!.findAll('nav[aria-label="Suppliers"] div.sourcing-row')).toHaveLength(4);
     expect(wrapper!.get('.sourcing-gallery').findAll(':scope > div')).toHaveLength(6);
-    expect(wrapper!.findAll('[role="status"]').every(item => item.classes().includes('sr-only'))).toBe(true);
+    expect(wrapper!.findAll('[aria-busy="true"] [role="status"]').every(item => item.classes().includes('sr-only'))).toBe(true);
     expect(button('Refresh suppliers')).toBeDefined();
     expect(button('Refresh media')).toBeDefined();
     expect(wrapper!.text()).not.toContain('0 files shown');

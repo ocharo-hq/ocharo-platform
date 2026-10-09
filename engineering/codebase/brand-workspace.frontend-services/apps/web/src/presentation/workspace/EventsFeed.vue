@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { Plus, RefreshCw } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
@@ -110,16 +111,10 @@ async function create(input: EventInput): Promise<EventSaveOutcome> {
           </div>
         </div>
         <label class="events-field">{{ t("Format") }}
-          <select v-model="format" class="events-input">
-            <option value="">{{ t("All formats") }}</option>
-            <option v-for="item in eventFormats" :key="item" :value="item">{{ t(formatLabels[item]) }}</option>
-          </select>
+          <DeskSelect v-model="format" :label="t('Format')" :options="[({ value: '' as const, label: (t('All formats')) }), ...(eventFormats).map(item => ({ value: item, label: (t(formatLabels[item])) }))]" />
         </label>
         <label class="events-field">{{ t("Status") }}
-          <select v-model="status" class="events-input">
-            <option value="">{{ summary.summary.value ? `${t("All statuses")} (${totalCount})` : t("All statuses") }}</option>
-            <option v-for="item in eventStatuses" :key="item" :value="item">{{ summary.summary.value ? `${t(statusLabels[item])} (${statusCount(item)})` : t(statusLabels[item]) }}</option>
-          </select>
+          <DeskSelect v-model="status" :label="t('Status')" :options="[({ value: '' as const, label: (summary.summary.value ? `${t('All statuses')} (${totalCount})` : t('All statuses')) }), ...(eventStatuses).map(item => ({ value: item, label: (summary.summary.value ? `${t(statusLabels[item])} (${statusCount(item)})` : t(statusLabels[item])) }))]" />
         </label>
         <label class="events-toggle">
           <input v-model="showPast" type="checkbox" />

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { ChevronLeft, ChevronRight, FileText, MapPin, X } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
@@ -63,13 +64,14 @@ function focusable(): HTMLElement[] {
   return Array.from(root.value?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), video[controls]') ?? []);
 }
 function keydown(event: KeyboardEvent): void {
+  if (event.defaultPrevented) return;
   if (event.key === 'Escape') {
     event.preventDefault();
     if (editing.value) { editing.value = false; root.value?.focus(); } else emit('close');
     return;
   }
   const target = event.target as HTMLElement | null;
-  const typing = !!target && /^(INPUT|TEXTAREA|SELECT|VIDEO)$/.test(target.tagName);
+  const typing = !!target && (/^(INPUT|TEXTAREA|SELECT|VIDEO)$/.test(target.tagName) || target.closest('[role=combobox],[role=listbox]') !== null);
   if (event.key === 'ArrowRight' && !typing) { event.preventDefault(); go(1); return; }
   if (event.key === 'ArrowLeft' && !typing) { event.preventDefault(); go(-1); return; }
   if (event.key !== 'Tab') return;
@@ -133,9 +135,7 @@ async function removeCurrent(): Promise<void> {
           <textarea v-model="draft.caption" class="sourcing-input" rows="3" :maxlength="sourcingLimits.caption" :disabled="saving" />
         </label>
         <label class="sourcing-field">{{ t("File origin") }}
-          <select v-model="draft.capture" class="sourcing-input" :disabled="saving">
-            <option v-for="capture in mediaCaptures" :key="capture" :value="capture">{{ t(captureLabels[capture]) }}</option>
-          </select>
+          <DeskSelect v-model="draft.capture" :disabled="saving" :label="t('File origin')" :options="[...(mediaCaptures).map(capture => ({ value: capture, label: (t(captureLabels[capture])) }))]" />
         </label>
         <div v-if="conflict" role="alert" class="sourcing-alert">{{ t("This record changed. Your edits are still here. Reload the latest version before trying again.") }}</div>
         <div class="flex flex-wrap gap-2">

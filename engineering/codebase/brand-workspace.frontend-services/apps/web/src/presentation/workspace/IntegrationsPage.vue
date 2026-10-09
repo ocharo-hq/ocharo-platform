@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import McpAccessPanel from './McpAccessPanel.vue';
 import SourceDirectoryPanel from './SourceDirectoryPanel.vue';
 import { requestConfirmation, useErrorToast } from '@/application/shared/UseFeedback';
@@ -117,12 +118,12 @@ async function importFiles(): Promise<void> {
     <p v-if="!apps.length" role="status" class="workspace-card p-5">{{ t("Connected apps are available from the configured local Ocharo workspace.") }}</p>
     <section class="space-y-4 border-t border-border pt-6">
       <div class="flex flex-wrap items-end justify-between gap-4"><div><h2 class="text-xl font-semibold">{{ t("Creative imports") }}</h2><p class="mt-1 text-sm text-muted-foreground">{{ t("Studio renders arrive as unreviewed images. Review their source and rights before adding them to your catalogue.") }}</p></div>
-        <Button variant="outline" :is-disabled="blocked||loading||!brandId" :is-loading="loading" @click="loadImports">{{t("Refresh")}}</Button><label>{{ t("Brand") }}<select v-model="brandId" :disabled="blocked" class="native-select mt-2"><option value="">{{ t("Choose a brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
+        <Button variant="outline" :is-disabled="blocked||loading||!brandId" :is-loading="loading" @click="loadImports">{{t("Refresh")}}</Button><label>{{ t("Brand") }}<DeskSelect v-model="brandId" :disabled="blocked" class="mt-2" :label="t('Brand')" :options="[({ value: '' as const, label: (t('Choose a brand')) }), ...(workspace.brands.value ?? []).map(brand => ({ value: brand.id, label: (brand.name) }))]" /></label>
       </div>
       <form v-if="workspace.canEdit.value && brandId" class="workspace-card grid gap-4 p-5 sm:grid-cols-2" @submit.prevent="importFiles">
         <label class="flex min-w-0 flex-col gap-2">{{ t("Studio manifest") }}<input :key="`manifest-${fileSelection}`" type="file" accept="application/json,.json" :disabled="blocked" class="block w-full min-w-0 rounded-lg border border-border bg-background p-3 text-sm file:mr-3" @change="selectFile($event, 'manifest')" /></label>
         <label class="flex min-w-0 flex-col gap-2">{{ t("Exported image") }}<input :key="`image-${fileSelection}`" type="file" accept="image/png,image/jpeg" :disabled="blocked" class="block w-full min-w-0 rounded-lg border border-border bg-background p-3 text-sm file:mr-3" @change="selectFile($event, 'image')" /></label>
-        <label>{{ t("Product (optional)") }}<select v-model="productId" :disabled="blocked" class="native-select mt-2"><option value="">{{ t("Assign during review") }}</option><option v-for="product in products" :key="product.document.id" :value="product.document.id">{{ product.document.locales.en.name || product.document.id }}</option></select></label>
+        <label>{{ t("Product (optional)") }}<DeskSelect v-model="productId" :disabled="blocked" class="mt-2" :label="t('Product (optional)')" :options="[({ value: '' as const, label: (t('Assign during review')) }), ...(products).map(product => ({ value: product.document.id, label: (product.document.locales.en.name || product.document.id) }))]" /></label>
         <div class="flex items-end"><Button type="submit" :is-disabled="blocked || !manifestFile || !imageFile">{{ t(importing ? 'Importing…' : 'Import Studio image') }}</Button></div>
         <p class="text-xs text-muted-foreground sm:col-span-2">{{ t("Choose both files downloaded by Studio. The image fingerprint must match. Studio's author submission does not approve catalogue publication.") }}</p>
       </form>

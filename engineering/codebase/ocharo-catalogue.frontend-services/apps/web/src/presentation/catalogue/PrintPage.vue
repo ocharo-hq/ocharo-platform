@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CatalogueSelect from '../common/CatalogueSelect.vue';
 import { useRefresh } from '@wow-two-beta/ui-vue/query';
 import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
@@ -117,13 +118,11 @@ onMounted(() => feed.load(locale.value));
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
-        <select v-model="locale" class="field w-36" :aria-label="t('Content language')">
-          <option v-for="code in locales" :key="code" :value="code">{{ languageNames[code] }}</option>
-        </select>
-        <select v-model="collection" class="field w-48" :aria-label="t('Collection')">
-          <option value="">{{ t('All products') }}</option>
-          <option v-for="c in feed.catalogue.value?.collections ?? []" :key="c.id" :value="c.id">{{ c.name }}</option>
-        </select>
+        <CatalogueSelect :model-value="locale" :label="t('Content language')" class="w-36"
+          :options="locales.map(code => ({ value: code, label: languageNames[code] }))"
+          @update:model-value="locale = $event as LocaleCode" />
+        <CatalogueSelect v-model="collection" :label="t('Collection')" class="w-48"
+          :options="[{ value: '', label: t('All products') }, ...(feed.catalogue.value?.collections ?? []).map(item => ({ value: item.id, label: item.name }))]" />
         <div role="tablist" class="flex rounded-lg bg-muted p-1 text-sm">
           <button
             role="tab"

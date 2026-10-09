@@ -1,3 +1,4 @@
+import { chooseDeskValue } from './helpers/DeskSelect';
 import { defineComponent, h, ref, computed } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -44,7 +45,7 @@ describe('saved catalogue admin entry', () => {
     expect(wrapper!.get<HTMLInputElement>('input[aria-label="Design name"]').element.value).toBe(doc.title);
     expect(wrapper!.get('.stage-toolbar').text()).toContain('Garment details');
     expect(window.location.search).toContain('page=detail');
-    await wrapper!.get('select[aria-label="Select page element"]').setValue('heading');
+    await chooseDeskValue(wrapper!, 'Select page element', 'heading');
     expect(wrapper!.get('.inspector-heading').text()).toContain('Page heading');
   });
   it('shows searchable saved designs before creating anything', async () => {

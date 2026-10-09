@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { watch } from 'vue';
 import { notifyError } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
@@ -39,10 +40,7 @@ const designTarget = readDesignTarget(window.location.search);
 const workspace = useWorkspace(props.access, location);
 watch(workspace.error, failure => { if (failure) notifyError(failureMessage(failure), 'workspace-load'); });
 watch(workspace.refreshError, failure => { if (failure) notifyError('Some workspace information could not refresh. Your design remains open.', 'workspace-refresh'); });
-function changeOrganization(event: Event): void {
-  const select = event.target as HTMLSelectElement;
-  const id = select.value;
-  select.value = location.organizationId ?? '';
+function changeOrganization(id: string): void {
   props.access.navigate(id ? `/organizations/${id}` : '/');
 }
 </script>
@@ -70,18 +68,7 @@ function changeOrganization(event: Event): void {
         <div class="my-6 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
           <label class="flex min-w-0 flex-wrap items-center gap-3 text-sm"
             ><span class="text-muted-foreground">{{ t("Organization") }}</span
-            ><select
-              :aria-label="t('Organization')"
-              class="native-select w-auto max-w-full"
-              :value="location.organizationId ?? ''"
-              :disabled="access.busy.value || workspace.loading.value"
-              @change="changeOrganization"
-            >
-              <option value="">{{ t("All organizations") }}</option>
-              <option v-for="org in workspace.organizations.value" :key="org.id" :value="org.id">
-                {{ org.name }}
-              </option></select
-            ><Badge v-if="workspace.organization.value" variant="outline">{{ t(workspace.organization.value.role) }}</Badge></label
+            ><DeskSelect :label="t('Organization')" class="w-auto max-w-full" :model-value="location.organizationId ?? ''" :disabled="access.busy.value || workspace.loading.value" @update:model-value="changeOrganization" :options="[({ value: '' as const, label: (t('All organizations')) }), ...(workspace.organizations.value ?? []).map(org => ({ value: org.id, label: (org.name) }))]" /><Badge v-if="workspace.organization.value" variant="outline">{{ t(workspace.organization.value.role) }}</Badge></label
           >
           <Button size="sm" variant="outline" :is-disabled="access.busy.value || access.dirty.value || workspace.loading.value || workspace.refreshing.value" :is-loading="workspace.refreshing.value" @click="workspace.refresh()">{{ t("Refresh") }}</Button>
           <nav :aria-label="t('Workspace sections')" class="flex flex-wrap gap-1">

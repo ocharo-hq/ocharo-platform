@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { RefreshCw } from 'lucide-vue-next';
@@ -51,17 +52,13 @@ async function saveDetails(input: SupplierInput): Promise<SaveOutcome> {
   if (outcome === 'saved') editing.value = false;
   return outcome;
 }
-async function changeStage(event: Event): Promise<void> {
-  const select = event.target as HTMLSelectElement;
+async function changeStage(stage: string): Promise<void> {
   const current = supplier.value;
-  if (!current || !isSupplierStage(select.value) || select.value === current.stage) return;
-  const stage = select.value;
-  select.value = current.stage;
+  if (!current || stageSaving.value || props.access.busy.value || !isSupplierStage(stage) || stage === current.stage) return;
   stageSaving.value = true;
   try {
     const outcome = saveOutcome(await props.sourcing.updateSupplier(current.id, current.revision, { ...fields(current), stage }));
     stageConflict.value = outcome === 'conflict';
-    if (outcome !== 'saved') select.value = current.stage;
   } finally { stageSaving.value = false; }
 }
 async function reload(): Promise<void> {
@@ -88,9 +85,7 @@ async function reload(): Promise<void> {
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <label v-if="sourcing.canEdit.value && !editing" class="flex items-center gap-2 text-sm text-muted-foreground">{{ t("Stage") }}
-            <select class="sourcing-input w-auto" :value="supplier.stage" :disabled="access.busy.value || stageSaving" @change="changeStage">
-              <option v-for="stage in supplierStages" :key="stage" :value="stage">{{ t(stageLabels[stage]) }}</option>
-            </select>
+            <DeskSelect class="w-auto" :model-value="supplier.stage" :disabled="access.busy.value || stageSaving" @update:model-value="changeStage" :label="t('Stage')" :options="[...(supplierStages).map(stage => ({ value: stage, label: (t(stageLabels[stage])) }))]" />
           </label>
           <Badge v-else variant="brand">{{ t(stageLabels[supplier.stage]) }}</Badge>
           <Button v-if="sourcing.canEdit.value && !editing" size="sm" variant="outline" :is-disabled="access.busy.value" @click="editing = true">{{ t("Edit details") }}</Button>

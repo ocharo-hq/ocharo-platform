@@ -1,3 +1,4 @@
+import { deskSelect, chooseDeskValue } from './helpers/DeskSelect';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type DOMWrapper, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -80,7 +81,6 @@ const feed: EventsLocation = { view: 'feed', eventId: null };
 const card = (title: string) => wrapper!.findAll('article.event-card').find(item => item.text().includes(title))!;
 const buttonIn = (scope: { findAll(selector: string): DOMWrapper<Element>[] }, label: string) => scope.findAll('button').find(item => item.text() === label);
 const detail = () => wrapper!.get('article[aria-labelledby="event-detail-title"]');
-const selectWith = (option: string) => wrapper!.findAll('select').find(select => select.text().includes(option))!;
 const unfiltered = { query: '', scope: '', format: '', status: '', from: '2026-10-08', limit: 200, offset: 0 };
 
 describe('events feed', () => {
@@ -113,7 +113,7 @@ describe('events feed', () => {
     expect(fair.text()).not.toContain('New — review');
     expect(card('Craft Expo').get('[data-test="event-dates"]').text()).toBe('Dates not announced');
 
-    expect(selectWith('All statuses').findAll('option').map(option => option.text()))
+    expect(deskSelect(wrapper!, 'Status').props('options').map((option: { label: string }) => option.label))
       .toEqual(['All statuses (7)', 'Candidate (4)', 'Shortlisted (2)', 'Applying (1)', 'Applied (0)', 'Confirmed (0)', 'Attended (0)', 'Skipped (0)', 'Rejected (0)']);
     // Desk records decisions only: nothing offers to apply, register, send or pay.
     expect(wrapper!.findAll('button').some(item => /apply|register|send|pay/i.test(item.text()))).toBe(false);
@@ -131,8 +131,8 @@ describe('events feed', () => {
     expect(chips.map(chip => chip.text())).toEqual(['All', 'Local', 'Regional', 'International']);
     await chips[3]!.trigger('click');
     expect(chips[3]!.attributes('aria-pressed')).toBe('true');
-    await selectWith('All formats').setValue('trade-fair');
-    await selectWith('All statuses').setValue('candidate');
+    await chooseDeskValue(wrapper!, 'Format', 'trade-fair');
+    await chooseDeskValue(wrapper!, 'Status', 'candidate');
     await flushPromises();
     expect(api.listEvents).toHaveBeenLastCalledWith(ORG,
       { ...unfiltered, query: 'silk', scope: 'international', format: 'trade-fair', status: 'candidate' }, expect.any(AbortSignal));
@@ -210,7 +210,7 @@ describe('event detail', () => {
     render('viewer', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     expect(detail().text()).toContain('Candidate');
-    expect(detail().findAll('select')).toHaveLength(0);
+    expect(detail().findAll('[role=combobox]')).toHaveLength(0);
     for (const label of ['Edit details', 'Delete event', 'Add event', 'Shortlist', 'Skip']) expect(buttonIn(wrapper!, label)).toBeUndefined();
     await buttonIn(wrapper!, '← All events')!.trigger('click');
     await flushPromises();
@@ -222,15 +222,32 @@ describe('event detail', () => {
     render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     api.updateEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'applying', revision: 4 }));
-    const [status, priority] = detail().findAll('select');
-    await status!.setValue('applying');
+    await chooseDeskValue(wrapper!.findComponent({ name: 'EventDetail' }), 'Status', 'applying');
     await flushPromises();
     expect(api.updateEvent).toHaveBeenLastCalledWith(ORG, FASHION_WEEK, 3, { ...eventInput(fashionWeek()), status: 'applying' }, expect.any(AbortSignal));
     api.getEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'applying', revision: 4 }));
-    await priority!.setValue('low');
+    await chooseDeskValue(wrapper!.findComponent({ name: 'EventDetail' }), 'Priority', 'low');
     await flushPromises();
     expect(api.updateEvent).toHaveBeenCalledTimes(2);
     expect(api.updateEvent.mock.calls[1]![3]).toMatchObject({ priority: 'low' });
+  });
+
+  it('retains the committed status throughout a pending and rejected update', async () => {
+    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    const eventDetail = wrapper!.findComponent({ name: 'EventDetail' });
+    const picker = deskSelect(eventDetail, 'Status');
+    let finish!: (value: unknown) => void;
+    api.updateEvent.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    await chooseDeskValue(eventDetail, 'Status', 'applying');
+    expect(api.updateEvent).toHaveBeenCalledTimes(1);
+    expect(picker.props('modelValue')).toBe('candidate');
+    expect(picker.props('disabled')).toBe(true);
+    finish(ResultExtensions.fail(ApiFailureFactory.create('http', { status: 409, headers: new Headers() })));
+    await flushPromises();
+    expect(picker.props('modelValue')).toBe('candidate');
+    expect(picker.props('disabled')).toBe(false);
+    expect(eventDetail.text()).toContain('This record changed. Reload the latest version before trying again.');
   });
 
   it('keeps the edited values and offers a reload after a revision conflict', async () => {
@@ -286,7 +303,7 @@ describe('event collection outcomes', () => {
     await flushPromises();
     expect(wrapper!.findAll('.events-list .event-card')).toHaveLength(3);
     expect(wrapper!.findAll('.events-deadlines .events-deadline')).toHaveLength(3);
-    expect(wrapper!.findAll('[role="status"]').every(item => item.classes().includes('sr-only'))).toBe(true);
+    expect(wrapper!.findAll('[aria-busy="true"] [role="status"]').every(item => item.classes().includes('sr-only'))).toBe(true);
     expect(buttonIn(wrapper!, 'Refresh events')).toBeDefined();
     expect(wrapper!.find('input[type="search"]').exists()).toBe(true);
     expect(wrapper!.text()).not.toContain('No upcoming events.');

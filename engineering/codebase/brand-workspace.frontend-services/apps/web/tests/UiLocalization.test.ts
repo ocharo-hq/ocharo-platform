@@ -1,3 +1,4 @@
+import { chooseDeskValue, deskSelect } from './helpers/DeskSelect';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,23 +37,23 @@ describe('operator and catalogue language boundaries', () => {
     const editor = mount(ProductEditor, { props: { product, canApprove: true, imageUrl: hash => hash } });
     const picker = mount(UiLanguagePicker);
     mounted.push(editor, picker);
-    await editor.get('select[aria-label="Product content language"]').setValue('fr');
+    await chooseDeskValue(editor, 'Product content language', 'fr');
     const original = JSON.stringify(product);
 
-    await picker.get('select').setValue('uz');
+    await chooseDeskValue(picker, translateUi('Interface language', locale.uiLocale.value), 'uz');
     expect(editor.text()).toContain(translateUi('Product translations', 'uz'));
-    expect(editor.get(`select[aria-label="${translateUi('Product content language', 'uz')}"]`).element).toHaveProperty('value', 'fr');
+    expect(deskSelect(editor, translateUi('Product content language', 'uz')).props('modelValue')).toBe('fr');
     expect(editor.findAll('input').map(field => (field.element as HTMLInputElement).value)).toContain('Gilet');
     expect(document.documentElement.lang).toBe('uz');
     expect(localStorage.getItem('ocharo.operator.locale')).toBe('uz');
     expect(JSON.stringify(product)).toBe(original);
 
-    await picker.get('select').setValue('ru');
+    await chooseDeskValue(picker, translateUi('Interface language', locale.uiLocale.value), 'ru');
     expect(editor.text()).toContain('Переводы товара');
     expect(productCopy(product, 'fr').fabric).toBe('Soie');
     expect(product.document.pricing?.tiers[0]?.unitPrice).toBe(350000);
     expect(JSON.stringify(product)).toBe(original);
-    await picker.get('select').setValue('en');
+    await chooseDeskValue(picker, translateUi('Interface language', locale.uiLocale.value), 'en');
     expect(editor.text()).toContain('Product translations');
   });
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { requestConfirmation, notifyError } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { catalogueMetadata, eligibleCataloguePdf } from '@/domain/workspace/CatalogueDocuments';
@@ -82,7 +83,7 @@ async function publish(): Promise<void> {
 <template>
   <section class="catalogue-publication" :aria-label="t('Buyer catalogue edition')">
     <div><p class="eyebrow">{{ t("Buyer catalogue") }}</p><h2>{{ t("Publish this exact edition.") }}</h2><p>{{ t("Prepare the enabled Web and PDF outputs from this saved revision.") }}</p></div>
-    <label class="field-label">{{ t("Publication brand") }}<select v-model="brandId" :aria-label="t('Publication brand')" :disabled="busy || loading"><option value="">{{ t("Choose brand") }}</option><option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">{{ brand.name }}</option></select></label>
+    <label class="field-label">{{ t("Publication brand") }}<DeskSelect v-model="brandId" :label="t('Publication brand')" :disabled="busy || loading" :options="[({ value: '' as const, label: (t('Choose brand')) }), ...(workspace.brands.value ?? []).map(brand => ({ value: brand.id, label: (brand.name) }))]" /></label>
     <p v-if="!document || dirty" class="edition-notice">{{ t("Save this design before preparing its buyer edition.") }}</p>
     <p v-else-if="error&&!current" class="edition-notice">{{ t('Edition status is unavailable. Retry before preparing or publishing.') }}</p>
     <ContentSkeleton v-else-if="loading" :cards="1" :label="t('Loading edition status')"/><p v-else-if="!current" class="edition-notice">{{ t("Save the brand’s products in Products & releases before attaching an edition.") }}</p>

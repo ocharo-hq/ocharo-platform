@@ -1,3 +1,4 @@
+import { deskSelect, chooseDeskValue } from './helpers/DeskSelect';
 import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -53,7 +54,7 @@ describe("independent catalogue and operator languages", () => {
     const { wrapper, snapshot } = await mountPanel();
     const before = JSON.stringify(snapshot);
     expect(wrapper.text()).toContain("Katalog tili");
-    expect(wrapper.get("select").element.value).toBe("en");
+    expect(deskSelect(wrapper, controls.t('Catalogue language')).props('modelValue')).toBe("en");
     controls.setUiLocale("ru");
     await flushPromises();
     expect(wrapper.text()).toContain("Язык каталога");
@@ -64,7 +65,7 @@ describe("independent catalogue and operator languages", () => {
   it("changes only the catalogue locale and flags untranslated shared text", async () => {
     controls.setUiLocale("uz");
     const { wrapper, snapshot } = await mountPanel();
-    await wrapper.get("select").setValue("fr");
+    await chooseDeskValue(wrapper, controls.t('Catalogue language'), 'fr');
     const change = wrapper.emitted("change")![0]![0] as typeof snapshot;
     expect(change.locale).toBe("fr");
     expect(controls.uiLocale.value).toBe("uz");
@@ -79,7 +80,7 @@ describe("independent catalogue and operator languages", () => {
   });
   it("emits one replacement for a global photo-group switch and translates dynamic notices", async () => {
     const { wrapper } = await mountPanel();
-    await wrapper.findAll("select")[1]!.setValue("model");
+    await chooseDeskValue(wrapper, controls.t('Photo group for all products'), 'model');
     expect(wrapper.emitted("change")).toHaveLength(1);
     expect(
       (

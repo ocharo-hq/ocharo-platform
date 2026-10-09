@@ -1,4 +1,5 @@
 import { ESLint } from 'eslint';
+import { parse } from '@vue/compiler-sfc';
 import { describe, expect, it } from 'vitest';
 
 describe('frontend dependency rules', () => {
@@ -27,5 +28,18 @@ describe('frontend dependency rules', () => {
       { filePath: 'src/application/system/Forbidden.ts' },
     );
     expect(result?.messages.some((message) => message.ruleId === 'architecture/boundaries')).toBe(true);
+  });
+});
+
+/** Native select popups bypass SDK themes and cannot inherit their floating surface styles. */
+describe('Desk presentation controls', () => {
+  it('routes dropdown choices through SDK controls instead of native select elements', () => {
+    const sources = import.meta.glob<string>('../src/presentation/**/*.vue', { eager: true, query: '?raw', import: 'default' });
+    const violations = Object.entries(sources).flatMap(([filename, source]) => {
+      const template = parse(source, { filename }).descriptor.template?.content ?? '';
+      const markup = template.replace(/<!--[\s\S]*?-->/g, '');
+      return /<select(?=[\s/>])/i.test(markup) ? [filename] : [];
+    });
+    expect(violations).toEqual([]);
   });
 });

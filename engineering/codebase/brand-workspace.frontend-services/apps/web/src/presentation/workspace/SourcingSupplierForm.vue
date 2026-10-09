@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 
@@ -66,9 +67,7 @@ async function submit(): Promise<void> {
         <input v-model="draft.name" class="sourcing-input" required :maxlength="sourcingLimits.name" autocomplete="off" />
       </label>
       <label class="sourcing-field">{{ t("Stage") }}
-        <select v-model="draft.stage" class="sourcing-input">
-          <option v-for="stage in supplierStages" :key="stage" :value="stage">{{ t(stageLabels[stage]) }}</option>
-        </select>
+        <DeskSelect v-model="draft.stage" :label="t('Stage')" :disabled="disabled || saving" :options="[...(supplierStages).map(stage => ({ value: stage, label: (t(stageLabels[stage])) }))]" />
       </label>
       <label class="sourcing-field">{{ t("Country code") }}
         <input v-model="draft.country" class="sourcing-input uppercase placeholder:normal-case" maxlength="2" autocomplete="off" :placeholder="t('e.g. IN')" />

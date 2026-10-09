@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
@@ -27,10 +28,10 @@ function submit(): void { if (props.save(draft.value)) emit('close'); }
         <ModalTitle class="text-xl font-semibold">{{ t('Sourcing view settings') }}</ModalTitle>
         <p class="text-sm text-muted-foreground">{{ t('Saved for your account in this browser. Other people’s views and supplier records stay unchanged.') }}</p>
         <label class="sourcing-field">{{ t('Default starting view') }}
-          <select v-model="draft.start" class="sourcing-input"><option value="suppliers">{{ t('Suppliers') }}</option><option value="materials">{{ t('Materials') }}</option></select>
+          <DeskSelect v-model="draft.start" :label="t('Default starting view')" :options="[({ value: 'suppliers' as const, label: (t('Suppliers')) }), ({ value: 'materials' as const, label: (t('Materials')) })]" />
         </label>
         <label class="sourcing-field">{{ t('Supplier section order') }}
-          <select v-model="draft.order" class="sourcing-input"><option value="materials-first">{{ t('Materials first') }}</option><option value="contacts-first">{{ t('Contacts first') }}</option></select>
+          <DeskSelect v-model="draft.order" :label="t('Supplier section order')" :options="[({ value: 'materials-first' as const, label: (t('Materials first')) }), ({ value: 'contacts-first' as const, label: (t('Contacts first')) })]" />
         </label>
         <fieldset class="space-y-3">
           <legend class="mb-2 text-sm font-medium">{{ t('Show on supplier pages') }}</legend>

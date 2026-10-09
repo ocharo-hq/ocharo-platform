@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { notifyError, useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
@@ -169,18 +170,7 @@ async function prepareExport(): Promise<void> {
       <div class="grid gap-5 sm:grid-cols-2">
         <form.Field v-slot="f" name="brandId" is-required
           ><Field :label="t('Brand')"
-            ><select
-              v-model="f.value"
-              class="native-select"
-              required
-              :disabled="access.busy.value || !workspace.canEdit.value"
-              @blur="f.onBlur"
-            >
-              <option value="" disabled>{{ t("Choose a brand") }}</option>
-              <option v-for="brand in workspace.brands.value" :key="brand.id" :value="brand.id">
-                {{ brand.name }}
-              </option>
-            </select></Field
+            ><DeskSelect v-model="f.value" required :disabled="access.busy.value || !workspace.canEdit.value" @blur="f.onBlur" :label="t('Brand')" :options="[({ value: '' as const, label: (t('Choose a brand')), disabled: true }), ...(workspace.brands.value ?? []).map(brand => ({ value: brand.id, label: (brand.name) }))]" /></Field
           ></form.Field
         >
         <form.Field v-slot="f" name="language" is-required

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 
@@ -69,24 +70,16 @@ async function submit(): Promise<void> {
         <input v-model="draft.organizer" class="events-input" :maxlength="eventLimits.organizer" autocomplete="off" />
       </label>
       <label class="events-field">{{ t("Scope") }}
-        <select v-model="draft.scope" class="events-input">
-          <option v-for="item in eventScopes" :key="item" :value="item">{{ t(scopeLabels[item]) }}</option>
-        </select>
+        <DeskSelect v-model="draft.scope" :label="t('Scope')" :disabled="disabled || saving" :options="[...(eventScopes).map(item => ({ value: item, label: (t(scopeLabels[item])) }))]" />
       </label>
       <label class="events-field">{{ t("Format") }}
-        <select v-model="draft.format" class="events-input">
-          <option v-for="item in eventFormats" :key="item" :value="item">{{ t(formatLabels[item]) }}</option>
-        </select>
+        <DeskSelect v-model="draft.format" :label="t('Format')" :disabled="disabled || saving" :options="[...(eventFormats).map(item => ({ value: item, label: (t(formatLabels[item])) }))]" />
       </label>
       <label class="events-field">{{ t("Status") }}
-        <select v-model="draft.status" class="events-input">
-          <option v-for="item in eventStatuses" :key="item" :value="item">{{ t(statusLabels[item]) }}</option>
-        </select>
+        <DeskSelect v-model="draft.status" :label="t('Status')" :disabled="disabled || saving" :options="[...(eventStatuses).map(item => ({ value: item, label: (t(statusLabels[item])) }))]" />
       </label>
       <label class="events-field">{{ t("Priority") }}
-        <select v-model="draft.priority" class="events-input">
-          <option v-for="item in eventPriorities" :key="item" :value="item">{{ t(priorityLabels[item]) }}</option>
-        </select>
+        <DeskSelect v-model="draft.priority" :label="t('Priority')" :disabled="disabled || saving" :options="[...(eventPriorities).map(item => ({ value: item, label: (t(priorityLabels[item])) }))]" />
       </label>
       <label class="events-field">{{ t("Country code") }}
         <input v-model="draft.country" class="events-input uppercase placeholder:normal-case" maxlength="2" autocomplete="off" :placeholder="t('e.g. UZ')" />
@@ -98,9 +91,7 @@ async function submit(): Promise<void> {
         <input v-model="draft.venue" class="events-input" :maxlength="eventLimits.venue" autocomplete="off" />
       </label>
       <label class="events-field sm:col-span-2">{{ t("Date precision") }}
-        <select v-model="draft.datePrecision" class="events-input">
-          <option v-for="item in datePrecisions" :key="item" :value="item">{{ t(precisionLabels[item]) }}</option>
-        </select>
+        <DeskSelect v-model="draft.datePrecision" :label="t('Date precision')" :disabled="disabled || saving" :options="[...(datePrecisions).map(item => ({ value: item, label: (t(precisionLabels[item])) }))]" />
       </label>
       <template v-if="draft.datePrecision === 'day'">
         <label class="events-field">{{ t("Start date") }}

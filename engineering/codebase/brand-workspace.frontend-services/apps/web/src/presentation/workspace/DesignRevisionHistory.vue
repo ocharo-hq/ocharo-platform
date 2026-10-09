@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { useErrorToast } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
@@ -131,9 +132,7 @@ function date(value: string): string { return new Date(value).toLocaleString(); 
             <p>{{ t("Revision") }} {{ preview.revision }} · {{ preview.snapshot.locale.toUpperCase() }} · {{ preview.snapshot.pages.length }} {{ t("pages") }}</p>
             <p v-if="metadata">{{ t("Saved") }} <time :datetime="metadata.savedAtUtc">{{ date(metadata.savedAtUtc) }}</time> {{ t("by") }} {{ metadata.savedBy }}</p>
             <label :for="pageId" class="field-label">{{ t("Preview page") }}</label>
-            <select :id="pageId" v-model="pageIndex" :aria-label="t('Historical preview page')">
-              <option v-for="(item, index) in preview.snapshot.pages" :key="item.id" :value="index">{{ index + 1 }}. {{ item.title }}</option>
-            </select>
+            <DeskSelect :id="pageId" v-model="pageIndex" :label="t('Historical preview page')" :options="[...(preview.snapshot.pages).map((item, index) => ({ value: index, label: (index + 1) + '. ' + (item.title) }))]" />
             <div v-if="page" class="history-page" :lang="preview.snapshot.locale"><DesignPrintPreview :key="`${preview.revision}-${page.id}`" :page="page" /></div>
             <button type="button" class="restore-button" :disabled="locked || !canEdit || loading || previewLoading" @click="restore">{{ t("Restore as new unsaved copy") }}</button>
             <p v-if="!canEdit" class="history-hint">{{ t("An editor or owner can restore a copy.") }}</p>
@@ -151,6 +150,6 @@ function date(value: string): string { return new Date(value).toLocaleString(); 
 .history-toggle:disabled { cursor: default; opacity: .6; }.history-content { padding: 0 20px 20px; }.history-hint { font-size: 13px; line-height: 1.6; color: #68675e; }.revision-history>.history-hint { padding: 0 20px 12px; margin: 0; }
 .history-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 12px 0; font-size: 13px; }.history-layout { display: grid; grid-template-columns: minmax(200px, 280px) minmax(0, 1fr); gap: 24px; align-items: start; }
 .history-list { min-width: 0; }.history-list ol { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 8px; max-height: 540px; overflow: auto; }.revision-choice { width: 100%; display: grid; gap: 5px; padding: 12px; border: 1px solid #e3ddd2; border-radius: 8px; background: #fff; text-align: left; color: #34372b; cursor: pointer; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }.revision-choice[aria-pressed="true"] { border-color: #756b50; background: #f5f1e6; }.revision-choice time { color: #68675e; }
-.history-preview { min-width: 0; }.history-preview h3 { font: 23px/1.3 Georgia,serif; overflow-wrap: anywhere; margin: 0 0 8px; }.history-preview p { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }.history-preview select { width: 100%; max-width: 430px; }.history-page { width: min(100%, 430px); margin: 16px 0; }.restore-button { padding: 12px 16px; border: 1px solid #514a37; border-radius: 7px; background: #514a37; color: #fff; font: 600 13px/1.4 Arial,sans-serif; cursor: pointer; }.restore-button:disabled { opacity: .55; cursor: default; }
+.history-preview { min-width: 0; }.history-preview h3 { font: 23px/1.3 Georgia,serif; overflow-wrap: anywhere; margin: 0 0 8px; }.history-preview p { font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }.history-preview :deep(.desk-select-trigger) { width: 100%; max-width: 430px; }.history-page { width: min(100%, 430px); margin: 16px 0; }.restore-button { padding: 12px 16px; border: 1px solid #514a37; border-radius: 7px; background: #514a37; color: #fff; font: 600 13px/1.4 Arial,sans-serif; cursor: pointer; }.restore-button:disabled { opacity: .55; cursor: default; }
 @media (max-width: 700px) { .history-layout { grid-template-columns: minmax(0,1fr); }.history-list ol { max-height: 240px; }.history-content { padding: 0 14px 16px; }.restore-button { width: 100%; } }
 </style>

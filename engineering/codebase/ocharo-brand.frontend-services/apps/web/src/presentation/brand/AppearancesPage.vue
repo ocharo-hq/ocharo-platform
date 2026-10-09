@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { SelectPicker, SelectPickerTrigger, SelectPickerContent, SelectPickerItem } from '@wow-two-beta/ui-vue/presentation/forms';
 import { CalendarPlus, Upload, X } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { useBrand } from '../../application/brand';
@@ -124,17 +125,26 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
       <div class="mt-2 grid gap-3 md:grid-cols-3">
         <div v-for="slot in slots" :key="slot">
           <label class="label" :for="`o-${slot}`">{{ slotLabels[slot]!.label }}</label>
-          <select :id="`o-${slot}`" v-model="form.overrides[slot]" class="field">
-            <option value="">— asosiy nashrdagisi</option>
-            <option v-for="v in brand.versionsFor(slot)" :key="v.id" :value="v.id">{{ v.fileName }}</option>
-          </select>
+          <SelectPicker :model-value="form.overrides[slot] ?? ''"
+            :options="[{ itemKey: '', value: '', label: '— asosiy nashrdagisi' }, ...brand.versionsFor(slot).map(version => ({ itemKey: version.id, value: version.id, label: version.fileName }))]"
+            @update:model-value="form.overrides[slot] = $event ?? ''">
+            <SelectPickerTrigger v-bind="{ id: `o-${slot}`, 'aria-label': slotLabels[slot]!.label }" class="field" />
+            <SelectPickerContent variant="glass-outline" class="z-[100] max-h-80 overflow-auto">
+              <SelectPickerItem item-key="" label="— asosiy nashrdagisi" />
+              <SelectPickerItem v-for="version in brand.versionsFor(slot)" :key="version.id" :item-key="version.id" :label="version.fileName" />
+            </SelectPickerContent>
+          </SelectPicker>
         </div>
       </div>
       <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
         <span class="text-muted-foreground">Tadbir uchun fayl yuklash:</span>
-        <select v-model="uploadSlot" class="field w-44" aria-label="O‘rin">
-          <option v-for="slot in slots" :key="slot" :value="slot">{{ slotLabels[slot]!.label }}</option>
-        </select>
+        <SelectPicker :model-value="uploadSlot" :options="slots.map(slot => ({ itemKey: slot, value: slot, label: slotLabels[slot]!.label }))"
+          @update:model-value="uploadSlot = $event ?? 'on-light'">
+          <SelectPickerTrigger class="field w-44" v-bind="{ 'aria-label': 'O‘rin' }" />
+          <SelectPickerContent variant="glass-outline" class="z-[100] max-h-80 overflow-auto">
+            <SelectPickerItem v-for="slot in slots" :key="slot" :item-key="slot" :label="slotLabels[slot]!.label" />
+          </SelectPickerContent>
+        </SelectPicker>
         <button class="btn-outline" @click="fileInput?.click()"><Icon :icon="Upload" :size="14" />Fayl</button>
         <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" @change="onFile" />
       </div>

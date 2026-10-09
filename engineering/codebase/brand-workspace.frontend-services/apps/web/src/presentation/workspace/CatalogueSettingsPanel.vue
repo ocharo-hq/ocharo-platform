@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { useErrorToast } from "@/application/shared/UseFeedback";
 import ContentSkeleton from "@/presentation/shared/ContentSkeleton.vue";
 import { Button } from "@wow-two-beta/ui-vue/presentation/actions";
@@ -239,18 +240,16 @@ function priceField(
   ).checked;
   apply(next);
 }
-function language(event: Event): void {
-  const locale = (event.target as HTMLSelectElement).value as CatalogueLocale;
+function language(locale: CatalogueLocale): void {
   const local = localizeUnboundTemplate(props.snapshot, locale),
     result = refreshCatalogue(local.snapshot, drafts.value, locale);
   warnings.value = [...local.warnings, ...result.warnings];
   emit("change", result.snapshot);
 }
-function group(event: Event): void {
+function group(value: CatalogueSettings["mediaGroup"]): void {
   const next = cloneSnapshot(props.snapshot);
   next.catalogueSettings = catalogueSettings(next);
-  next.catalogueSettings.mediaGroup = (event.target as HTMLSelectElement)
-    .value as CatalogueSettings["mediaGroup"];
+  next.catalogueSettings.mediaGroup = value;
   const result = randomizeCatalogue(
     next,
     drafts.value,
@@ -337,13 +336,12 @@ function unbind(): void {
       ),
     );
 }
-function linkPhoto(event: Event): void {
+function linkPhoto(productId: string): void {
   if (!selected.value || selected.value.type !== "image" || !page.value) return;
   const next = cloneSnapshot(props.snapshot),
     target = next.pages
       .find((item) => item.id === page.value!.id)!
       .elements.find((item) => item.id === selected.value!.id)!;
-  const productId = (event.target as HTMLSelectElement).value;
   if (productId) target.productId = productId;
   else delete target.productId;
   next.catalogueSettings = catalogueSettings(next);
@@ -357,10 +355,9 @@ function mediaOptions(productId?: string) {
   );
   return product ? catalogueMedia(product, settings.value.mediaGroup) : [];
 }
-function photo(elementId: string, event: Event): void {
+function photo(elementId: string, hash: string): void {
   if (!page.value) return;
-  const frame = page.value.elements.find((item) => item.id === elementId),
-    hash = (event.target as HTMLSelectElement).value;
+  const frame = page.value.elements.find((item) => item.id === elementId);
   const image = mediaOptions(frame?.productId).find(
     (item) => item.sha256 === hash,
   );
@@ -397,27 +394,11 @@ function photo(elementId: string, event: Event): void {
       <div class="settings-toolbar">
         <label
           >{{ t("Catalogue language")
-          }}<select :value="snapshot.locale" @change="language">
-            <option
-              v-for="locale in catalogueLocales"
-              :key="locale.code"
-              :value="locale.code"
-            >
-              {{ locale.name }}
-            </option>
-          </select></label
+          }}<DeskSelect :model-value="snapshot.locale" @update:model-value="language" :label="t('Catalogue language')" :disabled="disabled || loading" :options="[...(catalogueLocales).map(locale => ({ value: locale.code, label: (locale.name) }))]" /></label
         >
         <label
           >{{ t("Photo group for all products")
-          }}<select :value="settings.mediaGroup" @change="group">
-            <option
-              v-for="group in catalogueMediaGroups"
-              :key="group"
-              :value="group"
-            >
-              {{ t(group) }}
-            </option>
-          </select></label
+          }}<DeskSelect :model-value="settings.mediaGroup" @update:model-value="group" :label="t('Photo group for all products')" :disabled="disabled || loading" :options="[...(catalogueMediaGroups).map(group => ({ value: group, label: (t(group)) }))]" /></label
         >
         <button type="button" @click="randomize()">
           {{ t("Randomize whole catalogue") }}
@@ -476,20 +457,7 @@ function photo(elementId: string, event: Event): void {
         <div class="photo-choices">
           <label v-for="frame in photos" :key="frame.id"
             >{{ frame.label
-            }}<select
-              :value="frame.src?.split('/').at(-1)"
-              :disabled="!frame.productId"
-              @change="photo(frame.id, $event)"
-            >
-              <option value="">{{ t("Choose product image") }}</option>
-              <option
-                v-for="image in mediaOptions(frame.productId)"
-                :key="image.sha256"
-                :value="image.sha256"
-              >
-                {{ image.alt || image.fileName }}
-              </option></select
-            ><span v-if="!frame.productId">{{
+            }}<DeskSelect :model-value="frame.src?.split('/').at(-1) ?? null" @update:model-value="photo(frame.id, $event)" :label="frame.label" :disabled="(!frame.productId) || disabled || loading" :options="[({ value: '' as const, label: (t('Choose product image')) }), ...(mediaOptions(frame.productId)).map(image => ({ value: image.sha256, label: (image.alt || image.fileName) }))]" /><span v-if="!frame.productId">{{
               t("Select this frame to connect its product.")
             }}</span></label
           >
@@ -503,16 +471,7 @@ function photo(elementId: string, event: Event): void {
         <summary>{{ t("Connect the existing layout to products") }}</summary>
         <label
           >{{ t("Product brand")
-          }}<select v-model="brandId">
-            <option value="">{{ t("Choose brand") }}</option>
-            <option
-              v-for="brand in workspace.brands.value"
-              :key="brand.id"
-              :value="brand.id"
-            >
-              {{ brand.name }}
-            </option>
-          </select></label
+          }}<DeskSelect v-model="brandId" :label="t('Product brand')" :disabled="disabled || loading" :options="[({ value: '' as const, label: (t('Choose brand')) }), ...(workspace.brands.value ?? []).map(brand => ({ value: brand.id, label: (brand.name) }))]" /></label
         >
         <button type="button" :disabled="!brandId" @click="connect">
           {{ t("Connect products in a new copy") }}
@@ -537,42 +496,13 @@ function photo(elementId: string, event: Event): void {
           <div class="binding-fields">
             <label
               >{{ t("Text source")
-              }}<select
-                v-model="bindingKind"
-                @change="
-                  bindingField = bindingKind === 'shared' ? 'header' : 'name'
-                "
-              >
-                <option value="product">{{ t("Product") }}</option>
-                <option value="shared">{{ t("Shared catalogue text") }}</option>
-              </select></label
+              }}<DeskSelect v-model="bindingKind" @update:model-value="bindingField = $event === 'shared' ? 'header' : 'name'" :label="t('Text source')" :disabled="disabled || loading" :options="[({ value: 'product' as const, label: (t('Product')) }), ({ value: 'shared' as const, label: (t('Shared catalogue text')) })]" /></label
             ><label
               >{{ t("Field")
-              }}<select v-model="bindingField">
-                <option
-                  v-for="field in bindingKind === 'shared'
-                    ? catalogueCopyFields
-                    : productFields"
-                  :key="field"
-                  :value="field"
-                >
-                  {{ t(field) }}
-                </option>
-              </select></label
+              }}<DeskSelect v-model="bindingField" :label="t('Field')" :disabled="disabled || loading" :options="[...(bindingKind === 'shared' ? catalogueCopyFields : productFields).map(field => ({ value: field, label: (t(field)) }))]" /></label
             ><label v-if="bindingKind === 'product'"
               >{{ t("Product")
-              }}<select v-model="bindingProduct">
-                <option value="">{{ t("Choose product") }}</option>
-                <option
-                  v-for="product in source?.snapshot.products.filter(
-                    (item) => item.document.status !== 'archived',
-                  )"
-                  :key="product.document.id"
-                  :value="product.document.id"
-                >
-                  {{ product.document.id }}
-                </option>
-              </select></label
+              }}<DeskSelect v-model="bindingProduct" :label="t('Product')" :disabled="disabled || loading" :options="[({ value: '' as const, label: (t('Choose product')) }), ...(source?.snapshot.products.filter( (item) => item.document.status !== 'archived', ) ?? []).map(product => ({ value: product.document.id, label: (product.document.id) }))]" /></label
             ><label
               v-if="
                 bindingKind === 'product' &&
@@ -611,18 +541,7 @@ function photo(elementId: string, event: Event): void {
         <label
           v-else-if="selected?.type === 'image' && selected.role === 'photo'"
           >{{ t("Product for selected photo")
-          }}<select :value="selected.productId ?? ''" @change="linkPhoto">
-            <option value="">{{ t("Unconnected photo") }}</option>
-            <option
-              v-for="product in source?.snapshot.products.filter(
-                (item) => item.document.status !== 'archived',
-              )"
-              :key="product.document.id"
-              :value="product.document.id"
-            >
-              {{ product.document.id }}
-            </option>
-          </select></label
+          }}<DeskSelect :model-value="selected.productId ?? ''" @update:model-value="linkPhoto" :label="t('Product for selected photo')" :disabled="disabled || loading" :options="[({ value: '' as const, label: (t('Unconnected photo')) }), ...(source?.snapshot.products.filter( (item) => item.document.status !== 'archived', ) ?? []).map(product => ({ value: product.document.id, label: (product.document.id) }))]" /></label
         >
         <p v-else>
           {{
@@ -689,7 +608,6 @@ label {
   gap: 5px;
 }
 input,
-select,
 textarea {
   border: 1px solid var(--color-border, #d8d0c2);
   padding: 7px;

@@ -1,3 +1,4 @@
+import { chooseDeskValue } from './helpers/DeskSelect';
 import { feedbackBus } from '@/application/shared/UseFeedback';
 import { ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
@@ -46,7 +47,7 @@ describe('saved revision review and separate unsaved restoration', () => {
     expect(wrapper.text()).toContain('Revision 3 · loaded'); await inspect(2);
     expect(getRevision).toHaveBeenCalledWith('org', source.id, 2, expect.any(AbortSignal));
     expect(wrapper.text()).toContain('Revision 2 · EN · 16 pages'); expect(wrapper.text()).toContain('Maftuna');
-    await wrapper.get('select').setValue(1); expect(wrapper.get('[data-preview]').text()).toBe(source.snapshot.pages[1]!.title);
+    await chooseDeskValue(wrapper, 'Historical preview page', 1); expect(wrapper.get('[data-preview]').text()).toBe(source.snapshot.pages[1]!.title);
     expect(source.revision).toBe(3); expect(wrapper.emitted('restore')).toBeUndefined();
   });
   it('emits a cloned unsaved copy only after an explicit restore click', async () => {

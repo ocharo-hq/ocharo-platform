@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { useUiLocale } from '@/application/shared/UseUiLocale';
+import DeskSelect from './DeskSelect.vue';
 
 /** Changes the operator interface independently of the document being edited. */
 defineOptions({ name: 'UiLanguagePicker' });
 const { uiLocale, setUiLocale, t } = useUiLocale();
+const languages = [
+  { value: 'uz', label: 'O‘zbekcha' },
+  { value: 'ru', label: 'Русский' },
+  { value: 'en', label: 'English' },
+] as const;
 </script>
 
 <template>
-  <label class="inline-flex items-center gap-2 text-xs">
+  <div class="inline-flex items-center gap-2 text-xs">
     <span>{{ t('Interface language') }}</span>
-    <select :aria-label="t('Interface language')" :value="uiLocale" class="native-select w-auto" @change="setUiLocale(($event.target as HTMLSelectElement).value)">
-      <option value="uz" lang="uz">O‘zbekcha</option>
-      <option value="ru" lang="ru">Русский</option>
-      <option value="en" lang="en">English</option>
-    </select>
-  </label>
+    <div class="w-36">
+      <DeskSelect :label="t('Interface language')" :model-value="uiLocale" :options="languages"
+        @update:model-value="setUiLocale" />
+    </div>
+  </div>
 </template>

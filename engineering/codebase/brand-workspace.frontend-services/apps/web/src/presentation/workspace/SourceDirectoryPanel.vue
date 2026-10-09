@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref } from 'vue';
 import { ExternalLink } from 'lucide-vue-next';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
@@ -23,11 +24,7 @@ const sources = computed(() => sourceDirectory.filter(source =>
         </p>
       </div>
       <label class="text-sm">{{ t('Source category') }}
-        <select v-model="area" class="native-select mt-2">
-          <option value="all">{{ t('All sources') }}</option>
-          <option value="events">{{ t('Events') }}</option>
-          <option value="sourcing">{{ t('Sourcing') }}</option>
-        </select>
+        <DeskSelect v-model="area" class="mt-2" :label="t('Source category')" :options="[({ value: 'all' as const, label: (t('All sources')) }), ({ value: 'events' as const, label: (t('Events')) }), ({ value: 'sourcing' as const, label: (t('Sourcing')) })]" />
       </label>
     </div>
     <p class="text-sm text-muted-foreground">{{ t('Reviewed links · 9 October 2026 · No automatic synchronization') }}</p>

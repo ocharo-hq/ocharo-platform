@@ -12,6 +12,9 @@ export type UiMessageTable = Record<string, { uz: string; ru: string }>;
 
 /** English source phrases identify operator messages; authored content never passes through this table. */
 const baseUiMessages: UiMessageTable = {
+  'Loading…': { uz: 'Yuklanmoqda…', ru: 'Загрузка…' },
+  'Search…': { uz: 'Qidirish…', ru: 'Поиск…' },
+  'No results': { uz: 'Natija yo‘q', ru: 'Нет результатов' },
   'Refresh': {uz:'Yangilash',ru:'Обновить'},
   'Content unavailable. Try refreshing.': {uz:'Ma’lumotlar mavjud emas. Yangilab ko‘ring.',ru:'Данные недоступны. Попробуйте обновить.'},
   'Saved products unavailable': {uz:'Saqlangan mahsulotlar mavjud emas',ru:'Сохранённые товары недоступны'},

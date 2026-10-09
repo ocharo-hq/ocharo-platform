@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { Inbox, Plus, RefreshCw } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
@@ -80,10 +81,7 @@ async function create(input: SupplierInput): Promise<SaveOutcome> {
         <input v-model="search" type="search" class="sourcing-input" :placeholder="t('Type to search')" autocomplete="off" />
       </label>
       <label class="sourcing-field">{{ t("Stage") }}
-        <select v-model="stage" class="sourcing-input">
-          <option value="">{{ t("All stages") }}</option>
-          <option v-for="item in supplierStages" :key="item" :value="item">{{ t(stageLabels[item]) }}</option>
-        </select>
+        <DeskSelect v-model="stage" :label="t('Stage')" :options="[({ value: '' as const, label: (t('All stages')) }), ...(supplierStages).map(item => ({ value: item, label: (t(stageLabels[item])) }))]" />
       </label>
     </div>
     <nav class="space-y-1" :aria-label="t('Suppliers')">

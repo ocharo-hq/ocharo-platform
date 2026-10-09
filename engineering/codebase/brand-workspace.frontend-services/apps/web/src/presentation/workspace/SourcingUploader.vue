@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref } from 'vue';
 import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
 import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
@@ -32,9 +33,7 @@ function add(accepted: readonly File[], rejected: readonly FileRejection[]): voi
         <p class="text-xs text-muted-foreground">{{ t("Each file uploads separately. Files already in Desk are recognized and not stored twice.") }}</p>
       </div>
       <label class="sourcing-field">{{ t("File origin") }}
-        <select v-model="capture" class="sourcing-input w-auto">
-          <option v-for="item in mediaCaptures" :key="item" :value="item">{{ t(captureLabels[item]) }}</option>
-        </select>
+        <DeskSelect v-model="capture" class="w-auto" :label="t('File origin')" :options="[...(mediaCaptures).map(item => ({ value: item, label: (t(captureLabels[item])) }))]" />
       </label>
     </div>
     <FileUploadPicker

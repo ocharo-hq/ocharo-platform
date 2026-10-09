@@ -1,3 +1,4 @@
+import { chooseDeskValue } from './helpers/DeskSelect';
 import { reactive } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -22,7 +23,7 @@ describe('canonical product editing',()=>{
   expect(updated).not.toBe(product);
  });
  it('adds French wording without changing Uzbek copy or approving it',async()=>{
-  const product=open();await wrapper.get('select[aria-label="Product content language"]').setValue('fr');
+  const product=open();await chooseDeskValue(wrapper, 'Product content language', 'fr');
   expect(wrapper.text()).toContain('This translation is empty');expect(product.translations).toBeUndefined();
   await label('Product name').get('input').setValue('Gilet');await label('Material / fabric name').get('input').setValue('Soie');
   expect(productCopy(product,'fr')).toMatchObject({name:'Gilet',fabric:'Soie',status:'draft'});
@@ -30,7 +31,7 @@ describe('canonical product editing',()=>{
  });
  it('uses one canonical price across content language changes',async()=>{
   const product=open();await label('1–9 pieces · UZS per piece').get('input').setValue('400000');
-  await wrapper.get('select[aria-label="Product content language"]').setValue('fr');
+  await chooseDeskValue(wrapper, 'Product content language', 'fr');
   expect(product.document.pricing?.tiers[0]?.unitPrice).toBe(400000);expect(product.document.pricing?.status).toBe('draft');
   expect((label('1–9 pieces · UZS per piece').get('input').element as HTMLInputElement).value).toBe('400000');
  });
@@ -38,7 +39,7 @@ describe('canonical product editing',()=>{
   const product=open();
   const approval=()=>wrapper.findAll('label').find(item=>item.text().includes('Approve this language for publication'))!;
   await approval().get('input').setValue(true);expect(productCopy(product,'en').status).toBe('approved');
-  await wrapper.get('select[aria-label="Product content language"]').setValue('uz');
+  await chooseDeskValue(wrapper, 'Product content language', 'uz');
   await approval().get('input').setValue(true);expect(productCopy(product,'uz').status).toBe('approved');
   await label('Material / fabric name').get('input').setValue('Atlas');
   expect(productCopy(product,'uz').status).toBe('draft');expect(productCopy(product,'en').status).toBe('approved');
@@ -50,7 +51,7 @@ describe('canonical product editing',()=>{
   const choice=wrapper.findAll('article input[type="checkbox"]').find(input=>(input.element as HTMLInputElement).value==='model')!;
   await choice.setValue(true);expect(productMediaForGroup(product,'model').map(image=>image.id)).toEqual(['model']);
   const modelFigure=wrapper.findAll('figure').find(figure=>figure.find('img').attributes('src')?.includes('b'.repeat(64)))!;
-  await modelFigure.get('button').trigger('click');expect(product.mediaGroups?.[0]?.mediaIds).toEqual([]);
+  await modelFigure.findAll('button').find(item => item.text() === 'Detach')!.trigger('click');expect(product.mediaGroups?.[0]?.mediaIds).toEqual([]);
  });
  it('keeps legacy role selections and never includes private references',()=>{
   const product=fixture();product.document.media.push({...product.document.media[0]!,id:'private',role:'reference'});
