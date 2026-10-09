@@ -16,5 +16,7 @@ public interface IDesignRepository
     Task WithdrawAsync(Guid designId, int expectedRevision, DateTimeOffset now, CancellationToken ct);
     Task<CatalogueReleaseRecord?> PublishedAsync(string slug, string locale, Guid? releaseId, CancellationToken ct);
     Task<IReadOnlyList<CatalogueReleaseRecord>> PublicationsAsync(CancellationToken ct);
+    /// <summary>Current and pinned historical releases that remain publicly accessible.</summary>
+    Task<IReadOnlyList<CatalogueReleaseRecord>> PublicReleasesAsync(CancellationToken ct);
     Task<CatalogueReleaseAssetRecord?> AssetAsync(string sha256, CancellationToken ct);
 }

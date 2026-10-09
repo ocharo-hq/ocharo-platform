@@ -1,3 +1,4 @@
+import { ssoClient } from '../common/OcharoSsoClient';
 import {
   ApiFailureFactory,
   createApiClient,
@@ -222,7 +223,7 @@ export function createCatalogueApi(fetchImplementation: typeof fetch = globalThi
 
 export type CatalogueApi = ReturnType<typeof createCatalogueApi>;
 
-export const catalogueApi = createCatalogueApi();
+export const catalogueApi = createCatalogueApi(ssoClient.fetch);
 
 export const catalogueExports = {
   json: '/api/catalogue/export/catalogue.json',

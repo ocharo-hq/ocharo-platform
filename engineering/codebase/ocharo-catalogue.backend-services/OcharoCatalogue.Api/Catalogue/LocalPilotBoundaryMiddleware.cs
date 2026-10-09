@@ -1,3 +1,4 @@
+using Ocharo.Sso;
 using System.Net;
 
 namespace OcharoCatalogue.Api.Catalogue;
@@ -10,6 +11,17 @@ public sealed class LocalPilotBoundaryMiddleware(RequestDelegate next, IConfigur
 {
     public async Task InvokeAsync(HttpContext context)
     {
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        var path = context.Request.Path;
+        if (path.StartsWithSegments("/api/public") || path.StartsWithSegments("/api/catalogue/media"))
+            context.Response.Headers.AccessControlAllowOrigin = "*";
+        else if (path.StartsWithSegments("/api"))
+            context.Response.Headers.CacheControl = "no-store";
+        if (context.RequestServices.GetRequiredService<SsoOptions>().Enabled)
+        {
+            await next(context);
+            return;
+        }
         var address = context.Connection.RemoteIpAddress;
         var localHost = context.Request.Host.Host is "localhost" or "127.0.0.1" or "[::1]" or "::1";
         if (!localHost || address is not null && !IPAddress.IsLoopback(address))
@@ -30,12 +42,6 @@ public sealed class LocalPilotBoundaryMiddleware(RequestDelegate next, IConfigur
             }
         }
 
-        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-        var path = context.Request.Path;
-        if (path.StartsWithSegments("/api/public") || path.StartsWithSegments("/api/catalogue/media"))
-            context.Response.Headers.AccessControlAllowOrigin = "*";
-        else if (path.StartsWithSegments("/api"))
-            context.Response.Headers.CacheControl = "no-store";
         await next(context);
     }
 

@@ -1,3 +1,4 @@
+using Ocharo.Sso;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -66,6 +67,7 @@ public static partial class HostConfiguration
         builder.Services.AddScoped<ProductService>();
         builder.Services.AddScoped<CollectionService>();
         builder.Services.AddScoped<PublicCatalogueService>();
+        builder.Services.AddScoped<CatalogueMediaAccessService>();
         builder.Services.AddScoped<CatalogueExportService>();
         builder.Services.AddScoped<CatalogueDesignService>();
         builder.Services.AddScoped<CatalogueReleaseService>();

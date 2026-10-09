@@ -1,6 +1,13 @@
 <script setup lang="ts">
+import { useSsoSession } from '../../application/common/UseSsoSession';
+const { canEdit: ssoCanEdit } = useSsoSession();
 import { computed, ref } from 'vue';
-import { SelectPicker, SelectPickerTrigger, SelectPickerContent, SelectPickerItem } from '@wow-two-beta/ui-vue/presentation/forms';
+import {
+  SelectPicker,
+  SelectPickerTrigger,
+  SelectPickerContent,
+  SelectPickerItem,
+} from '@wow-two-beta/ui-vue/presentation/forms';
 import { CalendarPlus, Upload, X } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
 import { useBrand } from '../../application/brand';
@@ -100,7 +107,9 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
           chizilmaydi.
         </p>
       </div>
-      <button class="btn-primary" @click="startNew"><Icon :icon="CalendarPlus" :size="15" />Yangi tadbir</button>
+      <button :disabled="!ssoCanEdit" class="btn-primary" @click="startNew">
+        <Icon :icon="CalendarPlus" :size="15" />Yangi tadbir
+      </button>
     </div>
 
     <section v-if="form" class="panel">
@@ -125,21 +134,36 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
       <div class="mt-2 grid gap-3 md:grid-cols-3">
         <div v-for="slot in slots" :key="slot">
           <label class="label" :for="`o-${slot}`">{{ slotLabels[slot]!.label }}</label>
-          <SelectPicker :model-value="form.overrides[slot] ?? ''"
-            :options="[{ itemKey: '', value: '', label: '— asosiy nashrdagisi' }, ...brand.versionsFor(slot).map(version => ({ itemKey: version.id, value: version.id, label: version.fileName }))]"
-            @update:model-value="form.overrides[slot] = $event ?? ''">
+          <SelectPicker
+            :model-value="form.overrides[slot] ?? ''"
+            :options="[
+              { itemKey: '', value: '', label: '— asosiy nashrdagisi' },
+              ...brand
+                .versionsFor(slot)
+                .map((version) => ({ itemKey: version.id, value: version.id, label: version.fileName })),
+            ]"
+            @update:model-value="form.overrides[slot] = $event ?? ''"
+          >
             <SelectPickerTrigger v-bind="{ id: `o-${slot}`, 'aria-label': slotLabels[slot]!.label }" class="field" />
             <SelectPickerContent variant="glass-outline" class="z-[100] max-h-80 overflow-auto">
               <SelectPickerItem item-key="" label="— asosiy nashrdagisi" />
-              <SelectPickerItem v-for="version in brand.versionsFor(slot)" :key="version.id" :item-key="version.id" :label="version.fileName" />
+              <SelectPickerItem
+                v-for="version in brand.versionsFor(slot)"
+                :key="version.id"
+                :item-key="version.id"
+                :label="version.fileName"
+              />
             </SelectPickerContent>
           </SelectPicker>
         </div>
       </div>
       <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
         <span class="text-muted-foreground">Tadbir uchun fayl yuklash:</span>
-        <SelectPicker :model-value="uploadSlot" :options="slots.map(slot => ({ itemKey: slot, value: slot, label: slotLabels[slot]!.label }))"
-          @update:model-value="uploadSlot = $event ?? 'on-light'">
+        <SelectPicker
+          :model-value="uploadSlot"
+          :options="slots.map((slot) => ({ itemKey: slot, value: slot, label: slotLabels[slot]!.label }))"
+          @update:model-value="uploadSlot = $event ?? 'on-light'"
+        >
           <SelectPickerTrigger class="field w-44" v-bind="{ 'aria-label': 'O‘rin' }" />
           <SelectPickerContent variant="glass-outline" class="z-[100] max-h-80 overflow-auto">
             <SelectPickerItem v-for="slot in slots" :key="slot" :item-key="slot" :label="slotLabels[slot]!.label" />
@@ -178,7 +202,9 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
         </div>
       </div>
       <div class="mt-5 flex justify-end">
-        <button class="btn-primary" :disabled="brand.busy.value || !form.name.trim()" @click="save">Saqlash</button>
+        <button class="btn-primary" :disabled="!ssoCanEdit || brand.busy.value || !form.name.trim()" @click="save">
+          Saqlash
+        </button>
       </div>
     </section>
 
@@ -199,7 +225,11 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
         </div>
         <div v-if="a.status === 'scheduled'" class="flex gap-2">
           <button class="btn-outline" @click="edit(a.id)">Tahrirlash</button>
-          <button class="btn-ghost text-destructive" :disabled="brand.busy.value" @click="brand.cancelAppearance(a.id)">
+          <button
+            class="btn-ghost text-destructive"
+            :disabled="!ssoCanEdit || brand.busy.value"
+            @click="brand.cancelAppearance(a.id)"
+          >
             Bekor qilish
           </button>
         </div>

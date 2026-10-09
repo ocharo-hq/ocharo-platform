@@ -1,3 +1,4 @@
+import { ssoClient } from '../common/OcharoSsoClient';
 import {
   ApiFailureFactory,
   createApiClient,
@@ -40,7 +41,8 @@ export function describeFailure(failure: ApiFailure): string {
   if (failure.status === 401) return 'Qayta kiring. O‘zgarishlaringiz saqlanib turibdi.';
   if (failure.status === 403) return 'Ruxsatingiz o‘zgardi. O‘zgarishlaringiz saqlanib turibdi.';
   if (failure.status === 409) return 'Yangi talqin mavjud. O‘zgarishlaringiz saqlanib turibdi; holatni tekshiring.';
-  if ([400, 422].includes(failure.status)) return 'Kiritilgan qiymatlarni tekshiring. O‘zgarishlaringiz saqlanib turibdi.';
+  if ([400, 422].includes(failure.status))
+    return 'Kiritilgan qiymatlarni tekshiring. O‘zgarishlaringiz saqlanib turibdi.';
   return 'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi; qayta urinib ko‘ring.';
 }
 
@@ -109,7 +111,7 @@ export function createBrandApi(fetchImplementation: typeof fetch = globalThis.fe
   } as const;
 }
 
-export const brandApi = createBrandApi();
+export const brandApi = createBrandApi(ssoClient.fetch);
 
 export const brandUrls = {
   logo: (slot: string) => `/api/public/brand/logo/${slot}`,

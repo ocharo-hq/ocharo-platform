@@ -1,3 +1,4 @@
+import { ssoClient } from '../integration/common/OcharoSsoClient';
 import { createApp } from 'vue';
 import AppRoot from './AppRoot.vue';
 import { catalogueRouter } from './CatalogueRouter';
@@ -8,6 +9,9 @@ initializeUiLocale();
 
 const app = createApp(AppRoot);
 app.use(catalogueRouter);
-void catalogueRouter.isReady().then(() => {
+void Promise.all([
+  catalogueRouter.isReady(),
+  window.location.pathname.startsWith('/c/') ? Promise.resolve() : ssoClient.initialize(),
+]).then(() => {
   app.mount('#root');
 });

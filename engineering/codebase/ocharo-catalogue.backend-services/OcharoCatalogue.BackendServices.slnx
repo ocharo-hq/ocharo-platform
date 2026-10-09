@@ -4,7 +4,11 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
+  <Folder Name="/shared/">
+    <Project Path="../ocharo-sso/Ocharo.Sso/Ocharo.Sso.csproj" />
+  </Folder>
   <Folder Name="/tests/">
+    <Project Path="../ocharo-sso/Ocharo.Sso.Tests/Ocharo.Sso.Tests.csproj" />
     <Project Path="tests/OcharoCatalogue.Tests/OcharoCatalogue.Tests.csproj" />
   </Folder>
   <Project Path="OcharoCatalogue.Api/OcharoCatalogue.Api.csproj" />

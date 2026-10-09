@@ -1,3 +1,4 @@
+using Ocharo.Sso;
 using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
 using OcharoCatalogue.Api.Catalogue;
 
@@ -9,6 +10,7 @@ public static partial class HostConfiguration
     /// <summary>Configures the application builder (services).</summary>
     public static WebApplicationBuilder Configure(this WebApplicationBuilder builder)
     {
+        builder.Services.AddOcharoSso(builder.Configuration, "catalogue", "ocharo-catalogue", requireBoundOrganization: true);
         builder
             .AddSqliteDatabase()
             .AddClock()
@@ -27,7 +29,9 @@ public static partial class HostConfiguration
         app.UseHttpProblemDetails();
 
         app.UseMiddleware<CatalogueExceptionMiddleware>();
+        app.UseOcharoSso(IsPublicSsoRequest, http => http.Request.Path.StartsWithSegments("/api/catalogue/media"));
         app.UseMiddleware<LocalPilotBoundaryMiddleware>();
+        app.Use(RequirePublicationApproval);
 
         if (app.Environment.IsDevelopment())
             app.MapOpenApi();

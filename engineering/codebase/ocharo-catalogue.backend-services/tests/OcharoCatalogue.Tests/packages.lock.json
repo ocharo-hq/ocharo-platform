@@ -2246,10 +2246,14 @@
         "resolved": "0.16.11",
         "contentHash": "OZfAVu88hl87BffQ+rlWCj/vLvAhhCK4QnFaoveeF/MY8SjHNSYBQ3qyUEWlPKNgBQGh1syXhCDg10vUnCsqkg=="
       },
+      "ocharo.sso": {
+        "type": "Project"
+      },
       "ocharocatalogue.api": {
         "type": "Project",
         "dependencies": {
           "Microsoft.AspNetCore.OpenApi": "[10.0.12, )",
+          "Ocharo.Sso": "[1.0.0, )",
           "OcharoCatalogue.Application": "[0.0.0, )",
           "OcharoCatalogue.Domain": "[0.0.0, )",
           "OcharoCatalogue.Infrastructure": "[0.0.0, )",

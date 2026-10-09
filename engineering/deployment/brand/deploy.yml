@@ -10,6 +10,7 @@ services:
   ocharobrand:
     build: { dockerfile: deployment/brand/Dockerfile }
     paths:
+      - codebase/ocharo-sso/**
       - codebase/ocharo-brand.backend-services/**
       - codebase/ocharo-brand.frontend-services/**
     health: /health

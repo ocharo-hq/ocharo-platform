@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSsoSession } from '../../application/common/UseSsoSession';
+const { canEdit: ssoCanEdit } = useSsoSession();
 import { computed, ref, toRaw, watch } from 'vue';
 import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
 import IdentityFormSkeleton from '../common/IdentityFormSkeleton.vue';
@@ -60,7 +62,7 @@ const texts = [
         <h1 class="font-editorial text-4xl tracking-tight">Identitet</h1>
         <p class="mt-2 text-sm text-muted-foreground">Qoralamaga saqlanadi; ilovalar keyingi nashrdan keyin ko‘radi.</p>
       </div>
-      <button class="btn-primary" :disabled="!dirty || brand.busy.value || saving" @click="save">
+      <button class="btn-primary" :disabled="!ssoCanEdit || !dirty || brand.busy.value || saving" @click="save">
         <Icon :icon="Save" :size="15" />Saqlash
       </button>
     </div>

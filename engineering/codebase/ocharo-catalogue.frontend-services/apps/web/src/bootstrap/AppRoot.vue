@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useSsoSession } from '../application/common/UseSsoSession';
+const { session: ssoSession } = useSsoSession();
+import SsoConnection from '../presentation/common/SsoConnection.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { provideLocale } from '@wow-two-beta/ui-vue/foundation/i18n';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
@@ -111,6 +114,14 @@ onMounted(() => {
           </nav>
         </template>
         <template #end>
+          <a
+            v-if="ssoSession.enabled && ssoSession.accountUrl"
+            :href="ssoSession.accountUrl"
+            target="_blank"
+            rel="noopener"
+            class="btn-outline"
+            >{{ t('Account') }}</a
+          >
           <div v-if="publicRoute" class="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -151,6 +162,7 @@ onMounted(() => {
           <p>{{ store.notice.value }}</p>
           <button :aria-label="t('Close')" @click="store.notice.value = null"><Icon :icon="X" :size="16" /></button>
         </div>
+        <SsoConnection v-if="!publicRoute" />
         <AppErrorBoundary>
           <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
           <template #fallback="{ reset }"

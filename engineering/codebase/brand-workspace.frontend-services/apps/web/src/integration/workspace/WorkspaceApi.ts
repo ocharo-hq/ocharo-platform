@@ -1,3 +1,4 @@
+import { telegramAvailabilityDecoder, telegramLinkDecoder, telegramCodeDecoder } from './TelegramDecoders';
 import type { DesignKind, DesignSnapshot } from '@/domain/workspace/EditorModels';
 import { createApiClient } from '@wow-two-beta/ui-vue/foundation/http';
 
@@ -23,7 +24,7 @@ import {
 
 /** Creates one document's cookie client. Each unsafe request captures its session-bound CSRF token. */
 export function createWorkspaceApi(csrfToken: () => string, unauthorized: () => void) {
-  const client = createApiClient({ credentials: 'same-origin', onUnauthorized: unauthorized, retry: false });
+  const client = createApiClient({ credentials: 'same-origin', onUnauthorized: failure => { if (failure.problem?.code !== 'invalid_credentials') unauthorized(); }, retry: false });
   const request = (signal?: AbortSignal) => ({
     signal: AbortSignal.any([AbortSignal.timeout(30_000), ...(signal ? [signal] : [])]),
   });
@@ -32,6 +33,11 @@ export function createWorkspaceApi(csrfToken: () => string, unauthorized: () => 
   const draft = (orgId: string, id: string) => `${org(orgId)}/drafts/${encodeURIComponent(id)}`;
   const design = (orgId: string, id?: string) => `${org(orgId)}/design-documents${id ? `/${encodeURIComponent(id)}` : ''}`;
   return {
+    getTelegram: (signal: AbortSignal) => client.get('/api/auth/telegram', { ...request(signal), decode: telegramAvailabilityDecoder }),
+    linkTelegram: (password: string, signal: AbortSignal) => client.post('/api/auth/telegram/link', { ...write(signal), body: { password }, decode: telegramLinkDecoder }),
+    unlinkTelegram: (password: string, signal: AbortSignal) => client.delete('/api/auth/telegram/link', { ...write(signal), body: { password }, response: 'empty' }),
+    requestTelegramCode: (phone: string, signal: AbortSignal) => client.post('/api/auth/telegram/code', { ...write(signal), body: { phone }, decode: telegramCodeDecoder }),
+    loginTelegram: (phone: string, code: string, signal: AbortSignal) => client.post('/api/auth/telegram/login', { ...write(signal), body: { phone, code }, decode: loginDecoder }),
     getDesigns: (orgId: string, kind: DesignKind, signal: AbortSignal) =>
       client.get(`${design(orgId)}?kind=${kind}&limit=100`, { ...request(signal), decode: listDecoder(isDesignSummary) }),
     getDesign: (orgId: string, id: string, signal: AbortSignal) =>

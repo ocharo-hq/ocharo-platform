@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSsoSession } from '../../application/common/UseSsoSession';
+const { canEdit: ssoCanEdit, canApprove: ssoCanApprove } = useSsoSession();
 import { computed } from 'vue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import type { CatalogueDocumentControls } from '../../application/design/UseCatalogueDocument';
@@ -54,7 +56,11 @@ function locale(value: string) {
         {{ t('Undo') }}</button
       ><button class="btn-outline" :disabled="!editor.canRedo.value || editor.busy.value" @click="editor.redo">
         {{ t('Redo') }}</button
-      ><button class="btn-primary" :disabled="editor.busy.value || !editor.title.value.trim()" @click="editor.save">
+      ><button
+        class="btn-primary"
+        :disabled="!ssoCanEdit || editor.busy.value || !editor.title.value.trim()"
+        @click="editor.save"
+      >
         {{ editor.busy.value ? t('Working…') : t('Save catalogue') }}
       </button>
     </div>
@@ -98,11 +104,15 @@ function locale(value: string) {
         {{ t('Prepare release') }}</button
       ><button
         class="btn-primary"
-        :disabled="editor.busy.value || editor.dirty.value || !editor.prepared.value"
+        :disabled="!ssoCanApprove || editor.busy.value || editor.dirty.value || !editor.prepared.value"
         @click="editor.publish"
       >
         {{ t('Publish catalogue') }}</button
-      ><button class="btn-outline" :disabled="editor.busy.value || editor.dirty.value" @click="editor.withdraw">
+      ><button
+        class="btn-outline"
+        :disabled="!ssoCanApprove || editor.busy.value || editor.dirty.value"
+        @click="editor.withdraw"
+      >
         {{ t('Withdraw catalogue') }}</button
       ><RouterLink v-if="link" :to="link" class="btn-outline">{{ t('Open public catalogue') }}</RouterLink
       ><button class="btn-outline" :disabled="editor.busy.value" @click="editor.history">
@@ -112,7 +122,11 @@ function locale(value: string) {
     <ol v-if="editor.revisions.value.length">
       <li v-for="revision in editor.revisions.value" :key="revision.revision">
         <span>{{ t('Revision') }} {{ revision.revision }} · {{ revision.title }}</span
-        ><button class="btn-ghost" :disabled="editor.busy.value" @click="editor.restore(revision.revision)">
+        ><button
+          class="btn-ghost"
+          :disabled="!ssoCanEdit || editor.busy.value"
+          @click="editor.restore(revision.revision)"
+        >
           {{ t('Restore revision') }}
         </button>
       </li>

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useSsoSession } from '../application/common/UseSsoSession';
+const { session: ssoSession } = useSsoSession();
+import SsoConnection from '../presentation/common/SsoConnection.vue';
 import { watch } from 'vue';
 import { createFeedbackBus } from '@wow-two-beta/ui-vue/feedback';
 import { FeedbackToastHost, SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
@@ -119,6 +122,14 @@ onMounted(() => brand.refresh());
             <SkeletonState v-if="brand.refreshing.value" class="inline-block h-4 w-4 align-middle" />
             <template v-else>{{ brand.pending.value.length }}</template> ta nashr qilinmagan o‘zgarish
           </span>
+          <a
+            v-if="ssoSession.enabled && ssoSession.accountUrl"
+            :href="ssoSession.accountUrl"
+            target="_blank"
+            rel="noopener"
+            class="btn-outline"
+            >Hisob</a
+          >
           <form @submit.prevent="brand.refresh">
             <Button
               type="submit"
@@ -156,6 +167,7 @@ onMounted(() => brand.refresh());
             <Icon :icon="X" :size="15" />
           </button>
         </div>
+        <SsoConnection />
         <AppErrorBoundary>
           <RouterView v-slot="{ Component }">
             <component :is="Component" v-if="brand.draft.value || route.path === '/identity'" :key="route.fullPath" />

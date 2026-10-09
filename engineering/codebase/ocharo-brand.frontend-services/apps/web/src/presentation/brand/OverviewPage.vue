@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSsoSession } from '../../application/common/UseSsoSession';
+const { canApprove: ssoCanApprove } = useSsoSession();
 import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Send } from 'lucide-vue-next';
@@ -45,6 +47,7 @@ async function publish() {
           <button
             class="btn-primary"
             :disabled="
+              !ssoCanApprove ||
               brand.busy.value ||
               !brand.draft.value ||
               (brand.draft.value.latestRelease !== null && brand.pending.value.length === 0)

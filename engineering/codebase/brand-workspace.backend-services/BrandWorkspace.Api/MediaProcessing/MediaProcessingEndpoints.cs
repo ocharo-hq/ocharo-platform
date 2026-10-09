@@ -11,7 +11,7 @@ public static class MediaProcessingEndpoints
     private const int MaximumBytes = 20 * 1024 * 1024;
     private static readonly SemaphoreSlim Processing = new(1, 1);
 
-    /// <summary>Maps HTTPS endpoints authenticated exclusively by a current Marketing audience ticket.</summary>
+    /// <summary>Maps HTTPS endpoints authenticated exclusively by a current Marketing or Editorial audience ticket.</summary>
     public static WebApplication MapMediaProcessingEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/integrations/media/background-removal")
@@ -67,10 +67,12 @@ public static class MediaProcessingEndpoints
         finally { Processing.Release(); }
     }
 
-    private static Task<IntegrationAccess?> AuthenticateAsync(HttpContext http, IntegrationTickets tickets, CancellationToken ct)
+    private static async Task<IntegrationAccess?> AuthenticateAsync(HttpContext http, IntegrationTickets tickets, CancellationToken ct)
     {
-        if (!http.Request.IsHttps) return Task.FromResult<IntegrationAccess?>(null);
+        if (!http.Request.IsHttps) return null;
         var values = http.Request.Headers["X-Ocharo-Integration-Ticket"];
-        return values.Count == 1 ? tickets.ValidateAsync(values[0], "ocharo-marketing", ct) : Task.FromResult<IntegrationAccess?>(null);
+        if (values.Count != 1) return null;
+        return await tickets.ValidateAsync(values[0], "ocharo-marketing", ct)
+            ?? await tickets.ValidateAsync(values[0], "ocharo-editorial", ct);
     }
 }

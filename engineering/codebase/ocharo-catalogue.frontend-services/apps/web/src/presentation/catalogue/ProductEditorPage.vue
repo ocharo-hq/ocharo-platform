@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSsoSession } from '../../application/common/UseSsoSession';
+const { canEdit: ssoCanEdit } = useSsoSession();
 import { useRefresh } from '@wow-two-beta/ui-vue/query';
 import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
@@ -188,7 +190,7 @@ async function onFiles(event: Event) {
     >
       <section v-if="editor.draft.value" class="flex min-h-0 flex-1 flex-col">
         <fieldset
-          :disabled="editor.saving.value || editor.uploading.value"
+          :disabled="!ssoCanEdit || editor.saving.value || editor.uploading.value"
           class="flex min-h-0 min-w-0 flex-1 flex-col border-0 p-0"
         >
           <div class="catalogue-product-body min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
@@ -583,7 +585,7 @@ async function onFiles(event: Event) {
                       <button
                         v-if="entry.revision !== editor.detail.value?.revision"
                         class="btn-ghost shrink-0 px-2 text-xs"
-                        :disabled="editor.dirty.value"
+                        :disabled="!ssoCanEdit || editor.dirty.value"
                         :title="
                           editor.dirty.value ? t('Save or cancel your changes first.') : t('Restore this revision')
                         "
@@ -626,7 +628,10 @@ async function onFiles(event: Event) {
               <button
                 class="btn-primary"
                 :disabled="
-                  (!editor.dirty.value && !editor.isNew.value) || editor.saving.value || editor.uploading.value
+                  !ssoCanEdit ||
+                  (!editor.dirty.value && !editor.isNew.value) ||
+                  editor.saving.value ||
+                  editor.uploading.value
                 "
                 :aria-busy="editor.saving.value"
                 @click="save"

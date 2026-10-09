@@ -13,18 +13,19 @@ namespace BrandWorkspace.Api.Integrations;
 public sealed class IntegrationTickets(IConfiguration configuration, TimeProvider time, IAccessRepository access)
 {
     private const string Issuer = "ocharo-platform/integration-v1";
-    public static bool ValidAudience(string? audience) => audience is "ocharo-studio" or "ocharo-marketing" or "ocharo-desk-mcp";
+    public static bool ValidAudience(string? audience) => audience is "ocharo-studio" or "ocharo-marketing" or "ocharo-desk-mcp"
+        or "ocharo-catalogue" or "ocharo-brand" or "ocharo-editorial" or "ocharo-assets";
     private string? SigningKey => configuration["Integrations:SigningKey"] is { } key && Encoding.UTF8.GetByteCount(key) >= 32 ? key : null;
     /// <summary>Reports whether delegated access can be signed, without exposing its key.</summary>
     public bool IsConfigured => SigningKey is not null;
-    public object? Issue(string audience, OrganizationAccess member, Guid sessionId)
+    public IssuedIntegrationTicket? Issue(string audience, OrganizationAccess member, Guid sessionId)
     {
         if (SigningKey is not { } key) return null;
         ITokenIssuer issuer = new JwtTokenIssuer(new JwtTokenIssuerOptions
         { Issuer = Issuer, Audience = audience, SigningKey = key, Lifetime = TimeSpan.FromMinutes(5) }, time);
         var token = issuer.Issue([new Claim("sub", member.UserId), new Claim("org", member.OrganizationId.ToString()),
             new Claim("sid", sessionId.ToString()), new Claim("jti", Guid.NewGuid().ToString())]);
-        return new { token, expiresAt = time.GetUtcNow().AddMinutes(5) };
+        return new(token, time.GetUtcNow().AddMinutes(5));
     }
     public async Task<object> IntrospectAsync(string? token, string? audience, CancellationToken cancellation)
     {
@@ -91,3 +92,8 @@ public static class IntegrationEndpoints
         return app;
     }
 }
+
+/// <summary>Bounded delegated access; JSON names preserve the existing integration contract.</summary>
+public sealed record IssuedIntegrationTicket(
+    [property: System.Text.Json.Serialization.JsonPropertyName("token")] string Token,
+    [property: System.Text.Json.Serialization.JsonPropertyName("expiresAt")] DateTimeOffset ExpiresAt);

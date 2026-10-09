@@ -28,8 +28,9 @@ RUN pnpm build
 
 # ---- Stage 2: publish the .NET API (no Node here; the SPA arrives from stage 1) ----
 FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
-WORKDIR /src
+WORKDIR /src/ocharo-brand.backend-services
 COPY ocharo-brand.backend-services/ ./
+COPY ocharo-sso/ /src/ocharo-sso/
 # the built SPA lands in wwwroot so `dotnet publish` bundles it into the output.
 COPY --from=spa /spa/apps/web/dist ./OcharoBrand.Api/wwwroot
 RUN dotnet publish OcharoBrand.Api/OcharoBrand.Api.csproj -c Release -o /app -p:RestoreLockedMode=true -p:UseAppHost=false

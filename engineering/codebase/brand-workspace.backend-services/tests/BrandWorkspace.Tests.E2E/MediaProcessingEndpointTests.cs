@@ -94,13 +94,15 @@ public sealed class MediaProcessingEndpointTests
         host.Worker.RemoveCalls.Should().Be(0);
     }
 
-    [Fact]
-    public async Task Processing_ShouldReturnPngAndShapeHeaders_WhenCurrentEditorSendsValidImage()
+    [Theory]
+    [InlineData("ocharo-marketing")]
+    [InlineData("ocharo-editorial")]
+    public async Task Processing_ShouldReturnPngAndShapeHeaders_WhenCurrentEditorSendsValidImage(string audience)
     {
         await using var host = await EndpointHost.CreateAsync();
         var original = Png();
 
-        using var response = await host.PostAsync(ImageContent(original));
+        using var response = await host.PostAsync(ImageContent(original), host.Issue(audience));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Content.Headers.ContentType!.MediaType.Should().Be("image/png");

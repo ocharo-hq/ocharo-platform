@@ -1,3 +1,4 @@
+import { signInDestination } from '@/domain/workspace/SignInDestination';
 import { requestConfirmation, resolveConfirmation, notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef } from 'vue';
@@ -104,7 +105,7 @@ export function useAccess(
   function authenticated(destination = '/'): void {
     dirty.value = false;
     channel.post('changed');
-    navigation.assign(safeWorkspaceDestination(destination));
+    navigation.assign(signInDestination(new URL(destination, window.location.origin).search, safeWorkspaceDestination(destination)));
   }
   /** Exchanges local operator credentials using the anonymous document's antiforgery token. */
   function login(input: { email: string; password: string }, signal: AbortSignal) {

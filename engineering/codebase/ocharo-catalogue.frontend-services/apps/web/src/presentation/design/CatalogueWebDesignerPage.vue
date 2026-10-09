@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSsoSession } from '../../application/common/UseSsoSession';
+const { canEdit: ssoCanEdit } = useSsoSession();
 import { useRefresh } from '@wow-two-beta/ui-vue/query';
 import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
@@ -181,7 +183,7 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                 <div class="actions">
                   <button class="btn-outline" :disabled="pages.length >= 100 || editor.busy.value" @click="duplicate">
                     {{ t('Duplicate page') }}</button
-                  ><button class="btn-ghost" :disabled="editor.busy.value" @click="remove">
+                  ><button class="btn-ghost" :disabled="!ssoCanEdit || editor.busy.value" @click="remove">
                     {{ t('Remove page') }}
                   </button>
                 </div>

@@ -1,3 +1,4 @@
+import { telegramUiMessages } from './TelegramUiMessages';
 import { sourcingViewUiMessages } from './SourcingViewUiMessages';
 import { integrationUiMessages } from './IntegrationUiMessages';
 import { catalogueUiMessages } from './CatalogueUiMessages';
@@ -1770,7 +1771,8 @@ export const operatorUiMessages: UiMessageTable = {
   }
 };
 
-export const uiMessages: UiMessageTable = { ...baseUiMessages, ...integrationUiMessages, ...operatorUiMessages, ...designerUiMessages, ...productReviewUiMessages, ...catalogueUiMessages, ...sourcingUiMessages, ...sourcingViewUiMessages, ...eventsUiMessages };
+export const uiMessages: UiMessageTable = {
+  ...telegramUiMessages, ...baseUiMessages, ...integrationUiMessages, ...operatorUiMessages, ...designerUiMessages, ...productReviewUiMessages, ...catalogueUiMessages, ...sourcingUiMessages, ...sourcingViewUiMessages, ...eventsUiMessages };
 
 /** Resolves exact interface phrases without interpreting or translating customer-authored data. */
 export function translateUi(source: string, locale: UiLocale, variables?: Record<string, string | number>): string {

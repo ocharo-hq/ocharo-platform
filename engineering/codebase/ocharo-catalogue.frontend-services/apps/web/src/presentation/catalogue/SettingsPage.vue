@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSsoSession } from '../../application/common/UseSsoSession';
+const { canEdit: ssoCanEdit } = useSsoSession();
 import { onMounted, ref, watch } from 'vue';
 import { Download, Plus, Trash2, UploadCloud } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
@@ -91,7 +93,11 @@ onMounted(() => store.loadSettings(true));
         <button class="btn-outline" @click="form.garmentTypes.push({ key: '', uz: '', ru: '', en: '' })">
           <Icon :icon="Plus" :size="14" />{{ t('Add garment type') }}
         </button>
-        <button class="btn-primary ml-auto" :disabled="admin.busy.value" @click="admin.saveSettings(form)">
+        <button
+          class="btn-primary ml-auto"
+          :disabled="!ssoCanEdit || admin.busy.value"
+          @click="admin.saveSettings(form)"
+        >
           {{ t(admin.busy.value ? 'Saving…' : 'Save') }}
         </button>
       </div>
@@ -119,7 +125,7 @@ onMounted(() => store.loadSettings(true));
           </label>
           <button
             class="btn-primary ml-auto"
-            :disabled="admin.busy.value"
+            :disabled="!ssoCanEdit || admin.busy.value"
             @click="admin.importWorkspace(updateExisting, includeReferences)"
           >
             <Icon :icon="UploadCloud" :size="15" />{{ t(admin.busy.value ? 'Importing…' : 'Start import') }}

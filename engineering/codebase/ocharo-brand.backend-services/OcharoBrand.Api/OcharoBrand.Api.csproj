@@ -13,4 +13,7 @@
     <ProjectReference Include="..\OcharoBrand.Domain\OcharoBrand.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="../../ocharo-sso/Ocharo.Sso/Ocharo.Sso.csproj" />
+  </ItemGroup>
 </Project>

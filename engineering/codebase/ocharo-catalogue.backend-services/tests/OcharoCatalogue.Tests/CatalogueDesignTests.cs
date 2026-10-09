@@ -156,6 +156,36 @@ public sealed class CatalogueDesignTests
         await File.WriteAllBytesAsync(Path.Combine(h.Root,"data","blobs",blob.BlobPath),Encoding.ASCII.GetBytes("corrupted"));
         await Assert.ThrowsAsync<CatalogueException>(()=>rs.PreparationAsync(d.Id,Ct));await Assert.ThrowsAsync<CatalogueException>(()=>rs.PublishAsync(d.Id,release.Id,1,Ct));
     }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Public_media_preserves_pinned_releases_but_rejects_prepared_and_revoked_media(bool archive)
+    {
+        await using var h = await CatalogueHarness.CreateAsync();
+        var row = await Seed(h);
+        var original = CatalogueJson.Read<ProductDocument>(row.Json).Media[0];
+        var designs = h.Get<CatalogueDesignService>();
+        var releases = h.Get<CatalogueReleaseService>();
+        var mediaAccess = h.Get<CatalogueMediaAccessService>();
+        var design = await designs.SaveAsync(null, new("Spring", Snapshot(ids: [row.Id])), Ct);
+        var first = await releases.PrepareAsync(design.Id, 1, await Fingerprint(releases, design.Id), new Dictionary<string, byte[]>(), Ct);
+        await releases.PublishAsync(design.Id, first.Id, 1, Ct);
+        var secondBlob = await h.Get<IMediaStore>().StoreAsync(CatalogueHarness.Png(122), Ct);
+        await Mutate(h, row.Id, product => product with { Media = [original with { Sha256 = secondBlob.Sha256 }] });
+        var second = await releases.PrepareAsync(design.Id, 1, await Fingerprint(releases, design.Id), new Dictionary<string, byte[]>(), Ct);
+        await releases.PublishAsync(design.Id, second.Id, 1, Ct);
+        var preparedBlob = await h.Get<IMediaStore>().StoreAsync(CatalogueHarness.Png(133), Ct);
+        await Mutate(h, row.Id, product => product with { Media = [original with { Sha256 = preparedBlob.Sha256 }] });
+        await releases.PrepareAsync(design.Id, 1, await Fingerprint(releases, design.Id), new Dictionary<string, byte[]>(), Ct);
+        await Mutate(h, row.Id, product => product with { Status = ProductStatus.Draft });
+        Assert.True(await mediaAccess.IsPublicAsync(original.Sha256, Ct));
+        Assert.True(await mediaAccess.IsPublicAsync(secondBlob.Sha256, Ct));
+        Assert.False(await mediaAccess.IsPublicAsync(preparedBlob.Sha256, Ct));
+        if (archive) await designs.ArchiveAsync(design.Id, 1, Ct);
+        else await releases.WithdrawAsync(design.Id, 1, Ct);
+        Assert.False(await mediaAccess.IsPublicAsync(original.Sha256, Ct));
+        Assert.False(await mediaAccess.IsPublicAsync(secondBlob.Sha256, Ct));
+    }
     [Fact] public async Task Prepared_web_preserves_copy_media_group_and_all_price_flags()
     {
         await using var h=await CatalogueHarness.CreateAsync();await Seed(h);var n=JsonNode.Parse(Snapshot(ids:["nimcha-v01"]).GetRawText())!;

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSsoSession } from '../../application/common/UseSsoSession';
+const { canEdit: ssoCanEdit } = useSsoSession();
 import { useRefresh } from '@wow-two-beta/ui-vue/query';
 import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
@@ -88,6 +90,7 @@ onMounted(async () => {
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <RefreshButton :busy="resultBusy" :disabled="collections.busy.value" @refresh="refresh" /><button
+          :disabled="!ssoCanEdit"
           class="btn-primary"
           @click="edit(collections.blank())"
         >
@@ -153,7 +156,7 @@ onMounted(async () => {
             <Icon :icon="X" :size="16" />
           </button>
         </div>
-        <fieldset :disabled="collections.busy.value" class="min-w-0 border-0 p-0">
+        <fieldset :disabled="!ssoCanEdit || collections.busy.value" class="min-w-0 border-0 p-0">
           <div class="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
               <label class="label" for="c-uz">{{ t('Name (uz)') }}</label
@@ -226,13 +229,17 @@ onMounted(async () => {
             </li>
           </ol>
           <div class="mt-6 flex items-center gap-3">
-            <button class="btn-primary" :disabled="collections.busy.value || !draft.names.uz.trim()" @click="save">
+            <button
+              class="btn-primary"
+              :disabled="!ssoCanEdit || collections.busy.value || !draft.names.uz.trim()"
+              @click="save"
+            >
               {{ collections.busy.value ? t('Saving…') : t('Save') }}
             </button>
             <button
               v-if="draft.expectedRevision !== null && draft.id"
               class="btn-ghost ml-auto text-destructive"
-              :disabled="collections.busy.value"
+              :disabled="!ssoCanEdit || collections.busy.value"
               :aria-busy="collections.busy.value"
               @click="remove(draft.id)"
             >

@@ -67,6 +67,13 @@ public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db):IDesi
         var current=await db.CataloguePublications.AsNoTracking().FirstOrDefaultAsync(x=>x.Key==slug+":"+locale,ct);return current is null?null:await db.CatalogueReleases.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==current.ReleaseId&&x.WithdrawnAtUtc==null&&db.CatalogueDesigns.Any(d=>d.Id==x.DesignId&&!d.Archived),ct);
     }
     public async Task<IReadOnlyList<CatalogueReleaseRecord>> PublicationsAsync(CancellationToken ct)=>await db.CatalogueReleases.AsNoTracking().Where(x=>x.WithdrawnAtUtc==null&&db.CatalogueDesigns.Any(d=>d.Id==x.DesignId&&!d.Archived)&&db.CataloguePublications.Any(p=>p.ReleaseId==x.Id)).ToArrayAsync(ct);
+    public async Task<IReadOnlyList<CatalogueReleaseRecord>> PublicReleasesAsync(CancellationToken ct)
+    {
+        return await db.CatalogueReleases.AsNoTracking()
+            .Where(release => release.PublishedAtUtc != null && release.WithdrawnAtUtc == null
+                && db.CatalogueDesigns.Any(design => design.Id == release.DesignId && !design.Archived))
+            .ToArrayAsync(ct);
+    }
     public Task<CatalogueReleaseAssetRecord?> AssetAsync(string hash,CancellationToken ct)=>db.CatalogueReleaseAssets.AsNoTracking().FirstOrDefaultAsync(x=>x.Sha256==hash,ct);
     private static void Check(CatalogueDesignRecord? current,int revision){if(current is null)throw CatalogueException.NotFound("Catalogue design");if(current.Archived)throw CatalogueException.Conflict("This catalogue is archived.");if(revision<1||revision==int.MaxValue||current.Revision!=revision)throw CatalogueException.Conflict("The catalogue changed. Reload before saving.");}
     private async Task CheckFingerprint(CatalogueReleaseRecord release,CancellationToken ct)

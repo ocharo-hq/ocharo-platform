@@ -18,7 +18,7 @@ function controls() {
   const command = vi.fn().mockResolvedValue(failure());
   return {
     command,
-    access: { busy: ref(false), session: ref(null), setDirty: vi.fn(), navigate: vi.fn(), login: command, authenticated: vi.fn() } as unknown as AccessControls,
+    access: { busy: ref(false), session: ref(null), api: { getTelegram: vi.fn().mockResolvedValue(ResultExtensions.ok({ enabled: false, linked: false, phone: null, botUsername: null })) }, setDirty: vi.fn(), navigate: vi.fn(), login: command, authenticated: vi.fn() } as unknown as AccessControls,
     workspace: { organizations: ref([]), brands: ref([]), media: ref([]), canEdit: ref(true), canApprove: ref(true),
       createOrganization: command, createBrand: command, uploadMedia: command } as unknown as WorkspaceControls,
   };

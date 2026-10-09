@@ -1,3 +1,4 @@
+using Ocharo.Sso;
 using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -71,7 +72,9 @@ public static partial class HostConfiguration
         app.UseHttpProblemDetails();
 
         app.UseMiddleware<BrandExceptionMiddleware>();
+        app.UseOcharoSso(IsPublicSsoRequest);
         app.UseMiddleware<LocalPilotBoundaryMiddleware>();
+        app.Use(RequirePublicationApproval);
         if (app.Environment.IsDevelopment())
             app.MapOpenApi();
         app.UseDefaultFiles();

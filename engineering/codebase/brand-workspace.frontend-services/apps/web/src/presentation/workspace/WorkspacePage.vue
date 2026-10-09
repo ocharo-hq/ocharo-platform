@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
+import AccountSettings from './AccountSettings.vue';
 import { notifyError } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import CatalogueWorkspacePage from './CatalogueWorkspacePage.vue';
@@ -34,6 +35,7 @@ const { t } = useUiLocale();
 defineOptions({ name: 'WorkspacePage' });
 const props = defineProps<{ access: AccessControls }>();
 defineSlots<{ diagnostics(): unknown }>();
+const accountOpen = ref(false);
 const currentPath = window.location.pathname;
 const location = readWorkspaceLocation(currentPath);
 const designTarget = readDesignTarget(window.location.search);
@@ -47,6 +49,7 @@ function changeOrganization(id: string): void {
 
 <template>
   <AppShell sidebar-width="0px" class="min-h-screen bg-background text-foreground">
+    <AccountSettings v-if="accountOpen" :access="access" @close="accountOpen = false" />
     <AppShellHeader class="h-auto min-h-14 border-b border-border bg-card px-0 py-4">
       <div class="mx-auto flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 sm:px-9">
         <div class="flex items-center gap-3">
@@ -58,6 +61,7 @@ function changeOrganization(id: string): void {
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <UiLanguagePicker />
+          <Button variant="ghost" size="sm" :is-disabled="access.busy.value" @click="accountOpen = true">{{ t('Account settings') }}</Button>
           <span class="text-sm text-muted-foreground">{{ access.session.value?.user?.displayName }}</span
           ><Button variant="ghost" size="sm" :is-disabled="access.busy.value" @click="access.logout">{{ t("Sign out") }}</Button>
         </div>

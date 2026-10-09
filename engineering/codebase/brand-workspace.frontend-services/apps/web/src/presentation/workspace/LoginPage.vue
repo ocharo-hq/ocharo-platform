@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted, onScopeDispose, ref } from 'vue';
+import TelegramSignIn from './TelegramSignIn.vue';
 import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
@@ -14,6 +16,18 @@ const { t } = useUiLocale();
 /** Presents the explicitly provisioned operator sign-in. */
 defineOptions({ name: 'LoginPage' });
 const props = defineProps<{ access: AccessControls }>();
+const telegramEnabled = ref(false);
+const method = ref<'password' | 'telegram'>('password');
+const passwordStarted = ref(false);
+const availabilityController = new AbortController();
+onScopeDispose(() => availabilityController.abort());
+onMounted(async () => {
+  const result = await props.access.api.getTelegram(availabilityController.signal);
+  if (!availabilityController.signal.aborted && result.ok) {
+    telegramEnabled.value = result.value.enabled;
+    if (result.value.enabled && !passwordStarted.value && !form.state.isDirty && !form.state.isSubmitting) method.value = 'telegram';
+  }
+});
 const form = useAppForm(() => ({
   defaultValues: { email: '', password: '' },
   isDisabled: props.access.busy.value,
@@ -54,7 +68,13 @@ const form = useAppForm(() => ({
         </p>
         <p class="mt-4 text-sm text-muted-foreground">{{ t("This workspace does not offer public registration.") }}</p>
       </template>
-      <form v-else class="mt-6 space-y-5" @submit.prevent="form.handleSubmit($event)">
+      <template v-else>
+      <div v-if="telegramEnabled" class="my-5 flex gap-2" :aria-label="t('Sign-in method')">
+        <Button variant="outline" :aria-pressed="method === 'telegram'" :is-disabled="access.busy.value" @click="method = 'telegram'">Telegram</Button>
+        <Button variant="outline" :aria-pressed="method === 'password'" :is-disabled="access.busy.value" @click="method = 'password'">{{ t('Email and password') }}</Button>
+      </div>
+      <TelegramSignIn v-if="telegramEnabled && method === 'telegram'" :access="access" />
+      <form v-else class="mt-6 space-y-5" @focusin="passwordStarted = true" @input="passwordStarted = true" @submit.prevent="passwordStarted = true; form.handleSubmit($event)">
         <form.Field v-slot="f" name="email" is-required
           ><Field :label="t('Email')"
             ><EmailInput v-model="f.value" autocomplete="username" required @blur="f.onBlur" /></Field
@@ -70,6 +90,7 @@ const form = useAppForm(() => ({
           {{ t("Use the account provisioned by your administrator.") }}
         </p>
       </form>
+      </template>
     </section>
   </main>
 </template>

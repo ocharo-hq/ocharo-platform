@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using System.Text.RegularExpressions;
 using BrandWorkspace.Application.Access;
 using BrandWorkspace.Persistence.Access;
@@ -71,18 +70,7 @@ public static class AccessEndpoints
         }
         var check = await signIn.CheckPasswordSignInAsync(user, input.Password, lockoutOnFailure: true);
         if (!check.Succeeded) return AccessProblems.Create(401, "Email or password is incorrect", "invalid_credentials");
-        var now = clock.GetUtcNow();
-        var session = Guid.NewGuid();
-        var expires = now.AddHours(8);
-        await repository.CreateSessionAsync(session, user.Id, await users.GetSecurityStampAsync(user), expires,
-            AccessClaims.Session(http.User), http.RequestAborted);
-        var identity = new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, user.Id), new Claim(ClaimTypes.Name, user.Email!),
-            new Claim(AccessClaims.SessionId, session.ToString("D"))
-        }, CookieAuthenticationDefaults.AuthenticationScheme);
-        await http.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity),
-            new AuthenticationProperties { IsPersistent = false, IssuedUtc = now, ExpiresUtc = expires, AllowRefresh = false });
+        await AccessSessionIssuer.IssueAsync(http, user, repository, clock);
         return Results.Ok(new { data = new { authenticated = true } });
     }
 

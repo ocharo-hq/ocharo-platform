@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Ocharo.Sso;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
@@ -14,6 +15,8 @@ public sealed class CatalogueController(
     CatalogueExportService exports,
     WorkspaceCatalogueImporter importer,
     IMediaStore media,
+    CatalogueMediaAccessService mediaAccess,
+    SsoOptions sso,
     Microsoft.Extensions.Options.IOptions<CatalogueOptions> options) : ControllerBase
 {
     [HttpGet("settings")]
@@ -89,6 +92,10 @@ public sealed class CatalogueController(
         bool preview,
         CancellationToken ct)
     {
+        var isPublic = await mediaAccess.IsPublicAsync(sha256, ct);
+        Response.Headers.CacheControl = "no-store";
+        if (!isPublic && sso.Enabled && User.Identity?.AuthenticationType != SsoContext.AuthenticationType)
+            return NotFound();
         var opened = await media.OpenAsync(
             sha256,
             preview,
@@ -96,7 +103,8 @@ public sealed class CatalogueController(
         if (opened is null)
             return NotFound();
         var (record, content) = opened.Value;
-        Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        // Visibility can change after withdrawal or review; public bytes must be revalidated.
+        Response.Headers.CacheControl = isPublic ? "public, no-cache" : "private, no-store";
         Response.Headers.ETag = $"\"{record.Sha256}{(preview ? "-p" : "")}\"";
         return File(content, preview && record.PreviewPath is not null ? "image/webp" : record.ContentType);
     }

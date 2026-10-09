@@ -1,3 +1,9 @@
+using BrandWorkspace.Api.Identity.Telegram;
+using Telegram.Bot;
+using WoW.Two.Sdk.Backend.Beta.Identity.Otp;
+using WoW.Two.Sdk.Backend.Beta.Identity.Otp.Telegram;
+using WoW.Two.Sdk.Backend.Beta.Foundation.Options;
+using System.Threading.RateLimiting;
 using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
 using BrandWorkspace.Api.MediaProcessing;
 using BrandWorkspace.Api.Commerce;
@@ -69,6 +75,9 @@ public static partial class HostConfiguration
                      "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password" })
             if (Environment.GetEnvironmentVariable(key) is { } value) values[key.Replace("__", ":")] = value;
         if (Environment.GetEnvironmentVariable("MCP_ENABLED") is { } mcpEnabled) values["Mcp:Enabled"] = mcpEnabled;
+        foreach (var (alias, name) in new[] { ("TELEGRAM_AUTH_ENABLED", "Enabled"), ("TELEGRAM_BOT_USERNAME", "BotUsername"),
+                     ("TELEGRAM_BOT_TOKEN", "BotToken"), ("TELEGRAM_WEBHOOK_SECRET", "WebhookSecret"), ("TELEGRAM_POLLING_ENABLED", "PollingEnabled") })
+            if (Environment.GetEnvironmentVariable(alias) is { } value) values[$"{TelegramAuthSettings.SectionName}:{name}"] = value;
         builder.Configuration.AddInMemoryCollection(values);
         return builder;
     }
@@ -170,6 +179,45 @@ public static partial class HostConfiguration
             });
         builder.Services.AddOptions<DataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
             options.ApplicationDiscriminator = configuration["DataProtection:ApplicationName"] ?? $"brand-workspace:{environment.EnvironmentName}");
+        return builder;
+    }
+
+    /// <summary>Registers opt-in bot account linking, transactional OTP verification and Development-only polling.</summary>
+    private static WebApplicationBuilder AddTelegramAccess(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddValidatedSettings<TelegramAuthSettings>(builder.Configuration, TelegramAuthSettings.SectionName,
+            options => options.Validate(value => !value.Enabled ||
+                    (System.Text.RegularExpressions.Regex.IsMatch(value.BotUsername, "^[A-Za-z][A-Za-z0-9_]{4,31}$")
+                     && System.Text.RegularExpressions.Regex.IsMatch(value.BotToken, "^[0-9]+:[A-Za-z0-9_-]{30,}$")
+                     && (value.PollingEnabled || System.Text.RegularExpressions.Regex.IsMatch(value.WebhookSecret, "^[A-Za-z0-9_-]{32,256}$"))),
+                    "Enabled Telegram sign-in requires a bot username, server token, and webhook secret unless Development polling is selected.")
+                .Validate(value => !value.PollingEnabled || builder.Environment.IsDevelopment(), "Telegram polling is allowed only in Development."));
+        builder.Services.AddScoped<TelegramAuthRepository>();
+        builder.Services.AddScoped<IOtpRepository>(services => services.GetRequiredService<TelegramAuthRepository>());
+        builder.Services.AddOtpService();
+        builder.Services.AddTelegramOtpDelivery(options => options.ScopeDisplayNames[TelegramAuthEndpoints.Scope] = "Ocharo");
+        builder.Services.PostConfigure<OtpOptions>(options =>
+        {
+            options.CodeLength = 6;
+            options.CodeKind = OtpCodeKind.Numeric;
+            options.CodeLifetime = TimeSpan.FromMinutes(5);
+            options.RateLimitWindow = TimeSpan.FromSeconds(30);
+            options.MaxAttempts = 5;
+        });
+        builder.Services.AddSingleton<ITelegramBotClient>(services => new TelegramBotClient(services.GetRequiredService<TelegramAuthSettings>().BotToken));
+        builder.Services.AddScoped<TelegramBotUpdatesHandler>();
+        builder.Services.AddHostedService<TelegramPollingService>();
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.AddPolicy(TelegramAuthEndpoints.RatePolicy, http => RateLimitPartition.GetFixedWindowLimiter(
+                http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            options.OnRejected = async (context, ct) =>
+            {
+                context.HttpContext.Response.Headers.RetryAfter = "60";
+                await AccessProblems.Create(429, "Wait before trying again", "telegram_rate_limited").ExecuteAsync(context.HttpContext);
+            };
+        });
         return builder;
     }
 
@@ -298,6 +346,7 @@ public static partial class HostConfiguration
         });
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseRateLimiter();
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.StartsWithSegments("/api")
