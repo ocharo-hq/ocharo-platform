@@ -1,12 +1,21 @@
 name: Verify Ocharo Platform
 
-on: [push, pull_request]
+# Called once per push by publish-docker-image (which gates publication on it), and directly for pull requests.
+on:
+  pull_request:
+  workflow_call:
+    inputs:
+      commit:
+        description: Immutable commit selected by the delivery workflow
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: platform-verify-${{ github.workflow }}-${{ github.ref }}
+  group: platform-verify-${{ inputs.commit || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ inputs.commit || github.sha }}
           lfs: true
       - uses: pnpm/action-setup@v4
         with:
@@ -62,6 +72,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ inputs.commit || github.sha }}
           lfs: true
       - uses: pnpm/action-setup@v4
         if: matrix.app == 'brand-workspace'
@@ -91,6 +102,8 @@ jobs:
         working-directory: engineering/codebase/ocharo-image.backend-services
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.commit || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -127,6 +140,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ inputs.commit || github.sha }}
           lfs: true
       - name: Validate deployment composition
         if: matrix.name == 'desk'

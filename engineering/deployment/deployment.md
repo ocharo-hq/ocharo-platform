@@ -1,6 +1,6 @@
 # Deployment and local runtime
 
-*Last updated: 2026-09-26*
+*Last updated: 2026-10-17*
 
 ## Artifacts and ownership
 
@@ -141,11 +141,11 @@ HTTPS development API. Browser application and API requests remain same-origin.
 ## CI and publication
 
 `verify.yml` runs frontend checks, locked backend restore, the default API/SPA build, backend tests,
-and both image builds. `publish-docker-image.yml` is the standard release marker. A human-published
-version release builds `ghcr.io/ocharo-hq/ocharo-platform` and the corresponding
-`ocharo-platform-worker` image, each tagged with the release tag and `latest`.
-The main image remains the control plane's standard deployable; operating the separate worker and
-PostgreSQL still requires this product's topology. No release or remote deployment was created here.
+and every image build. `publish-docker-image.yml` is the Wheelhouse marker: each push, and each
+dispatched `commit`, runs `verify.yml` and then the shared `publish.yml` of `wow-two-platform.pipelines`.
+That workflow builds the services in `deploy.yml` that changed, as `ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}`.
+A `main` build releases `vX.Y.Z` with `ocharo-platform-release.tar.gz`; other builds are candidates.
+Wheelhouse deploys that bundle; PostgreSQL, settings and the model volume come from its targets.
 
 Before public hosting, explicitly set `AllowedHosts` to the intended host names, for example
 `<public-host>;localhost;127.0.0.1`; replace the placeholder with the actual hostname. The default
@@ -158,4 +158,13 @@ Executed verification is recorded in [verification](../research/previous-work/ve
 
 ## Convention adoption status
 
-The descriptor and local packaging are prepared; no target was deployed. The shared publisher v0.1.0 proposal was withdrawn because its checkout does not materialize required Git LFS assets. Existing Platform/Studio publishing workflows remain unchanged; Assets has no publisher. Current CI must be reviewed before claiming descriptor-driven versioned images. See `../research/convention-audit.md` for verified checks and remaining configuration boundaries.
+`deploy.yml` lists Desk, jobs and the private image worker; the Brand and Catalogue pilots have no descriptor.
+Desk probes `/health/ready`, its own readiness route, until it adopts the SDK boot bundle's `/health`.
+Before a usable deployment:
+
+- The shared `publish.yml@v0.2.0` checks out without Git LFS, so LFS-tracked template PNGs ship as pointer files.
+  Move to a pipelines tag that hydrates LFS before relying on a release.
+- The shared workflow passes `APP_VERSION` only; `VCS_REF` stays empty, so builds report no commit.
+- Desk requires HTTPS requests but has no trusted-proxy support, so sign-in fails behind a TLS-terminating ingress.
+
+See `../research/convention-audit.md` for the earlier verified checks.
