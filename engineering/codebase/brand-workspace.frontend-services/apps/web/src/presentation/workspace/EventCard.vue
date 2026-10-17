@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Star } from 'lucide-vue-next';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
 
 import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';

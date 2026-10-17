@@ -1,4 +1,4 @@
-import type { StorageBroker } from '@wow-two-beta/ui-vue/foundation/storage';
+import type { StorageBroker } from '@wow-two-beta/fe/foundation/storage';
 import { isRecoveryScope, validateRecovery, type DesignRecoveryRecord, type DesignRecoveryScope } from '@/domain/workspace/DesignRecovery';
 
 /** The SDK broker contract with tab-local browser storage; never shares mutable recovery between tabs. */
@@ -6,8 +6,8 @@ const tabRecoveryBroker: StorageBroker = {
   read<T>(key: string): T | null {
     try { const raw = window.sessionStorage.getItem(key); return raw === null ? null : JSON.parse(raw) as T; } catch { return null; }
   },
-  write<T>(key: string, value: T): void { try { window.sessionStorage.setItem(key, JSON.stringify(value)); } catch { /* Verified by readback below. */ } },
-  remove(key: string): void { try { window.sessionStorage.removeItem(key); } catch { /* Verified by readback below. */ } },
+  write<T>(key: string, value: T): boolean { try { window.sessionStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; /* Verified by readback below. */ } },
+  remove(key: string): boolean { try { window.sessionStorage.removeItem(key); return true; } catch { return false; /* Verified by readback below. */ } },
 };
 /** Synchronous writes finish before reload; verified acknowledgements surface quota or blocked storage. */
 export function createDesignRecoveryStorage(scope: DesignRecoveryScope, broker: StorageBroker = tabRecoveryBroker) {

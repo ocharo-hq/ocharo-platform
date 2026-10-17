@@ -8,9 +8,9 @@ import CatalogueWorkspacePage from './CatalogueWorkspacePage.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
 import BuildIdentity from '../shared/BuildIdentity.vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
-import { AppShell, AppShellContent, AppShellHeader, AppShellMain } from '@wow-two-beta/ui-vue/presentation/layout';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
+import { AppShell, AppShellContent, AppShellHeader, AppShellMain } from '@wow-two-beta/fe/presentation/layout';
 
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { useWorkspace } from '@/application/workspace/UseWorkspace';

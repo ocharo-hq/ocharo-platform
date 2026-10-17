@@ -3,10 +3,10 @@ import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { onScopeDispose, ref, watch } from 'vue';
 
-import { AppErrorFactory, ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
-import { useAppForm } from '@wow-two-beta/ui-vue/forms-engine/house';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Field, FileUploadPicker, TextAreaInput } from '@wow-two-beta/ui-vue/presentation/forms';
+import { AppErrorFactory, ResultExtensions } from '@wow-two-beta/fe/foundation/results';
+import { useAppForm } from '@wow-two-beta/fe/forms-engine/house';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Field, FileUploadPicker, TextAreaInput } from '@wow-two-beta/fe/presentation/forms';
 
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
@@ -68,7 +68,7 @@ function selectFile(files: readonly File[], rejected: readonly unknown[]): void 
         accept="image/png,image/jpeg"
         :max-size="5 * 1024 * 1024"
         :max-files="1"
-        :disabled="access.busy.value"
+        :is-disabled="access.busy.value"
         :label="t('Choose an original image')"
         hint="PNG or JPEG · up to 5 MiB"
         @files-change="selectFile"
@@ -79,7 +79,7 @@ function selectFile(files: readonly File[], rejected: readonly unknown[]): void 
         ><Field
           :label="t('Source and provenance')"
           :helper="t('Record the creator and source, and whether this is a photograph or a visualization.')"
-          ><TextAreaInput v-model="f.value" required :maxlength="2000" :rows="4" @blur="f.onBlur" /></Field
+          ><TextAreaInput v-model="f.value" is-required :maxlength="2000" :rows="4" @blur="f.onBlur" /></Field
       ></form.Field>
       <p v-if="uploaded" role="status" class="text-sm text-success-soft-foreground">{{ t("Image added.") }}</p>
       <Button type="submit" :is-loading="form.state.isSubmitting" :is-disabled="access.busy.value || !selectedFile"

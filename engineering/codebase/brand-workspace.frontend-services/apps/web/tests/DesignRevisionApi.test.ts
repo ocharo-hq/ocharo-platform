@@ -16,7 +16,12 @@ describe('authenticated saved revision reads', () => {
     expect(fetch.mock.calls[0]![0]).toBe('/api/organizations/org%2Fid/design-documents/design%2Fid/revisions?limit=20&offset=20');
     expect(fetch.mock.calls[1]![0]).toBe('/api/organizations/org%2Fid/design-documents/design%2Fid/revisions/2');
     expect(fetch.mock.calls[0]![1]).toMatchObject({ method: 'GET', credentials: 'same-origin' });
-    const signal = fetch.mock.calls[1]![1].signal as AbortSignal; controller.abort(); expect(signal.aborted).toBe(true);
+    // The SDK links the caller's signal for the request's lifetime; cancellation applies while it is in flight.
+    fetch.mockImplementationOnce((_: string, init: RequestInit) => new Promise((_resolve, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason))));
+    const pending = api.getDesignRevision('org/id', 'design/id', 2, controller.signal);
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+    const signal = fetch.mock.calls[2]![1].signal as AbortSignal; controller.abort(); expect(signal.aborted).toBe(true);
+    expect(await pending).toMatchObject({ ok: false });
   });
   it('rejects malformed metadata without trusting casts', () => {
     expect(isDesignRevision(metadata)).toBe(true);

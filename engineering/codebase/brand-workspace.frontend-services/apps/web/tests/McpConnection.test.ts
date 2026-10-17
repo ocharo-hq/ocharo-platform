@@ -1,10 +1,10 @@
 import { computed, defineComponent, ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
-import { DefaultRetryPolicy } from '@wow-two-beta/ui-vue/foundation/resilience';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
-import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
+import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
+import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
+import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 
 import { useMcpConnection } from '@/application/workspace/UseMcpConnection';
 import type { AccessControls } from '@/application/workspace/UseAccess';

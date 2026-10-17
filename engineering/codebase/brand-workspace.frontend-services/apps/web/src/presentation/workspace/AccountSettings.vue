@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onScopeDispose, ref, shallowRef } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Field, PasswordInput } from '@wow-two-beta/ui-vue/presentation/forms';
-import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Field, PasswordInput } from '@wow-two-beta/fe/presentation/forms';
+import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { notifyError, requestConfirmation, resolveConfirmation } from '@/application/shared/UseFeedback';
-import type { ApiFailure } from '@wow-two-beta/ui-vue/foundation/http';
+import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import type { TelegramAvailability, TelegramLink } from '@/domain/workspace/TelegramAccess';
 defineOptions({ name: 'AccountSettings' });
 const props = defineProps<{ access: AccessControls }>();
@@ -79,7 +79,7 @@ onMounted(refresh);
           <p class="text-sm text-muted-foreground">{{ t(status.linked ? 'Telegram is connected to your account.' : 'Connect Telegram once to receive sign-in codes without an email password.') }}</p>
           <p v-if="status.linked && status.phone" class="text-sm">{{ status.phone }}</p>
           <form class="space-y-4" @submit.prevent="status?.linked ? disconnect() : connect()">
-            <Field :label="t('Current password')"><PasswordInput v-model="password" autocomplete="current-password" required :disabled="loading || saving || confirming || access.busy.value" /></Field>
+            <Field :label="t('Current password')"><PasswordInput v-model="password" autocomplete="current-password" is-required :is-disabled="loading || saving || confirming || access.busy.value" /></Field>
             <p v-if="status.linked" class="text-sm text-muted-foreground">{{ t('Disconnecting Telegram signs you out of your existing sessions.') }}</p>
             <Button type="submit" :is-loading="saving" :is-disabled="loading || confirming || access.busy.value">{{ t(status.linked ? 'Disconnect Telegram' : 'Connect Telegram') }}</Button>
           </form>

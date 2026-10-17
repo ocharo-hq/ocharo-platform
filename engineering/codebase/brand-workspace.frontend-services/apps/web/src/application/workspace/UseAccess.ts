@@ -3,10 +3,10 @@ import { requestConfirmation, resolveConfirmation, notifyError } from '@/applica
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef } from 'vue';
 
-import type { AuthStrategy } from '@wow-two-beta/ui-vue/auth';
-import { createSyncChannel } from '@wow-two-beta/ui-vue/foundation/channels';
-import type { ApiFailure } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions, type Result } from '@wow-two-beta/ui-vue/foundation/results';
+import type { AuthStrategy } from '@wow-two-beta/fe/auth';
+import { createSyncChannel } from '@wow-two-beta/fe/foundation/channels';
+import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
 
 import type { Session } from '@/domain/workspace/Models';
 import { safeWorkspaceDestination } from '@/domain/workspace/EditorNavigation';

@@ -48,7 +48,7 @@ function forbidLayers(layers, additional = []) {
         message: `This layer cannot depend on ${layer}.`,
       })),
       ...additional,
-      { group: ['@wow-two-beta/ui-vue/src/**', '@wow-two-beta/ui-vue/dist/**'], message: 'Use SDK public subpaths.' },
+      { group: ['@wow-two-beta/fe/src/**', '@wow-two-beta/fe/dist/**'], message: 'Use SDK public subpaths.' },
     ],
   }];
 }

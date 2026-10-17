@@ -3,9 +3,9 @@ import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { onScopeDispose, watch } from 'vue';
 
-import { useAppForm } from '@wow-two-beta/ui-vue/forms-engine/house';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Field, TextInput } from '@wow-two-beta/ui-vue/presentation/forms';
+import { useAppForm } from '@wow-two-beta/fe/forms-engine/house';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Field, TextInput } from '@wow-two-beta/fe/presentation/forms';
 
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
@@ -56,11 +56,11 @@ onScopeDispose(() => {
     >
       <h2 class="text-xl font-semibold">{{ t("Create a brand") }}</h2>
       <form.Field v-slot="f" name="name" is-required
-        ><Field :label="t('Brand name')"><TextInput v-model="f.value" required :maxlength="120" @blur="f.onBlur" /></Field
+        ><Field :label="t('Brand name')"><TextInput v-model="f.value" is-required :maxlength="120" @blur="f.onBlur" /></Field
       ></form.Field>
       <form.Field v-slot="f" name="timeZone" is-required
         ><Field :label="t('Time zone')" :helper="t('For example Asia/Tashkent or UTC.')"
-          ><TextInput v-model="f.value" required :maxlength="100" @blur="f.onBlur" /></Field
+          ><TextInput v-model="f.value" is-required :maxlength="100" @blur="f.onBlur" /></Field
       ></form.Field>
       <Button type="submit" :is-loading="form.state.isSubmitting" :is-disabled="access.busy.value">{{ t("Create brand") }}</Button>
     </form>

@@ -1,7 +1,7 @@
 import { webcrypto } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { readCreativeHandoff } from '@/domain/workspace/CreativeHandoff';
 import { useCommerce } from '@/application/workspace/UseCommerce';
 import type { AccessControls } from '@/application/workspace/UseAccess';

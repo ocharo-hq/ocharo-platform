@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import { useAuth } from '@wow-two-beta/ui-vue/auth';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { useAuth } from '@wow-two-beta/fe/auth';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { Session } from '@/domain/workspace/Models';

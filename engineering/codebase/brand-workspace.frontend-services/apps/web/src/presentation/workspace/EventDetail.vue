@@ -2,9 +2,9 @@
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref, shallowRef } from 'vue';
 import { CalendarDays, RefreshCw, Star } from 'lucide-vue-next';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 
 import { notifyError, requestConfirmation, useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';

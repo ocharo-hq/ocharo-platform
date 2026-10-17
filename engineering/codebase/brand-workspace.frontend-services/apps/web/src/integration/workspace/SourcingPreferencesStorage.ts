@@ -1,4 +1,4 @@
-import { localStorageStorageBroker, type StorageBroker } from '@wow-two-beta/ui-vue/foundation/storage';
+import { localStorageStorageBroker, type StorageBroker } from '@wow-two-beta/fe/foundation/storage';
 import { defaultSourcingPreferences, isSourcingPreferences, type SourcingPreferences, type SourcingPreferenceScope } from '@/domain/workspace/SourcingPreferences';
 import { isSourcingIdentifier } from '@/domain/workspace/Sourcing';
 

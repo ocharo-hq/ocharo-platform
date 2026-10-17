@@ -2,7 +2,7 @@
 import { computed, ref, useTemplateRef } from 'vue';
 import {
   SelectPicker, SelectPickerTrigger, SelectPickerValue, SelectPickerContent, SelectPickerItem,
-} from '@wow-two-beta/ui-vue/presentation/forms';
+} from '@wow-two-beta/fe/presentation/forms';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 
 /** Composes the SDK picker with Desk labels; the SDK owns focus, keyboard and popup behavior. */

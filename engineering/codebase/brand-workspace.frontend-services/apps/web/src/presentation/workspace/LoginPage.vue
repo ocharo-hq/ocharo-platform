@@ -5,9 +5,9 @@ import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
 import BuildIdentity from '../shared/BuildIdentity.vue';
-import { useAppForm } from '@wow-two-beta/ui-vue/forms-engine/house';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Field, EmailInput, PasswordInput } from '@wow-two-beta/ui-vue/presentation/forms';
+import { useAppForm } from '@wow-two-beta/fe/forms-engine/house';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Field, EmailInput, PasswordInput } from '@wow-two-beta/fe/presentation/forms';
 
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 
@@ -77,11 +77,11 @@ const form = useAppForm(() => ({
       <form v-else class="mt-6 space-y-5" @focusin="passwordStarted = true" @input="passwordStarted = true" @submit.prevent="passwordStarted = true; form.handleSubmit($event)">
         <form.Field v-slot="f" name="email" is-required
           ><Field :label="t('Email')"
-            ><EmailInput v-model="f.value" autocomplete="username" required @blur="f.onBlur" /></Field
+            ><EmailInput v-model="f.value" autocomplete="username" is-required @blur="f.onBlur" /></Field
         ></form.Field>
         <form.Field v-slot="f" name="password" is-required
           ><Field :label="t('Password')"
-            ><PasswordInput v-model="f.value" autocomplete="current-password" required @blur="f.onBlur" /></Field
+            ><PasswordInput v-model="f.value" autocomplete="current-password" is-required @blur="f.onBlur" /></Field
         ></form.Field>
         <Button type="submit" :is-loading="form.state.isSubmitting" :is-disabled="access.busy.value" is-full-width
           >{{ t("Sign in") }}</Button

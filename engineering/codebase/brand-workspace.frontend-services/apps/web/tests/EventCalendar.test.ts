@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { downloadText } from '@wow-two-beta/ui-vue/foundation/files';
+import { downloadText } from '@wow-two-beta/fe/foundation/files';
 
 import { createEventCalendar, downloadEventCalendar } from '@/application/workspace/EventCalendar';
 import type { UiLocale } from '@/domain/shared/UiMessages';
 import type { ShowcaseEvent } from '@/domain/workspace/Events';
 
-vi.mock('@wow-two-beta/ui-vue/foundation/files', () => ({ downloadText: vi.fn(() => true) }));
+vi.mock('@wow-two-beta/fe/foundation/files', () => ({ downloadText: vi.fn(() => true) }));
 
 const now = new Date('2026-10-09T12:34:56.789Z');
 const eventId = '22222222-2222-4222-8222-222222222222';

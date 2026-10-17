@@ -1,8 +1,8 @@
 import { computed, ref } from 'vue';
 
-import { ApiFailureFactory, type ApiFailure } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions, type Result } from '@wow-two-beta/ui-vue/foundation/results';
-import { useAppQuery } from '@wow-two-beta/ui-vue/query';
+import { ApiFailureFactory, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
+import { useAppQuery } from '@wow-two-beta/fe/query';
 
 import type { SystemStatus } from '@/domain/system/SystemStatus';
 import { systemApi } from '@/integration/system/SystemApi';

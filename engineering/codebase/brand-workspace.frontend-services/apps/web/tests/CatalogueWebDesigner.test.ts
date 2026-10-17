@@ -1,7 +1,7 @@
 import {computed,ref} from 'vue';
 import {afterEach,beforeEach,describe,expect,it,vi} from 'vitest';
 import {mount,flushPromises,type VueWrapper} from '@vue/test-utils';
-import {ResultExtensions} from '@wow-two-beta/ui-vue/foundation/results';
+import {ResultExtensions} from '@wow-two-beta/fe/foundation/results';
 import CatalogueWebDesigner from '@/presentation/workspace/CatalogueWebDesigner.vue';
 import {createCatalogue} from '@/domain/workspace/CatalogueDocuments';
 import {initialCommerce} from '@/domain/workspace/Commerce';

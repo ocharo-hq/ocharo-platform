@@ -2,8 +2,8 @@
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed } from 'vue';
 
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
 
 import { useSystemStatus } from '@/application/system/UseSystemStatus';
 

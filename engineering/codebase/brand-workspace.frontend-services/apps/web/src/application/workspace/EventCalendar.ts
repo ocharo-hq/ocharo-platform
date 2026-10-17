@@ -1,4 +1,4 @@
-import { downloadText } from '@wow-two-beta/ui-vue/foundation/files';
+import { downloadText } from '@wow-two-beta/fe/foundation/files';
 
 import { eventCalendarUiMessages } from '@/domain/shared/EventCalendarUiMessages';
 import type { UiLocale } from '@/domain/shared/UiMessages';

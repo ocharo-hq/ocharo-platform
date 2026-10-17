@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { memoryStorageBroker, type StorageBroker } from '@wow-two-beta/ui-vue/foundation/storage';
+import { memoryStorageBroker, type StorageBroker } from '@wow-two-beta/fe/foundation/storage';
 import { defaultSourcingPreferences, orderedSourcingSections } from '@/domain/workspace/SourcingPreferences';
 import { createSourcingPreferencesStorage } from '@/integration/workspace/SourcingPreferencesStorage';
 import { createSourcingApi } from '@/integration/workspace/SourcingApi';
@@ -47,7 +47,7 @@ describe('personal sourcing preferences', () => {
     const memory = memoryStorageBroker();
     const storage = createSourcingPreferencesStorage(scope, memory);
     expect(storage.save(defaultSourcingPreferences())).toBe(true);
-    const blocked: StorageBroker = { read: memory.read, write: () => {}, remove: () => {} };
+    const blocked: StorageBroker = { read: memory.read, write: () => false, remove: () => false };
     expect(createSourcingPreferencesStorage(scope, blocked).save(defaultSourcingPreferences())).toBe(false);
   });
 });

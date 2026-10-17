@@ -1,6 +1,6 @@
 import { effectScope, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { memoryStorageBroker, type StorageBroker } from '@wow-two-beta/ui-vue/foundation/storage';
+import { memoryStorageBroker, type StorageBroker } from '@wow-two-beta/fe/foundation/storage';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import { useDesignRecovery } from '@/application/workspace/UseDesignRecovery';
 import { createDesignRecoveryStorage } from '@/integration/workspace/DesignRecoveryStorage';
@@ -74,12 +74,12 @@ describe('tab design recovery boundary', () => {
   });
   it('surfaces write quota failures and retains the previous durable snapshot', () => {
     const { controls, current } = setup(); controls.enable(); const persisted = createDesignRecoveryStorage(scope, broker).read();
-    vi.spyOn(broker, 'write').mockImplementation(() => undefined);
+    vi.spyOn(broker, 'write').mockImplementation(() => false);
     current.value = { ...input(), title: 'Cannot persist' }; controls.capture();
     expect(controls.error.value).toContain('full or unavailable'); expect(createDesignRecoveryStorage(scope, broker).read()).toEqual(persisted);
   });
   it('surfaces unavailable storage while removing a recovery instead of claiming removal', () => {
-    const { controls } = setup(); controls.enable(); vi.spyOn(broker, 'write').mockImplementation(() => undefined);
+    const { controls } = setup(); controls.enable(); vi.spyOn(broker, 'write').mockImplementation(() => false);
     controls.discard(); expect(controls.error.value).toContain('unavailable'); expect(controls.hasStored.value).toBe(true);
   });
   it('cannot clear a newer controller checkpoint after its own server save completes', () => {

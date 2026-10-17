@@ -3,10 +3,10 @@ import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { watch, onScopeDispose } from 'vue';
 
-import { useAppForm } from '@wow-two-beta/ui-vue/forms-engine/house';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
-import { Field, TextInput } from '@wow-two-beta/ui-vue/presentation/forms';
+import { useAppForm } from '@wow-two-beta/fe/forms-engine/house';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
+import { Field, TextInput } from '@wow-two-beta/fe/presentation/forms';
 
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
@@ -71,13 +71,13 @@ onScopeDispose(() => {
       <p class="text-sm text-muted-foreground">{{ t("You will become its owner. Nothing is prefilled or created for you.") }}</p>
       <form.Field v-slot="f" name="name" is-required
         ><Field :label="t('Organization name')"
-          ><TextInput v-model="f.value" required :maxlength="120" @blur="f.onBlur" /></Field
+          ><TextInput v-model="f.value" is-required :maxlength="120" @blur="f.onBlur" /></Field
       ></form.Field>
       <form.Field v-slot="f" name="slug" is-required
         ><Field :label="t('Short name')" :helper="t('Lowercase letters, numbers, and hyphens.')"
           ><TextInput
             v-model="f.value"
-            required
+            is-required
             pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
             :maxlength="64"
             @blur="f.onBlur" /></Field

@@ -2,8 +2,8 @@ import { defineComponent, h } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DefaultRetryPolicy } from '@wow-two-beta/ui-vue/foundation/resilience';
-import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
+import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
+import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
 
 import { useAccess } from '@/application/workspace/UseAccess';
 import WorkspacePage from '@/presentation/workspace/WorkspacePage.vue';
@@ -55,7 +55,8 @@ describe('published SDK workspace shell composition', () => {
     expect(skipLinks).toHaveLength(1);
     expect(main.attributes('tabindex')).toBe('-1');
     const shell = wrapper.element as HTMLElement;
-    expect(shell.style.gridTemplate).toContain(width >= 1024 ? '/ 0px 1fr' : '/ 1fr');
+    // The SDK reserves a sidebar column only when a sidebar is composed; the content column stays floored.
+    expect(shell.style.gridTemplate).toMatch(/\/ minmax\(0(px)?, 1fr\)$/);
     expect(wrapper.find('aside').exists()).toBe(false);
 
     // The SDK merges consumer classes; its fixed-height default must not survive a wrapping header.

@@ -5,7 +5,7 @@ import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { catalogueMetadata, eligibleCataloguePdf } from '@/domain/workspace/CatalogueDocuments';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 import { useDesignPreflight } from '@/application/workspace/UseDesignPreflight';

@@ -1,6 +1,6 @@
 # Ocharo Platform — current state
 
-*Last updated: 2026-10-09*
+*Last updated: 2026-10-17*
 
 ## Desk Sourcing direction — 2026-10-09
 
@@ -127,7 +127,7 @@ are created by operators; no Ocharo identity or real account is seeded by the ap
 ## Applied implementation defaults
 
 Current shared conventions require .NET 10 and Vue 3 with strict TypeScript, Vite, Tailwind v4,
-and `@wow-two-beta/ui-vue`. The inspected template's React starter is not an exception.
+and `@wow-two-beta/fe`. The inspected template's React starter is not an exception.
 Use a modular backend serving the frontend and a separate worker process. PostgreSQL is the target
 shared API/worker store. Executed verification and its limits are recorded separately below.
 

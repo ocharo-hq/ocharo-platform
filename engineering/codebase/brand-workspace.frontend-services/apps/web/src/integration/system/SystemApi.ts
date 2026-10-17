@@ -1,5 +1,5 @@
-import { ApiFailureFactory, createApiClient, type ApiFailure } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions, type Result } from '@wow-two-beta/ui-vue/foundation/results';
+import { ApiFailureFactory, createApiClient, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
 
 import type { SystemStatus } from '@/domain/system/SystemStatus';
 

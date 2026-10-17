@@ -1,5 +1,5 @@
-import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
 import {
   isDatePrecision, isEventFormat, isEventPriority, isEventScope, isEventStatus, isIsoDate,

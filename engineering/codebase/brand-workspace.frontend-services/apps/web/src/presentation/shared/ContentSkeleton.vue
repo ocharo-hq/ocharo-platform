@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 withDefaults(defineProps<{ label?: string; cards?: number; variant?: 'gallery' | 'rows' | 'form' | 'imports' | 'stats' | 'canvas' | 'designer' }>(), { label: 'Loading content', cards: 3, variant: 'gallery' });
 const { t } = useUiLocale();

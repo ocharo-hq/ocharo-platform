@@ -1,8 +1,8 @@
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DefaultRetryPolicy } from '@wow-two-beta/ui-vue/foundation/resilience';
-import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
+import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
+import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
 
 import FoundationPage from '@/presentation/system/pages/FoundationPage.vue';
 

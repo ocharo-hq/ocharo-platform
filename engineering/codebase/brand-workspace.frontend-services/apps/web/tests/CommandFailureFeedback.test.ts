@@ -1,9 +1,9 @@
 import { ref } from 'vue';
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
-import { FileUploadPicker } from '@wow-two-beta/ui-vue/presentation/forms';
+import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
+import { FileUploadPicker } from '@wow-two-beta/fe/presentation/forms';
 import { feedbackBus } from '@/application/shared/UseFeedback';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';

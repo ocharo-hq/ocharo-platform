@@ -1,6 +1,6 @@
 import type { TelegramAvailability, TelegramLink, TelegramCode } from '@/domain/workspace/TelegramAccess';
-import { ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 function record(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value); }
 function nullableText(value: unknown): value is string | null { return value === null || typeof value === 'string'; }
 function decoder<T>(guard: (value: unknown) => value is T): ApiDecoder<T> {

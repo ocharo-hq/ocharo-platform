@@ -6,7 +6,7 @@ import { requestConfirmation, useErrorToast } from '@/application/shared/UseFeed
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 import { connectedApps, connectionUrl, type ConnectedApp } from '@/domain/workspace/ConnectedApps';

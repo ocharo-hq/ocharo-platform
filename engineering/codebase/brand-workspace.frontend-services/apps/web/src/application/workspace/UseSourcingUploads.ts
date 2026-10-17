@@ -1,6 +1,6 @@
 import { computed, markRaw, onScopeDispose, reactive } from 'vue';
 
-import type { ApiFailure } from '@wow-two-beta/ui-vue/foundation/http';
+import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
 
 import { sourcingLimits, uploadRejection, type MediaCapture } from '@/domain/workspace/Sourcing';
 

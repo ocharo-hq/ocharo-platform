@@ -3,7 +3,7 @@ import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { useErrorToast } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 import { useCommerce } from '@/application/workspace/UseCommerce';

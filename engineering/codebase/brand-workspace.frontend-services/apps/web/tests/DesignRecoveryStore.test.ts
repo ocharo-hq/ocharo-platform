@@ -1,6 +1,6 @@
 import { effectScope } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { useAccess } from '@/application/workspace/UseAccess';
 import { useDesignDocument } from '@/application/workspace/DocumentStore';
 import { createDesignRecoveryStorage } from '@/integration/workspace/DesignRecoveryStorage';

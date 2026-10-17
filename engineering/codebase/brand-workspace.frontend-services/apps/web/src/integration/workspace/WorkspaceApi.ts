@@ -1,6 +1,6 @@
 import { telegramAvailabilityDecoder, telegramLinkDecoder, telegramCodeDecoder } from './TelegramDecoders';
 import type { DesignKind, DesignSnapshot } from '@/domain/workspace/EditorModels';
-import { createApiClient } from '@wow-two-beta/ui-vue/foundation/http';
+import { createApiClient } from '@wow-two-beta/fe/foundation/http';
 
 import type { DraftInput } from '@/domain/workspace/Models';
 

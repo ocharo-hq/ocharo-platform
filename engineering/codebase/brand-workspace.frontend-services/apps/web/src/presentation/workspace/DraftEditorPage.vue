@@ -4,10 +4,10 @@ import { notifyError, useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue';
 
-import { useAppForm } from '@wow-two-beta/ui-vue/forms-engine/house';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
-import { Field, TextAreaInput, TextInput } from '@wow-two-beta/ui-vue/presentation/forms';
+import { useAppForm } from '@wow-two-beta/fe/forms-engine/house';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
+import { Field, TextAreaInput, TextInput } from '@wow-two-beta/fe/presentation/forms';
 
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
@@ -177,22 +177,22 @@ async function prepareExport(): Promise<void> {
           ><Field :label="t('Language')" :helper="t('For example uz, uz-Latn, ru, or en.')"
             ><TextInput
               v-model="f.value"
-              required
+              is-required
               :maxlength="35"
               pattern="[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*"
               @blur="f.onBlur" /></Field
         ></form.Field>
       </div>
       <form.Field v-slot="f" name="title" is-required
-        ><Field :label="t('Working title')"><TextInput v-model="f.value" required :maxlength="200" @blur="f.onBlur" /></Field
+        ><Field :label="t('Working title')"><TextInput v-model="f.value" is-required :maxlength="200" @blur="f.onBlur" /></Field
       ></form.Field>
       <form.Field v-slot="f" name="caption" is-required
         ><Field :label="t('Caption')"
-          ><TextAreaInput v-model="f.value" required :maxlength="10000" :rows="9" @blur="f.onBlur" /></Field
+          ><TextAreaInput v-model="f.value" is-required :maxlength="10000" :rows="9" @blur="f.onBlur" /></Field
       ></form.Field>
       <form.Field v-slot="f" name="destination" is-required
         ><Field :label="t('Intended destination')" :helper="t('For example Instagram feed or Telegram channel.')"
-          ><TextInput v-model="f.value" required :maxlength="200" @blur="f.onBlur" /></Field
+          ><TextInput v-model="f.value" is-required :maxlength="200" @blur="f.onBlur" /></Field
       ></form.Field>
       <form.Field v-slot="f" name="sourceNotes"
         ><Field
@@ -323,7 +323,7 @@ async function prepareExport(): Promise<void> {
           >
           <form v-if="revoking" class="space-y-3" @submit.prevent="transition('revoke-approval')">
             <Field :label="t('Reason for revocation')"
-              ><TextAreaInput v-model="revokeReason" required :maxlength="1000" :disabled="access.busy.value" /></Field
+              ><TextAreaInput v-model="revokeReason" is-required :maxlength="1000" :is-disabled="access.busy.value" /></Field
             ><Button
               type="submit"
               variant="outline"

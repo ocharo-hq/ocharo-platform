@@ -2,7 +2,7 @@ import { defineComponent, h } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
 import { resolveConfirmation } from '@/application/shared/UseFeedback';
 import { useAccess, type AccessControls } from '@/application/workspace/UseAccess';
@@ -14,7 +14,7 @@ const channel = vi.hoisted(() => ({
   post: vi.fn(),
   close: vi.fn(),
 }));
-vi.mock('@wow-two-beta/ui-vue/foundation/channels', () => ({
+vi.mock('@wow-two-beta/fe/foundation/channels', () => ({
   createSyncChannel: () => ({
     post: channel.post,
     close: channel.close,

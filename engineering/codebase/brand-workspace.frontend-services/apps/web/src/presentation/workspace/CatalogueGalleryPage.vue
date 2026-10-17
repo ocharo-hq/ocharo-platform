@@ -6,10 +6,10 @@ import { failureMessage } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 import { requestConfirmation, notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import {Modal,ModalContent,ModalTitle} from '@wow-two-beta/ui-vue/presentation/overlays';
+import {Modal,ModalContent,ModalTitle} from '@wow-two-beta/fe/presentation/overlays';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
-import {Button} from '@wow-two-beta/ui-vue/presentation/actions';
-import {SkeletonState} from '@wow-two-beta/ui-vue/presentation/feedback';
+import {Button} from '@wow-two-beta/fe/presentation/actions';
+import {SkeletonState} from '@wow-two-beta/fe/presentation/feedback';
 import { catalogueLocales, type CatalogueLocale } from '@/domain/workspace/Commerce';
 import { catalogueMetadata, catalogueSlug, createCatalogue, duplicateCatalogue } from '@/domain/workspace/CatalogueDocuments';
 import { cloneSnapshot, validCatalogueSlug, type CatalogueMetadata, type DesignDocument, type DesignSummary } from '@/domain/workspace/EditorModels';
@@ -77,7 +77,7 @@ async function remove(item:DesignSummary){if(locked.value||!await requestConfirm
    </div>
   </article></div></div>
   <p class="catalogue-note">{{t('Changes affect the working catalogue. Published editions change only after explicit preparation and publication.')}}</p>
-  <Modal :open="dialogOpen" :dismiss-on-escape="!busy" :dismiss-on-outside-click="!busy" @update:open="value=>{if(!value)void close();}"><ModalContent v-if="dialogOpen" :is-blurred="true" class="catalogue-settings-modal"><form @submit.prevent="save"><header><ModalTitle>{{selected?t('Catalogue settings'):t('New catalogue')}}</ModalTitle><button type="button" :disabled="busy" @click="close()">{{t('Close')}}</button></header><fieldset :disabled="busy">
+  <Modal :open="dialogOpen" :can-dismiss-on-escape="!busy" :can-dismiss-on-outside-click="!busy" @update:open="value=>{if(!value)void close();}"><ModalContent v-if="dialogOpen" :is-blurred="true" class="catalogue-settings-modal"><form @submit.prevent="save"><header><ModalTitle>{{selected?t('Catalogue settings'):t('New catalogue')}}</ModalTitle><button type="button" :disabled="busy" @click="close()">{{t('Close')}}</button></header><fieldset :disabled="busy">
    <label>{{t('Name')}}<input v-model="name" maxlength="160" required @input="nameChanged"></label><label>{{t('Slug')}}<input v-model="metadata.slug" maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" :aria-invalid="!!slugError" :aria-describedby="slugError?'slug-error':undefined" required><span v-if="slugError" id="slug-error" role="alert">{{slugError}}</span></label><label>{{t('Description')}}<textarea v-model="metadata.description" maxlength="2000" rows="3" /></label>
    <label>{{t('Brand')}}<DeskSelect v-model="brandId" required :label="t('Brand')" :disabled="busy" :options="[({ value: '' as const, label: (t('Choose brand')) }), ...(workspace.brands.value ?? []).map(brand => ({ value: brand.id, label: (brand.name) }))]" /></label>
    <label v-if="!selected">{{t('Catalogue language')}}<DeskSelect v-model="locale" :label="t('Catalogue language')" :disabled="busy" :options="[...(catalogueLocales).map(language => ({ value: language.code, label: (language.name) }))]" /></label>

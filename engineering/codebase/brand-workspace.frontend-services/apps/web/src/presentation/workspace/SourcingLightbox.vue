@@ -2,7 +2,7 @@
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue';
 import { ChevronLeft, ChevronRight, FileText, MapPin, X } from 'lucide-vue-next';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 
 import { requestConfirmation } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';

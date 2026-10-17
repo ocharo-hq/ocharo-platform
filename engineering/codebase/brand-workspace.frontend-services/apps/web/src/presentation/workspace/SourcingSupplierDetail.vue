@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { RefreshCw } from 'lucide-vue-next';
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 import { failureMessage } from '@/application/workspace/UseAccess';
 import { useErrorToast } from '@/application/shared/UseFeedback';
 import { orderedSourcingSections, type SourcingPreferences } from '@/domain/workspace/SourcingPreferences';
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';

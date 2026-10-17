@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
-import { FileUploadPicker, type FileRejection } from '@wow-two-beta/ui-vue/presentation/forms';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
+import { FileUploadPicker, type FileRejection } from '@wow-two-beta/fe/presentation/forms';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';
@@ -38,7 +38,7 @@ function add(accepted: readonly File[], rejected: readonly FileRejection[]): voi
     </div>
     <FileUploadPicker
       multiple :accept="sourcingMediaAccept" :max-size="sourcingMaximumBytes" :max-files="100"
-      :disabled="access.busy.value && !uploads.running.value"
+      :is-disabled="access.busy.value && !uploads.running.value"
       :label="t('Drop photos, PDFs or videos here, or click to browse')"
       :hint="t('JPEG, PNG or WebP up to 20 MiB · PDF up to 25 MiB · MP4 up to 64 MiB')"
       @files-change="add"

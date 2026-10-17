@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue';
 import { notifyError } from '@/application/shared/UseFeedback';
 
-import { useAppQuery, useQueryCache } from '@wow-two-beta/ui-vue/query';
+import { useAppQuery, useQueryCache } from '@wow-two-beta/fe/query';
 
 import type { DraftInput, WorkspaceLocation } from '@/domain/workspace/Models';
 

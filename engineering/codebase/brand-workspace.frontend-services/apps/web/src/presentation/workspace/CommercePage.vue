@@ -6,7 +6,7 @@ import { useErrorToast } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { productReviewIssueCount, unconfirmedProductLocales } from '@/domain/workspace/ProductReview';
 import ProductEditor from './ProductEditor.vue';
-import {Button} from '@wow-two-beta/ui-vue/presentation/actions';
+import {Button} from '@wow-two-beta/fe/presentation/actions';
 import {failureMessage,type AccessControls} from '@/application/workspace/UseAccess';
 import type {WorkspaceControls} from '@/application/workspace/UseWorkspace';
 import {useCommerce} from '@/application/workspace/UseCommerce';

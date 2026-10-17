@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Button, CopyButton } from '@wow-two-beta/ui-vue/presentation/actions';
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { Button, CopyButton } from '@wow-two-beta/fe/presentation/actions';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 import { Bot, Copy, RefreshCw } from 'lucide-vue-next';
 
 import { notifyError } from '@/application/shared/UseFeedback';

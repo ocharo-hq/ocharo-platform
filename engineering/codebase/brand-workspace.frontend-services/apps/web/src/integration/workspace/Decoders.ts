@@ -1,7 +1,7 @@
 import { validateSnapshot, type DesignDocument, type DesignSummary } from '@/domain/workspace/EditorModels';
 import type { DesignRevision } from '@/domain/workspace/DesignRevisions';
-import { ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
 import type {
   Brand,

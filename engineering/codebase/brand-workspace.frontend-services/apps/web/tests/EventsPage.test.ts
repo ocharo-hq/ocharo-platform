@@ -2,10 +2,10 @@ import { deskSelect, chooseDeskValue } from './helpers/DeskSelect';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type DOMWrapper, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
-import { DefaultRetryPolicy } from '@wow-two-beta/ui-vue/foundation/resilience';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
-import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
+import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
+import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
+import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
 
 import { feedbackBus, resolveConfirmation } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';

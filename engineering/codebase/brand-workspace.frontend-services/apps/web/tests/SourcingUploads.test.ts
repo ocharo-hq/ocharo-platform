@@ -1,8 +1,8 @@
 import { effectScope } from 'vue';
 import { flushPromises } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
 import type { SourcingControls } from '@/application/workspace/UseSourcing';
 import { useSourcingUploads } from '@/application/workspace/UseSourcingUploads';

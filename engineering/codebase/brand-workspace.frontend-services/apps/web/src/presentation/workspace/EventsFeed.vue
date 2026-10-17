@@ -2,7 +2,7 @@
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { Plus, RefreshCw } from 'lucide-vue-next';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 
 import { useErrorToast } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';

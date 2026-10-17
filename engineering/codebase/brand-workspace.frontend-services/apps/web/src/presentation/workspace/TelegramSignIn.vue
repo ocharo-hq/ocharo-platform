@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onScopeDispose, ref, watch } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Field, TextInput } from '@wow-two-beta/ui-vue/presentation/forms';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Field, TextInput } from '@wow-two-beta/fe/presentation/forms';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { notifyError } from '@/application/shared/UseFeedback';
@@ -44,12 +44,12 @@ async function login(): Promise<void> {
   <div class="space-y-5">
     <p class="text-sm text-muted-foreground">{{ t('Use the phone number linked to Telegram in your Ocharo account settings.') }}</p>
     <form class="space-y-4" @submit.prevent="send">
-      <Field :label="t('Phone number')"><TextInput v-model="phone" type="tel" autocomplete="tel" placeholder="+998…" required :disabled="access.busy.value" /></Field>
+      <Field :label="t('Phone number')"><TextInput v-model="phone" type="tel" autocomplete="tel" placeholder="+998…" is-required :is-disabled="access.busy.value" /></Field>
       <Button type="submit" variant="outline" :is-loading="sending" :is-disabled="access.busy.value" is-full-width>{{ t(sentTo ? 'Send a new code' : 'Send Telegram code') }}</Button>
     </form>
     <form v-if="sentTo" class="space-y-4" @submit.prevent="login">
       <p role="status" class="text-sm text-muted-foreground">{{ t('If this number is connected to an active Ocharo account, a code will arrive in Telegram.') }}</p>
-      <Field :label="t('Sign-in code')"><TextInput v-model="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required :disabled="access.busy.value" /></Field>
+      <Field :label="t('Sign-in code')"><TextInput v-model="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" is-required :is-disabled="access.busy.value" /></Field>
       <Button type="submit" :is-loading="signingIn" :is-disabled="access.busy.value" is-full-width>{{ t('Sign in') }}</Button>
     </form>
   </div>

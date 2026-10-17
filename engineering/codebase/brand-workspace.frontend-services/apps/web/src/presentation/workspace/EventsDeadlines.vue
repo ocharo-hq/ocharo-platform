@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Badge } from '@wow-two-beta/ui-vue/presentation/display';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';

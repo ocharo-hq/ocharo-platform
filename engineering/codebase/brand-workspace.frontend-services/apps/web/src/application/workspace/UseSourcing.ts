@@ -1,8 +1,8 @@
 import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue';
 
-import type { ApiFailure } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions, type Result } from '@wow-two-beta/ui-vue/foundation/results';
-import { useAppInfiniteQuery, useAppQuery, useQueryCache } from '@wow-two-beta/ui-vue/query';
+import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
+import { useAppInfiniteQuery, useAppQuery, useQueryCache } from '@wow-two-beta/fe/query';
 
 import { notifyError, requestConfirmation } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';

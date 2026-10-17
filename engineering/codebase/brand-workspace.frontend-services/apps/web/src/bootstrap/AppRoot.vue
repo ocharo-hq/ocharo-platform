@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { provideLocale } from '@wow-two-beta/ui-vue/foundation/i18n';
+import { provideLocale } from '@wow-two-beta/fe/foundation/i18n';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import { AuthProvider } from '@wow-two-beta/ui-vue/auth';
+import { AuthProvider } from '@wow-two-beta/fe/auth';
 
 import { useAccess } from '@/application/workspace/UseAccess';
 import FoundationPage from '@/presentation/system/pages/FoundationPage.vue';

@@ -1,5 +1,5 @@
-import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import type {CommerceDraft,CommerceRelease,CommerceSnapshot,IntegrationTicket,CreativeInput,CreativeImport,Provenance} from '@/domain/workspace/Commerce';
 const record=(v:unknown):v is Record<string,unknown>=>typeof v==='object'&&v!==null&&!Array.isArray(v);
 function decode<T>(guard:(v:unknown)=>v is T):ApiDecoder<T> {return value=>guard(value)?ResultExtensions.ok(value):ResultExtensions.fail(ApiFailureFactory.create('protocol'));}

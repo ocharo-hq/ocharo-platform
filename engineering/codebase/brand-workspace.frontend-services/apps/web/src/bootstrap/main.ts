@@ -2,8 +2,8 @@ import './index.css';
 
 import { createApp } from 'vue';
 
-import { DefaultRetryPolicy } from '@wow-two-beta/ui-vue/foundation/resilience';
-import { createQueryClient, queryPlugin } from '@wow-two-beta/ui-vue/query';
+import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
+import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
 
 import AppRoot from './AppRoot.vue';
 import { initializeUiLocale } from '@/application/shared/UseUiLocale';

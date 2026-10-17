@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { onScopeDispose } from 'vue';
 import { TriangleAlert } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { FeedbackToastHost } from '@wow-two-beta/ui-vue/presentation/feedback';
-import { AlertModal, AlertModalContent, ModalTitle, ModalDescription } from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { FeedbackToastHost } from '@wow-two-beta/fe/presentation/feedback';
+import { AlertModal, AlertModalContent, ModalTitle, ModalDescription } from '@wow-two-beta/fe/presentation/overlays';
 import { confirmation, feedbackBus, resolveConfirmation } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 const { t } = useUiLocale();
 onScopeDispose(() => resolveConfirmation(false));
 </script>
 <template>
-  <FeedbackToastHost :bus="feedbackBus" position="top-right" />
+  <FeedbackToastHost :bus="feedbackBus" />
   <AlertModal :open="!!confirmation" @update:open="value => { if (!value) resolveConfirmation(false); }">
     <AlertModalContent v-if="confirmation" :is-blurred="true" class="w-[min(32rem,calc(100vw-2rem))]">
       <Icon :icon="TriangleAlert" :size="32" class="mb-4 text-warning" />

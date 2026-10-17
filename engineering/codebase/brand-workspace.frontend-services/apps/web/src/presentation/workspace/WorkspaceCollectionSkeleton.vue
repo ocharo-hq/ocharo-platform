@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 
 /** Matches the Desk collection being loaded without moving its toolbar or inventing content. */
 defineOptions({ name: 'WorkspaceCollectionSkeleton' });

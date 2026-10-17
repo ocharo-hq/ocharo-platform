@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
 import { computed, ref } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { requestConfirmation } from '@/application/shared/UseFeedback';
 import { defaultSourcingPreferences, sourcingSections, sourcingSectionLabels, type SourcingPreferences } from '@/domain/workspace/SourcingPreferences';

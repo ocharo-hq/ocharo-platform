@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Images, Users, SlidersHorizontal } from 'lucide-vue-next';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { notifyError } from '@/application/shared/UseFeedback';
 import { useSourcingPreferences } from '@/application/workspace/UseSourcingPreferences';
 import SourcingViewSettings from './SourcingViewSettings.vue';

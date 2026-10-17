@@ -1,5 +1,5 @@
 import { computed, onScopeDispose, readonly, ref, shallowRef, watch } from 'vue';
-import { useAppQuery } from '@wow-two-beta/ui-vue/query';
+import { useAppQuery } from '@wow-two-beta/fe/query';
 
 import { notifyError, useErrorToast } from '@/application/shared/UseFeedback';
 import { createMcpApi, type McpTicket } from '@/integration/workspace/McpApi';

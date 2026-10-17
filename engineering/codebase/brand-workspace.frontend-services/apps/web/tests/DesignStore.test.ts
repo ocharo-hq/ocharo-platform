@@ -1,7 +1,7 @@
 import { effectScope } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
-import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
+import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { useAccess } from '@/application/workspace/UseAccess';
 import { useDesignDocument } from '@/application/workspace/DocumentStore';
 import { createCardTemplate } from '@/domain/workspace/Templates';

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { notifyError } from '@/application/shared/UseFeedback';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onMounted, ref, watch } from 'vue';
 

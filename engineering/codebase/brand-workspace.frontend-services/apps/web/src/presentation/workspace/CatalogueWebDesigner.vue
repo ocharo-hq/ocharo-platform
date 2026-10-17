@@ -8,7 +8,7 @@ import type {WorkspaceControls} from '@/application/workspace/UseWorkspace';
 import {useUiLocale} from '@/application/shared/UseUiLocale';
 import {requestConfirmation,notifyError} from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
-import {Button} from '@wow-two-beta/ui-vue/presentation/actions';
+import {Button} from '@wow-two-beta/fe/presentation/actions';
 import {catalogueLocales,productCopy,productEligibleForCatalogue,type CatalogueLocale,type CommerceDraft} from '@/domain/workspace/Commerce';
 import {catalogueMetadata} from '@/domain/workspace/CatalogueDocuments';
 import {cloneSnapshot,type CatalogueWebPage,type CatalogueMetadata,type CatalogueCopy,type CatalogueSettings} from '@/domain/workspace/EditorModels';

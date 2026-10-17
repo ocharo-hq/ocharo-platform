@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, reactive, ref, watch } from 'vue';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { SaveOutcome, SourcingControls } from '@/application/workspace/UseSourcing';
