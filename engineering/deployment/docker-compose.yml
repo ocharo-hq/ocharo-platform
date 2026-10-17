@@ -49,7 +49,7 @@ services:
       <<: *runtime-environment
       ASPNETCORE_URLS: http://+:8080
     ports:
-      - "127.0.0.1:8268:8080"
+      - "127.0.0.1:8377:8080"
     volumes:
       - data-protection-keys:/var/lib/brand-workspace/keys
     depends_on:

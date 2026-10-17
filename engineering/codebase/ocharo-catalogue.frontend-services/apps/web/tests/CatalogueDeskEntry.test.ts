@@ -7,7 +7,7 @@ describe('Canonical catalogue entry', () => {
   it('opens Desk in another tab without submitting or replacing pilot edits', () => {
     const wrapper = mount(CatalogueDeskEntry, { props: { deskUrl: resolveCatalogueDeskUrl(undefined) } });
     const link = wrapper.get('a');
-    expect(link.attributes('href')).toBe('https://localhost:8266/catalogue');
+    expect(link.attributes('href')).toBe('https://localhost:8264/catalogue');
     expect(link.attributes('target')).toBe('_blank');
     expect(link.attributes('rel')).toContain('noopener');
     expect(wrapper.find('form').exists()).toBe(false);
@@ -15,7 +15,7 @@ describe('Canonical catalogue entry', () => {
   });
 
   it.each([
-    'http://localhost:8266/catalogue',
+    'http://localhost:8264/catalogue',
     'javascript:alert(1)',
     '/catalogue',
     'https://user:password@desk.example/catalogue',

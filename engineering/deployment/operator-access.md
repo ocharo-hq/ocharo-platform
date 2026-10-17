@@ -44,13 +44,13 @@ provisioning require PostgreSQL but no HTTP listener, HTTPS certificate, or key 
 
 ## HTTPS and sessions
 
-Authentication requires HTTPS. The ordinary Compose HTTP listener at port `8268` supports diagnostics
+Authentication requires HTTPS. The ordinary Compose HTTP listener at port `8377` supports diagnostics
 and the public application shell; it cannot sign an operator in. Host development uses the configured
 HTTPS profile at `https://localhost:8264`, with an existing locally trusted .NET development certificate.
 Certificate creation or trust changes remain explicit local setup actions.
 
 The optional `docker-compose.https.yml` starts a direct Kestrel TLS listener at
-`https://localhost:8269`. Supply the absolute path and password of your local PFX certificate through
+`https://localhost:8376`. Supply the absolute path and password of your local PFX certificate through
 the ignored deployment `.env`:
 
 ```dotenv
@@ -101,7 +101,7 @@ synthetic organizations, a one-pixel image, a draft, and an export; it leaves th
 Use a dedicated local verification database for repeatable clean runs.
 
 ```bash
-python3 check-preparation.py --origin https://localhost:8269 --email smoke@example.test
+python3 check-preparation.py --origin https://localhost:8376 --email smoke@example.test
 ```
 
 The password comes from a masked terminal prompt or standard input. For a dedicated test certificate,

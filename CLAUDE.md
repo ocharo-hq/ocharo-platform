@@ -32,7 +32,7 @@ The requested authoring app is **Ocharo Catalogue**, frontend `https://localhost
 backend `OcharoCatalogue.Api` at `https://localhost:8278` with the `https` launch profile.
 Its source lives under `engineering/codebase/ocharo-catalogue.{frontend,backend}-services/`.
 Products, prices, translations, collections, named catalogues and both designers are edited there.
-Desk at `8266` remains a separate operator workspace. A Desk link is not a Catalogue implementation.
+Desk at `8264` remains a separate operator workspace. A Desk link is not a Catalogue implementation.
 
 Catalogue retains its existing SQLite products, media hashes and product revision history.
 New design/release tables are added idempotently; this work does not adopt or overwrite live data.

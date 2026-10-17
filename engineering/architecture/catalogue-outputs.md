@@ -28,10 +28,10 @@ no second mutable catalogue or product database for this feature.
 | Retained Catalogue pilot | Preserved `ocharo-catalogue.*` applications retain their earlier local data/API. Their banner opens Desk in a new tab, preserving unsaved pilot work. They are not another canonical editing path. |
 | Public catalogue | Marketing consumes the explicitly published Platform release through `/api/public/v1/brands/{slug}/catalogue?locale={locale}`. |
 
-The checked-in Desk frontend defaults to HTTPS port **8266**, proxying API port **8264**.
+The checked-in Desk frontend defaults to HTTPS port **8378**, proxying API port **8264**.
 Environment overrides and an IDE session can use other ports. These defaults do not establish
 that a service is running. The retained pilot link uses `VITE_OCHARO_DESK_URL`, defaulting to
-`https://localhost:8266/catalogue`; it accepts only an HTTPS destination without credentials,
+`https://localhost:8264/catalogue`; it accepts only an HTTPS destination without credentials,
 query or fragment. No automatic redirect discards the older editor's state.
 
 ## Saved catalogue contract

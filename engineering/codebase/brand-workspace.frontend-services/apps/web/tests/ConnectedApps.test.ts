@@ -6,7 +6,7 @@ describe('built-in connected app destinations', () => {
     ['https://localhost:8340','https://localhost:8340'],
     ['https://localhost:8342','https://localhost:8340'],
     ['https://localhost:8264','https://localhost:8264'],
-    ['https://localhost:8266','https://localhost:8264'],
+    ['https://localhost:8378','https://localhost:8264'],
   ])('passes each ticket only in the destination fragment for %s', (deskOrigin, issuer) => {
     for (const app of connectedApps(deskOrigin)) {
       const url = new URL(connectionUrl(app.id,deskOrigin,'ticket-value'));

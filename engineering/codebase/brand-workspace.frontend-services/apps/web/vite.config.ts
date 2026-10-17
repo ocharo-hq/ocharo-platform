@@ -36,7 +36,7 @@ export default defineConfig(({ command }) => ({
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   server: {
     host: 'localhost',
-    port: Number(process.env.VITE_PORT ?? 8266),
+    port: Number(process.env.VITE_PORT ?? 8378),
     strictPort: true,
     proxy: {
       '/api': deskProxy(command),

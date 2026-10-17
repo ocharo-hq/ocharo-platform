@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-origin="${1:-http://127.0.0.1:8268}"
+origin="${1:-http://127.0.0.1:8377}"
 origin="${origin%/}"
 check_tmp="$(mktemp -d "${TMPDIR:-/tmp}/brand-workspace-check.XXXXXX")"
 trap 'rm -rf "$check_tmp"' EXIT

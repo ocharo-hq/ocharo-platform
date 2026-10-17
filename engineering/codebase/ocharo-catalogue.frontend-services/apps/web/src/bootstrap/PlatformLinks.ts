@@ -8,7 +8,7 @@ export interface PlatformLink {
 const env = import.meta.env as Record<string, string | undefined>;
 
 const configuredApps: PlatformLink[] = [
-  { key: 'workspace', label: 'Workspace', url: env.VITE_OCHARO_WORKSPACE_URL ?? 'https://localhost:8266/' },
+  { key: 'workspace', label: 'Workspace', url: env.VITE_OCHARO_WORKSPACE_URL ?? 'https://localhost:8264/' },
   { key: 'brand', label: 'Brand', url: env.VITE_OCHARO_BRAND_URL ?? 'https://localhost:8288/' },
   { key: 'catalogue', label: 'Catalogue', url: env.VITE_OCHARO_CATALOGUE_URL ?? 'https://localhost:8282/catalogues' },
   { key: 'marketing', label: 'Marketing', url: env.VITE_OCHARO_MARKETING_URL ?? 'https://localhost:8358/' },
@@ -36,7 +36,7 @@ export const platformLinks: PlatformLink[] = configuredApps.flatMap((app) => {
 
 /** A configured canonical authoring destination; only trusted HTTPS links are exposed. */
 export function resolveCatalogueDeskUrl(value: string | undefined): string | null {
-  return resolvePlatformUrl(value ?? 'https://localhost:8266/catalogue');
+  return resolvePlatformUrl(value ?? 'https://localhost:8264/catalogue');
 }
 
 export const catalogueDeskUrl = resolveCatalogueDeskUrl(env.VITE_OCHARO_DESK_URL);

@@ -75,7 +75,7 @@ docker compose --env-file .env.example ps
 docker compose --env-file .env.example logs --tail 50 api worker migrate
 ```
 
-The public application shell and diagnostics are at `http://127.0.0.1:8268`. Operator access requires
+The public application shell and diagnostics are at `http://127.0.0.1:8377`. Operator access requires
 HTTPS; [operator setup](operator-access.md) documents provisioning and the optional packaged TLS listener.
 The local container HTTP endpoint is bound only to loopback. `check.sh` validates API readiness, actual
 worker heartbeat, root/deep-link SPA responses, and JSON errors for unknown API paths and methods.
@@ -129,8 +129,8 @@ organization API boundary and requires current membership.
 | Surface | Local port |
 |---|---|
 | API development | HTTPS 8264; 8265 reserved |
-| Vue development | HTTPS 8266 |
-| Packaged API and SPA | HTTP 8268; optional HTTPS 8269; loopback only |
+| Vue development | HTTPS 8378 |
+| Packaged API and SPA | HTTP 8377; optional HTTPS 8376; loopback only |
 | PostgreSQL | 8270, loopback only |
 | Worker | No HTTP listener |
 
