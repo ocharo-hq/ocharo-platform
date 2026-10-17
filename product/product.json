@@ -1,0 +1,6 @@
+{
+  "$schema": "../../../../../../conventions/design/identity/product.schema.json",
+  "manifest": 1,
+  "name": "Ocharo Platform",
+  "description": "Ocharo Desk, the operator workspace for Ocharo's brand identity, product authority, commerce and business management."
+}

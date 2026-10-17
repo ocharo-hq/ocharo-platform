@@ -1,3 +1,10 @@
+# yaml-language-server: $schema=../../../../../../../conventions/deployment/descriptor/deploy.schema.json
+# What this product deploys: its services, how each builds, what changes it and which sites it serves.
+# Format and rules: wow-two-ws/conventions/deployment/descriptor/deploy-descriptor.md. Hostnames, secrets and
+# environments live in Wheelhouse targets, never here. Paths are relative to engineering/.
+#
+# Ocharo Platform deploys Desk, its jobs worker and the private image worker. The adopted Brand and Catalogue
+# pilots stay loopback-only and are never deployed; Desk and jobs compile only their Domain projects.
 descriptor: 1
 product: ocharo-platform
 services:
@@ -6,10 +13,15 @@ services:
     paths:
       - codebase/brand-workspace.backend-services/**
       - codebase/brand-workspace.frontend-services/**
+      - codebase/ocharo-brand.backend-services/Directory.*.props
+      - codebase/ocharo-brand.backend-services/OcharoBrand.Domain/**
+      - codebase/ocharo-catalogue.backend-services/Directory.*.props
+      - codebase/ocharo-catalogue.backend-services/OcharoCatalogue.Domain/**
+    # Desk serves its own readiness probe (PostgreSQL and schema); it does not use the SDK boot bundle's /health.
     health: /health/ready
     needs: [postgres]
     settings:
-      required: [ConnectionStrings:Database, DataProtection:KeysPath, DataProtection:ApplicationName]
+      required: [ConnectionStrings:Database, AllowedHosts, DataProtection:KeysPath, DataProtection:ApplicationName]
     volumes:
       keys: /var/lib/brand-workspace/keys
     sites:
@@ -18,6 +30,10 @@ services:
     build: { dockerfile: deployment/Dockerfile.worker }
     paths:
       - codebase/brand-workspace.backend-services/**
+      - codebase/ocharo-brand.backend-services/Directory.*.props
+      - codebase/ocharo-brand.backend-services/OcharoBrand.Domain/**
+      - codebase/ocharo-catalogue.backend-services/Directory.*.props
+      - codebase/ocharo-catalogue.backend-services/OcharoCatalogue.Domain/**
     health: { command: [sh, -c, 'kill -0 1'] }
     needs: [postgres]
     settings:
