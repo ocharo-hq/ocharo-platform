@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import CatalogueSelect from '../common/CatalogueSelect.vue';
-import { useRefresh } from '@wow-two-beta/ui-vue/query';
-import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { useRefresh } from '@wow-two-beta/fe/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import TableSkeletonRows from '../common/TableSkeletonRows.vue';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { Printer } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useBrandKit, useCatalogueStore, usePublicCatalogue } from '../../application/catalogue';
 import type { LocaleCode, PublicProduct } from '../../domain/catalogue/CatalogueModels';
 import { formatUzs, locales } from '../../domain/catalogue/CatalogueRules';

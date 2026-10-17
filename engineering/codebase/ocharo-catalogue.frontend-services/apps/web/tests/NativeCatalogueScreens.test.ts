@@ -5,7 +5,7 @@ import CatalogueGalleryPage from '../src/presentation/design/CatalogueGalleryPag
 import CatalogueWebDesignerPage from '../src/presentation/design/CatalogueWebDesignerPage.vue';
 import CatalogueWebPreview from '../src/presentation/design/CatalogueWebPreview.vue';
 import { designApi, DesignRequestError } from '../src/integration/design/DesignApi';
-import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
+import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
 import { confirmation, feedbackBus, resolveConfirmation } from '../src/application/common/UseFeedback';
 let messages: string[] = [];

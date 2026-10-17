@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useSsoSession } from '../../application/common/UseSsoSession';
 const { canEdit: ssoCanEdit } = useSsoSession();
-import { useRefresh } from '@wow-two-beta/ui-vue/query';
-import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { useRefresh } from '@wow-two-beta/fe/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
 import TableSkeletonRows from '../common/TableSkeletonRows.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';

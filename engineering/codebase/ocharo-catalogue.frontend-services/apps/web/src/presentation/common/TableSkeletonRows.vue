@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 withDefaults(defineProps<{ columns: number; rows?: number }>(), { rows: 5 });
 </script>
 <template>

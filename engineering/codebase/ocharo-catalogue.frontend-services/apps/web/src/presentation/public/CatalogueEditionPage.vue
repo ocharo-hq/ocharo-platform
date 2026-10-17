@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useRefresh } from '@wow-two-beta/ui-vue/query';
-import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { useRefresh } from '@wow-two-beta/fe/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router';
 import { ArrowDownToLine, Bookmark, Check, Share2 } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { usePublishedCatalogue } from '../../application/public/UsePublishedCatalogue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import { notifyError, useErrorToast } from '../../application/common/UseFeedback';

@@ -5,7 +5,7 @@ import {
   SelectPickerValue,
   SelectPickerContent,
   SelectPickerItem,
-} from '@wow-two-beta/ui-vue/presentation/forms';
+} from '@wow-two-beta/fe/presentation/forms';
 defineOptions({ inheritAttrs: false });
 defineProps<{
   modelValue: string;

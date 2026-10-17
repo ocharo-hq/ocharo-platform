@@ -1,5 +1,5 @@
-import { ApiFailureFactory, createApiClient, rawEnvelope } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ApiFailureFactory, createApiClient, rawEnvelope } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { decodePublishedCatalogue, type PublishedCatalogue } from '../../domain/public/PublishedCatalogue';
 
 /** Read-only, exact-language published editions. No operator or draft endpoint is used. */

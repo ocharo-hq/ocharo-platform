@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useSsoSession } from '../../application/common/UseSsoSession';
 const { canEdit: ssoCanEdit } = useSsoSession();
-import { useRefresh } from '@wow-two-beta/ui-vue/query';
-import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { useRefresh } from '@wow-two-beta/fe/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
@@ -10,10 +10,10 @@ const { t } = useUiLocale();
 import { requestConfirmation } from '../../application/common/UseFeedback';
 import { computed, onMounted, ref } from 'vue';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-vue-next';
-import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useCollections, useProductList, type CollectionDraft } from '../../application/catalogue';
 
 /** Ordered product selections: seasons, lookbooks, merchant sheets. */
@@ -136,8 +136,8 @@ onMounted(async () => {
 
     <Modal
       :open="!!draft"
-      :dismiss-on-escape="!collections.busy.value"
-      :dismiss-on-outside-click="!collections.busy.value"
+      :can-dismiss-on-escape="!collections.busy.value"
+      :can-dismiss-on-outside-click="!collections.busy.value"
       @update:open="
         (value) => {
           if (!value) void close();

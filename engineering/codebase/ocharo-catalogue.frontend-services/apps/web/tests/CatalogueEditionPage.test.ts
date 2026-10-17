@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import CatalogueEditionPage from '../src/presentation/public/CatalogueEditionPage.vue';
 import { publishedCatalogueApi } from '../src/integration/public/PublishedCatalogueApi';
 import { feedbackBus } from '../src/application/common/UseFeedback';

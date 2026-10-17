@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { useSsoSession } from '../../application/common/UseSsoSession';
 const { canEdit: ssoCanEdit } = useSsoSession();
-import { useRefresh } from '@wow-two-beta/ui-vue/query';
-import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { useRefresh } from '@wow-two-beta/fe/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, onMounted, onScopeDispose, ref } from 'vue';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
-import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 import { designApi, describeDesignFailure } from '../../application/design/UseCatalogueDocument';
 import { notifyError, requestConfirmation } from '../../application/common/UseFeedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
@@ -322,8 +322,8 @@ onScopeDispose(() => {
     </p>
     <Modal
       :open="dialogOpen"
-      :dismiss-on-escape="!busy"
-      :dismiss-on-outside-click="!busy"
+      :can-dismiss-on-escape="!busy"
+      :can-dismiss-on-outside-click="!busy"
       @update:open="
         (value) => {
           if (!value) void close();

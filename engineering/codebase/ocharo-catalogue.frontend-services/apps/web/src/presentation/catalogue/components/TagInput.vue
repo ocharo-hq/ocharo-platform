@@ -4,7 +4,7 @@ import { orderProductSizes } from '../../../domain/catalogue/ProductSizes';
 import { useUiLocale } from '../../../application/shared/UseUiLocale';
 const { t } = useUiLocale();
 import { X } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 
 /** Editable list of short codes (sizes, tags, fabric codes). Enter or comma adds; × removes. */
 defineOptions({ name: 'TagInput' });

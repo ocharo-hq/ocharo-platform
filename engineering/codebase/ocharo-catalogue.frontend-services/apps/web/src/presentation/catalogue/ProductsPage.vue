@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { useSsoSession } from '../../application/common/UseSsoSession';
 const { canEdit: ssoCanEdit } = useSsoSession();
-import { useRefresh } from '@wow-two-beta/ui-vue/query';
-import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { useRefresh } from '@wow-two-beta/fe/query';
+import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
 import { CheckSquare, CirclePlus, Copy, ImageOff, Search, Square } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useCatalogueStore, useProductList, useCollections } from '../../application/catalogue';
 import { formatUzs, statusLabels } from '../../domain/catalogue/CatalogueRules';
 import ContentSkeleton from '../common/ContentSkeleton.vue';

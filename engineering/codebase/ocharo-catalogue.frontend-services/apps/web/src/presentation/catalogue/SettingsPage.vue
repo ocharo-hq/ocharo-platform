@@ -3,7 +3,7 @@ import { useSsoSession } from '../../application/common/UseSsoSession';
 const { canEdit: ssoCanEdit } = useSsoSession();
 import { onMounted, ref, watch } from 'vue';
 import { Download, Plus, Trash2, UploadCloud } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useCatalogueAdmin, useCatalogueStore } from '../../application/catalogue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import type { CatalogueSettings } from '../../domain/catalogue/CatalogueModels';

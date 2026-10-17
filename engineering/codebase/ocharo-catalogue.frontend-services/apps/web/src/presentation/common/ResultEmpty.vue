@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { EmptyState } from '@wow-two-beta/ui-vue/presentation/display';
+import { EmptyState } from '@wow-two-beta/fe/presentation/display';
 defineProps<{ label: string }>();
 </script>
 <template>

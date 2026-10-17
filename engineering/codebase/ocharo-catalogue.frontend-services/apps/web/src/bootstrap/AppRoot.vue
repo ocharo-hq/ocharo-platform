@@ -3,13 +3,13 @@ import { useSsoSession } from '../application/common/UseSsoSession';
 const { session: ssoSession } = useSsoSession();
 import SsoConnection from '../presentation/common/SsoConnection.vue';
 import { computed, onMounted, ref, watch } from 'vue';
-import { provideLocale } from '@wow-two-beta/ui-vue/foundation/i18n';
+import { provideLocale } from '@wow-two-beta/fe/foundation/i18n';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import { Boxes, BookOpen, Layers, Settings, Shirt, X } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
-import { AppErrorBoundary, RouteAnnouncer } from '@wow-two-beta/ui-vue/router';
-import { AppShell, AppShellHeader, AppShellMain, Navbar } from '@wow-two-beta/ui-vue/presentation/layout';
-import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { AppErrorBoundary, RouteAnnouncer } from '@wow-two-beta/fe/router';
+import { AppShell, AppShellHeader, AppShellMain, Navbar } from '@wow-two-beta/fe/presentation/layout';
+import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 import { useCatalogueStore } from '../application/catalogue';
 import { useUiLocale } from '../application/shared/UseUiLocale';
 import FeedbackHost from '../presentation/common/FeedbackHost.vue';
@@ -72,7 +72,7 @@ onMounted(() => {
     <AppShellHeader
       class="catalogue-chrome no-print border-b border-border bg-chrome max-lg:h-auto max-lg:flex-col max-lg:items-stretch max-lg:gap-0"
     >
-      <Navbar :bordered="false" container-class="max-w-[1800px] px-5 sm:px-8" class="shrink-0 bg-transparent">
+      <Navbar :has-border="false" container-class="max-w-[1800px] px-5 sm:px-8" class="shrink-0 bg-transparent">
         <template #start>
           <OcharoAppsMenu
             v-if="!publicRoute"

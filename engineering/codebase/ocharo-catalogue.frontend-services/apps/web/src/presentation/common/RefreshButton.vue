@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { RefreshCw } from 'lucide-vue-next';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 withDefaults(defineProps<{ busy?: boolean; disabled?: boolean }>(), { busy: false, disabled: false });

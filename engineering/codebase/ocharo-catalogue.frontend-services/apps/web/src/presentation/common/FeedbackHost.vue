@@ -1,21 +1,16 @@
 <script setup lang="ts">
 import { onScopeDispose } from 'vue';
 import { TriangleAlert } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
-import { FeedbackToastHost } from '@wow-two-beta/ui-vue/presentation/feedback';
-import {
-  AlertModal,
-  AlertModalContent,
-  ModalTitle,
-  ModalDescription,
-} from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { FeedbackToastHost } from '@wow-two-beta/fe/presentation/feedback';
+import { AlertModal, AlertModalContent, ModalTitle, ModalDescription } from '@wow-two-beta/fe/presentation/overlays';
 import { confirmation, feedbackBus, resolveConfirmation } from '../../application/common/UseFeedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 const { t } = useUiLocale();
 onScopeDispose(() => resolveConfirmation(false));
 </script>
 <template>
-  <FeedbackToastHost :bus="feedbackBus" position="top-right" />
+  <FeedbackToastHost :bus="feedbackBus" />
   <AlertModal
     :open="!!confirmation"
     @update:open="

@@ -1,6 +1,6 @@
 @import 'tailwindcss';
-@import '@wow-two-beta/ui-vue/styles.css';
-@source '../../node_modules/@wow-two-beta/ui-vue/dist';
+@import '@wow-two-beta/fe/styles.css';
+@source '../../node_modules/@wow-two-beta/fe/dist';
 
 /* Approved Catalogue light palette: Ink and Raspberry. */
 @theme {

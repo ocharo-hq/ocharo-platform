@@ -1,4 +1,4 @@
-import { createAppRouter } from '@wow-two-beta/ui-vue/router';
+import { createAppRouter } from '@wow-two-beta/fe/router';
 
 /** Code-split, directly addressable catalogue pages. */
 export const catalogueRouter = createAppRouter(

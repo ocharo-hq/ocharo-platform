@@ -1,6 +1,6 @@
 import { readonly, shallowRef, watch, type Ref } from 'vue';
 import { useUiLocale } from '../shared/UseUiLocale';
-import { createFeedbackBus } from '@wow-two-beta/ui-vue/feedback';
+import { createFeedbackBus } from '@wow-two-beta/fe/feedback';
 
 interface Confirmation {
   message: string;

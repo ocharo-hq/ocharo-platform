@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SkeletonState, SkeletonStateGroup } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { SkeletonState, SkeletonStateGroup } from '@wow-two-beta/fe/presentation/feedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 const { t } = useUiLocale();
 withDefaults(

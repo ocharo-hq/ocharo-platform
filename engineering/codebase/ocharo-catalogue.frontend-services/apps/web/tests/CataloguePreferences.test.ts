@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DOMWrapper, flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import AppRoot from '../src/bootstrap/AppRoot.vue';
 import SettingsPage from '../src/presentation/catalogue/SettingsPage.vue';
 import { catalogueApi } from '../src/integration/catalogue';

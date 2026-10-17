@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ApiFailureFactory } from '@wow-two-beta/ui-vue/foundation/http';
+import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { translateUi } from '../src/domain/shared/UiMessages';
 import { createCatalogueApi, describeFailure } from '../src/integration/catalogue';
 

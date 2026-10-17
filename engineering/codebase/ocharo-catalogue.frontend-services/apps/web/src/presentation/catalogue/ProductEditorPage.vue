@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { useSsoSession } from '../../application/common/UseSsoSession';
 const { canEdit: ssoCanEdit } = useSsoSession();
-import { useRefresh } from '@wow-two-beta/ui-vue/query';
+import { useRefresh } from '@wow-two-beta/fe/query';
 import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { requestConfirmation } from '../../application/common/UseFeedback';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave, RouterLink, useRoute, useRouter } from 'vue-router';
 import { ArrowDown, ArrowLeft, ArrowUp, History, ImagePlus, RotateCcw, Save, Trash2, Upload } from 'lucide-vue-next';
-import { Modal, ModalContent } from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Modal, ModalContent } from '@wow-two-beta/fe/presentation/overlays';
 import ProductsPage from './ProductsPage.vue';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useCatalogueStore, useProductEditor } from '../../application/catalogue';
 import type { MediaRole, MediaView } from '../../domain/catalogue/CatalogueModels';
 import { roleLabels } from '../../domain/catalogue/CatalogueRules';
@@ -175,8 +175,8 @@ async function onFiles(event: Event) {
   <div aria-hidden="true" inert><ProductsPage /></div>
   <Modal
     :open="true"
-    :dismiss-on-escape="!editor.saving.value && !editor.uploading.value"
-    :dismiss-on-outside-click="!editor.saving.value && !editor.uploading.value"
+    :can-dismiss-on-escape="!editor.saving.value && !editor.uploading.value"
+    :can-dismiss-on-outside-click="!editor.saving.value && !editor.uploading.value"
     @update:open="
       (value) => {
         if (!value) void router.push('/');

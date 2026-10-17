@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, type CSSProperties } from 'vue';
-import { useResizeObserver } from '@wow-two-beta/ui-vue/foundation/observers';
+import { useResizeObserver } from '@wow-two-beta/fe/foundation/observers';
 
 defineOptions({ name: 'CataloguePreviewViewport' });
 const props = defineProps<{ width: number }>();

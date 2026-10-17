@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Archive, CircleCheck, FilePenLine } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
-import { SegmentedPicker, ToggleInput } from '@wow-two-beta/ui-vue/presentation/forms';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { SegmentedPicker, ToggleInput } from '@wow-two-beta/fe/presentation/forms';
 import { useUiLocale } from '../../../application/shared/UseUiLocale';
 import type { ProductStatus } from '../../../domain/catalogue/CatalogueModels';
 

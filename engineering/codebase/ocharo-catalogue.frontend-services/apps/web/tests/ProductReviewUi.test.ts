@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { defineComponent, ref } from 'vue';
 import { createMemoryHistory, createRouter } from 'vue-router';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { catalogueApi } from '../src/integration/catalogue';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
 import { useCatalogueStore } from '../src/application/catalogue/CatalogueStore';

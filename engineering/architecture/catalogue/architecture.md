@@ -1,6 +1,6 @@
 # ventures.ocharo-catalogue — Architecture
 
-*Last updated: 2026-10-01*
+*Last updated: 2026-10-17*
 
 > Retained local-pilot architecture. Canonical authenticated authoring and named web/PDF editions
 > are documented in [Catalogue authoring and outputs](../catalogue-outputs.md). The pilot remains
@@ -39,5 +39,5 @@ flowchart LR
 
 ## SDK usage and extraction candidates
 
-- Uses the published kit `WoW2.Sdk.Backend.Beta 10.0.59-beta` (blob storage, mediator registration) and `@wow-two-beta/ui-vue 0.0.7` (HTTP client, router, error boundary, icons).
+- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.68-beta` (blob storage, mediator registration) and `@wow-two-beta/fe 0.0.20` (HTTP client, router, error boundary, icons).
 - Product-local candidates for later SDK extraction: revisioned document store (document row + snapshot + expected-revision save), content-addressed media store with previews, local-pilot boundary middleware, CSV formula-safe writer, lazily resolved SQLite/blob paths.

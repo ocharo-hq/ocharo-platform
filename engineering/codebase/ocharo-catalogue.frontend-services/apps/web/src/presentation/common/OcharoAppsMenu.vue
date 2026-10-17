@@ -2,8 +2,8 @@
 import { ref, type HTMLAttributes } from 'vue';
 import { RouterLink } from 'vue-router';
 import { ChevronDown } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
-import { Popover, PopoverContent, PopoverTrigger } from '@wow-two-beta/ui-vue/presentation/overlays';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { Popover, PopoverContent, PopoverTrigger } from '@wow-two-beta/fe/presentation/overlays';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 
 defineOptions({ name: 'OcharoAppsMenu' });
