@@ -2,6 +2,20 @@ import type { UiMessageTable } from './UiMessages';
 
 /** Catalogue app navigation, product forms and preferences. */
 export const catalogueAppUiMessages: UiMessageTable = {
+  Account: { uz: 'Hisob', ru: 'Аккаунт' },
+  'Reconnect to Ocharo. Your unsaved changes stay in this tab.': {
+    uz: 'Ocharo hisobiga qayta ulaning. Saqlanmagan o‘zgarishlar shu oynada qoladi.',
+    ru: 'Подключитесь к Ocharo снова. Несохранённые изменения останутся в этой вкладке.',
+  },
+  'Sign in to Ocharo': { uz: 'Ocharo hisobiga kirish', ru: 'Войти в Ocharo' },
+  'Check connection': { uz: 'Ulanishni tekshirish', ru: 'Проверить подключение' },
+  'You have read-only access.': { uz: 'Sizda faqat ko‘rish ruxsati bor.', ru: 'У вас доступ только для чтения.' },
+  Notifications: { uz: 'Bildirishnomalar', ru: 'Уведомления' },
+  '{count} notifications': { uz: '{count} ta bildirishnoma', ru: 'Уведомлений: {count}' },
+  'Close notifications': { uz: 'Bildirishnomalarni yopish', ru: 'Закрыть уведомления' },
+  'Delete notification': { uz: 'Bildirishnomani o‘chirish', ru: 'Удалить уведомление' },
+  'No notifications yet.': { uz: 'Hozircha bildirishnoma yo‘q.', ru: 'Уведомлений пока нет.' },
+  'Catalogue created.': { uz: 'Katalog yaratildi.', ru: 'Каталог создан.' },
   'Ocharo apps': { uz: 'Ocharo ilovalari', ru: 'Приложения Ocharo' },
   Workspace: { uz: 'Ish maydoni', ru: 'Рабочее пространство' },
   'Blog studio': { uz: 'Blog muharriri', ru: 'Редактор блога' },

@@ -1,6 +1,6 @@
 import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from 'vue-router';
-import { notifyError, requestConfirmation } from '../common/UseFeedback';
+import { notifyCatalogueSaved, notifyError, requestConfirmation } from '../common/UseFeedback';
 import { useUiLocale } from '../shared/UseUiLocale';
 import {
   designApi,
@@ -184,6 +184,7 @@ export function useCatalogueDocument() {
       if (!document.value || !snapshot.value) return;
       const next = source.value ? refreshCatalogue(snapshot.value, source.value.products) : snapshot.value;
       const saved = await designApi.save(document.value.id, title.value.trim(), next, document.value.revision);
+      if (!controller.signal.aborted) notifyCatalogueSaved(saved, route.path.endsWith('/pdf') ? 'pdf' : 'web');
       // A successful write is durable even when its separate detail refresh fails.
       document.value = { ...document.value, revision: saved.revision };
       accept(await designApi.get(saved.id));

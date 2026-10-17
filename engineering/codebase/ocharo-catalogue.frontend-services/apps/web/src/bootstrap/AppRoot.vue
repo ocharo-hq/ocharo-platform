@@ -2,7 +2,7 @@
 import { useSsoSession } from '../application/common/UseSsoSession';
 const { session: ssoSession } = useSsoSession();
 import SsoConnection from '../presentation/common/SsoConnection.vue';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onScopeDispose, ref, watch } from 'vue';
 import { provideLocale } from '@wow-two-beta/fe/foundation/i18n';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import { Boxes, BookOpen, Layers, Settings, Shirt, X } from 'lucide-vue-next';
@@ -13,6 +13,8 @@ import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/o
 import { useCatalogueStore } from '../application/catalogue';
 import { useUiLocale } from '../application/shared/UseUiLocale';
 import FeedbackHost from '../presentation/common/FeedbackHost.vue';
+import { feedbackBus } from '../application/common/UseFeedback';
+import NotificationsMenu from '../presentation/common/NotificationsMenu.vue';
 import InterfacePreferences from '../presentation/common/InterfacePreferences.vue';
 import { useAppearance } from '../application/shared/UseAppearance';
 import OcharoAppsMenu from '../presentation/common/OcharoAppsMenu.vue';
@@ -31,6 +33,10 @@ provideLocale(
     'SelectPickerContent.searchPlaceholder': t('Search…'),
     'SelectPickerContent.noResultsLabel': t('No results'),
     'Toast.closeLabel': t('Close'),
+    'Toast.deleteLabel': t('Delete notification'),
+    'NotificationItem.deleteNotification': t('Delete notification'),
+    'NotificationCenterGroup.notifications': t('Notifications'),
+    'NotificationCenterGroup.closeNotifications': t('Close notifications'),
     'Alert.closeLabel': t('Close'),
     'Banner.closeLabel': t('Close'),
     'Tag.closeLabel': t('Remove'),
@@ -57,6 +63,7 @@ watch(
   { immediate: true },
 );
 initializeAppearance();
+onScopeDispose(() => feedbackBus.reset());
 onMounted(() => {
   if (!publicRoute.value) void store.loadSettings();
 });
@@ -122,6 +129,7 @@ onMounted(() => {
             class="btn-outline"
             >{{ t('Account') }}</a
           >
+          <NotificationsMenu v-if="!publicRoute" />
           <div v-if="publicRoute" class="flex shrink-0 items-center gap-2">
             <button
               type="button"

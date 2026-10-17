@@ -1,6 +1,7 @@
-import { readonly, shallowRef, watch, type Ref } from 'vue';
+import { h, readonly, shallowRef, watch, type Ref } from 'vue';
+import { RouterLink } from 'vue-router';
 import { useUiLocale } from '../shared/UseUiLocale';
-import { createFeedbackBus } from '@wow-two-beta/fe/feedback';
+import { createFeedbackBus, NoticeCategory } from '@wow-two-beta/fe/feedback';
 
 interface Confirmation {
   message: string;
@@ -13,6 +14,31 @@ export const confirmation = readonly(pending);
 export const feedbackBus = createFeedbackBus();
 const recentErrors = new Map<string, number>();
 const errorDurationMs = 10_000;
+
+/** Retains an acknowledged catalogue write for this app session, with an action back to its designer. */
+export function notifyCatalogueSaved(
+  saved: { id: string; revision: number; title: string },
+  mode: 'web' | 'pdf',
+  created = false,
+): void {
+  const { t } = useUiLocale();
+  feedbackBus.notify({
+    id: `catalogue:${saved.id}:revision:${saved.revision}`,
+    category: NoticeCategory.Retained,
+    tone: 'success',
+    title: t(created ? 'Catalogue created.' : 'Catalogue saved.'),
+    description: saved.title,
+    action: h(
+      RouterLink,
+      {
+        to: `/catalogues/${encodeURIComponent(saved.id)}/${mode}`,
+        class:
+          'text-sm font-medium underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+      },
+      () => t('Open catalogue'),
+    ),
+  });
+}
 
 /** Asks through the app modal; concurrent destructive intents are rejected. */
 export function requestConfirmation(

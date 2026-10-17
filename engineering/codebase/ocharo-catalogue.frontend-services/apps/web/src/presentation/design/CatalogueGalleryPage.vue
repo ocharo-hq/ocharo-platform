@@ -9,7 +9,7 @@ import { computed, onMounted, onScopeDispose, ref } from 'vue';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 import { designApi, describeDesignFailure } from '../../application/design/UseCatalogueDocument';
-import { notifyError, requestConfirmation } from '../../application/common/UseFeedback';
+import { notifyCatalogueSaved, notifyError, requestConfirmation } from '../../application/common/UseFeedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import { catalogueLanguages, type CatalogueLanguage } from '../../domain/catalogue/CatalogueLanguages';
 import { catalogueSlug, createCatalogue, emptyMetadata } from '../../domain/design/CatalogueDesign';
@@ -133,7 +133,14 @@ async function save() {
   busy.value = true;
   pendingAction.value = 'save';
   try {
-    await designApi.save(selected.value?.id ?? null, name.value.trim(), snapshot, selected.value?.revision);
+    const saved = await designApi.save(
+      selected.value?.id ?? null,
+      name.value.trim(),
+      snapshot,
+      selected.value?.revision,
+    );
+    if (!controller.signal.aborted)
+      notifyCatalogueSaved(saved, metadata.value.outputs.web ? 'web' : 'pdf', !selected.value);
     dialogOpen.value = false;
     await load();
   } catch (cause) {

@@ -56,6 +56,7 @@ async function open(component: typeof CatalogueGalleryPage | typeof CatalogueWeb
   return { wrapper, router };
 }
 beforeEach(() => {
+  feedbackBus.reset();
   vi.clearAllMocks();
   notificationClock += 10_001;
   vi.spyOn(Date, 'now').mockImplementation(() => notificationClock);
@@ -82,6 +83,87 @@ beforeEach(() => {
   }));
 });
 describe('native catalogue screens', () => {
+  it('retains a created catalogue only after the write acknowledgement, even when the grid read fails', async () => {
+    let resolve!: (value: ReturnType<typeof documentFixture>) => void;
+    vi.mocked(designApi.save).mockReturnValue(
+      new Promise((success) => {
+        resolve = success;
+      }),
+    );
+    const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'New catalogue')!
+      .trigger('click');
+    await flushPromises();
+    const form = document.querySelector('form')!;
+    const name = form.querySelector('input[maxlength="160"]') as HTMLInputElement;
+    name.value = 'New season';
+    name.dispatchEvent(new Event('input', { bubbles: true }));
+    await flushPromises();
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await flushPromises();
+    expect(feedbackBus.retained()).toEqual([]);
+    expect(designApi.list).toHaveBeenCalledTimes(1);
+    vi.mocked(designApi.list).mockRejectedValue(new Error('Refresh unavailable'));
+    resolve({ ...documentFixture(), id: 'new-season', revision: 1, title: 'New season' });
+    await flushPromises();
+    expect(feedbackBus.retained()).toMatchObject([{ title: 'Catalogue created.', description: 'New season' }]);
+    expect(designApi.list).toHaveBeenCalledTimes(2);
+    expect(messages).toContain('Unable to load catalogues.');
+    wrapper.unmount();
+  });
+  it('retains a designer save only after acknowledgement and preserves it through a failed document reread', async () => {
+    let resolve!: (value: ReturnType<typeof documentFixture>) => void;
+    const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
+    vi.mocked(designApi.save).mockReturnValue(
+      new Promise((success) => {
+        resolve = success;
+      }),
+    );
+    await wrapper.find('input[maxlength="160"]').setValue('Changed catalogue');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Save catalogue')!
+      .trigger('click');
+    expect(feedbackBus.retained()).toEqual([]);
+    vi.mocked(designApi.get).mockRejectedValue(new Error('Read unavailable'));
+    resolve({ ...documentFixture(), title: 'Changed catalogue', revision: 3 });
+    await flushPromises();
+    expect(feedbackBus.retained()).toMatchObject([{ title: 'Catalogue saved.', description: 'Changed catalogue' }]);
+    wrapper.unmount();
+  });
+  it('keeps failed designer writes out of retained notification history', async () => {
+    const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
+    vi.mocked(designApi.save).mockRejectedValue(new Error('Write rejected'));
+    await wrapper.find('input[maxlength="160"]').setValue('Rejected catalogue');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Save catalogue')!
+      .trigger('click');
+    await flushPromises();
+    expect(feedbackBus.retained()).toEqual([]);
+    expect(messages).toContain('Unable to save this catalogue.');
+    wrapper.unmount();
+  });
+  it('does not republish a late designer acknowledgement after its owner unmounts', async () => {
+    let resolve!: (value: ReturnType<typeof documentFixture>) => void;
+    const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
+    vi.mocked(designApi.save).mockReturnValue(
+      new Promise((success) => {
+        resolve = success;
+      }),
+    );
+    await wrapper.find('input[maxlength="160"]').setValue('Late save');
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Save catalogue')!
+      .trigger('click');
+    wrapper.unmount();
+    resolve({ ...documentFixture(), title: 'Late save', revision: 3 });
+    await flushPromises();
+    expect(feedbackBus.retained()).toEqual([]);
+  });
   it('keeps the last catalogue grid while a failed duplicate is pending', async () => {
     let reject!: (cause: Error) => void;
     vi.mocked(designApi.duplicate).mockReturnValue(

@@ -90,7 +90,8 @@ describe('Catalogue interface preferences', () => {
         '/settings',
       ]);
     }
-    expect(header.findAll('button')).toHaveLength(1);
+    expect(header.findAll('button')).toHaveLength(2);
+    expect(header.find('[aria-label="Notifications"]').exists()).toBe(true);
     expect(header.get('button').attributes('aria-haspopup')).toBe('dialog');
     expect(wrapper.findAll('.interface-preferences')).toHaveLength(1);
     expect(wrapper.get('#interface-settings-heading').text()).toBe('Interface settings');
