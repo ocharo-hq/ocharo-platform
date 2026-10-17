@@ -2,10 +2,10 @@
 import { useSsoSession } from '../../application/common/UseSsoSession';
 const { canEdit: ssoCanEdit } = useSsoSession();
 import { computed, ref, toRaw, watch } from 'vue';
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 import IdentityFormSkeleton from '../common/IdentityFormSkeleton.vue';
 import { Plus, Save, Trash2 } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useBrand } from '../../application/brand';
 import type { BrandIdentity } from '../../domain/brand/BrandModels';
 

@@ -1,6 +1,6 @@
 # ventures.ocharo-brand — Architecture
 
-*Last updated: 2026-09-28*
+*Last updated: 2026-10-17*
 
 ```mermaid
 flowchart LR
@@ -38,5 +38,5 @@ flowchart LR
 
 ## SDK usage and extraction candidates
 
-- Uses the published kit `WoW2.Sdk.Backend.Beta 10.0.59-beta` (blob storage, mediator registration) and `@wow-two-beta/ui-vue 0.0.7` (HTTP client, router, error boundary, icons).
+- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.68-beta` (blob storage, mediator registration) and `@wow-two-beta/fe 0.0.20` (HTTP client, router, error boundary, icons).
 - Candidates for SDK extraction (shared with Catalogue/Blog): revisioned document store, content-addressed media store with previews, local-pilot boundary middleware, a generic "published kit" client with cache + fallback.

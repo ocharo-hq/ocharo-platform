@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 import { slotLabels, slots } from '../../domain/brand/BrandModels';
 
 /** First-read outcomes shaped like the selected brand route's actual content. */

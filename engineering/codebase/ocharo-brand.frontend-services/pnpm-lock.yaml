@@ -10,9 +10,9 @@ importers:
 
   apps/web:
     dependencies:
-      '@wow-two-beta/ui-vue':
-        specifier: 0.0.7
-        version: 0.0.7(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.43)(@vue/server-renderer@3.5.43)(vue@3.5.43(typescript@5.9.3)))(tailwindcss@4.3.3)(vue-router@4.6.4(vue@3.5.43(typescript@5.9.3)))(vue@3.5.43(typescript@5.9.3))
+      '@wow-two-beta/fe':
+        specifier: 0.0.20
+        version: 0.0.20(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.43)(@vue/server-renderer@3.5.43)(vue@3.5.43(typescript@5.9.3)))(tailwindcss@4.3.3)(vue-router@4.6.4(vue@3.5.43(typescript@5.9.3)))(vue@3.5.43(typescript@5.9.3))
       lucide-vue-next:
         specifier: ^0.460.0
         version: 0.460.0(vue@3.5.43(typescript@5.9.3))
@@ -763,8 +763,8 @@ packages:
       '@vue/server-renderer':
         optional: true
 
-  '@wow-two-beta/ui-vue@0.0.7':
-    resolution: {integrity: sha512-BqXXzJ5E2JbJ5Xiy6TJUg1m7TXk3RtxRxi5OION0FEhNcXMeinmbzRBLzwWMzXkTXuRbINqe0RE5Byg8ZDo/tg==}
+  '@wow-two-beta/fe@0.0.20':
+    resolution: {integrity: sha512-/qYkVrm9Ko8IiAo1cPG5WPjknT8nd6hzU/GQi3vNChQgdRvuix5P/nSUmCWVRoqlfuJiF/nJ3G8IJaqzAWQ+yg==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@tanstack/vue-form': ^1.0.0
@@ -2240,7 +2240,7 @@ snapshots:
     optionalDependencies:
       '@vue/server-renderer': 3.5.43
 
-  '@wow-two-beta/ui-vue@0.0.7(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.43)(@vue/server-renderer@3.5.43)(vue@3.5.43(typescript@5.9.3)))(tailwindcss@4.3.3)(vue-router@4.6.4(vue@3.5.43(typescript@5.9.3)))(vue@3.5.43(typescript@5.9.3))':
+  '@wow-two-beta/fe@0.0.20(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.43)(@vue/server-renderer@3.5.43)(vue@3.5.43(typescript@5.9.3)))(tailwindcss@4.3.3)(vue-router@4.6.4(vue@3.5.43(typescript@5.9.3)))(vue@3.5.43(typescript@5.9.3))':
     dependencies:
       '@floating-ui/vue': 1.1.11(vue@3.5.43(typescript@5.9.3))
       bignumber.js: 11.1.5

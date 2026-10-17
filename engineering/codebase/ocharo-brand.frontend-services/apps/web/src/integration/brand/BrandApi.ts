@@ -5,8 +5,8 @@ import {
   rawEnvelope,
   type ApiFailure,
   type ResponseEnvelope,
-} from '@wow-two-beta/ui-vue/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/ui-vue/foundation/results';
+} from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import type {
   BrandAppearance,
   BrandIdentity,

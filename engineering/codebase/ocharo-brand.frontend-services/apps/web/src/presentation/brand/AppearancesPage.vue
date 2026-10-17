@@ -7,9 +7,9 @@ import {
   SelectPickerTrigger,
   SelectPickerContent,
   SelectPickerItem,
-} from '@wow-two-beta/ui-vue/presentation/forms';
+} from '@wow-two-beta/fe/presentation/forms';
 import { CalendarPlus, Upload, X } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useBrand } from '../../application/brand';
 import { slotLabels, slots } from '../../domain/brand/BrandModels';
 import { formatWhen } from '../../domain/brand/UzDates';

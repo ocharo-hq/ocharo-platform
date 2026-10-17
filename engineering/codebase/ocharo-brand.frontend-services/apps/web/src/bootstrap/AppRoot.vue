@@ -3,16 +3,16 @@ import { useSsoSession } from '../application/common/UseSsoSession';
 const { session: ssoSession } = useSsoSession();
 import SsoConnection from '../presentation/common/SsoConnection.vue';
 import { watch } from 'vue';
-import { createFeedbackBus } from '@wow-two-beta/ui-vue/feedback';
-import { FeedbackToastHost, SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
-import { Button } from '@wow-two-beta/ui-vue/presentation/actions';
+import { createFeedbackBus } from '@wow-two-beta/fe/feedback';
+import { FeedbackToastHost, SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import BrandQueryState from '../presentation/common/BrandQueryState.vue';
 import BuildIdentity from '../presentation/common/BuildIdentity.vue';
 import { computed, onMounted } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 import { CalendarHeart, ChevronRight, Image, LayoutDashboard, Palette, Plug, RefreshCw, X } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
-import { AppErrorBoundary, RouteAnnouncer } from '@wow-two-beta/ui-vue/router';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { AppErrorBoundary, RouteAnnouncer } from '@wow-two-beta/fe/router';
 import { useBrand } from '../application/brand';
 import { platformLinks } from './PlatformLinks';
 
@@ -181,7 +181,7 @@ onMounted(() => brand.refresh());
           </template>
         </AppErrorBoundary>
       </main>
-      <FeedbackToastHost :bus="feedbackBus" position="top-right" />
+      <FeedbackToastHost :bus="feedbackBus" />
       <RouteAnnouncer />
     </div>
   </div>

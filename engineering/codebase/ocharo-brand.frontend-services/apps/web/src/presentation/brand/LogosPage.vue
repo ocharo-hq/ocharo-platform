@@ -3,7 +3,7 @@ import { useSsoSession } from '../../application/common/UseSsoSession';
 const { canEdit: ssoCanEdit } = useSsoSession();
 import { ref } from 'vue';
 import { Check, Upload } from 'lucide-vue-next';
-import { Icon } from '@wow-two-beta/ui-vue/foundation/icons';
+import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useBrand } from '../../application/brand';
 import { slotLabels, slots } from '../../domain/brand/BrandModels';
 import LogoSwatch from './LogoSwatch.vue';

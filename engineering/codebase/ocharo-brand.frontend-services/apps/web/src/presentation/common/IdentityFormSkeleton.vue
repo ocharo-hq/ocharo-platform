@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { SkeletonState } from '@wow-two-beta/ui-vue/presentation/feedback';
+import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 
 /** Reserves the identity editor's field groups while the first acknowledged draft loads. */
 defineOptions({ name: 'IdentityFormSkeleton' });
