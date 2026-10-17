@@ -162,9 +162,6 @@ Executed verification is recorded in [verification](../research/previous-work/ve
 Desk probes `/health/ready`, its own readiness route, until it adopts the SDK boot bundle's `/health`.
 Before a usable deployment:
 
-- The shared `publish.yml@v0.2.0` checks out without Git LFS, so LFS-tracked template PNGs ship as pointer files.
-  Move to a pipelines tag that hydrates LFS before relying on a release.
-- The shared workflow passes `APP_VERSION` only; `VCS_REF` stays empty, so builds report no commit.
 - Desk requires HTTPS requests but has no trusted-proxy support, so sign-in fails behind a TLS-terminating ingress.
 
 See `../research/convention-audit.md` for the earlier verified checks.
