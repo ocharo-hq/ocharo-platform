@@ -7,7 +7,7 @@ using BrandWorkspace.Domain.Commerce;
 using Microsoft.Data.Sqlite;
 using OcharoBrand.Domain.Brand;
 using OcharoCatalogue.Domain.Catalogue.Models;
-using WoW.Two.Sdk.Backend.Beta.Foundation.Serialization;
+using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 
 namespace BrandWorkspace.Infrastructure.Commerce;
 

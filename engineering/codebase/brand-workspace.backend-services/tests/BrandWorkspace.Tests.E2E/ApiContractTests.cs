@@ -5,7 +5,7 @@ using Hangfire;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using WoW.Two.Sdk.Backend.Beta.Testing;
+using WoW.Two.Sdk.Beta.Be.Testing;
 using Xunit;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]

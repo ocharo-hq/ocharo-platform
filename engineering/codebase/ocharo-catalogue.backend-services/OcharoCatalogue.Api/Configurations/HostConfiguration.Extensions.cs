@@ -11,10 +11,10 @@ using OcharoCatalogue.Infrastructure.Catalogue;
 using OcharoCatalogue.Infrastructure.Time;
 using OcharoCatalogue.Persistence;
 using OcharoCatalogue.Persistence.Catalogue;
-using WoW.Two.Sdk.Backend.Beta.Mediator;
-using WoW.Two.Sdk.Backend.Beta.Storage.Core;
-using WoW.Two.Sdk.Backend.Beta.Storage.FileSystem;
-using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
+using WoW.Two.Sdk.Beta.Be.Mediator;
+using WoW.Two.Sdk.Beta.Be.Storage.Core;
+using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
+using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 
 namespace OcharoCatalogue.Api.Configurations;
 

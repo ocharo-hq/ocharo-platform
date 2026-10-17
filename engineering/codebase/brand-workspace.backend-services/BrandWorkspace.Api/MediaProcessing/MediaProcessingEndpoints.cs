@@ -1,7 +1,7 @@
 using BrandWorkspace.Api.Access;
 using BrandWorkspace.Api.Integrations;
 using Microsoft.AspNetCore.Http.Features;
-using WoW.Two.Sdk.Backend.Beta.Media.BackgroundRemoval;
+using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 
 namespace BrandWorkspace.Api.MediaProcessing;
 

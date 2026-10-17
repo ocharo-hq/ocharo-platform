@@ -849,23 +849,23 @@
       },
       "MessagePack": {
         "type": "Transitive",
-        "resolved": "3.1.8",
-        "contentHash": "Qk2q+9FVxnMSp+NQ9y3SLz3HqWe7Rg3KRMHhBX28FkKUoOeP9YIU86mA4pFOxDDjUIRA9e7Ssbxs/LwWUcAzPw==",
+        "resolved": "3.1.9",
+        "contentHash": "9IuUiOycxveb2R4RER5yQl7qYHMeRRMghOFuI/c+A8aX8j0zEzJ9QJD0u3Sr3MrNewUUkqOcTVLW9Zn6odZyIQ==",
         "dependencies": {
-          "MessagePack.Annotations": "3.1.8",
-          "MessagePackAnalyzer": "3.1.8",
+          "MessagePack.Annotations": "3.1.9",
+          "MessagePackAnalyzer": "3.1.9",
           "Microsoft.NET.StringTools": "17.11.4"
         }
       },
       "MessagePack.Annotations": {
         "type": "Transitive",
-        "resolved": "3.1.8",
-        "contentHash": "SitOtZ4tOlAZZPF7p52M7143F+Cuz7o/aU0MrtAXX0+ZkPXzDNroOFhzzE2ogMFThsoEW/E6akXVVcBFM9ZKaw=="
+        "resolved": "3.1.9",
+        "contentHash": "bd+/udHmQECcfdcnlLHXR+/5Oc+UdQTEwZI5M1xw8Olymcb7SPXHleMxkkBkSLiK2+fpmY+0uAR7Jy3oiPPhKA=="
       },
       "MessagePackAnalyzer": {
         "type": "Transitive",
-        "resolved": "3.1.8",
-        "contentHash": "Vm4g0cR4YRKRchEOmMJ0uVFU6yxdg7cJa2KHv3SUAHEsdYKvMpHMF5A1hZfsix89ymD5cmuzRnw9a6dKMcvq+Q=="
+        "resolved": "3.1.9",
+        "contentHash": "/nMSlVz4p8BjlPbgxgBfE9kHyObHvmjczShWp2rGeKMH7oVEyPd0a3Fcd6yO3Xf36Jsf2ax/VvhV28Z7F5ibmQ=="
       },
       "Microsoft.AspNetCore.Authentication.Facebook": {
         "type": "Transitive",
@@ -2496,8 +2496,8 @@
       },
       "System.Security.Cryptography.Pkcs": {
         "type": "Transitive",
-        "resolved": "10.0.0",
-        "contentHash": "UPWqLSygJlFerRi9XNIuM0a1VC8gHUIufyP24xQ0sc+XimqUAEcjpOz9DhKpyDjH+5B/wO3RpC0KpkEeDj/ddg=="
+        "resolved": "10.0.13",
+        "contentHash": "a+EovgC1fBnwdlQ6cn3j4JFBfKqiFaFvoAhjisOoSvazLAcIznaBzPQP0oYnvccmeXfqUH1KebVZOxSeH6rMaw=="
       },
       "System.Security.Cryptography.ProtectedData": {
         "type": "Transitive",
@@ -2527,10 +2527,10 @@
         "resolved": "7.0.0",
         "contentHash": "DkbH9Wvh/o9j1vgVBtjuwlrKX5BEculkWzoP1lYJIsI7if3LiiYXaSIVjX2J0Gn53wyjWfyMcNfPiEY9kq6xDw=="
       },
-      "WoW2.Sdk.Backend.Beta.Data.Abstractions": {
+      "WoW2.Sdk.Beta.Be.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.64-beta",
-        "contentHash": "I0V54oARiJ7Ahmtc3iKPLk4w9g4lwz+NDvpUSlB+PK/vg6d65YLfkFHFEvFQ+cHg6c0jiP1k/p2XY+5IPpAm2g==",
+        "resolved": "10.0.68-beta",
+        "contentHash": "eXqZTzrNDWZxew7zpDuvKySiFrrnsjjFPan3ojByHv8Y0QFyfxUQ49QT5EN6aPueERAvQWhKUQwp7j00AKRKMQ==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.3"
         }
@@ -2560,13 +2560,13 @@
       "ocharobrand.domain": {
         "type": "Project",
         "dependencies": {
-          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.68-beta, )"
         }
       },
       "ocharocatalogue.domain": {
         "type": "Project",
         "dependencies": {
-          "WoW2.Sdk.Backend.Beta": "[10.0.64-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.68-beta, )"
         }
       },
       "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
@@ -2617,11 +2617,11 @@
         "resolved": "3.119.2",
         "contentHash": "9WzxSyG/s9Id506j0Ht+Bi5ucOpWKPzd1XXr9TD4fuCafHHy2swRSlbZtC3IDQAsvCH63OerkDJajj43uSv5og=="
       },
-      "WoW2.Sdk.Backend.Beta": {
+      "WoW2.Sdk.Beta.Be": {
         "type": "CentralTransitive",
-        "requested": "[10.0.64-beta, )",
-        "resolved": "10.0.64-beta",
-        "contentHash": "t9568/OW3QLX6AMxl+YXCwsdiaI9S1UghD1xjyenIufr6IAZmwSc3IcB0guHAgHr3bNGGTvr+I52gQwE+29r0g==",
+        "requested": "[10.0.68-beta, )",
+        "resolved": "10.0.68-beta",
+        "contentHash": "Bk7pu5Lrt5MR/UiP9IKHB1+OxnOnlXp0V6ol/AnEzAf87tfORv8BMamPYY87vHDJuTwxnGHaCVlHaGzayRvsuw==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -2694,7 +2694,7 @@
           "MailKit": "4.18.0",
           "Markdig": "1.4.0",
           "MaxMind.Db": "5.2.0",
-          "MessagePack": "3.1.8",
+          "MessagePack": "3.1.9",
           "Microsoft.AspNetCore.Authentication.Facebook": "10.0.3",
           "Microsoft.AspNetCore.Authentication.Google": "10.0.3",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.3",
@@ -2774,10 +2774,11 @@
           "StronglyTypedId": "1.0.0-beta08",
           "Svg.Skia": "5.1.1",
           "System.Drawing.Common": "6.0.0",
+          "System.Security.Cryptography.Pkcs": "10.0.13",
           "Telegram.Bot": "22.10.0.1",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Backend.Beta.Data.Abstractions": "10.0.64-beta",
+          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.68-beta",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",
           "dbup-mysql": "6.0.4",

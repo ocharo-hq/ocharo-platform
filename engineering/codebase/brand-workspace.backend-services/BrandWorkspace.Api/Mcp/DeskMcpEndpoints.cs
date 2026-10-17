@@ -1,6 +1,6 @@
 using BrandWorkspace.Api.Access;
 using BrandWorkspace.Api.Integrations;
-using WoW.Two.Sdk.Backend.Beta.Ai.Mcp;
+using WoW.Two.Sdk.Beta.Be.Ai.Mcp;
 
 namespace BrandWorkspace.Api.Mcp;
 

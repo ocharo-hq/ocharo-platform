@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <ItemGroup>
-    <PackageReference Include="WoW2.Sdk.Backend.Beta" />
+    <PackageReference Include="WoW2.Sdk.Beta.Be" />
     <ProjectReference Include="../BrandWorkspace.Application/BrandWorkspace.Application.csproj" />
     <ProjectReference Include="../BrandWorkspace.Infrastructure/BrandWorkspace.Infrastructure.csproj" />
     <ProjectReference Include="../BrandWorkspace.Persistence/BrandWorkspace.Persistence.csproj" />

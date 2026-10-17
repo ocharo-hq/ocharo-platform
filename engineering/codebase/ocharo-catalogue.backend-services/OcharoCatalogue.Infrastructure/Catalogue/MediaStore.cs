@@ -6,7 +6,7 @@ using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Entities;
 using SkiaSharp;
-using WoW.Two.Sdk.Backend.Beta.Storage.Core;
+using WoW.Two.Sdk.Beta.Be.Storage.Core;
 
 namespace OcharoCatalogue.Infrastructure.Catalogue;
 

@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Preparation.Services;
-using WoW.Two.Sdk.Backend.Beta.Foundation.Serialization;
+using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 
 namespace BrandWorkspace.Infrastructure.Preparation.Services;
 

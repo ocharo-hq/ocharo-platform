@@ -1,6 +1,6 @@
 # Engineering overview
 
-*Last updated: 2026-09-27 12:25 AM*
+*Last updated: 2026-10-17*
 
 ## Foundation stack
 
@@ -14,7 +14,7 @@
 | Source | Existing product template, adapted to current conventions | Audited source adapted additively |
 
 Toolchain pins: .NET SDK `10.0.300`, Node `24.11.0`, pnpm `10.33.2`. Published SDK inputs are
-`WoW2.Sdk.Backend.Beta` `10.0.58-beta` and `@wow-two-beta/ui-vue` `0.0.6`. Lockfiles record
+`WoW2.Sdk.Beta.Be` `10.0.68-beta` and `@wow-two-beta/ui-vue` `0.0.6`. Lockfiles record
 resolved dependency graphs. Runtime and test proof remains in the verification record.
 
 ## Navigation

@@ -14,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Telegram.Bot;
-using WoW.Two.Sdk.Backend.Beta.Testing;
+using WoW.Two.Sdk.Beta.Be.Testing;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E.Access;

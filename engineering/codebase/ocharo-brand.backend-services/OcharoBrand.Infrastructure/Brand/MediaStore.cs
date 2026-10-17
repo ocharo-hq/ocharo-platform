@@ -6,7 +6,7 @@ using OcharoBrand.Application.Brand;
 
 using OcharoBrand.Domain.Brand;
 using SkiaSharp;
-using WoW.Two.Sdk.Backend.Beta.Storage.Core;
+using WoW.Two.Sdk.Beta.Be.Storage.Core;
 
 namespace OcharoBrand.Infrastructure.Brand;
 

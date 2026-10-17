@@ -4,7 +4,7 @@ using AwesomeAssertions;
 using BrandWorkspace.Api.Integrations;
 using BrandWorkspace.Application.Access;
 using Microsoft.Extensions.Configuration;
-using WoW.Two.Sdk.Backend.Beta.Identity.Jwt.Issuance;
+using WoW.Two.Sdk.Beta.Be.Identity.Jwt.Issuance;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;

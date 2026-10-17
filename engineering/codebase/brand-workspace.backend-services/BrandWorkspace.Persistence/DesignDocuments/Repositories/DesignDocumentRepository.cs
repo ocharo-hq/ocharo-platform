@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
-using WoW.Two.Sdk.Backend.Beta.Foundation.Serialization;
+using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 using BrandWorkspace.Application.DesignDocuments.Models;
 using BrandWorkspace.Application.DesignDocuments.Repositories;
 using BrandWorkspace.Application.Preparation.Models;

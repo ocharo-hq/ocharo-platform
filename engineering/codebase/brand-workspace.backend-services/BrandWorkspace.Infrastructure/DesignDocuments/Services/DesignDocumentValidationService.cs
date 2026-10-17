@@ -1,7 +1,7 @@
 using System.Text;
 using BrandWorkspace.Application.Commerce;
 using System.Text.Json;
-using WoW.Two.Sdk.Backend.Beta.Foundation.Serialization;
+using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 using BrandWorkspace.Application.DesignDocuments.Models;
 using BrandWorkspace.Application.Preparation.Models;
 

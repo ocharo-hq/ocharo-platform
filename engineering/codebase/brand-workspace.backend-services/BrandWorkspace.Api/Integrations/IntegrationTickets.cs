@@ -5,7 +5,7 @@ using BrandWorkspace.Api.Preparation;
 using BrandWorkspace.Application.Access;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
-using WoW.Two.Sdk.Backend.Beta.Identity.Jwt.Issuance;
+using WoW.Two.Sdk.Beta.Be.Identity.Jwt.Issuance;
 
 namespace BrandWorkspace.Api.Integrations;
 

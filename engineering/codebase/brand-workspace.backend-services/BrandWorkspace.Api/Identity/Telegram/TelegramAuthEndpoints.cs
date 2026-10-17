@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using WoW.Two.Sdk.Backend.Beta.Identity.Otp;
-using WoW.Two.Sdk.Backend.Beta.Identity.Otp.Models;
+using WoW.Two.Sdk.Beta.Be.Identity.Otp;
+using WoW.Two.Sdk.Beta.Be.Identity.Otp.Models;
 
 namespace BrandWorkspace.Api.Identity.Telegram;
 

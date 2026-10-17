@@ -13,7 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using SkiaSharp;
-using WoW.Two.Sdk.Backend.Beta.Media.BackgroundRemoval;
+using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;

@@ -90,9 +90,9 @@ Unknown `/api` paths, including dotted paths and non-GET methods, return JSON `4
 
 ## SDK adoption boundary
 
-Published `WoW2.Sdk.Backend.Beta` and its testing package are pinned to `10.0.64-beta`.
-NuGet availability was verified on 26 September 2026; source inspection used SDK
-HEAD `546466ef67e0b8c5ba1ad01957052c682b2c447f`, with unrelated documentation edits.
+Published `WoW2.Sdk.Beta.Be` and `WoW2.Sdk.Beta.Be.Testing` are pinned to `10.0.68-beta`.
+The family was renamed from `WoW2.Sdk.Backend.Beta` at `10.0.67-beta`; NuGet availability
+was verified on 17 October 2026.
 
 The worker calls public SDK `AddHangfireJobs` with explicit PostgreSQL storage
 options (`PrepareSchemaIfNecessary=false`). The SDK's PostgreSQL preset auto-creates

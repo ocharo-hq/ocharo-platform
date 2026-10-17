@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Npgsql;
-using WoW.Two.Sdk.Backend.Beta.Identity.Otp;
+using WoW.Two.Sdk.Beta.Be.Identity.Otp;
 
 namespace BrandWorkspace.Persistence.Access;
 

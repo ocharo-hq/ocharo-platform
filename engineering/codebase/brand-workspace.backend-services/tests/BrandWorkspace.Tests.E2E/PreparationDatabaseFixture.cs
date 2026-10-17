@@ -15,8 +15,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using WoW.Two.Sdk.Backend.Beta.Testing;
-using WoW.Two.Sdk.Backend.Beta.Testing.Containers.Postgres;
+using WoW.Two.Sdk.Beta.Be.Testing;
+using WoW.Two.Sdk.Beta.Be.Testing.Containers.Postgres;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;

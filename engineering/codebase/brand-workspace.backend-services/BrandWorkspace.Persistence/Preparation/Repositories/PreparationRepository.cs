@@ -7,7 +7,7 @@ using BrandWorkspace.Application.Preparation.Services;
 using BrandWorkspace.Domain.Preparation.Models;
 using Npgsql;
 using NpgsqlTypes;
-using WoW.Two.Sdk.Backend.Beta.Foundation.Serialization;
+using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 
 namespace BrandWorkspace.Persistence.Preparation.Repositories;
 

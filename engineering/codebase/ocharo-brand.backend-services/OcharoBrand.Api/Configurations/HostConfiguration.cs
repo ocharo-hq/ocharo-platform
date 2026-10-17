@@ -1,5 +1,5 @@
 using Ocharo.Sso;
-using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
+using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using OcharoBrand.Api.Brand;
 
 namespace OcharoBrand.Api.Configurations;

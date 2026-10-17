@@ -1,5 +1,5 @@
 using Ocharo.Sso;
-using WoW.Two.Sdk.Backend.Beta.Web.ProblemDetails;
+using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -11,9 +11,9 @@ using OcharoBrand.Infrastructure.Brand;
 using OcharoBrand.Infrastructure.Time;
 using OcharoBrand.Persistence;
 using OcharoBrand.Persistence.Brand;
-using WoW.Two.Sdk.Backend.Beta.Mediator;
-using WoW.Two.Sdk.Backend.Beta.Storage.Core;
-using WoW.Two.Sdk.Backend.Beta.Storage.FileSystem;
+using WoW.Two.Sdk.Beta.Be.Mediator;
+using WoW.Two.Sdk.Beta.Be.Storage.Core;
+using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
 
 namespace OcharoBrand.Api.Configurations;
 

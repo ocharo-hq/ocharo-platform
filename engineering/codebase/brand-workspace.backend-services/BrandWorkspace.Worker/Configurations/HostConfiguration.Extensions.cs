@@ -11,7 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using WoW.Two.Sdk.Backend.Beta.Jobs.Hangfire;
+using WoW.Two.Sdk.Beta.Be.Jobs.Hangfire;
 
 namespace BrandWorkspace.Worker.Configurations;
 

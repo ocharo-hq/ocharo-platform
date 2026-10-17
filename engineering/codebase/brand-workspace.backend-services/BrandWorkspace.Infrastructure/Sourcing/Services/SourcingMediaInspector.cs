@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Sourcing.Models;
-using WoW.Two.Sdk.Backend.Beta.Media.Images;
+using WoW.Two.Sdk.Beta.Be.Media.Images;
 
 namespace BrandWorkspace.Infrastructure.Sourcing.Services;
 
