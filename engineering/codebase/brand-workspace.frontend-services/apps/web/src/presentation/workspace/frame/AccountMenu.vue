@@ -71,12 +71,13 @@ onMounted(() => void refresh());
         <ChevronDown :size="14" class="text-muted-foreground" aria-hidden="true" />
       </button>
     </DropdownMenuTrigger>
-    <DropdownMenuContent :aria-label="t('Account')" class="oc-glass-menu w-72 border-(--oc-glass-edge) shadow-(--oc-menu-shadow)">
+    <DropdownMenuContent :aria-label="t('Account')" class="oc-glass-menu max-h-[calc(100dvh-5rem)] w-72 overflow-y-auto border-(--oc-glass-edge) shadow-(--oc-menu-shadow)">
       <MenuLabel>{{ displayName }}</MenuLabel>
       <p v-if="user?.email" class="truncate px-2 pb-2 text-xs text-muted-foreground">{{ user.email }}</p>
       <template v-if="organizations.length > 1">
         <MenuSeparator />
-        <MenuRadioGroup :label="t('Organization')" :model-value="current?.id ?? null" @update:model-value="chooseOrganization">
+        <!-- Many memberships scroll inside their own group, so appearance and sign-out stay in reach. -->
+        <MenuRadioGroup :label="t('Organization')" class="max-h-44 overflow-y-auto" :model-value="current?.id ?? null" @update:model-value="chooseOrganization">
           <MenuRadioItem v-for="org in organizations" :key="org.id" :value="org.id">
             <template #indicator="{ checked }"><Check v-if="checked" :size="14" /></template>
             {{ org.name }}
