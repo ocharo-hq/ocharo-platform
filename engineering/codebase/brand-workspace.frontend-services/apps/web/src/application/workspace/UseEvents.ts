@@ -1,4 +1,5 @@
 import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import type { Result } from '@wow-two-beta/fe/foundation/results';
@@ -148,6 +149,8 @@ export function useShowcaseEvent(events: EventsControls, id: () => string | null
 export function useEventsNavigation(access: AccessControls, organizationId: () => string, initial: EventsLocation) {
   const { t } = useUiLocale();
   const current = shallowRef<EventsLocation>(initial);
+  const route = useRoute();
+  const router = useRouter();
   const confirmDiscard = () => requestConfirmation(t('Discard unsaved changes and leave this page?'), { confirmLabel: t('Discard changes') });
   async function open(next: EventsLocation): Promise<boolean> {
     if (access.busy.value) return false;
@@ -155,22 +158,15 @@ export function useEventsNavigation(access: AccessControls, organizationId: () =
     if (access.busy.value) return false;
     access.setDirty(false);
     const path = eventsPath(organizationId(), next);
-    if (window.location.pathname !== path) window.history.pushState(window.history.state, '', path);
+    if (route.path !== path && await router.push(path)) return false;
     current.value = next;
     return true;
   }
-  async function popstate(): Promise<void> {
-    const location = readWorkspaceLocation(window.location.pathname);
+  /* Back and forward arrive through the router, whose guard has already asked about unsaved edits. */
+  watch(() => route.path, (path) => {
+    const location = readWorkspaceLocation(path);
     if (location.section !== 'events' || !location.events || location.organizationId?.toLowerCase() !== organizationId().toLowerCase()) return;
-    if (access.dirty.value && !await confirmDiscard()) {
-      window.history.pushState(window.history.state, '', eventsPath(organizationId(), current.value));
-      return;
-    }
-    access.setDirty(false);
     current.value = location.events;
-  }
-  const listener = () => { void popstate(); };
-  window.addEventListener('popstate', listener);
-  onScopeDispose(() => window.removeEventListener('popstate', listener));
+  });
   return { current, open };
 }

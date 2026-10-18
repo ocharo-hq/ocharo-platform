@@ -1,4 +1,5 @@
 import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
@@ -183,6 +184,8 @@ export function useSourcingMedia(sourcing: SourcingControls, filter: () => Media
 export function useSourcingNavigation(access: AccessControls, organizationId: () => string, initial: SourcingLocation) {
   const { t } = useUiLocale();
   const current = shallowRef<SourcingLocation>(initial);
+  const route = useRoute();
+  const router = useRouter();
   const confirmDiscard = () => requestConfirmation(t('Discard unsaved changes and leave this page?'), { confirmLabel: t('Discard changes') });
   async function open(next: SourcingLocation): Promise<boolean> {
     if (access.busy.value) return false;
@@ -190,22 +193,15 @@ export function useSourcingNavigation(access: AccessControls, organizationId: ()
     if (access.busy.value) return false;
     access.setDirty(false);
     const path = sourcingPath(organizationId(), next);
-    if (window.location.pathname !== path) window.history.pushState(window.history.state, '', path);
+    if (route.path !== path && await router.push(path)) return false;
     current.value = next;
     return true;
   }
-  async function popstate(): Promise<void> {
-    const location = readWorkspaceLocation(window.location.pathname);
+  /* Back and forward arrive through the router, whose guard has already asked about unsaved edits. */
+  watch(() => route.path, (path) => {
+    const location = readWorkspaceLocation(path);
     if (location.section !== 'sourcing' || !location.sourcing || location.organizationId?.toLowerCase() !== organizationId().toLowerCase()) return;
-    if (access.dirty.value && !await confirmDiscard()) {
-      window.history.pushState(window.history.state, '', sourcingPath(organizationId(), current.value));
-      return;
-    }
-    access.setDirty(false);
     current.value = location.sourcing;
-  }
-  const listener = () => { void popstate(); };
-  window.addEventListener('popstate', listener);
-  onScopeDispose(() => window.removeEventListener('popstate', listener));
+  });
   return { current, open };
 }

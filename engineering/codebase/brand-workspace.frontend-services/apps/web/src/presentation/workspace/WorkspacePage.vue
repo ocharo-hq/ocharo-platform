@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import DeskSelect from '@/presentation/shared/DeskSelect.vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import AccountSettings from './AccountSettings.vue';
 import { notifyError } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import CatalogueWorkspacePage from './CatalogueWorkspacePage.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
-import BuildIdentity from '../shared/BuildIdentity.vue';
-import { Button } from '@wow-two-beta/fe/presentation/actions';
-import { Badge } from '@wow-two-beta/fe/presentation/display';
-import { AppShell, AppShellContent, AppShellHeader, AppShellMain } from '@wow-two-beta/fe/presentation/layout';
+import DeskFrame from './frame/DeskFrame.vue';
 
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import { useWorkspace } from '@/application/workspace/UseWorkspace';
@@ -31,104 +27,54 @@ import SourcingPage from './SourcingPage.vue';
 
 const { t } = useUiLocale();
 
-/** Composes real organization context with the preparation pages. */
+/**
+ * Composes real organization context with the preparation pages inside the Ocharo frame. The route picks the section;
+ * Sourcing and Events move between their own views in place, and every other page opens fresh on each navigation, as
+ * it did when each move loaded a new document.
+ */
 defineOptions({ name: 'WorkspacePage' });
 const props = defineProps<{ access: AccessControls }>();
 defineSlots<{ diagnostics(): unknown }>();
+const route = useRoute();
 const accountOpen = ref(false);
-const currentPath = window.location.pathname;
-const location = readWorkspaceLocation(currentPath);
-const designTarget = readDesignTarget(window.location.search);
+const location = computed(() => readWorkspaceLocation(route.path));
+const designTarget = computed(() => readDesignTarget(new URL(route.fullPath, window.location.origin).search));
 const workspace = useWorkspace(props.access, location);
+/** Sourcing and Events keep their page across their own views; the rest remount per address. @internal */
+const pageKey = computed(() =>
+  location.value.section === 'sourcing' || location.value.section === 'events' ? location.value.section : route.fullPath,
+);
 watch(workspace.error, failure => { if (failure) notifyError(failureMessage(failure), 'workspace-load'); });
 watch(workspace.refreshError, failure => { if (failure) notifyError('Some workspace information could not refresh. Your design remains open.', 'workspace-refresh'); });
-function changeOrganization(id: string): void {
-  props.access.navigate(id ? `/organizations/${id}` : '/');
-}
 </script>
 
 <template>
-  <AppShell sidebar-width="0px" class="min-h-screen bg-background text-foreground">
+  <DeskFrame :access="access" :workspace="workspace" :location="location" @settings="accountOpen = true">
     <AccountSettings v-if="accountOpen" :access="access" @close="accountOpen = false" />
-    <AppShellHeader class="h-auto min-h-14 border-b border-border bg-card px-0 py-4">
-      <div class="mx-auto flex w-full max-w-[1600px] flex-wrap items-center justify-between gap-4 px-5 sm:px-9">
-        <div class="flex items-center gap-3">
-          <span class="brand-mark" aria-hidden="true">O</span
-          ><span
-            ><b class="block text-sm">{{ t("Ocharo workspace") }}</b
-            ><span class="text-xs text-muted-foreground">{{ t("Your creative business") }}</span></span
-          >
-        </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <UiLanguagePicker />
-          <Button variant="ghost" size="sm" :is-disabled="access.busy.value" @click="accountOpen = true">{{ t('Account settings') }}</Button>
-          <span class="text-sm text-muted-foreground">{{ access.session.value?.user?.displayName }}</span
-          ><Button variant="ghost" size="sm" :is-disabled="access.busy.value" @click="access.logout">{{ t("Sign out") }}</Button>
-        </div>
-      </div>
-    </AppShellHeader>
-    <AppShellMain class="w-full min-w-0">
-      <AppShellContent class="mx-auto w-full max-w-[1600px] px-5 pb-12 sm:px-9">
-        <div class="my-6 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-5">
-          <label class="flex min-w-0 flex-wrap items-center gap-3 text-sm"
-            ><span class="text-muted-foreground">{{ t("Organization") }}</span
-            ><DeskSelect :label="t('Organization')" class="w-auto max-w-full" :model-value="location.organizationId ?? ''" :disabled="access.busy.value || workspace.loading.value" @update:model-value="changeOrganization" :options="[({ value: '' as const, label: (t('All organizations')) }), ...(workspace.organizations.value ?? []).map(org => ({ value: org.id, label: (org.name) }))]" /><Badge v-if="workspace.organization.value" variant="outline">{{ t(workspace.organization.value.role) }}</Badge></label
-          >
-          <Button size="sm" variant="outline" :is-disabled="access.busy.value || access.dirty.value || workspace.loading.value || workspace.refreshing.value" :is-loading="workspace.refreshing.value" @click="workspace.refresh()">{{ t("Refresh") }}</Button>
-          <nav :aria-label="t('Workspace sections')" class="flex flex-wrap gap-1">
-            <template v-if="location.organizationId"
-              ><Button
-                v-for="section in ['overview', 'products', 'sourcing', 'events', 'catalogue', 'business-cards', 'content', 'media', 'brands', 'integrations'] as const"
-                :key="section"
-                size="sm"
-                :variant="location.section === section ? 'soft' : 'ghost'"
-                :aria-current="location.section === section ? 'page' : undefined"
-                :is-disabled="access.busy.value"
-                @click="
-                  access.navigate(
-                    `/organizations/${location.organizationId}${section === 'overview' ? '' : `/${section}`}`,
-                  )
-                "
-                >{{ t(({overview:'Overview',products:'Products & releases',sourcing:'Sourcing',events:'Events',integrations:'Connected apps',catalogue:'Catalogues','business-cards':'Business cards',content:'Content',media:'Media',brands:'Brands'})[section]) }}</Button
-              ></template
-            >
-            <Button size="sm" variant="ghost" :is-disabled="access.busy.value" @click="access.navigate('/system')"
-              >{{ t("System") }}</Button
-            >
-          </nav>
-        </div>
-        <div>
-          <ContentSkeleton v-if="workspace.initialLoading.value" :variant="location.section === 'products' || location.section === 'sourcing' ? 'form' : location.section === 'media' || location.section === 'catalogue' ? 'gallery' : 'rows'" :label="t('Loading your workspace…')" />
-          <div v-else :aria-busy="workspace.loading.value || workspace.refreshing.value">
-          <p v-if="workspace.error.value" role="status" class="query-label">{{ t("Workspace unavailable") }}</p>
-          <slot v-else-if="location.section === 'system'" name="diagnostics" />
-          <OrganizationPage v-else-if="!location.organizationId" :access="access" :workspace="workspace" :catalogue-entry="location.section === 'catalogue'" />
-          <section v-else-if="!workspace.organization.value" role="status" class="query-label">
-            <h1 class="text-xl font-semibold">{{ t("Organization unavailable") }}</h1>
-            <p class="mt-3 text-sm text-muted-foreground">{{ t("Choose one of your current memberships.") }}</p>
-          </section>
-          <OverviewPage v-else-if="location.section === 'overview'" :access="access" :workspace="workspace" />
-          <CatalogueWorkspacePage v-else-if="location.section === 'catalogue'" :access="access" :workspace="workspace" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" :initial-mode="designTarget.mode" />
-          <DesignEditorPage v-else-if="location.section === 'business-cards'" :access="access" :workspace="workspace" kind="business-card" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" />
-          <CommercePage v-else-if="location.section === 'products'" :access="access" :workspace="workspace" />
-          <SourcingPage v-else-if="location.section === 'sourcing'" :access="access" :workspace="workspace" :initial-location="location.sourcing" />
-          <EventsPage v-else-if="location.section === 'events'" :access="access" :workspace="workspace" :initial-location="location.events" />
-          <IntegrationsPage v-else-if="location.section === 'integrations'" :access="access" :workspace="workspace" />
-          <BrandsPage v-else-if="location.section === 'brands'" :access="access" :workspace="workspace" />
-          <MediaPage v-else-if="location.section === 'media'" :access="access" :workspace="workspace" />
-          <DraftEditorPage
-            v-else-if="location.draftId === 'new' || workspace.draft.value"
-            :access="access"
-            :workspace="workspace"
-          />
-          <DraftListPage v-else :access="access" :workspace="workspace" />
-          </div>
-        </div>
-        <footer class="mt-12 border-t border-border pt-5 text-xs leading-5 text-muted-foreground">
-          {{ t("Ocharo · A place for your collection, identity, and stories. Social publishing is not connected.") }}
-          <div class="mt-3"><span class="mr-2">{{ t("About this app") }}</span><BuildIdentity /></div>
-        </footer>
-      </AppShellContent>
-    </AppShellMain>
-  </AppShell>
+    <ContentSkeleton v-if="workspace.initialLoading.value" :variant="location.section === 'products' || location.section === 'sourcing' ? 'form' : location.section === 'media' || location.section === 'catalogue' ? 'gallery' : 'rows'" :label="t('Loading your workspace…')" />
+    <div v-else :key="pageKey" :aria-busy="workspace.loading.value || workspace.refreshing.value">
+      <p v-if="workspace.error.value" role="status" class="query-label">{{ t("Workspace unavailable") }}</p>
+      <slot v-else-if="location.section === 'system'" name="diagnostics" />
+      <OrganizationPage v-else-if="!location.organizationId" :access="access" :workspace="workspace" :catalogue-entry="location.section === 'catalogue'" />
+      <section v-else-if="!workspace.organization.value" role="status" class="query-label">
+        <h1 class="text-xl font-semibold">{{ t("Organization unavailable") }}</h1>
+        <p class="mt-3 text-sm text-muted-foreground">{{ t("Choose one of your current memberships.") }}</p>
+      </section>
+      <OverviewPage v-else-if="location.section === 'overview'" :access="access" :workspace="workspace" />
+      <CatalogueWorkspacePage v-else-if="location.section === 'catalogue'" :access="access" :workspace="workspace" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" :initial-mode="designTarget.mode" />
+      <DesignEditorPage v-else-if="location.section === 'business-cards'" :access="access" :workspace="workspace" kind="business-card" :initial-document-id="designTarget.documentId" :initial-page-id="designTarget.pageId" :navigation-error="designTarget.error" />
+      <CommercePage v-else-if="location.section === 'products'" :access="access" :workspace="workspace" />
+      <SourcingPage v-else-if="location.section === 'sourcing'" :access="access" :workspace="workspace" :initial-location="location.sourcing" />
+      <EventsPage v-else-if="location.section === 'events'" :access="access" :workspace="workspace" :initial-location="location.events" />
+      <IntegrationsPage v-else-if="location.section === 'integrations'" :access="access" :workspace="workspace" />
+      <BrandsPage v-else-if="location.section === 'brands'" :access="access" :workspace="workspace" />
+      <MediaPage v-else-if="location.section === 'media'" :access="access" :workspace="workspace" />
+      <DraftEditorPage
+        v-else-if="location.draftId === 'new' || workspace.draft.value"
+        :access="access"
+        :workspace="workspace"
+      />
+      <DraftListPage v-else :access="access" :workspace="workspace" />
+    </div>
+  </DeskFrame>
 </template>

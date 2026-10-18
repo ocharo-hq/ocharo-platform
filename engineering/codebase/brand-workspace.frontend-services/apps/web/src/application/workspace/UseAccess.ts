@@ -1,14 +1,15 @@
 import { signInDestination } from '@/domain/workspace/SignInDestination';
 import { requestConfirmation, resolveConfirmation, notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import { computed, onScopeDispose, ref, shallowRef } from 'vue';
+import { computed, inject, onScopeDispose, ref, shallowRef } from 'vue';
+import { routerKey, type Router } from 'vue-router';
 
 import type { AuthStrategy } from '@wow-two-beta/fe/auth';
 import { createSyncChannel } from '@wow-two-beta/fe/foundation/channels';
 import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
 
-import type { Session } from '@/domain/workspace/Models';
+import { readWorkspaceLocation, type Session } from '@/domain/workspace/Models';
 import { safeWorkspaceDestination } from '@/domain/workspace/EditorNavigation';
 import { createWorkspaceApi } from '@/integration/workspace/WorkspaceApi';
 
@@ -32,15 +33,21 @@ export function failureMessage(error: ApiFailure): string {
 export interface DocumentNavigation {
   assign(path: string): void;
   reload(): void;
+  /** Moves between sections of the same organization without reloading; absent, every move replaces the document. */
+  router?: Router | null;
+}
+
+/** The runtime navigation: the document for context changes, the app router for moves inside one organization. */
+function documentNavigation(): DocumentNavigation {
+  return {
+    assign: (path) => window.location.assign(path),
+    reload: () => window.location.reload(),
+    router: inject(routerKey, null),
+  };
 }
 
 /** Owns the document's immutable session context and whole-document context transitions. */
-export function useAccess(
-  navigation: DocumentNavigation = {
-    assign: (path) => window.location.assign(path),
-    reload: () => window.location.reload(),
-  },
-) {
+export function useAccess(navigation: DocumentNavigation = documentNavigation()) {
   const { t } = useUiLocale();
   const session = shallowRef<Session | null>(null);
   const sessionError = ref<string | null>(null);
@@ -82,14 +89,33 @@ export function useAccess(
     controller.abort();
     navigation.reload();
   }
-  /** Prevents accidental loss of edits and switches context only with no pending writes. */
+  /** The organization this document loaded; its reads and caches stay bound to it until the document is replaced. */
+  const documentOrganizationId = readWorkspaceLocation(window.location.pathname).organizationId?.toLowerCase() ?? null;
+  /** Whether a path stays in this document: the same organization, or the organization-free diagnostics. */
+  function staysInDocument(path: string): boolean {
+    const target = readWorkspaceLocation(new URL(path, window.location.origin).pathname);
+    return target.section === 'system' || (target.organizationId?.toLowerCase() ?? null) === documentOrganizationId;
+  }
+  /** Prevents accidental loss of edits; moves inside the organization in place and replaces the document otherwise. */
   async function navigate(path: string): Promise<void> {
     if (busy.value || !path.startsWith('/') || path.startsWith('//')) return;
     if (dirty.value && !await requestConfirmation(t('Discard unsaved changes and leave this page?'), {confirmLabel:t('Discard changes')})) return;
     if (busy.value || disposed) return;
     dirty.value = false;
-    navigation.assign(path);
+    if (navigation.router && staysInDocument(path)) await navigation.router.push(path);
+    else navigation.assign(path);
   }
+  /* Back, forward and in-app links pass the same checks: pending writes hold the page, unsaved edits ask first, and a
+     move to another organization replaces the document so no private state crosses it. */
+  const removeGuard = navigation.router?.beforeEach(async (to, from) => {
+    if (!from.matched.length || to.fullPath === from.fullPath) return true;
+    if (busy.value || disposed) return false;
+    if (dirty.value && !await requestConfirmation(t('Discard unsaved changes and leave this page?'), {confirmLabel:t('Discard changes')})) return false;
+    dirty.value = false;
+    if (staysInDocument(to.fullPath)) return true;
+    navigation.assign(to.fullPath);
+    return false;
+  });
   /** Counts writes across all active forms; session cancellation reaches the HTTP transport. */
   async function write<T>(operation: (signal: AbortSignal) => Promise<Result<T, ApiFailure>>, signal?: AbortSignal) {
     pendingWrites.value += 1;
@@ -161,6 +187,7 @@ export function useAccess(
   document.addEventListener('visibilitychange', visibility);
   window.addEventListener('focus', recheck);
   onScopeDispose(() => {
+    removeGuard?.();
     resolveConfirmation(false);
     disposed = true;
     controller.abort();

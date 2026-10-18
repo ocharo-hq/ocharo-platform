@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { Images, Users, SlidersHorizontal } from 'lucide-vue-next';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { notifyError } from '@/application/shared/UseFeedback';
@@ -26,11 +27,13 @@ const viewSettings = useSourcingPreferences(props.access, sourcing.organizationI
 const preferences = viewSettings.preferences;
 const settingsOpen = ref(false);
 const initial = props.initialLocation ?? { view: 'suppliers' as const, supplierId: null };
+const route = useRoute();
+const router = useRouter();
 const startsWithMaterials = initial.view === 'suppliers' && preferences.value.start === 'materials' &&
-  window.location.pathname.replace(/\/$/, '') === sourcingPath(sourcing.organizationId(), initial);
+  route.path.replace(/\/$/, '') === sourcingPath(sourcing.organizationId(), initial);
 const startingLocation: SourcingLocation = startsWithMaterials ? { view: 'materials', supplierId: null } : initial;
 // The first history entry must describe the same view, so Back returns to the starting gallery.
-if (startsWithMaterials) window.history.replaceState(window.history.state, '', sourcingPath(sourcing.organizationId(), startingLocation));
+if (startsWithMaterials) void router.replace(sourcingPath(sourcing.organizationId(), startingLocation));
 const navigation = useSourcingNavigation(props.access, sourcing.organizationId, startingLocation);
 const current = navigation.current;
 const { summary } = useMediaSummary(sourcing);

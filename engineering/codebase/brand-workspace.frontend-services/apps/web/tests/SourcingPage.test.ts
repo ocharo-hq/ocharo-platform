@@ -1,4 +1,5 @@
 import { deskSelect, chooseDeskValue } from './helpers/DeskSelect';
+import { deskRouter } from './helpers/DeskRouter';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -73,7 +74,7 @@ afterEach(() => {
   client?.clear();
 });
 
-function render(role: 'owner' | 'editor' | 'viewer', initialLocation: SourcingLocation) {
+async function render(role: 'owner' | 'editor' | 'viewer', initialLocation: SourcingLocation) {
   client = createQueryClient({ retry: { ...DefaultRetryPolicy, maxRetries: 0 } });
   const access = {
     busy: ref(false), dirty: ref(false), invalidated: ref(false), checking: ref(false), session: ref({ csrfToken: 'token', sessionId: 'session', authenticated: true, user: { id: PERSON } }),
@@ -83,7 +84,7 @@ function render(role: 'owner' | 'editor' | 'viewer', initialLocation: SourcingLo
   const workspace = { organization: ref({ id: ORG, name: 'Ocharo', slug: 'ocharo', role }), canEdit: computed(() => role !== 'viewer') };
   wrapper = mount(SourcingPage, {
     props: { access: access as unknown as AccessControls, workspace: workspace as unknown as WorkspaceControls, initialLocation },
-    global: { plugins: [queryPlugin(client)] },
+    global: { plugins: [queryPlugin(client), await deskRouter()] },
     attachTo: document.body,
   });
   return { access };
@@ -92,7 +93,7 @@ const button = (label: string) => wrapper!.findAll('button').find(item => item.t
 
 describe('sourcing supplier list', () => {
   it('renders suppliers with stage, place, primary channel, media count and the inbox count', async () => {
-    render('editor', { view: 'suppliers', supplierId: null });
+    await render('editor', { view: 'suppliers', supplierId: null });
     await flushPromises();
     const list = wrapper!.get('nav[aria-label="Suppliers"]');
     expect(list.text()).toContain('Sethi Weaves');
@@ -104,7 +105,7 @@ describe('sourcing supplier list', () => {
   });
 
   it('passes the search text and stage filter to the server and opens a supplier', async () => {
-    render('editor', { view: 'suppliers', supplierId: null });
+    await render('editor', { view: 'suppliers', supplierId: null });
     await flushPromises();
     api.listSuppliers.mockResolvedValue(ResultExtensions.ok([summary({ id: OTHER, name: 'Bukhara Silk', stage: 'lead' })]));
     await wrapper!.get('input[type="search"]').setValue('silk');
@@ -125,7 +126,7 @@ describe('sourcing supplier list', () => {
 
 describe('sourcing supplier detail', () => {
   it('renders safe route links only and never a script URL', async () => {
-    render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await render('editor', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     const routes = wrapper!.get('[aria-labelledby="sourcing-routes-title"]');
     const hrefs = routes.findAll('a').map(link => link.attributes('href'));
@@ -140,7 +141,7 @@ describe('sourcing supplier detail', () => {
   });
 
   it('hides every edit control from viewers', async () => {
-    render('viewer', { view: 'supplier', supplierId: SUPPLIER });
+    await render('viewer', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     expect(wrapper!.text()).toContain('Sethi Weaves');
     expect(wrapper!.text()).toContain('photo-1.jpg');
@@ -150,7 +151,7 @@ describe('sourcing supplier detail', () => {
   });
 
   it('retains the committed stage throughout a pending and rejected update', async () => {
-    render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await render('editor', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     const detail = wrapper!.findComponent({ name: 'SourcingSupplierDetail' });
     const picker = deskSelect(detail, 'Stage');
@@ -169,14 +170,14 @@ describe('sourcing supplier detail', () => {
   });
 
   it('shows the edit controls to editors', async () => {
-    render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await render('editor', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     for (const label of ['Add supplier', 'Edit details', 'Add route', 'Add person', 'Select files']) expect(button(label)).toBeDefined();
     expect(wrapper!.findComponent(FileUploadPicker).exists()).toBe(true);
   });
 
   it('keeps the edited values and explains a revision conflict', async () => {
-    const { access } = render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    const { access } = await render('editor', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     await button('Edit details')!.trigger('click');
     const name = wrapper!.get('form input');
@@ -194,7 +195,7 @@ describe('sourcing supplier detail', () => {
 
 describe('sourcing inbox', () => {
   it('uploads dropped files to the inbox and shows duplicates', async () => {
-    render('editor', { view: 'inbox', supplierId: null });
+    await render('editor', { view: 'inbox', supplierId: null });
     await flushPromises();
     expect(api.listMedia).toHaveBeenCalledWith(ORG, { kind: 'inbox' }, { limit: 100, offset: 0 }, expect.any(AbortSignal));
     api.uploadMedia
@@ -211,7 +212,7 @@ describe('sourcing inbox', () => {
   });
 
   it('assigns selected files to a supplier in one request', async () => {
-    render('editor', { view: 'inbox', supplierId: null });
+    await render('editor', { view: 'inbox', supplierId: null });
     await flushPromises();
     api.assignMedia.mockResolvedValue(ResultExtensions.ok({ updated: 2 }));
     await button('Select files')!.trigger('click');
@@ -227,7 +228,7 @@ describe('sourcing inbox', () => {
   });
 
   it('opens a lightbox in grid order with keyboard navigation and returns focus', async () => {
-    render('editor', { view: 'inbox', supplierId: null });
+    await render('editor', { view: 'inbox', supplierId: null });
     await flushPromises();
     expect(wrapper!.findAll('.sourcing-tile-badge')).toHaveLength(1);
     const tile = wrapper!.findAll('.sourcing-tile-button')[1]!;
@@ -264,7 +265,7 @@ describe('sourcing collection outcomes', () => {
     let finishMedia!: (value: ReturnType<typeof ResultExtensions.ok<SourcingMedia[]>>) => void;
     api.listSuppliers.mockImplementation(() => new Promise(resolve => { finishSuppliers = resolve; }));
     api.listMedia.mockImplementation(() => new Promise(resolve => { finishMedia = resolve; }));
-    render('viewer', { view: 'inbox', supplierId: null });
+    await render('viewer', { view: 'inbox', supplierId: null });
     await flushPromises();
     expect(wrapper!.findAll('nav[aria-label="Suppliers"] div.sourcing-row')).toHaveLength(4);
     expect(wrapper!.get('.sourcing-gallery').findAll(':scope > div')).toHaveLength(6);
@@ -286,7 +287,7 @@ describe('sourcing collection outcomes', () => {
     const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 500, headers: new Headers() }));
     api.listSuppliers.mockResolvedValue(failure);
     api.listMedia.mockResolvedValue(failure);
-    render('viewer', { view: 'inbox', supplierId: null });
+    await render('viewer', { view: 'inbox', supplierId: null });
     await flushPromises();
     expect(notice).toHaveBeenCalledWith(expect.objectContaining({ tone: 'danger' }));
     expect(wrapper!.text()).not.toContain('unavailable');
@@ -306,7 +307,7 @@ describe('sourcing collection outcomes', () => {
   it('retains a confirmed empty collection when refresh fails', async () => {
     api.listSuppliers.mockResolvedValue(ResultExtensions.ok([]));
     api.listMedia.mockResolvedValue(ResultExtensions.ok([]));
-    render('viewer', { view: 'inbox', supplierId: null });
+    await render('viewer', { view: 'inbox', supplierId: null });
     await flushPromises();
     const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() }));
     api.listSuppliers.mockResolvedValue(failure);
@@ -318,7 +319,7 @@ describe('sourcing collection outcomes', () => {
   });
 
   it('preserves loaded suppliers and media after a failed refetch', async () => {
-    render('viewer', { view: 'inbox', supplierId: null });
+    await render('viewer', { view: 'inbox', supplierId: null });
     await flushPromises();
     const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() }));
     api.listSuppliers.mockResolvedValue(failure);
@@ -337,7 +338,7 @@ describe('sourcing collection outcomes', () => {
 describe('personal sourcing views', () => {
   it('opens the material gallery and follows a supplier association', async () => {
     api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1, { supplierId: SUPPLIER }), media(2, { supplierId: '55555555-5555-4555-8555-555555555555' }), media(3)]));
-    render('viewer', { view: 'suppliers', supplierId: null });
+    await render('viewer', { view: 'suppliers', supplierId: null });
     await flushPromises();
     await button('Materials')!.trigger('click');
     await flushPromises();
@@ -355,7 +356,7 @@ describe('personal sourcing views', () => {
     expect(store.save({ start: 'materials', order: 'contacts-first', visible: ['contacts'] })).toBe(true);
     api.listMedia.mockResolvedValue(ResultExtensions.ok([media(1, { supplierId: SUPPLIER })]));
     window.history.replaceState(null, '', `/organizations/${ORG}/sourcing`);
-    render('viewer', { view: 'suppliers', supplierId: null });
+    await render('viewer', { view: 'suppliers', supplierId: null });
     await flushPromises();
     expect(wrapper!.find('#sourcing-materials-title').exists()).toBe(true);
     expect(window.location.pathname).toBe(`/organizations/${ORG}/sourcing/materials`);
@@ -367,7 +368,7 @@ describe('personal sourcing views', () => {
     await flushPromises();
     expect(wrapper!.find('#sourcing-materials-title').exists()).toBe(true);
     wrapper!.unmount(); client!.clear();
-    render('viewer', { view: 'supplier', supplierId: SUPPLIER });
+    await render('viewer', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     expect(wrapper!.find('#sourcing-supplier-title').exists()).toBe(true);
     expect(wrapper!.find('#sourcing-routes-title').exists()).toBe(true);
@@ -375,7 +376,7 @@ describe('personal sourcing views', () => {
     expect(wrapper!.find('#sourcing-people-title').exists()).toBe(false);
   });
   it('saves view settings separately from supplier records and guards dirty forms', async () => {
-    const { access } = render('viewer', { view: 'supplier', supplierId: SUPPLIER });
+    const { access } = await render('viewer', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     access.dirty.value = true;
     await button('View settings')!.trigger('click');
@@ -407,7 +408,7 @@ describe('sourcing pagination and editing recovery', () => {
   const dialog = () => wrapper!.get('.sourcing-lightbox');
   const dialogButton = (label: string) => dialog().findAll('button').find(item => item.text() === label)!;
   async function editMedia() {
-    render('editor', { view: 'inbox', supplierId: null });
+    await render('editor', { view: 'inbox', supplierId: null });
     await flushPromises();
     await wrapper!.findAll('.sourcing-tile-button')[1]!.trigger('click');
     await flushPromises();
@@ -420,7 +421,7 @@ describe('sourcing pagination and editing recovery', () => {
     api.listSuppliers.mockImplementation((_org, filter) => Promise.resolve(ResultExtensions.ok(filter.stage === 'lead'
       ? [summary({ name: 'Filtered supplier' })]
       : filter.offset === 0 ? first : [summary({ name: 'Last supplier' })])));
-    render('viewer', { view: 'suppliers', supplierId: null });
+    await render('viewer', { view: 'suppliers', supplierId: null });
     await flushPromises();
     expect(button('Load more suppliers')).toBeDefined();
     await button('Load more suppliers')!.trigger('click');
@@ -441,7 +442,7 @@ describe('sourcing pagination and editing recovery', () => {
         id: `supplier-${index + (filter.offset === 200 ? 199 : 0)}`, name: `Supplier ${index + filter.offset}`,
       })) : [],
     )));
-    render('viewer', { view: 'suppliers', supplierId: null });
+    await render('viewer', { view: 'suppliers', supplierId: null });
     await flushPromises();
     await button('Load more suppliers')!.trigger('click');
     await flushPromises();
@@ -459,7 +460,7 @@ describe('sourcing pagination and editing recovery', () => {
     api.listMedia.mockImplementation((_org, _filter, page) => Promise.resolve(ResultExtensions.ok(
       page.offset < 200 ? Array.from({ length: 100 }, (_, index) => media(index + (page.offset === 100 ? 99 : 0))) : [],
     )));
-    render('viewer', { view: 'inbox', supplierId: null });
+    await render('viewer', { view: 'inbox', supplierId: null });
     await flushPromises();
     await button('Load more')!.trigger('click');
     await flushPromises();
@@ -471,7 +472,7 @@ describe('sourcing pagination and editing recovery', () => {
   });
 
   it('retains supplier drafts and their original revision through refresh and failed conflict reload', async () => {
-    render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await render('editor', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     await button('Edit details')!.trigger('click');
     await wrapper!.get('form input').setValue('My supplier edit');
@@ -496,7 +497,7 @@ describe('sourcing pagination and editing recovery', () => {
   });
 
   it.each(['person', 'route'] as const)('uses the edited %s revision after supplier data changes', async kind => {
-    render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    await render('editor', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     const section = wrapper!.get(`[aria-labelledby="sourcing-${kind === 'person' ? 'people' : 'routes'}-title"]`);
     await section.findAll('button').find(item => item.text() === 'Edit')!.trigger('click');
@@ -518,7 +519,7 @@ describe('sourcing pagination and editing recovery', () => {
   });
 
   it.each(['person', 'route'] as const)('retains a dirty %s after a remote removal and a successful missing-record reload', async kind => {
-    const { access } = render('editor', { view: 'supplier', supplierId: SUPPLIER });
+    const { access } = await render('editor', { view: 'supplier', supplierId: SUPPLIER });
     await flushPromises();
     const section = wrapper!.get(`[aria-labelledby="sourcing-${kind === 'person' ? 'people' : 'routes'}-title"]`);
     await section.findAll('button').find(item => item.text() === 'Edit')!.trigger('click');
@@ -577,7 +578,7 @@ describe('sourcing pagination and editing recovery', () => {
   });
 
   it.each([true, false])('closes the viewer only after a confirmed own delete (success=%s)', async succeeded => {
-    render('editor', { view: 'inbox', supplierId: null });
+    await render('editor', { view: 'inbox', supplierId: null });
     await flushPromises();
     await wrapper!.findAll('.sourcing-tile-button')[1]!.trigger('click');
     await flushPromises();

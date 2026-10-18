@@ -3,29 +3,36 @@ import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { describe, expect, it, vi } from "vitest";
+import { colorModeScript } from "@wow-two-beta/fe/foundation/primitives";
 import { proxyUnavailable } from "../dev/ProxyProblem";
+import { ThemeStorageKey } from "../src/bootstrap/theme";
 const root = resolve(process.cwd(), "../../..");
 const appPaths = [
   "brand-workspace.frontend-services/apps/web",
   "ocharo-brand.frontend-services/apps/web",
 ];
+/** Desk generates its pre-paint script from the SDK at build time; Brand still ships a fixed file. */
+function themeSource(path: string): string {
+  return path.startsWith("brand-workspace.")
+    ? colorModeScript({ storageKey: ThemeStorageKey })
+    : readFileSync(resolve(root, path, "public/theme.js"), "utf8");
+}
 function boot(
   path: string,
   values: Record<string, string> = {},
   pathname = "/",
+  prefersDark = false,
 ) {
   const toggle = vi.fn();
   const style: { colorScheme?: string } = {};
   const storage = { getItem: (key: string) => values[key] ?? null };
-  runInNewContext(
-    readFileSync(resolve(root, path, "public/theme.js"), "utf8"),
-    {
-      document: { documentElement: { classList: { toggle }, style } },
-      localStorage: storage,
-      sessionStorage: storage,
-      location: { pathname },
-    },
-  );
+  runInNewContext(themeSource(path), {
+    document: { documentElement: { classList: { toggle }, style } },
+    localStorage: storage,
+    sessionStorage: storage,
+    location: { pathname },
+    matchMedia: () => ({ matches: prefersDark }),
+  });
   return { toggle, style };
 }
 describe("first paint and proxy contracts", () => {
@@ -46,6 +53,13 @@ describe("first paint and proxy contracts", () => {
       expect(actual.style.colorScheme).toBe("light");
     },
   );
+  it("follows the remembered or device colour mode in Desk before the first paint", () => {
+    const desk = "brand-workspace.frontend-services/apps/web";
+    expect(boot(desk, { [ThemeStorageKey]: "dark" }).style.colorScheme).toBe("dark");
+    expect(boot(desk, { [ThemeStorageKey]: "dark" }).toggle).toHaveBeenCalledWith("dark", true);
+    expect(boot(desk, {}, "/", true).style.colorScheme).toBe("dark");
+    expect(boot(desk, { [ThemeStorageKey]: "light" }, "/", true).style.colorScheme).toBe("light");
+  });
   it.each(["GET", "HEAD"])(
     "returns safe structured transport problems for %s without exposing proxy errors",
     (method) => {

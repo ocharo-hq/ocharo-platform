@@ -6,6 +6,7 @@ import { productReviewUiMessages } from './ProductReviewUiMessages';
 import { designerUiMessages } from './DesignerUiMessages';
 import { eventsUiMessages } from './EventsUiMessages';
 import { sourcingUiMessages } from './SourcingUiMessages';
+import { shellUiMessages } from './ShellUiMessages';
 
 /** Operator interface locales are independent from authored catalogue languages. */
 export type UiLocale = 'uz' | 'ru' | 'en';
@@ -1772,7 +1773,7 @@ export const operatorUiMessages: UiMessageTable = {
 };
 
 export const uiMessages: UiMessageTable = {
-  ...telegramUiMessages, ...baseUiMessages, ...integrationUiMessages, ...operatorUiMessages, ...designerUiMessages, ...productReviewUiMessages, ...catalogueUiMessages, ...sourcingUiMessages, ...sourcingViewUiMessages, ...eventsUiMessages };
+  ...telegramUiMessages, ...baseUiMessages, ...integrationUiMessages, ...operatorUiMessages, ...designerUiMessages, ...productReviewUiMessages, ...catalogueUiMessages, ...sourcingUiMessages, ...sourcingViewUiMessages, ...eventsUiMessages, ...shellUiMessages };
 
 /** Resolves exact interface phrases without interpreting or translating customer-authored data. */
 export function translateUi(source: string, locale: UiLocale, variables?: Record<string, string | number>): string {

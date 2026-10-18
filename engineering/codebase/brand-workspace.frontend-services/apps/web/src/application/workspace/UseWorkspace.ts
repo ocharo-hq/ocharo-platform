@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, ref, toValue, type MaybeRefOrGetter } from 'vue';
 import { notifyError } from '@/application/shared/UseFeedback';
 
 import { useAppQuery, useQueryCache } from '@wow-two-beta/fe/query';
@@ -7,11 +7,15 @@ import type { DraftInput, WorkspaceLocation } from '@/domain/workspace/Models';
 
 import type { AccessControls } from './UseAccess';
 
-/** Owns tenant-scoped reads and server-confirmed preparation commands for one document. */
-export function useWorkspace(access: AccessControls, location: WorkspaceLocation) {
+/**
+ * Owns tenant-scoped reads and server-confirmed preparation commands for one document. The organization is fixed for
+ * the document's life (moving to another one replaces the document); the open draft follows the current location.
+ */
+export function useWorkspace(access: AccessControls, location: MaybeRefOrGetter<WorkspaceLocation>) {
   const cache = useQueryCache();
   const refreshing = ref(false);
-  const orgId = location.organizationId ?? '';
+  const orgId = toValue(location).organizationId ?? '';
+  const draftId = () => toValue(location).draftId;
   const scope = [access.session.value?.sessionId, orgId];
   const organizationsQuery = useAppQuery({
     key: [scope[0], 'organizations'],
@@ -34,11 +38,11 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
     enabled,
     queryFn: ({ signal }) => access.api.getDrafts(orgId, signal),
   });
-  const draftKey = [...scope, 'draft', location.draftId];
+  const draftKey = () => [...scope, 'draft', draftId()];
   const draftQuery = useAppQuery({
     key: draftKey,
-    enabled: () => enabled() && Boolean(location.draftId && location.draftId !== 'new'),
-    queryFn: ({ signal }) => access.api.getDraft(orgId, location.draftId!, signal),
+    enabled: () => enabled() && Boolean(draftId() && draftId() !== 'new'),
+    queryFn: ({ signal }) => access.api.getDraft(orgId, draftId()!, signal),
   });
   const canEdit = computed(() => organization.value?.role === 'owner' || organization.value?.role === 'editor');
   const canApprove = computed(() => organization.value?.role === 'owner');
@@ -71,7 +75,7 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
     try {
       const keys: unknown[][] = [[scope[0], 'organizations']];
       if (organization.value) keys.push([...scope, 'brands'], [...scope, 'media'], [...scope, 'drafts'], [...scope, 'sourcing'], [...scope, 'events']);
-      if (organization.value && location.draftId && location.draftId !== 'new') keys.push(draftKey);
+      if (organization.value && draftId() && draftId() !== 'new') keys.push(draftKey());
       await Promise.all(keys.map(key => cache.invalidate(key)));
     } finally { refreshing.value = false; }
   }
@@ -89,9 +93,9 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
     return result;
   }
   async function saveDraft(input: DraftInput, expectedRevision: number | null, signal: AbortSignal) {
-    const id = location.draftId === 'new' ? null : location.draftId;
+    const id = draftId() === 'new' ? null : draftId();
     const result = await access.write((s) => access.api.saveDraft(orgId, id, input, expectedRevision, s), signal);
-    if (result.ok) await refreshAfterWrite([[...scope, 'drafts'], ...(id ? [draftKey] : [])]);
+    if (result.ok) await refreshAfterWrite([[...scope, 'drafts'], ...(id ? [draftKey()] : [])]);
     return result;
   }
   async function transition(
@@ -101,14 +105,14 @@ export function useWorkspace(access: AccessControls, location: WorkspaceLocation
     signal: AbortSignal,
   ) {
     const result = await access.write(
-      (s) => access.api.transition(orgId, location.draftId!, action, revision, reason, s),
+      (s) => access.api.transition(orgId, draftId()!, action, revision, reason, s),
       signal,
     );
-    if (result.ok) await refreshAfterWrite([draftKey, [...scope, 'drafts']]);
+    if (result.ok) await refreshAfterWrite([draftKey(), [...scope, 'drafts']]);
     return result;
   }
   function createExport(revision: number, key: string, signal: AbortSignal) {
-    return access.write((s) => access.api.createExport(orgId, location.draftId!, revision, key, s), signal);
+    return access.write((s) => access.api.createExport(orgId, draftId()!, revision, key, s), signal);
   }
   return {
     organizations: organizationsQuery.data,

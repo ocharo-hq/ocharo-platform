@@ -5,13 +5,33 @@ import { fileURLToPath, URL } from 'node:url';
 
 import tailwindcss from '@tailwindcss/vite';
 import vue from '@vitejs/plugin-vue';
-import { defineConfig, type ProxyOptions } from 'vite';
+import { defineConfig, type Plugin, type ProxyOptions } from 'vite';
+import { colorModeScript } from '@wow-two-beta/fe/foundation/primitives';
+
+import { ThemeStorageKey } from './src/bootstrap/theme';
 import mkcert from 'vite-plugin-mkcert';
 
 /** Keeps development proxy overrides on verified HTTPS endpoints. */
 function httpsTarget(value: string): string {
   if (new URL(value).protocol !== 'https:') throw new Error('The development API target must use HTTPS.');
   return value;
+}
+
+/** Serves and emits `/theme.js`: the SDK's pre-paint colour script, so a dark Desk never flashes light first. */
+function themeScript(): Plugin {
+  const source = colorModeScript({ storageKey: ThemeStorageKey });
+  return {
+    name: 'ocharo-desk-theme-script',
+    configureServer(server) {
+      server.middlewares.use('/theme.js', (_request, response) => {
+        response.setHeader('Content-Type', 'text/javascript');
+        response.end(source);
+      });
+    },
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'theme.js', source });
+    },
+  };
 }
 
 /** Shares verified HTTPS proxying for the app API and stateless MCP transport. */
@@ -31,6 +51,7 @@ export default defineConfig(({ command }) => ({
   plugins: [
     vue(),
     tailwindcss(),
+    themeScript(),
     ...(command === "serve" ? [mkcert()] : []),
   ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },

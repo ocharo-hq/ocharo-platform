@@ -1,4 +1,5 @@
 import { deskSelect, chooseDeskValue } from './helpers/DeskSelect';
+import { deskRouter } from './helpers/DeskRouter';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type DOMWrapper, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -62,7 +63,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function render(role: 'owner' | 'editor' | 'viewer', initialLocation: EventsLocation) {
+async function render(role: 'owner' | 'editor' | 'viewer', initialLocation: EventsLocation) {
   client = createQueryClient({ retry: { ...DefaultRetryPolicy, maxRetries: 0 } });
   const access = {
     busy: ref(false), dirty: ref(false), session: ref({ csrfToken: 'token', sessionId: 'session' }),
@@ -72,7 +73,7 @@ function render(role: 'owner' | 'editor' | 'viewer', initialLocation: EventsLoca
   const workspace = { organization: ref({ id: ORG, name: 'Ocharo', slug: 'ocharo', role }), canEdit: computed(() => role !== 'viewer') };
   wrapper = mount(EventsPage, {
     props: { access: access as unknown as AccessControls, workspace: workspace as unknown as WorkspaceControls, initialLocation },
-    global: { plugins: [queryPlugin(client)] },
+    global: { plugins: [queryPlugin(client), await deskRouter()] },
     attachTo: document.body,
   });
   return { access };
@@ -85,7 +86,7 @@ const unfiltered = { query: '', scope: '', format: '', status: '', from: '2026-1
 
 describe('events feed', () => {
   it('shows the next deadlines, month groups and each card as precisely as announced', async () => {
-    render('editor', feed);
+    await render('editor', feed);
     await flushPromises();
     expect(api.summary).toHaveBeenCalledWith(ORG, '2026-10-08', expect.any(AbortSignal));
     expect(api.listEvents).toHaveBeenCalledWith(ORG, unfiltered, expect.any(AbortSignal));
@@ -120,7 +121,7 @@ describe('events feed', () => {
   });
 
   it('turns every filter into query parameters and drops from=today when past events are shown', async () => {
-    render('editor', feed);
+    await render('editor', feed);
     await flushPromises();
     await wrapper!.get('input[type="search"]').setValue('silk');
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -144,7 +145,7 @@ describe('events feed', () => {
   });
 
   it('shortlists or skips a candidate with one PUT carrying its revision', async () => {
-    render('editor', feed);
+    await render('editor', feed);
     await flushPromises();
     api.updateEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'shortlisted', revision: 4 }));
     expect(buttonIn(card('Silk Road Trade Fair'), 'Shortlist')).toBeUndefined();
@@ -161,7 +162,7 @@ describe('events feed', () => {
   });
 
   it('creates a manual event as shortlisted by default and opens it', async () => {
-    render('editor', feed);
+    await render('editor', feed);
     await flushPromises();
     await buttonIn(wrapper!, 'Add event')!.trigger('click');
     const form = wrapper!.get('section[aria-label="New event"] form');
@@ -177,7 +178,7 @@ describe('events feed', () => {
   });
 
   it('opens an event at its own address and returns to the feed', async () => {
-    render('editor', feed);
+    await render('editor', feed);
     await flushPromises();
     await card('Silk Road Trade Fair').get('h4 a').trigger('click');
     await flushPromises();
@@ -194,7 +195,7 @@ describe('events feed', () => {
 describe('event detail', () => {
   it('shows every field with safe links only', async () => {
     api.getEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), website: 'javascript:alert(1)' }));
-    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     const text = detail().text();
     for (const value of ['Tashkent Fashion Week', '12–14 Oct 2026', 'Exact dates', 'Humo Arena', 'Application package to the organiser', 'Cost not stated', 'tfw-2026', '15 Oct 2026', '7 days left'])
@@ -207,7 +208,7 @@ describe('event detail', () => {
   });
 
   it('hides every edit control from viewers', async () => {
-    render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     expect(detail().text()).toContain('Candidate');
     expect(detail().findAll('[role=combobox]')).toHaveLength(0);
@@ -219,7 +220,7 @@ describe('event detail', () => {
   });
 
   it('saves status and priority as soon as they change', async () => {
-    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     api.updateEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'applying', revision: 4 }));
     await chooseDeskValue(wrapper!.findComponent({ name: 'EventDetail' }), 'Status', 'applying');
@@ -233,7 +234,7 @@ describe('event detail', () => {
   });
 
   it('retains the committed status throughout a pending and rejected update', async () => {
-    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     const eventDetail = wrapper!.findComponent({ name: 'EventDetail' });
     const picker = deskSelect(eventDetail, 'Status');
@@ -251,7 +252,7 @@ describe('event detail', () => {
   });
 
   it('keeps the edited values and offers a reload after a revision conflict', async () => {
-    const { access } = render('editor', { view: 'event', eventId: FASHION_WEEK });
+    const { access } = await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
     const title = detail().get('form input');
@@ -268,7 +269,7 @@ describe('event detail', () => {
   });
 
   it('rejects an end date before the start date without sending', async () => {
-    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
     const [, end] = detail().findAll('input[type="date"]');
@@ -280,7 +281,7 @@ describe('event detail', () => {
   });
 
   it('deletes only after confirmation and returns to the feed', async () => {
-    render('editor', { view: 'event', eventId: SILK_FAIR });
+    await render('editor', { view: 'event', eventId: SILK_FAIR });
     await flushPromises();
     api.deleteEvent.mockResolvedValue(ResultExtensions.ok({ id: SILK_FAIR }));
     await buttonIn(detail(), 'Delete event')!.trigger('click');
@@ -299,7 +300,7 @@ describe('event collection outcomes', () => {
     let finishEvents!: (value: ReturnType<typeof ResultExtensions.ok<ShowcaseEvent[]>>) => void;
     api.listEvents.mockImplementation(() => new Promise(resolve => { finishEvents = resolve; }));
     api.summary.mockImplementation(() => new Promise(() => {}));
-    render('viewer', feed);
+    await render('viewer', feed);
     await flushPromises();
     expect(wrapper!.findAll('.events-list .event-card')).toHaveLength(3);
     expect(wrapper!.findAll('.events-deadlines .events-deadline')).toHaveLength(3);
@@ -318,7 +319,7 @@ describe('event collection outcomes', () => {
     const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 500, headers: new Headers() }));
     api.listEvents.mockResolvedValue(failure);
     api.summary.mockResolvedValue(failure);
-    render('viewer', feed);
+    await render('viewer', feed);
     await flushPromises();
     expect(notice).toHaveBeenCalledWith(expect.objectContaining({ tone: 'danger' }));
     expect(wrapper!.text()).not.toContain('unavailable');
@@ -334,7 +335,7 @@ describe('event collection outcomes', () => {
   });
 
   it('retains loaded cards and deadlines when a later refresh fails', async () => {
-    render('viewer', feed);
+    await render('viewer', feed);
     await flushPromises();
     const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() }));
     api.listEvents.mockResolvedValue(failure);
@@ -351,7 +352,7 @@ describe('event collection outcomes', () => {
 
 describe('event review safety', () => {
   it('saves a draft against the revision it opened even after another read changes the record', async () => {
-    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
     await detail().get('form input').setValue('My draft title');
@@ -368,7 +369,7 @@ describe('event review safety', () => {
   });
 
   it('keeps a conflicting draft when reload fails and accepts the new revision only after a successful reload', async () => {
-    const { access } = render('editor', { view: 'event', eventId: FASHION_WEEK });
+    const { access } = await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
     await detail().get('form input').setValue('Keep this draft');
@@ -394,7 +395,7 @@ describe('event review safety', () => {
   });
 
   it('blocks a submitted form while another command owns the workspace', async () => {
-    const { access } = render('editor', { view: 'event', eventId: FASHION_WEEK });
+    const { access } = await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
     await detail().get('form input').setValue('Pending edit');
@@ -408,7 +409,7 @@ describe('event review safety', () => {
 
   it('shows a neutral missing detail and a working refresh action after a failed initial read', async () => {
     api.getEvent.mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('http', { status: 500, headers: new Headers() })));
-    render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     expect(wrapper!.text()).toContain('Event unavailable');
     expect(wrapper!.text()).not.toContain('Content unavailable. Try refreshing.');
@@ -422,7 +423,7 @@ describe('event review safety', () => {
 
 describe('event feed day and empty states', () => {
   it('updates date filters and open detail deadlines when a sleeping tab regains focus', async () => {
-    render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     expect(detail().text()).toContain('7 days left');
     vi.setSystemTime(new Date(2026, 9, 9, 10, 0));
@@ -436,7 +437,7 @@ describe('event feed day and empty states', () => {
   it('updates the feed at local midnight without waiting for another interaction', async () => {
     vi.useFakeTimers({ toFake: ['Date', 'setTimeout', 'clearTimeout'] });
     vi.setSystemTime(new Date(2026, 9, 8, 23, 59, 59));
-    render('viewer', feed);
+    await render('viewer', feed);
     await flushPromises();
     await vi.advanceTimersByTimeAsync(1000);
     await flushPromises();
@@ -446,7 +447,7 @@ describe('event feed day and empty states', () => {
   it('does not label a failed filter or deadline refresh as an empty result', async () => {
     api.listEvents.mockResolvedValue(ResultExtensions.ok([]));
     api.summary.mockResolvedValue(ResultExtensions.ok({ byStatus: {}, upcomingDeadlines: [] }));
-    render('viewer', feed);
+    await render('viewer', feed);
     await flushPromises();
     expect(wrapper!.text()).toContain('No upcoming application deadlines.');
     const failure = ResultExtensions.fail(ApiFailureFactory.create('http', { status: 503, headers: new Headers() }));
@@ -465,7 +466,7 @@ describe('event feed day and empty states', () => {
 
 describe('event date precision editing', () => {
   it('carries edited months and days across precision changes without restoring stale hidden dates', async () => {
-    render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
     const form = detail().get('form');
