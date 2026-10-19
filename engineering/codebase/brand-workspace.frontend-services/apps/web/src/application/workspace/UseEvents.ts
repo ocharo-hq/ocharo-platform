@@ -51,7 +51,7 @@ export function useEventToday() {
 
 /** Owns Events transport, cache keys and server-confirmed commands for one organization document. */
 export function useEvents(access: AccessControls, workspace: WorkspaceControls) {
-  const api = createEventsApi(() => access.session.value?.csrfToken ?? '', () => access.recheck());
+  const api = createEventsApi(() => access.session.value?.csrfToken ?? '', access.transport);
   const cache = useQueryCache();
   const organizationId = () => workspace.organization.value?.id ?? '';
   // Shares the workspace scope prefix, so the shell's Refresh also reloads Events.

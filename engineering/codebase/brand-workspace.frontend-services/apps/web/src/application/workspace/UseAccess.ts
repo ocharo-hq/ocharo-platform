@@ -4,14 +4,14 @@ import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, inject, onScopeDispose, ref, shallowRef } from 'vue';
 import { routerKey, type Router } from 'vue-router';
 
-import type { AuthStrategy } from '@wow-two-beta/fe/auth';
+import { createAuthBridge, type AuthStrategy } from '@wow-two-beta/fe/auth';
 import { createSyncChannel } from '@wow-two-beta/fe/foundation/channels';
 import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
 
 import { readWorkspaceLocation, type Session } from '@/domain/workspace/Models';
 import { safeWorkspaceDestination } from '@/domain/workspace/EditorNavigation';
-import { createWorkspaceApi } from '@/integration/workspace/WorkspaceApi';
+import { createWorkspaceApi, type SessionTransport } from '@/integration/workspace/WorkspaceApi';
 
 /** Produces safe product messages without rendering server diagnostic text. */
 export function failureMessage(error: ApiFailure): string {
@@ -58,12 +58,12 @@ export function useAccess(navigation: DocumentNavigation = documentNavigation())
   const channel = createSyncChannel<string>('brand-workspace.auth');
   const controller = new AbortController();
   let disposed = false;
-  const api = createWorkspaceApi(
-    () => session.value?.csrfToken ?? '',
-    () => {
-      if (session.value?.authenticated) invalidate();
-    },
-  );
+  /* The SDK session bridge: a signed-in session's first current 401 expires it once, cancels that session's requests,
+     then replaces the document. Sign-in renders in place, so the reloaded address is the return location. */
+  const bridge = createAuthBridge<Session>({ getIdentity: (user) => user.sessionId ?? user.user?.id });
+  const unsubscribeExpired = bridge.subscribeExpired(() => invalidate());
+  const transport: SessionTransport = { scope: bridge.scope, onUnauthorized: bridge.onUnauthorized };
+  const api = createWorkspaceApi(() => session.value?.csrfToken ?? '', transport);
   const busy = computed(
     () => pendingWrites.value > 0 || checking.value || invalidated.value || sessionError.value !== null,
   );
@@ -187,6 +187,7 @@ export function useAccess(navigation: DocumentNavigation = documentNavigation())
   document.addEventListener('visibilitychange', visibility);
   window.addEventListener('focus', recheck);
   onScopeDispose(() => {
+    unsubscribeExpired();
     removeGuard?.();
     resolveConfirmation(false);
     disposed = true;
@@ -210,6 +211,8 @@ export function useAccess(navigation: DocumentNavigation = documentNavigation())
     pendingWrites,
     dirty,
     strategy,
+    bridge,
+    transport,
     api,
     navigate,
     write,

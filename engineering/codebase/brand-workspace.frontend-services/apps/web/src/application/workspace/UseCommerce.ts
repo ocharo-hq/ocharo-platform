@@ -5,7 +5,7 @@ import type { WorkspaceControls } from './UseWorkspace';
 
 /** Owns authenticated Commerce transport and explicit Studio file intake. */
 export function useCommerce(access: AccessControls) {
-  const api = createCommerceApi(() => access.session.value?.csrfToken ?? '', () => access.recheck());
+  const api = createCommerceApi(() => access.session.value?.csrfToken ?? '', access.transport);
   async function importPackage(workspace: WorkspaceControls, organization: string, brandId: string, productId: string | null,
     manifestFile: File, imageFile: File, signal: AbortSignal) {
     if (manifestFile.size > 1024 * 1024) throw new Error('The Studio manifest must be smaller than 1 MiB.');

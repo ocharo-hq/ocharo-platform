@@ -14,13 +14,13 @@ afterEach(() => vi.unstubAllGlobals());
 describe('published SDK workspace transport', () => {
   it('unwraps real data envelopes before validating session payloads', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: session })));
-    const api = createWorkspaceApi(() => session.csrfToken, vi.fn());
+    const api = createWorkspaceApi(() => session.csrfToken);
     expect(await api.getSession()).toEqual({ ok: true, value: session });
   });
 
   it('rejects incomplete authenticated sessions', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: { ...session, authenticated: true } })));
-    const result = await createWorkspaceApi(() => '', vi.fn()).getSession();
+    const result = await createWorkspaceApi(() => '').getSession();
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.failure.code).toBe('protocol');
   });
@@ -31,7 +31,7 @@ describe('published SDK workspace transport', () => {
       .mockResolvedValueOnce(Response.json({ data: { authenticated: true } }))
       .mockResolvedValueOnce(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetch);
-    const api = createWorkspaceApi(() => 'bound-token', vi.fn());
+    const api = createWorkspaceApi(() => 'bound-token');
     expect(
       (
         await api.login(
@@ -64,7 +64,7 @@ describe('published SDK workspace transport', () => {
       }),
     );
     vi.stubGlobal('fetch', fetch);
-    const result = await createWorkspaceApi(() => 'token', vi.fn()).uploadMedia(
+    const result = await createWorkspaceApi(() => 'token').uploadMedia(
       'org',
       file,
       'original',
@@ -83,7 +83,7 @@ describe('published SDK workspace transport', () => {
   it('preserves expectedRevision and export idempotency on the tenant route', async () => {
     const fetch = vi.fn().mockResolvedValue(Response.json({ code: 'conflict' }, { status: 409 }));
     vi.stubGlobal('fetch', fetch);
-    const result = await createWorkspaceApi(() => 'token', vi.fn()).createExport(
+    const result = await createWorkspaceApi(() => 'token').createExport(
       'org',
       'draft',
       3,

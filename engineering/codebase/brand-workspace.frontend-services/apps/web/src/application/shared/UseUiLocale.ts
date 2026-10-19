@@ -1,5 +1,8 @@
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
+import { provideLocale } from '@wow-two-beta/fe/foundation/i18n';
+
+import { sdkMessages } from '@/domain/shared/SdkUiMessages';
 import { translateUi, type UiLocale } from '@/domain/shared/UiMessages';
 
 const uiLocale = ref<UiLocale>('en');
@@ -23,4 +26,9 @@ export function useUiLocale() {
     try { localStorage.setItem(storageKey, value); } catch { /* The current-tab choice still works. */ }
   }
   return { uiLocale, setUiLocale, t: (source: string, variables?: Record<string, string | number>) => translateUi(source, uiLocale.value, variables) };
+}
+
+/** Provides the operator language to SDK components, with their Uzbek and Russian wording. */
+export function provideUiLocale(): void {
+  provideLocale(uiLocale, computed(() => sdkMessages(uiLocale.value)));
 }

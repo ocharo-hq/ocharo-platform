@@ -79,6 +79,22 @@ describe('Ocharo frame in Desk', () => {
     expect(header.find('button[aria-label="Account menu for Local verification operator"]').exists()).toBe(true);
   });
 
+  it.each([
+    [360, true],
+    [1440, false],
+  ])('opens the Ocharo apps from the app button at %ipx, full screen only on a phone', async (width, fullScreen) => {
+    await renderAt(`/organizations/${ORG}/brands`, width);
+
+    await wrapper!.get('header button[aria-label="Ocharo apps — Desk"]').trigger('click');
+    await flushPromises();
+
+    expect(document.body.textContent).toContain('Ocharo apps');
+    expect(document.querySelector('[aria-current="true"]')?.textContent).toContain('Desk');
+    expect(document.querySelector('a[href="https://localhost:8282/catalogues"]')?.textContent).toContain('Catalogue');
+    expect(document.querySelector('a[target="_blank"][href="https://localhost:8284/atlas/"]')).not.toBeNull();
+    expect(document.querySelector('[data-phone-layout="fullscreen"]') !== null).toBe(fullScreen);
+  });
+
   it('lists every section in the sidebar and marks the open one', async () => {
     await renderAt(`/organizations/${ORG}/brands`, 1440);
 

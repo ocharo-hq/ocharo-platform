@@ -56,7 +56,7 @@ describe('all-materials transport', () => {
   it('keeps all, inbox and supplier requests distinct', async () => {
     const fetch = vi.fn().mockImplementation(() => Promise.resolve(Response.json({ data: [] })));
     vi.stubGlobal('fetch', fetch);
-    const api = createSourcingApi(() => '', () => {});
+    const api = createSourcingApi(() => '');
     for (const filter of [{ kind: 'all' }, { kind: 'inbox' }, { kind: 'supplier', supplierId: other }] as const) {
       expect((await api.listMedia(organizationId, filter, { limit: 100, offset: 0 }, new AbortController().signal)).ok).toBe(true);
     }

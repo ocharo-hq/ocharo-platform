@@ -1,4 +1,5 @@
 import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
+import type { SessionTransport } from './WorkspaceApi';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
 import {
@@ -44,8 +45,8 @@ export function eventListQuery(filter: EventFilter, page: { limit: number; offse
 }
 
 /** Creates the Events transport. It records where Ocharo stands; nothing here applies, registers or pays. */
-export function createEventsApi(csrf: () => string, unauthorized: () => void) {
-  const client = createApiClient({ credentials: 'same-origin', onUnauthorized: unauthorized, retry: false });
+export function createEventsApi(csrf: () => string, session: SessionTransport = {}) {
+  const client = createApiClient({ credentials: 'same-origin', ...session, retry: false });
   const base = (o: string) => `/api/organizations/${encodeURIComponent(o)}/events`;
   const id = encodeURIComponent;
   const write = (signal: AbortSignal) => ({ signal, headers: { 'X-CSRF-TOKEN': csrf() } });

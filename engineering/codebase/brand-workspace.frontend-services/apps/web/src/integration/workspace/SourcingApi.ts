@@ -1,4 +1,5 @@
 import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
+import type { SessionTransport } from './WorkspaceApi';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
 import {
@@ -46,8 +47,8 @@ const isAssigned = (v: unknown): v is { updated: number } => record(v) && count(
 export interface UploadOptions { supplierId: string | null; capture: MediaCapture; caption: string }
 
 /** Creates the Sourcing transport. It records outreach only; nothing here contacts a supplier. */
-export function createSourcingApi(csrf: () => string, unauthorized: () => void) {
-  const client = createApiClient({ credentials: 'same-origin', onUnauthorized: unauthorized, retry: false });
+export function createSourcingApi(csrf: () => string, session: SessionTransport = {}) {
+  const client = createApiClient({ credentials: 'same-origin', ...session, retry: false });
   const base = (o: string) => `/api/organizations/${encodeURIComponent(o)}/sourcing`;
   const id = encodeURIComponent;
   const write = (signal: AbortSignal) => ({ signal, headers: { 'X-CSRF-TOKEN': csrf() } });

@@ -1,4 +1,5 @@
 import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
+import type { SessionTransport } from './WorkspaceApi';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
 /** Describes the server's explicitly enabled, read-only assistant surface. */
@@ -40,8 +41,8 @@ function decode<T>(guard: (value: unknown) => value is T): ApiDecoder<T> {
 }
 
 /** Creates same-origin requests; delegated credentials are issued only through the current CSRF session. */
-export function createMcpApi(csrf: () => string, unauthorized: () => void) {
-  const client = createApiClient({ credentials: 'same-origin', onUnauthorized: unauthorized, retry: false });
+export function createMcpApi(csrf: () => string, session: SessionTransport = {}) {
+  const client = createApiClient({ credentials: 'same-origin', ...session, retry: false });
   const base = (organization: string) => `/api/organizations/${encodeURIComponent(organization)}`;
   return {
     /** GET /api/organizations/{organization}/integrations/mcp. */

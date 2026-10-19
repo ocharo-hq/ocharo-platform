@@ -142,21 +142,8 @@
   .oc-mark {
     @apply grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary text-lg font-bold leading-none tracking-tight text-primary-foreground;
   }
-  .oc-app-button:hover,
-  .oc-app-button-open {
-    @apply border-primary/15 bg-primary-soft;
-  }
-  .oc-app-button-open .oc-app-chevron {
-    @apply rotate-180 text-primary-soft-foreground;
-  }
-  .oc-app-chevron {
-    @apply transition-transform duration-200 motion-reduce:transition-none;
-  }
   .oc-app-icon {
     @apply grid size-9 shrink-0 place-items-center rounded-[10px] border border-primary/10 bg-primary-soft/70 text-primary-soft-foreground;
-  }
-  .oc-app-icon-current {
-    @apply border-transparent bg-primary text-primary-foreground;
   }
   .skip-link {
     @apply sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-card focus:p-3 focus:outline-2 focus:outline-primary;

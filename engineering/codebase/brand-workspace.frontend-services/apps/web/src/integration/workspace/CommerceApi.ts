@@ -1,4 +1,5 @@
 import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
+import type { SessionTransport } from './WorkspaceApi';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import type {CommerceDraft,CommerceRelease,CommerceSnapshot,IntegrationTicket,CreativeInput,CreativeImport,Provenance} from '@/domain/workspace/Commerce';
 const record=(v:unknown):v is Record<string,unknown>=>typeof v==='object'&&v!==null&&!Array.isArray(v);
@@ -7,8 +8,8 @@ const snapshot=(v:unknown):v is CommerceSnapshot=>record(v)&&typeof v.slug==='st
 const draft=(v:unknown):v is CommerceDraft=>record(v)&&typeof v.brandId==='string'&&Number.isSafeInteger(v.revision)&&Number(v.revision)>0&&snapshot(v.snapshot);
 const release=(v:unknown):v is CommerceRelease=>record(v)&&typeof v.id==='string'&&Number.isSafeInteger(v.revision)&&snapshot(v.snapshot);
 const creative=(v:unknown):v is CreativeImport=>record(v)&&typeof v.id==='string'&&record(v.input)&&typeof v.status==='string';
-export function createCommerceApi(csrf:()=>string,unauthorized:()=>void){
- const client=createApiClient({credentials:'same-origin',onUnauthorized:unauthorized,retry:false});
+export function createCommerceApi(csrf:()=>string,session:SessionTransport={}){
+ const client=createApiClient({credentials:'same-origin',...session,retry:false});
  const org=(id:string)=>`/api/organizations/${encodeURIComponent(id)}`;
  const path=(o:string,b:string)=>`${org(o)}/brands/${encodeURIComponent(b)}/commerce`;
  const write=(signal:AbortSignal)=>({signal,headers:{'X-CSRF-TOKEN':csrf()}});

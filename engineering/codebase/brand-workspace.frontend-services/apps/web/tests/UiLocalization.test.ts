@@ -3,10 +3,13 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mount, type VueWrapper } from '@vue/test-utils';
-import { nextTick, reactive } from 'vue';
+import { defineComponent, h, nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { initializeUiLocale, useUiLocale } from '@/application/shared/UseUiLocale';
+import { PasswordInput } from '@wow-two-beta/fe/presentation/forms';
+
+import { initializeUiLocale, provideUiLocale, useUiLocale } from '@/application/shared/UseUiLocale';
+import { sdkUiMessages } from '@/domain/shared/SdkUiMessages';
 import { translateUi, uiMessages } from '@/domain/shared/UiMessages';
 import { emptyCopy, productCopy, type Product } from '@/domain/workspace/Commerce';
 import ProductEditor from '@/presentation/workspace/ProductEditor.vue';
@@ -101,5 +104,27 @@ describe('operator translation coverage', () => {
     inspect(join(sourceRoot, 'application'));
     inspect(join(sourceRoot, 'presentation'));
     expect([...missing]).toEqual([]);
+  });
+});
+
+describe('SDK component wording', () => {
+  it('names the password visibility toggle in the operator language', async () => {
+    const host = mount(defineComponent({ setup() { provideUiLocale(); return () => h(PasswordInput, { modelValue: 'secret' }); } }));
+    mounted.push(host);
+    const toggle = () => host.get('button[aria-pressed]');
+    expect(toggle().attributes('aria-label')).toBe('Show password');
+    locale.setUiLocale('ru');
+    await nextTick();
+    expect(toggle().attributes('aria-label')).toBe('Показать пароль');
+    await toggle().trigger('click');
+    expect(toggle().attributes('aria-label')).toBe('Скрыть пароль');
+    locale.setUiLocale('uz');
+    await nextTick();
+    expect(toggle().attributes('aria-label')).toBe('Parolni yashirish');
+  });
+
+  it('declares Uzbek and Russian for every SDK message key it overrides', () => {
+    expect(Object.keys(sdkUiMessages)).toEqual(expect.arrayContaining(['PasswordInput.revealLabel', 'PasswordInput.concealLabel', 'ToastHost.notifications']));
+    expect(Object.entries(sdkUiMessages).filter(([, message]) => !message.uz.trim() || !message.ru.trim())).toEqual([]);
   });
 });

@@ -30,7 +30,7 @@ export function saveOutcome(result: Result<unknown, ApiFailure>): SaveOutcome {
 
 /** Owns Sourcing transport, cache keys and server-confirmed commands for one organization document. */
 export function useSourcing(access: AccessControls, workspace: WorkspaceControls) {
-  const api = createSourcingApi(() => access.session.value?.csrfToken ?? '', () => access.recheck());
+  const api = createSourcingApi(() => access.session.value?.csrfToken ?? '', access.transport);
   const cache = useQueryCache();
   const organizationId = () => workspace.organization.value?.id ?? '';
   // Shares the workspace scope prefix, so the shell's Refresh also reloads Sourcing.

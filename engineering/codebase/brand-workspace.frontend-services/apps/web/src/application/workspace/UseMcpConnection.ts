@@ -8,7 +8,7 @@ import type { WorkspaceControls } from './UseWorkspace';
 
 /** Owns a short assistant session; expiry and identity changes clear the credential from memory. */
 export function useMcpConnection(access: AccessControls, workspace: WorkspaceControls) {
-  const api = createMcpApi(() => access.session.value?.csrfToken ?? '', () => { void access.recheck(); });
+  const api = createMcpApi(() => access.session.value?.csrfToken ?? '', access.transport);
   const organizationId = () => workspace.organization.value?.id ?? '';
   const identity = () => `${access.session.value?.sessionId ?? ''}:${organizationId()}`;
   const query = useAppQuery({

@@ -1,6 +1,6 @@
 import { telegramAvailabilityDecoder, telegramLinkDecoder, telegramCodeDecoder } from './TelegramDecoders';
 import type { DesignKind, DesignSnapshot } from '@/domain/workspace/EditorModels';
-import { createApiClient } from '@wow-two-beta/fe/foundation/http';
+import { createApiClient, type ApiClientOptions } from '@wow-two-beta/fe/foundation/http';
 
 import type { DraftInput } from '@/domain/workspace/Models';
 
@@ -22,9 +22,14 @@ import {
   sessionDecoder,
 } from './Decoders';
 
+/** The signed-in session's request lifetime: its scope and the 401 handler that expires it. */
+export type SessionTransport = Pick<ApiClientOptions, 'scope' | 'onUnauthorized'>;
+
 /** Creates one document's cookie client. Each unsafe request captures its session-bound CSRF token. */
-export function createWorkspaceApi(csrfToken: () => string, unauthorized: () => void) {
-  const client = createApiClient({ credentials: 'same-origin', onUnauthorized: failure => { if (failure.problem?.code !== 'invalid_credentials') unauthorized(); }, retry: false });
+export function createWorkspaceApi(csrfToken: () => string, session: SessionTransport = {}) {
+  // A rejected password is a sign-in answer, not an expired session.
+  const client = createApiClient({ credentials: 'same-origin', ...session, retry: false,
+    onUnauthorized: (failure, origin) => { if (failure.problem?.code !== 'invalid_credentials') session.onUnauthorized?.(failure, origin); } });
   const request = (signal?: AbortSignal) => ({
     signal: AbortSignal.any([AbortSignal.timeout(30_000), ...(signal ? [signal] : [])]),
   });
