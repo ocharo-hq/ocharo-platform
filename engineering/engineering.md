@@ -1,6 +1,6 @@
 # Engineering overview
 
-*Last updated: 2026-10-17*
+*Last updated: 2026-10-19*
 
 ## Foundation stack
 
@@ -14,13 +14,13 @@
 | Source | Existing product template, adapted to current conventions | Audited source adapted additively |
 
 Toolchain pins: .NET SDK `10.0.300`, Node `24.11.0`, pnpm `10.33.2`. Published SDK inputs are
-`WoW2.Sdk.Beta.Be` `10.0.68-beta` and `@wow-two-beta/fe` `0.0.20`. Lockfiles record
+`WoW2.Sdk.Beta.Be` `10.0.71-beta` and `@wow-two-beta/fe` `0.0.23`. Lockfiles record
 resolved dependency graphs. Runtime and test proof remains in the verification record.
 
 ## Navigation
 
 - [Architecture](architecture/architecture.md) owns system boundaries and invariants.
 - [Template audit](research/template-audit.md) owns source provenance and adaptation requirements.
-- [Scaffold track](research/previous-work/rough-track/r0.1/r0.1.md) owns the next implementation work.
+- [Version track](planning/version-track/v0.1/v0.1.md) owns the next implementation work.
 - [Verification](research/previous-work/verification.md) distinguishes inspections from executed checks.
 - [Deployment](deployment/deployment.md) and [operations](operations/operations.md) own runtime lifecycle.

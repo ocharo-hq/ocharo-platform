@@ -14,7 +14,8 @@ native dependencies and incompatible native/managed library versions before the 
 
 Compose names the local stack `brand-workspace`. PostgreSQL stores its data in the
 `brand-workspace_postgres-data` volume. A one-shot `migrate` service runs the API `--migrate` command;
-both ordinary hosts wait for its successful completion. Neither ordinary host changes schema.
+both ordinary hosts wait for its successful completion. The API also verifies the schema as it starts
+(nothing is pending by then); the worker never changes schema.
 The API's separate `brand-workspace_data-protection-keys` volume preserves protected sessions across
 process replacement. Its image directory belongs to the unprivileged runtime user.
 
@@ -92,16 +93,18 @@ local container startup.
 
 ## Schema and harmless queue diagnostics
 
-Apply migrations explicitly when running hosts outside Compose:
+The API applies the schema as it starts, before it listens: embedded SQL migrations through the shared SDK
+runner under a PostgreSQL advisory lock, then the provider-owned Hangfire schema. Readiness therefore never
+precedes them; an unreachable database is retried ten times, two seconds apart, and any other failure aborts
+startup, so a rollout stops on an unmigrated schema. The same steps run explicitly, without serving:
 
 ```bash
 dotnet run --project BrandWorkspace.Api --no-launch-profile -- --migrate
 ```
 
-That command runs from the backend directory with `ConnectionStrings__Database` configured. Embedded
-SQL migrations use the shared SDK runner and PostgreSQL locking; the explicit command also initializes
-the provider-owned Hangfire schema. The access migration includes framework-generated Identity DDL;
-Identity does not run a second migration system at startup. Re-running verifies source integrity.
+That command runs from the backend directory with `ConnectionStrings__Database` configured.
+The access migration includes framework-generated Identity DDL; Identity does not run a second
+migration system. Re-running verifies source integrity.
 
 Client-only diagnostics run from the worker image without starting a worker server:
 
@@ -142,15 +145,33 @@ HTTPS development API. Browser application and API requests remain same-origin.
 
 `verify.yml` runs frontend checks, locked backend restore, the default API/SPA build, backend tests,
 and every image build. `publish-docker-image.yml` is the Wheelhouse marker: each push, and each
-dispatched `commit`, runs `verify.yml` and then the shared `publish.yml` of `wow-two-platform.pipelines`.
-That workflow builds the services in `deploy.yml` that changed, as `ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}`.
-A `main` build releases `vX.Y.Z` with `ocharo-platform-release.tar.gz`; other builds are candidates.
+dispatched `commit`, runs `verify.yml` and then the shared `publish.yml` of `wow-two-platform.pipelines`,
+pinned to `v0.7.0`. That workflow builds the services in `deploy.yml` that changed, as
+`ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}`. Work happens on `main` and short-lived
+branches only: a `main` build releases `vX.Y.Z` with `ocharo-platform-release.tar.gz` and reaches dev
+automatically; any other branch builds a candidate that reaches dev only by hand.
 Wheelhouse deploys that bundle; PostgreSQL, settings and the model volume come from its targets.
 
-Before public hosting, explicitly set `AllowedHosts` to the intended host names, for example
-`<public-host>;localhost;127.0.0.1`; replace the placeholder with the actual hostname. The default
-accepts only local hosts. The initial topology supports direct TLS. A reverse proxy requires an
-explicit trusted-proxy configuration; arbitrary forwarded headers do not change request authority.
+## Target settings
+
+Pipelines `v0.7.0` mounts each service's target settings file at `/app/appsettings.Target.json`; the
+backend SDK (`10.0.71-beta`) reads it. Both environments run as .NET `Production`: `deploy.yml` leaves
+`dotnetEnvironment` off. The runner refuses a deploy missing a required key:
+
+| Service | Required settings |
+|---|---|
+| `desk` | `ConnectionStrings:Database`, `AllowedHosts`, `DataProtection:KeysPath`, `DataProtection:ApplicationName`, `Deployment:TrustedProxies` |
+| `jobs` | `ConnectionStrings:Database` |
+| `image-worker` | `ImageWorker:Key` (2 GB memory) |
+
+- `AllowedHosts` lists the public host and `localhost` for health probes, for example `desk.example.com;localhost`.
+- `DataProtection:KeysPath` is the `keys` volume, `/var/lib/brand-workspace/keys`.
+- `Deployment:TrustedProxies` is a JSON array naming the ingress, `["172.30.0.2"]` on the shared VPS's
+  `platform` network. Forwarded headers from any other sender are ignored, so without it sign-in fails
+  behind the TLS-terminating ingress.
+- `jobs` declares `dependsOn: [desk]`: it refuses to start before the schema exists, and Desk reports
+  healthy only after migrating.
+
 Production credentials, key encryption, backups, identity recovery, and operational acceptance remain
 separate work before storing real brand data. No real brand account is provisioned by scaffolding.
 
@@ -160,8 +181,5 @@ Executed verification is recorded in [verification](../research/previous-work/ve
 
 `deploy.yml` lists Desk, jobs and the private image worker; the Brand and Catalogue pilots have no descriptor.
 Desk probes `/health/ready`, its own readiness route, until it adopts the SDK boot bundle's `/health`.
-Before a usable deployment:
-
-- Desk requires HTTPS requests but has no trusted-proxy support, so sign-in fails behind a TLS-terminating ingress.
 
 See `../research/convention-audit.md` for the earlier verified checks.

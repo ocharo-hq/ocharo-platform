@@ -1,6 +1,6 @@
 # Telegram bot sign-in
 
-*Last updated: 2026-10-09*
+*Last updated: 2026-10-19*
 
 ## Decision
 
@@ -56,7 +56,7 @@ Error codes: `telegram_unavailable` (404), `invalid_phone` (400), `invalid_crede
 
 ## Configuration and local activation
 
-The feature is disabled by default. No bot client is contacted until the feature is explicitly enabled and an authorized operation or Development polling runs. No code prints the bot token or code. Startup never registers or deletes a Telegram webhook.
+The feature is disabled by default. No bot client is contacted until the feature is explicitly enabled and an authorized operation or local-run polling runs. No code prints the bot token or code. Startup never registers or deletes a Telegram webhook.
 
 | Explicit environment alias | Host key | Value |
 |---|---|---|
@@ -64,11 +64,11 @@ The feature is disabled by default. No bot client is contacted until the feature
 | `TELEGRAM_BOT_USERNAME` | `Identity:Telegram:BotUsername` | `ocharo_bot`, without `@` |
 | `TELEGRAM_BOT_TOKEN` | `Identity:Telegram:BotToken` | Server-only BotFather token |
 | `TELEGRAM_WEBHOOK_SECRET` | `Identity:Telegram:WebhookSecret` | Independent random 32–256 character ASCII secret: letters, numbers, `_`, `-` |
-| `TELEGRAM_POLLING_ENABLED` | `Identity:Telegram:PollingEnabled` | `true` only for explicit local Development polling |
+| `TELEGRAM_POLLING_ENABLED` | `Identity:Telegram:PollingEnabled` | `true` only for explicit local-run polling (Development without `DEPLOY_ENVIRONMENT`) |
 
 Store secrets through the established private server configuration, never chat, source, committed settings, browser storage, or frontend environment. Apply migration `009-telegram-access` through the existing migration command before enabling the feature. Back up and preserve PostgreSQL and Data Protection keys.
 
-For localhost review, explicitly enable Development polling. It requires no public tunnel and does not register a webhook. The API webhook route rejects requests in polling mode. Telegram itself rejects `getUpdates` when that bot already has a webhook; resolve that configuration deliberately instead of silently deleting it. Run one polling consumer per bot.
+For localhost review, explicitly enable local-run polling; a deployed host never polls, even as Development. It requires no public tunnel and does not register a webhook. The API webhook route rejects requests in polling mode. Telegram itself rejects `getUpdates` when that bot already has a webhook; resolve that configuration deliberately instead of silently deleting it. Run one polling consumer per bot.
 
 For deployment, turn polling off and explicitly register the public HTTPS URL ending `/api/auth/telegram/updates` with Telegram, including the independent `secret_token`. Localhost cannot receive Telegram's internet webhook. The handler accepts private human messages only and enforces a 64 KiB body limit. Live registration and bot-token activation remain operator actions, separate from local implementation verification.
 

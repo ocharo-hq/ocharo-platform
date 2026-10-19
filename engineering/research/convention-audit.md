@@ -1,6 +1,6 @@
 # Platform convention audit
 
-*Reviewed: 2026-10-01*
+*Reviewed: 2026-10-19*
 
 ## Changes
 
@@ -8,7 +8,7 @@ One canonical backlog and v0.1 track now cover Desk, Commerce and private image 
 
 Desk, Brand and Catalogue APIs expose immutable assembly identity. Their frontend headers include About. The jobs worker writes its build identity to stderr, preserving diagnostic JSON stdout. Product migration stamps remove only informational `+commit` metadata; prerelease identities remain intact.
 
-The descriptor represents Desk, jobs and the private Python worker. All named sites are private. Desk and jobs read the deployer's optional appsettings.Local.json before permitted environment overrides; Python accepts an equivalent ImageWorker section. Worker readiness includes truthful version and optional commit; model readiness semantics are unchanged. Python health uses its installed urllib probe.
+The descriptor represents Desk, jobs and the private Python worker. All named sites are private. Desk and jobs read the target's mounted appsettings.Target.json (pipelines v0.7.0) through the be sdk's AddSettingsFiles before permitted environment overrides, and appsettings.Local.json only on a local run with LOCAL_SETTINGS=true; Python reads the same Target file, falling back to a legacy Local mount with a warning. Worker readiness includes truthful version and optional commit; model readiness semantics are unchanged. Python health uses its installed urllib probe.
 
 ## Executed checks
 
