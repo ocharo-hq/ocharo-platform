@@ -2,8 +2,10 @@ using BrandWorkspace.Api.Identity.Telegram;
 using Telegram.Bot;
 using WoW.Two.Sdk.Beta.Be.Identity.Otp;
 using WoW.Two.Sdk.Beta.Be.Identity.Otp.Telegram;
+using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using System.Threading.RateLimiting;
+using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using BrandWorkspace.Api.MediaProcessing;
 using BrandWorkspace.Api.Commerce;
@@ -48,7 +50,6 @@ using System.Data.Common;
 using BrandWorkspace.Application.Foundation.Repositories;
 using BrandWorkspace.Domain.Foundation.Models;
 using BrandWorkspace.Persistence.Foundation.Repositories;
-using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Npgsql;
@@ -60,12 +61,12 @@ namespace BrandWorkspace.Api.Configurations;
 
 public static partial class HostConfiguration
 {
-    /// <summary>Registers the permitted deployment environment inputs.</summary>
+    /// <summary>Registers the optional target and local settings files, then the permitted deployment environment inputs.</summary>
     private static WebApplicationBuilder AddExplicitEnvironment(this WebApplicationBuilder builder)
     {
+        builder.AddSettingsFiles();
         foreach (var source in builder.Configuration.Sources.OfType<EnvironmentVariablesConfigurationSource>().ToArray())
             builder.Configuration.Sources.Remove(source);
-        builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
         var values = new Dictionary<string, string?>();
         if (Environment.GetEnvironmentVariable("ConnectionStrings__Database") is { } connection)
             values["ConnectionStrings:Database"] = connection;
@@ -93,7 +94,7 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers foundation diagnostics and migration services for the explicit CLI invocation.</summary>
+    /// <summary>Registers foundation diagnostics and, for serving and the migration command, the schema migrator.</summary>
     private static WebApplicationBuilder AddFoundation(this WebApplicationBuilder builder, bool migrate)
     {
         builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
@@ -104,9 +105,6 @@ public static partial class HostConfiguration
             options.Version = BuildIdentity.ProductVersion;
             options.AdvisoryLockId = 8_264_001;
         });
-        builder.Services.AddHangfire(configuration => configuration.UsePostgreSqlStorage(
-            storage => storage.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Database")),
-            new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true }));
         return builder;
     }
 
@@ -171,7 +169,7 @@ public static partial class HostConfiguration
                 var path = configuration["DataProtection:KeysPath"];
                 if (string.IsNullOrWhiteSpace(path))
                 {
-                    if (!environment.IsDevelopment()) throw new InvalidOperationException("DataProtection:KeysPath must name durable storage.");
+                    if (!environment.IsLocalRun(configuration)) throw new InvalidOperationException("DataProtection:KeysPath must name durable storage.");
                     path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "brand-workspace", environment.EnvironmentName, "keys");
                 }
                 options.XmlRepository = new Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository(
@@ -182,7 +180,7 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers opt-in bot account linking, transactional OTP verification and Development-only polling.</summary>
+    /// <summary>Registers opt-in bot account linking, transactional OTP verification and local-run-only polling.</summary>
     private static WebApplicationBuilder AddTelegramAccess(this WebApplicationBuilder builder)
     {
         builder.Services.AddValidatedSettings<TelegramAuthSettings>(builder.Configuration, TelegramAuthSettings.SectionName,
@@ -190,8 +188,9 @@ public static partial class HostConfiguration
                     (System.Text.RegularExpressions.Regex.IsMatch(value.BotUsername, "^[A-Za-z][A-Za-z0-9_]{4,31}$")
                      && System.Text.RegularExpressions.Regex.IsMatch(value.BotToken, "^[0-9]+:[A-Za-z0-9_-]{30,}$")
                      && (value.PollingEnabled || System.Text.RegularExpressions.Regex.IsMatch(value.WebhookSecret, "^[A-Za-z0-9_-]{32,256}$"))),
-                    "Enabled Telegram sign-in requires a bot username, server token, and webhook secret unless Development polling is selected.")
-                .Validate(value => !value.PollingEnabled || builder.Environment.IsDevelopment(), "Telegram polling is allowed only in Development."));
+                    "Enabled Telegram sign-in requires a bot username, server token, and webhook secret unless local polling is selected.")
+                .Validate<IHostEnvironment, IConfiguration>((value, environment, configuration) => !value.PollingEnabled || environment.IsLocalRun(configuration),
+                    "Telegram polling is allowed only on a local run."));
         builder.Services.AddScoped<TelegramAuthRepository>();
         builder.Services.AddScoped<IOtpRepository>(services => services.GetRequiredService<TelegramAuthRepository>());
         builder.Services.AddOtpService();
@@ -311,9 +310,16 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers JSON errors for the HTTP surface.</summary>
+    /// <summary>Registers the HTTP surface: forwarded headers trusted only from loopback and <c>Deployment:TrustedProxies</c>, and JSON errors.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
+        // Behind the TLS-terminating ingress, sign-in needs the forwarded scheme and host; any other sender keeps its own.
+        var proxies = builder.Configuration.GetSection("Deployment:TrustedProxies").Get<string[]>() ?? [];
+        builder.Services.AddProxyAwareHosting(options =>
+        {
+            foreach (var proxy in proxies)
+                options.TrustedProxies.Add(proxy);
+        });
         builder.Services.AddHttpProblemDetails();
         return builder;
     }
@@ -321,6 +327,7 @@ public static partial class HostConfiguration
     /// <summary>Configures public technical status and SPA endpoints without business mutations.</summary>
     private static WebApplication AddFoundationEndpoints(this WebApplication app)
     {
+        app.UseProxyAwareHosting();
         app.UseHttpProblemDetails();
         app.UseDefaultFiles();
         app.UseStaticFiles();
@@ -407,7 +414,40 @@ public static partial class HostConfiguration
         return app;
     }
 
-    /// <summary>Runs the explicit migration command or starts the API; neither path starts a worker.</summary>
+    /// <summary>Applies pending schema migrations, then the job queue's provider-owned schema, and returns the labels applied.</summary>
+    private static async Task<IReadOnlyList<string>> MigrateSchemaAsync(this WebApplication app, string appliedBy)
+    {
+        var result = await app.Services.GetRequiredService<IMigrationRunnerService>().ApplyPendingAsync(appliedBy);
+        if (result is not Result<IReadOnlyList<string>>.Success success)
+            throw new InvalidOperationException("Migration failed; inspect schema history and source integrity.");
+        // The queue's own installer is idempotent; the serving API registers no job client or server.
+        await using var connection = await app.Services.GetRequiredService<NpgsqlDataSource>().OpenConnectionAsync();
+        PostgreSqlObjectsInstaller.Install(connection);
+        return success.Value;
+    }
+
+    /// <summary>Applies the schema before the API listens, so readiness never precedes it.</summary>
+    /// <remarks>An unreachable database is retried ten times, two seconds apart; any other failure, or the last
+    /// attempt, aborts startup so a rollout stops on an unmigrated schema.</remarks>
+    private static async Task MigrateOnStartupAsync(this WebApplication app)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                var applied = await app.MigrateSchemaAsync("startup");
+                app.Logger.LogInformation("Schema ready; {Count} migrations applied at startup.", applied.Count);
+                return;
+            }
+            catch (Exception exception) when (attempt < 10 && exception is NpgsqlException { IsTransient: true } or TimeoutException)
+            {
+                app.Logger.LogWarning("Startup migration attempt {Attempt} could not reach the database; retrying.", attempt);
+                await Task.Delay(TimeSpan.FromSeconds(2));
+            }
+        }
+    }
+
+    /// <summary>Runs the explicit migration command, or applies the schema and starts the API; no path starts a worker.</summary>
     public static async Task RunCommandOrHostAsync(this WebApplication app, string[] args)
     {
         if (args.Contains("--verify-media-runtime"))
@@ -419,12 +459,8 @@ public static partial class HostConfiguration
         }
         if (args.Length == 1 && args[0] == "--migrate")
         {
-            var result = await app.Services.GetRequiredService<IMigrationRunnerService>().ApplyPendingAsync("api-cli");
-            if (result is not Result<IReadOnlyList<string>>.Success success)
-                throw new InvalidOperationException("Migration failed; inspect schema history and source integrity.");
-            // Resolving the storage initializes its provider-owned schema only in this explicit CLI.
-            _ = app.Services.GetRequiredService<JobStorage>();
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { migrated = success.Value, queueSchema = "ready" }));
+            var migrated = await app.MigrateSchemaAsync("api-cli");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { migrated, queueSchema = "ready" }));
             await app.DisposeAsync();
             return;
         }
@@ -447,6 +483,7 @@ public static partial class HostConfiguration
             finally { await app.DisposeAsync(); }
             return;
         }
+        await app.MigrateOnStartupAsync();
         await app.RunAsync();
     }
 }

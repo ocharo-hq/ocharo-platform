@@ -11,18 +11,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Npgsql;
+using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Jobs.Hangfire;
 
 namespace BrandWorkspace.Worker.Configurations;
 
 public static partial class HostConfiguration
 {
-    /// <summary>Registers the permitted database deployment input.</summary>
+    /// <summary>Registers the optional target and local settings files, then the permitted database deployment input.</summary>
     private static HostApplicationBuilder AddExplicitEnvironment(this HostApplicationBuilder builder)
     {
+        builder.AddSettingsFiles();
         foreach (var source in builder.Configuration.Sources.OfType<EnvironmentVariablesConfigurationSource>().ToArray())
             builder.Configuration.Sources.Remove(source);
-        builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
         if (Environment.GetEnvironmentVariable("ConnectionStrings__Database") is { } connection)
             builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = connection });
         return builder;

@@ -29,16 +29,10 @@ public sealed class DurableWorkerTests
         await database.StartAsync();
         var connection = database.ConnectionString;
 
-        // An API pointed at an empty database remains live but cannot change the schema.
-        await using (var unmigrated = ApiContractTests.CreateFactory(connection))
-        {
-            using var client = unmigrated.CreateClient();
-            (await client.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        }
+        // The worker never changes the schema: on an empty database it refuses to start.
         await using (var dataSource = NpgsqlDataSource.Create(connection))
         await using (var command = dataSource.CreateCommand("SELECT to_regnamespace('foundation') IS NULL"))
             (await command.ExecuteScalarAsync()).Should().Be(true);
-
         using (var unmigratedWorker = CreateWorker(connection, executeJobs: false))
         {
             var startup = () => WorkerConfiguration.ConfigureAsync(unmigratedWorker);
@@ -46,8 +40,14 @@ public sealed class DurableWorkerTests
             failure.Which.SqlState.Should().Be(PostgresErrorCodes.UndefinedTable);
         }
 
+        // The API applies the schema as it starts, before it can report ready.
+        await using (var api = ApiContractTests.CreateFactory(connection))
+        {
+            using var client = api.CreateClient();
+            (await client.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
         await MigrateAsync(connection);
-        await MigrateAsync(connection); // Applying the same embedded source is idempotent.
+        await MigrateAsync(connection); // Applying the same embedded source again is idempotent.
         string jobId;
         var probeId = Guid.NewGuid();
         using (var clientHost = CreateWorker(connection, executeJobs: false))

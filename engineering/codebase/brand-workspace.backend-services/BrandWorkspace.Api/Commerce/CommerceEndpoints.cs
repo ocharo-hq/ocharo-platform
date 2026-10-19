@@ -10,6 +10,7 @@ using BrandWorkspace.Domain.Commerce;
 using BrandWorkspace.Infrastructure.Commerce;
 using BrandWorkspace.Persistence.Commerce;
 using OcharoBrand.Domain.Brand;
+using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 
 namespace BrandWorkspace.Api.Commerce;
 
@@ -40,7 +41,7 @@ public static class CommerceEndpoints
                 throw new PreparationException("forbidden","Preserved source adoption is not enabled for this organization.");
             if(await repository.GetAsync(organizationId,brandId,token) is not null)throw new PreparationException("conflict","Adoption is only allowed into an empty brand draft.");
             var root=config["Commerce:SourceRoot"];
-            if(string.IsNullOrWhiteSpace(root)){if(!env.IsDevelopment())throw new PreparationException("validation","Preserved source storage is not configured.");root=Path.GetFullPath(Path.Combine(env.ContentRootPath,"../.."));}
+            if(string.IsNullOrWhiteSpace(root)){if(!env.IsLocalRun(config))throw new PreparationException("validation","Preserved source storage is not configured.");root=Path.GetFullPath(Path.Combine(env.ContentRootPath,"../.."));}
             var imported=await reader.ReadAsync(root,request.Slug,token);
             return CommerceOk(new {data=await repository.SaveAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,0,imported.Snapshot,imported.Blobs,true,token,preserveImportedPrices:true)});
         });

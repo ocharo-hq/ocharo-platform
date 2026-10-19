@@ -6,7 +6,8 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     Args = args.Contains("--migrate") || args.Contains("--provision-operator") || args.Contains("--import-sourcing") || args.Contains("--import-events") || args.Contains("--verify-media-runtime") ? [] : args,
     ContentRootPath = AppContext.BaseDirectory
 });
-builder.Configure(args.Contains("--migrate"));
+// Serving and --migrate apply the schema; the other commands run against an existing one.
+builder.Configure(migrate: !args.Any(argument => argument is "--provision-operator" or "--import-sourcing" or "--import-events" or "--verify-media-runtime"));
 
 // Build and configure the app.
 var app = builder.Build();

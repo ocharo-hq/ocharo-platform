@@ -5,14 +5,16 @@ using Hangfire;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Testcontainers.PostgreSql;
 using WoW.Two.Sdk.Beta.Be.Testing;
+using WoW.Two.Sdk.Beta.Be.Testing.Containers.Postgres;
 using Xunit;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
 namespace BrandWorkspace.Tests.E2E;
 
-public sealed class ApiContractTests
+public sealed class ApiContractTests(ApiDatabaseFixture database) : IClassFixture<ApiDatabaseFixture>
 {
     [Theory]
     [InlineData("GET", "/api")]
@@ -22,7 +24,7 @@ public sealed class ApiContractTests
     [InlineData("DELETE", "/api/unknown.json")]
     public async Task UnknownApi_ShouldReturn404Json_WhenNoEndpointMatches(string method, string path)
     {
-        await using var factory = CreateFactory("Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1");
+        await using var factory = CreateFactory(database.Connection);
         using var client = factory.CreateClient();
         using var request = new HttpRequestMessage(new HttpMethod(method), path);
         request.Headers.Accept.ParseAdd("text/html");
@@ -40,8 +42,14 @@ public sealed class ApiContractTests
     [Fact]
     public async Task Health_ShouldSeparateLivenessAndReadiness_WhenDatabaseIsUnavailable()
     {
-        await using var factory = CreateFactory("Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1");
+        // Startup applies the schema, so the database leaves only after the API is up.
+        var container = new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build();
+        await using var unavailable = new PostgresFixture(container);
+        await unavailable.StartAsync();
+        await using var factory = CreateFactory(unavailable.ConnectionString);
         using var client = factory.CreateClient();
+        (await client.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.OK);
+        await container.StopAsync();
         (await client.GetAsync("/health/live")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await client.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         (await client.GetAsync("/api/system/status")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
@@ -52,7 +60,7 @@ public sealed class ApiContractTests
     [Fact]
     public async Task Host_ShouldReturn400_WhenHostIsOutsideTheConfiguredAllowlist()
     {
-        await using var factory = CreateFactory("Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1");
+        await using var factory = CreateFactory(database.Connection);
         using var client = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, "/health/live");
         request.Headers.Host = "unconfigured.invalid";
@@ -77,4 +85,13 @@ public sealed class ApiContractTests
         factory.Clock.SetUtcNow(DateTimeOffset.UtcNow);
         return factory;
     }
+}
+
+/// <summary>One PostgreSQL database for contract tests; the first API host to start applies its schema.</summary>
+public sealed class ApiDatabaseFixture : IAsyncLifetime
+{
+    private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build());
+    public string Connection => _database.ConnectionString;
+    public async Task InitializeAsync() => await _database.StartAsync();
+    public async Task DisposeAsync() => await _database.DisposeAsync();
 }

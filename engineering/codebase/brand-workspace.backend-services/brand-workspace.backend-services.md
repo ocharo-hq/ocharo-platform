@@ -1,5 +1,7 @@
 # Backend foundation
 
+*Last updated: 2026-10-19*
+
 .NET 10 API and independent worker, with PostgreSQL-owned technical diagnostics.
 The API exposes no business mutation and starts no job processor. Authentication,
 organization authorization and Content & Publishing remain subsequent slices.
@@ -20,29 +22,54 @@ Docker is required. They do not use or restart the shared development database.
 
 ## Runtime commands
 
-Set `ConnectionStrings__Database` to the complete PostgreSQL connection string.
-The local endpoint is `127.0.0.1:8270`; database and user are `brand_workspace`.
-Passwords belong in environment configuration, never committed settings.
+Desk needs one PostgreSQL database. The local endpoint is `127.0.0.1:8270` (the packaged
+Compose `postgres` service); database and user are `brand_workspace`. Give the API the complete
+connection string with its password, either as `ConnectionStrings__Database` or in an ignored
+`BrandWorkspace.Api/appsettings.Local.json`, which only the `https` launch profile reads:
+
+```json
+{ "ConnectionStrings": { "Database": "Host=127.0.0.1;Port=8270;Database=brand_workspace;Username=brand_workspace;Password=<local password>" } }
+```
+
+Passwords never go in committed settings. A local run keeps its Data Protection keys under the user's
+application-data folder unless `DataProtection:KeysPath` names one; any other run requires it.
 
 From this directory, after a build:
 
 ```sh
-dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- --migrate
 dotnet run --project BrandWorkspace.Api --no-build --launch-profile https
+dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- --migrate
 dotnet run --project BrandWorkspace.Worker --no-build --no-launch-profile
 ```
 
-`--migrate` is the only application migration owner. It applies embedded versioned
-SQL with the SDK checksum journal and PostgreSQL advisory lock, initializes the
-provider-owned Hangfire schema, then exits. Neither normal host changes schema.
-The deployment runs one migration applicant. API ports are HTTPS `8264` and HTTP
-`8265`; Docker explicitly supplies `ASPNETCORE_URLS=http://+:8080`. Worker has no port.
+The API owns the schema. Serving applies pending embedded SQL migrations (SDK checksum
+journal, PostgreSQL advisory lock `8264001`) and the provider-owned Hangfire schema before it
+listens, so `/health/ready` never precedes them. An unreachable database is retried ten times,
+two seconds apart; any other migration failure aborts startup. `--migrate` applies the same
+steps and exits. The worker never changes schema and refuses to start before it exists.
+The API serves HTTPS `8264` only (Ocharo's HTTPS-only override; `8265` stays reserved);
+Docker explicitly supplies `ASPNETCORE_URLS=http://+:8080`. Worker has no port.
 
 Application environment configuration permits `ConnectionStrings__Database`, plus
 API `ASPNETCORE_URLS` and `AllowedHosts`. A hosted deployment supplies the exact
 host list, such as `<public-host>;localhost;127.0.0.1`; the local default is restrictive.
 Runtime/framework environment selection occurs during host
 construction. Arbitrary ambient variables are removed from application configuration.
+
+## Settings files and local runs
+
+Both hosts read their settings files through the SDK's `AddSettingsFiles`: `appsettings.json`,
+`appsettings.{Environment}.json`, then a deployed target's mounted `appsettings.Target.json`, then
+`appsettings.Local.json` only on a local run whose launch profile sets `LOCAL_SETTINGS=true`.
+`DEPLOY_ENVIRONMENT` (set by the deploy runner) and `LOCAL_SETTINGS` are host-bootstrap inputs read from
+the process, not application aliases. A run is local only in `Development` without `DEPLOY_ENVIRONMENT`;
+Telegram polling, the Data Protection key fallback and the Commerce source-root fallback stay local-only.
+Tests and containers never read the machine file. The worker has no launch profile: set
+`DOTNET_ENVIRONMENT=Development` and `LOCAL_SETTINGS=true` for it to read its own `appsettings.Local.json`.
+
+Deployed targets run as `Production`. The API trusts `X-Forwarded-For`, `-Proto` and `-Host` only from
+loopback and the addresses in `Deployment:TrustedProxies` (a JSON array; default empty). On the shared VPS
+the target sets it to the ingress, `["172.30.0.2"]`, so sign-in sees HTTPS and the public host.
 
 ## Harmless durable probe
 
@@ -90,9 +117,9 @@ Unknown `/api` paths, including dotted paths and non-GET methods, return JSON `4
 
 ## SDK adoption boundary
 
-Published `WoW2.Sdk.Beta.Be` and `WoW2.Sdk.Beta.Be.Testing` are pinned to `10.0.68-beta`.
-The family was renamed from `WoW2.Sdk.Backend.Beta` at `10.0.67-beta`; NuGet availability
-was verified on 17 October 2026.
+Published `WoW2.Sdk.Beta.Be` and `WoW2.Sdk.Beta.Be.Testing` are pinned to `10.0.71-beta`
+(settings files and the local-run check); NuGet availability was verified on 19 October 2026.
+The family was renamed from `WoW2.Sdk.Backend.Beta` at `10.0.67-beta`.
 
 The worker calls public SDK `AddHangfireJobs` with explicit PostgreSQL storage
 options (`PrepareSchemaIfNecessary=false`). The SDK's PostgreSQL preset auto-creates
@@ -102,5 +129,8 @@ an SDK client-only/schema-control preset gap; no product scheduler abstraction o
 private SDK API was introduced. Shared SDK files were not changed.
 
 Application schema migration uses public `AddDatabaseBespokeMigrations(assembly)`
-and `AddDataSourceConnectionFactory`. API migration CLI alone initializes Hangfire
-storage with schema preparation enabled. No EF model competes for schema ownership.
+and `AddDataSourceConnectionFactory`. The API alone installs the Hangfire schema, through
+Hangfire's own idempotent installer, without registering a job client. No EF model competes
+for schema ownership, so the SDK's EF startup runner does not apply; the SDK's bespoke startup
+helper needs `AddPostgresPersistence`, so the host calls the same runner directly.
+Forwarded headers use the SDK's `AddProxyAwareHosting`/`UseProxyAwareHosting`.

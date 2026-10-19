@@ -1,16 +1,17 @@
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types.Enums;
+using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 
 namespace BrandWorkspace.Api.Identity.Telegram;
 
-/// <summary>Receives bot updates only when Development polling is explicitly enabled; failures retry after five seconds.</summary>
-public sealed class TelegramPollingService(TelegramAuthSettings settings, IHostEnvironment environment,
+/// <summary>Receives bot updates only when polling is explicitly enabled on a local run; failures retry after five seconds.</summary>
+public sealed class TelegramPollingService(TelegramAuthSettings settings, IHostEnvironment environment, IConfiguration configuration,
     IServiceScopeFactory scopes, IServiceProvider services, ILogger<TelegramPollingService> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!settings.Enabled || !settings.PollingEnabled || !environment.IsDevelopment()) return;
+        if (!settings.Enabled || !settings.PollingEnabled || !environment.IsLocalRun(configuration)) return;
         var bot = services.GetRequiredService<ITelegramBotClient>();
         var offset = 0;
         while (!stoppingToken.IsCancellationRequested)

@@ -4,9 +4,9 @@
     "net10.0": {
       "WoW2.Sdk.Beta.Be": {
         "type": "Direct",
-        "requested": "[10.0.68-beta, )",
-        "resolved": "10.0.68-beta",
-        "contentHash": "Bk7pu5Lrt5MR/UiP9IKHB1+OxnOnlXp0V6ol/AnEzAf87tfORv8BMamPYY87vHDJuTwxnGHaCVlHaGzayRvsuw==",
+        "requested": "[10.0.71-beta, )",
+        "resolved": "10.0.71-beta",
+        "contentHash": "s1r5XQbHA1dP1TeHATF1oITKD/buLl8R+uh6/cq0vZ9gftTxXL4Z2OQ2B5mDiZj2nkUkMAuj5lOuwxftQpN/yQ==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -163,7 +163,7 @@
           "Telegram.Bot": "22.10.0.1",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.68-beta",
+          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.71-beta",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",
           "dbup-mysql": "6.0.4",
@@ -2297,8 +2297,8 @@
       },
       "WoW2.Sdk.Beta.Be.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.68-beta",
-        "contentHash": "eXqZTzrNDWZxew7zpDuvKySiFrrnsjjFPan3ojByHv8Y0QFyfxUQ49QT5EN6aPueERAvQWhKUQwp7j00AKRKMQ=="
+        "resolved": "10.0.71-beta",
+        "contentHash": "VcnAjIuoL95hHe2q8ZUtWWYsrYB9HkmFSI1oHI8z9eTpX8R1Oa31k4NftpAT2Q1OOQ6Y6PrzYNnbwvPktaITOw=="
       },
       "YamlDotNet": {
         "type": "Transitive",
@@ -2336,7 +2336,7 @@
           "Microsoft.Data.Sqlite": "[10.0.3, )",
           "SkiaSharp": "[4.152.1, )",
           "SkiaSharp.NativeAssets.Linux": "[4.152.1, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.68-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.71-beta, )"
         }
       },
       "brandworkspace.persistence": {
@@ -2346,19 +2346,19 @@
           "BrandWorkspace.Domain": "[0.0.0, )",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.3, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.0, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.68-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.71-beta, )"
         }
       },
       "ocharobrand.domain": {
         "type": "Project",
         "dependencies": {
-          "WoW2.Sdk.Beta.Be": "[10.0.68-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.71-beta, )"
         }
       },
       "ocharocatalogue.domain": {
         "type": "Project",
         "dependencies": {
-          "WoW2.Sdk.Beta.Be": "[10.0.68-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.71-beta, )"
         }
       },
       "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
