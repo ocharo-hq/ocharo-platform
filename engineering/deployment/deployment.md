@@ -144,7 +144,7 @@ HTTPS development API. Browser application and API requests remain same-origin.
 ## CI and publication
 
 `publish-docker-image.yml` is the Wheelhouse marker and the only CI file: it calls the shared `delivery.yml` of
-`wow-two-platform.pipelines`, pinned to `v0.9.0`, with the checks below. A docs-only push builds nothing; any
+`wow-two-platform.pipelines`, pinned to `v0.9.1`, with the checks below. A docs-only push builds nothing; any
 other runs the checks whose paths changed (each app's frontend, backend and pilot image; the image worker's tests;
 the deployment composition) and every check when a shared file changes. Publication then builds the services in
 `deploy.yml` that changed, as `ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}`; CI builds only the
