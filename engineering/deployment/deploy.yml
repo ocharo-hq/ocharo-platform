@@ -5,6 +5,8 @@
 #
 # Ocharo Platform deploys Desk, its jobs worker and the private image worker. The adopted Brand and Catalogue
 # pilots stay loopback-only and are never deployed; Desk and jobs compile only their Domain projects.
+# Both environments run as .NET Production (no dotnetEnvironment). Desk applies the schema as it starts and reports
+# ready only afterwards; jobs refuses to start on a missing schema, so it waits for Desk to be healthy.
 descriptor: 1
 product: ocharo-platform
 services:
@@ -21,7 +23,8 @@ services:
     health: /health/ready
     needs: [postgres]
     settings:
-      required: [ConnectionStrings:Database, AllowedHosts, DataProtection:KeysPath, DataProtection:ApplicationName]
+      required: [ConnectionStrings:Database, AllowedHosts, DataProtection:KeysPath, DataProtection:ApplicationName,
+                 Deployment:TrustedProxies]
     volumes:
       keys: /var/lib/brand-workspace/keys
     sites:
@@ -36,6 +39,7 @@ services:
       - codebase/ocharo-catalogue.backend-services/OcharoCatalogue.Domain/**
     health: { command: [sh, -c, 'kill -0 1'] }
     needs: [postgres]
+    dependsOn: [desk]
     settings:
       required: [ConnectionStrings:Database]
   image-worker:

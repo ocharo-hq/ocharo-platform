@@ -18,6 +18,8 @@ playwright-report/
 .env.*
 !.env.example
 **/appsettings.Local.json
+**/appsettings.Target.json
+**/appsettings.Machine.json
 engineering/operations/secrets/
 .vector/
 .local/

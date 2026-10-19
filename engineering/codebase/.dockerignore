@@ -17,6 +17,8 @@
 **/.env
 **/.env.*
 **/appsettings.Local.json
+**/appsettings.Target.json
+**/appsettings.Machine.json
 **/.local/
 **/*.pfx
 **/*.p12
