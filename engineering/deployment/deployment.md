@@ -143,11 +143,12 @@ HTTPS development API. Browser application and API requests remain same-origin.
 
 ## CI and publication
 
-`verify.yml` runs frontend checks, locked backend restore, the default API/SPA build, backend tests,
-and every image build. `publish-docker-image.yml` is the Wheelhouse marker: each push, and each
-dispatched `commit`, runs `verify.yml` and then the shared `publish.yml` of `wow-two-platform.pipelines`,
-pinned to `v0.7.0`. That workflow builds the services in `deploy.yml` that changed, as
-`ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}`. Work happens on `main` and short-lived
+`publish-docker-image.yml` is the Wheelhouse marker and the only CI file: it calls the shared `delivery.yml` of
+`wow-two-platform.pipelines`, pinned to `v0.9.0`, with the checks below. A docs-only push builds nothing; any
+other runs the checks whose paths changed (each app's frontend, backend and pilot image; the image worker's tests;
+the deployment composition) and every check when a shared file changes. Publication then builds the services in
+`deploy.yml` that changed, as `ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}`; CI builds only the
+Brand and Catalogue pilot images, which never publish. Jobs fetch only the LFS files under `engineering/codebase/`. Work happens on `main` and short-lived
 branches only: a `main` build releases `vX.Y.Z` with `ocharo-platform-release.tar.gz` and reaches dev
 automatically; any other branch builds a candidate that reaches dev only by hand.
 Wheelhouse deploys that bundle; PostgreSQL, settings and the model volume come from its targets.
