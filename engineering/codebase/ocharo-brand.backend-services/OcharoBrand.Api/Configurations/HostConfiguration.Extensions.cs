@@ -11,6 +11,7 @@ using OcharoBrand.Infrastructure.Brand;
 using OcharoBrand.Infrastructure.Time;
 using OcharoBrand.Persistence;
 using OcharoBrand.Persistence.Brand;
+using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
@@ -75,7 +76,7 @@ public static partial class HostConfiguration
         app.UseOcharoSso(IsPublicSsoRequest);
         app.UseMiddleware<LocalPilotBoundaryMiddleware>();
         app.Use(RequirePublicationApproval);
-        if (app.Environment.IsDevelopment())
+        if (app.Environment.IsLocalRun(app.Configuration))
             app.MapOpenApi();
         app.UseDefaultFiles();
         app.UseStaticFiles();

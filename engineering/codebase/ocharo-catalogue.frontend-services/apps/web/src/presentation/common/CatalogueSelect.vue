@@ -20,7 +20,6 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
   <SelectPicker
     :model-value="modelValue"
     :is-disabled="disabled"
-    :get-option-label="(value) => options.find((option) => option.value === value)?.label ?? value"
     @update:model-value="
       (value) => {
         if (typeof value === 'string') emit('update:modelValue', value);

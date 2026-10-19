@@ -1,4 +1,5 @@
 using Ocharo.Sso;
+using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using OcharoCatalogue.Api.Catalogue;
 
@@ -10,6 +11,7 @@ public static partial class HostConfiguration
     /// <summary>Configures the application builder (services).</summary>
     public static WebApplicationBuilder Configure(this WebApplicationBuilder builder)
     {
+        builder.AddSettingsFiles();
         builder.Services.AddOcharoSso(builder.Configuration, "catalogue", "ocharo-catalogue", requireBoundOrganization: true);
         builder
             .AddSqliteDatabase()
@@ -33,7 +35,7 @@ public static partial class HostConfiguration
         app.UseMiddleware<LocalPilotBoundaryMiddleware>();
         app.Use(RequirePublicationApproval);
 
-        if (app.Environment.IsDevelopment())
+        if (app.Environment.IsLocalRun(app.Configuration))
             app.MapOpenApi();
 
         // Serve the Vue SPA from wwwroot (single-deploy: API + UI in one host).
