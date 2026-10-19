@@ -50,8 +50,8 @@ Screens are synthetic verification artifacts, not approved final brand designs o
 
 ### Committed implementation
 
-- `c22b4fd`: native product, design and release backend.
-- `1e74f12`: native UI, product review, designers, public reader and regression tests.
+- `708ad70`: native product, design and release backend.
+- `a25f918`: native UI, product review, designers, public reader and regression tests.
 
 Earlier Desk or Marketing evidence is historical and must not be counted as native Catalogue verification.
 

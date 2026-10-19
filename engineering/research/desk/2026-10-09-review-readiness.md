@@ -75,4 +75,4 @@ Frontend proxies use verified HTTPS with the existing .NET public certificate th
 
 Machine-local logs: `/tmp/ocharo-desk-tests.log`, `/tmp/ocharo-desk-verified-fe-tests.log`, `/tmp/ocharo-desk-final-verified-build.log`, `/tmp/ocharo-companion-gates/`.
 
-Cohesive local commits: Events `aff61e9`, Sourcing `9d0ac87`, architecture tests `fe88ef8`, Marketing/Editorial status `2a62fa7`, Studio formatting `12bcbc9`. The final title target and this report are committed separately. Fetches found no incoming changes in the three edited repositories. Existing Catalogue notification edits were preserved; no SDK or remote publication was performed.
+Cohesive local commits: Events `6a66216`, Sourcing `091b8ea`, architecture tests `2bb2e51`, Marketing/Editorial status `3a1fe23`, Studio formatting `59ebbc7`. The final title target and this report are committed separately. Fetches found no incoming changes in the three edited repositories. Existing Catalogue notification edits were preserved; no SDK or remote publication was performed.

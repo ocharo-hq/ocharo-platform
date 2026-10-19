@@ -79,24 +79,24 @@ No inline script/style or relaxed Content-Security-Policy is required.
 | SDK Web, final source | 263 tests passed, including complete HTTP error boundary coverage |
 | Seven backend suites, isolated source copies | 715 tests passed: Catalogue 55, Brand 9, Desk 184, Marketing 258, Blog 176, Studio 29, Motion 4; temporary ProjectReferences to SDK source, not released package pins |
 | Private image worker | 26 tests passed with a fake processor, including interrupted upload capacity recovery |
-| Native Catalogue and worker CI | Runs 36977227486 (dbf684a) and 36979645014 (131f083) succeeded |
+| Native Catalogue and worker CI | Runs 36977227486 (667a91b) and 36979645014 (89a6875) succeeded |
 | Final read-only review | Relay headers/validation/correlation, upload disconnects and six proxy disconnect guards verified; no remaining actionable findings in that scope |
 
 ## Published verification
 
 | Repository | Latest verified source commit | Completed CI |
 |---|---|---|
-| Platform | `5058195` | [36982707109](https://github.com/ocharo-hq/ocharo-platform/actions/runs/36982707109), success |
-| Marketing | `1e989ab` | [36984576429](https://github.com/ocharo-hq/ocharo-marketing/actions/runs/36984576429), success |
-| Studio | `9f4a35f` | [36982714142](https://github.com/ocharo-hq/ocharo-studio/actions/runs/36982714142), success |
-| Assets | `3f22a1a` | [36986342373](https://github.com/ocharo-hq/ocharo-assets/actions/runs/36986342373), success |
+| Platform | `34abc3d` | [36982707109](https://github.com/ocharo-hq/ocharo-platform/actions/runs/36982707109), success |
+| Marketing | `c4666f6` | [36984576429](https://github.com/ocharo-hq/ocharo-marketing/actions/runs/36984576429), success |
+| Studio | `92f28ad` | [36982714142](https://github.com/ocharo-hq/ocharo-studio/actions/runs/36982714142), success |
+| Assets | `bd888a5` | [36986342373](https://github.com/ocharo-hq/ocharo-assets/actions/runs/36986342373), success |
 
 Published cohesive batches:
 
-- Platform: `dbf684a`, `66a7c91`, `131f083`, `c352b1c`, `5058195`.
-- Marketing: `d23b789`, `1e989ab`.
-- Studio: `b85059c`, `9f4a35f`.
-- Assets: `156c888`, `7ef657d`, `547713c`, `3f22a1a`.
+- Platform: `667a91b`, `a65e21d`, `89a6875`, `9c2a1cb`, `34abc3d`.
+- Marketing: `0471fdc`, `c4666f6`.
+- Studio: `db31636`, `92f28ad`.
+- Assets: `984b4c8`, `f44ab7e`, `c937607`, `bd888a5`.
 
 First-paint tests execute within their owning repositories. Brand's container copies the new proxy
 helper and boot assets; its actual frontend Docker stage built successfully. Marketing and Assets
@@ -114,7 +114,7 @@ that ignored folder is local evidence, not a committed artifact or production ru
 
 ## Delivery and owner review
 
-Native Catalogue frontend commit `dbf684a` and worker commits `66a7c91` / `131f083` are pushed. Companion frontend batches are committed and pushed in all four owning repositories. All four latest app verification runs in the preceding table passed. These runs verify committed code and its current released package pins; they do not include the unpublished shared SDK adoption described below.
+Native Catalogue frontend commit `667a91b` and worker commits `a65e21d` / `89a6875` are pushed. Companion frontend batches are committed and pushed in all four owning repositories. All four latest app verification runs in the preceding table passed. These runs verify committed code and its current released package pins; they do not include the unpublished shared SDK adoption described below.
 
 The shared SDK's 13-file change is staged, with commit/push flags ON in its owning WoW2 workspace. This chat's peer registry currently admits only Ocharo repositories, so its Git hook rejected the SDK commit. An exact SDK peer-scope proposal is pending human decision; the live registry and all Git flags remain unchanged. Seven actual API package pins therefore remain unchanged. Backend implementation is present locally and validated in isolated source-copy suites; it is not yet built against a published SDK package or committed/pushed. Do not interpret these source-copy results as verification of the real package pins.
 
