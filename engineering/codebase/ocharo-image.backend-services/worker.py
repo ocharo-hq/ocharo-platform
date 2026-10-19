@@ -29,6 +29,22 @@ MAX_DIMENSION = 8192
 MAX_OUTPUT_BYTES = 20 * 1024 * 1024
 ALLOWED = {"image/png": "PNG", "image/jpeg": "JPEG", "image/webp": "WEBP"}
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS
+SETTINGS_DIRECTORY = Path("/app")
+TARGET_SETTINGS = "appsettings.Target.json"
+# Release bundles before pipelines v0.7.0 mount the target's settings under this name instead.
+LEGACY_SETTINGS = "appsettings.Local.json"
+
+
+def settings_file() -> Path:
+    """The deployed target's mounted settings: an explicit path, else the target file, else a legacy mount."""
+    configured = os.environ.get("IMAGE_WORKER_SETTINGS_FILE")
+    if configured:
+        return Path(configured)
+    target, legacy = SETTINGS_DIRECTORY / TARGET_SETTINGS, SETTINGS_DIRECTORY / LEGACY_SETTINGS
+    if not target.exists() and legacy.exists():
+        logging.getLogger(__name__).warning("Read %s in place of %s; pipelines v0.7.0 mounts the target file.", legacy, target)
+        return legacy
+    return target
 
 
 @dataclass(frozen=True)
@@ -38,8 +54,8 @@ class Settings:
 
     @classmethod
     def environment(cls):
-        settings_file = Path(os.environ.get("IMAGE_WORKER_SETTINGS_FILE", "/app/appsettings.Local.json"))
-        config = json.loads(settings_file.read_text()) if settings_file.exists() else {}
+        source = settings_file()
+        config = json.loads(source.read_text()) if source.exists() else {}
         section = config.get("ImageWorker", {}) if isinstance(config, dict) else {}
         if not isinstance(section, dict):
             raise ValueError("ImageWorker settings must be an object.")

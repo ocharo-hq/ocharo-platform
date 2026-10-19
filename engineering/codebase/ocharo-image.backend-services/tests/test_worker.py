@@ -141,10 +141,39 @@ def test_failed_request_releases_capacity():
         assert app.post('/v1/remove-background', headers=HEADERS, content=picture()).status_code == 200
 
 
-def test_mounted_settings_preserve_environment_override(tmp_path, monkeypatch):
+def mounted(directory, name, key=KEY, models='/configured-models'):
     import json
-    config = tmp_path / 'appsettings.Local.json'
-    config.write_text(json.dumps({'ImageWorker': {'Key': KEY, 'ModelDirectory': '/configured-models'}}))
+    config = directory / name
+    config.write_text(json.dumps({'ImageWorker': {'Key': key, 'ModelDirectory': models}}))
+    return config
+
+
+def clear_overrides(monkeypatch):
+    for name in ['IMAGE_WORKER_SETTINGS_FILE', 'IMAGE_WORKER_KEY_FILE', 'IMAGE_WORKER_KEY', 'IMAGE_WORKER_MODEL_DIRECTORY']:
+        monkeypatch.delenv(name, raising=False)
+
+
+def test_target_settings_win_over_a_legacy_mount(tmp_path, monkeypatch, caplog):
+    clear_overrides(monkeypatch)
+    monkeypatch.setattr(worker, 'SETTINGS_DIRECTORY', tmp_path)
+    mounted(tmp_path, 'appsettings.Target.json', models='/target-models')
+    mounted(tmp_path, 'appsettings.Local.json', key='test-only-legacy-worker-key-00000000000000000', models='/legacy-models')
+    settings = Settings.environment()
+    assert settings.key == KEY and settings.model_directory == Path('/target-models')
+    assert 'appsettings.Local.json' not in caplog.text
+
+
+def test_legacy_mount_is_read_with_a_warning_until_pipelines_v0_7(tmp_path, monkeypatch, caplog):
+    clear_overrides(monkeypatch)
+    monkeypatch.setattr(worker, 'SETTINGS_DIRECTORY', tmp_path)
+    mounted(tmp_path, 'appsettings.Local.json', models='/legacy-models')
+    settings = Settings.environment()
+    assert settings.key == KEY and settings.model_directory == Path('/legacy-models')
+    assert 'appsettings.Local.json' in caplog.text and 'appsettings.Target.json' in caplog.text
+
+
+def test_mounted_settings_preserve_environment_override(tmp_path, monkeypatch):
+    config = mounted(tmp_path, 'appsettings.Target.json')
     monkeypatch.setenv('IMAGE_WORKER_SETTINGS_FILE', str(config))
     monkeypatch.delenv('IMAGE_WORKER_KEY_FILE', raising=False)
     monkeypatch.delenv('IMAGE_WORKER_KEY', raising=False)

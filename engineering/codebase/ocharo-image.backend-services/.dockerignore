@@ -3,3 +3,7 @@ __pycache__/
 *.onnx
 .venv/
 tests/
+# Settings files are mounted or machine-local, never image inputs.
+appsettings.Local.json
+appsettings.Target.json
+appsettings.Machine.json
