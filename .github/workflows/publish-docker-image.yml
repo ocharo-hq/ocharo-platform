@@ -1,14 +1,18 @@
-# Builds and publishes Ocharo Platform like every product, through the shared workflow in wow-two-platform.pipelines:
+# Verifies, builds and publishes Ocharo Platform like every product, through the shared delivery workflow in
+# wow-two-platform.pipelines (current → plan → ci → publish):
 #   main          → release vX.Y.Z (X.Y from the newest version-track folder), bundle on the GitHub release
 #   other branches → candidate sha-<commit>, bundle as an Actions artifact
 #   workflow_dispatch → a candidate for one commit that has no build yet (Wheelhouse's Build action)
-# Images: ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}, one per service in engineering/deployment/deploy.yml.
-# One push event tests/builds its final SHA once, regardless of its commit count. Wheelhouse deploys the bundle.
+#   pull request  → ci only
+# Images: ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}, one per service in engineering/deployment/deploy.yml;
+# publish builds the changed ones, so ci builds only the Brand and Catalogue pilot images, which never publish.
+# Each check runs when its own paths change; a docs-only push runs nothing. Wheelhouse deploys the bundle.
 name: publish-docker-image
 
 on:
   push:
-    branches: ['**']
+    branches: ['**', '!renovate/**']
+  pull_request:
   workflow_dispatch:
     inputs:
       commit:
@@ -22,43 +26,65 @@ permissions:
 
 concurrency:
   group: delivery-${{ github.repository }}-${{ inputs.commit || github.ref }}
-  cancel-in-progress: false
+  # main queues, so each release reads the tag the previous one created; other refs cancel a superseded run.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main') }}
   queue: max
 
 jobs:
-  verify:
-    uses: ./.github/workflows/verify.yml
-    with:
-      commit: ${{ inputs.commit || github.sha }}
-
-  current:
-    needs: verify
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      eligible: ${{ steps.head.outputs.eligible }}
-    steps:
-      - name: Skip superseded main pushes and old reruns
-        id: head
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT: ${{ github.event_name }}
-          REF: ${{ github.ref }}
-          COMMIT: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          eligible=true
-          if [ "$EVENT" = push ] && [ "$REF" = refs/heads/main ]; then
-            head=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
-            [ "$COMMIT" = "$head" ] || eligible=false
-          fi
-          echo "eligible=$eligible" >> "$GITHUB_OUTPUT"
-          [ "$eligible" = true ] || echo 'Superseded main push: publication skipped.' >> "$GITHUB_STEP_SUMMARY"
-
-  publish:
-    needs: current
-    if: needs.current.outputs.eligible == 'true'
-    uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/publish.yml@v0.8.1
+  delivery:
+    uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/delivery.yml@v0.9.0
     with:
       commit: ${{ inputs.commit }}
+      # Desk compiles the Brand and Catalogue Domain projects and builds its own SPA; the pilots share ocharo-sso.
+      backends: |
+        [{"name": "Backend (brand-workspace)", "dir": "engineering/codebase/brand-workspace.backend-services",
+          "dotnet": "10.0.300", "node": ".nvmrc",
+          "pnpm-lock": "engineering/codebase/brand-workspace.frontend-services/pnpm-lock.yaml",
+          "lfs": "engineering/codebase/**", "timeout": 25,
+          "run": ["dotnet restore BrandWorkspace.BackendServices.slnx --locked-mode",
+                  "dotnet build BrandWorkspace.BackendServices.slnx -c Release --no-restore",
+                  "dotnet test BrandWorkspace.BackendServices.slnx -c Release --no-build"],
+          "paths": ["engineering/codebase/brand-workspace.backend-services/**",
+                    "engineering/codebase/brand-workspace.frontend-services/**",
+                    "engineering/codebase/ocharo-brand.backend-services/**",
+                    "engineering/codebase/ocharo-catalogue.backend-services/**"]},
+         {"name": "Backend (ocharo-brand)", "dir": "engineering/codebase/ocharo-brand.backend-services",
+          "dotnet": "10.0.300", "lfs": "engineering/codebase/**", "timeout": 25,
+          "run": ["dotnet restore OcharoBrand.BackendServices.slnx --locked-mode",
+                  "dotnet build OcharoBrand.BackendServices.slnx -c Release --no-restore",
+                  "dotnet test OcharoBrand.BackendServices.slnx -c Release --no-build"],
+          "paths": ["engineering/codebase/ocharo-brand.backend-services/**", "engineering/codebase/ocharo-sso/**"]},
+         {"name": "Backend (ocharo-catalogue)", "dir": "engineering/codebase/ocharo-catalogue.backend-services",
+          "dotnet": "10.0.300", "lfs": "engineering/codebase/**", "timeout": 25,
+          "run": ["dotnet restore OcharoCatalogue.BackendServices.slnx --locked-mode",
+                  "dotnet build OcharoCatalogue.BackendServices.slnx -c Release --no-restore",
+                  "dotnet test OcharoCatalogue.BackendServices.slnx -c Release --no-build"],
+          "paths": ["engineering/codebase/ocharo-catalogue.backend-services/**", "engineering/codebase/ocharo-sso/**"]},
+         {"name": "Image worker tests", "dir": "engineering/codebase/ocharo-image.backend-services",
+          "python": "3.12", "pip": "-r requirements-test.txt",
+          "pip-cache": "engineering/codebase/ocharo-image.backend-services/requirements*.txt", "timeout": 20,
+          "run": "python -m pytest -q",
+          "paths": ["engineering/codebase/ocharo-image.backend-services/**"]},
+         {"name": "Container (brand)", "lfs": "engineering/codebase/**",
+          "run": "docker build --file engineering/deployment/brand/Dockerfile --tag ocharo-ci:brand --build-arg \"VCS_REF=$GITHUB_SHA\" engineering/codebase",
+          "paths": ["engineering/codebase/ocharo-brand.backend-services/**",
+                    "engineering/codebase/ocharo-brand.frontend-services/**",
+                    "engineering/codebase/ocharo-sso/**", "engineering/deployment/brand/**"]},
+         {"name": "Container (catalogue)", "lfs": "engineering/codebase/**",
+          "run": "docker build --file engineering/deployment/catalogue/Dockerfile --tag ocharo-ci:catalogue --build-arg \"VCS_REF=$GITHUB_SHA\" engineering/codebase",
+          "paths": ["engineering/codebase/ocharo-catalogue.backend-services/**",
+                    "engineering/codebase/ocharo-catalogue.frontend-services/**",
+                    "engineering/codebase/ocharo-sso/**", "engineering/deployment/catalogue/**"]},
+         {"name": "Deployment composition", "dir": "engineering/deployment", "timeout": 5,
+          "run": "docker compose --env-file .env.example config --quiet",
+          "paths": ["engineering/deployment/**"]}]
+      frontends: |
+        [{"name": "Frontend (brand-workspace)", "dir": "engineering/codebase/brand-workspace.frontend-services",
+          "node": ".nvmrc", "lfs": "engineering/codebase/**",
+          "paths": ["engineering/codebase/brand-workspace.frontend-services/**"]},
+         {"name": "Frontend (ocharo-brand)", "dir": "engineering/codebase/ocharo-brand.frontend-services",
+          "node": ".nvmrc", "lfs": "engineering/codebase/**",
+          "paths": ["engineering/codebase/ocharo-brand.frontend-services/**"]},
+         {"name": "Frontend (ocharo-catalogue)", "dir": "engineering/codebase/ocharo-catalogue.frontend-services",
+          "node": ".nvmrc", "lfs": "engineering/codebase/**",
+          "paths": ["engineering/codebase/ocharo-catalogue.frontend-services/**"]}]
