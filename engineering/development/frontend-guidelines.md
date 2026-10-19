@@ -1,8 +1,8 @@
 # Frontend development
 
-*Last updated: 2026-10-17*
+*Last updated: 2026-10-19*
 
-Follow the [frontend standard](../../../../../../../../career/engineering/wow-two/wow-two-ws/conventions/development/repo/repo-conventions.md#frontend-standard):
+Follow the [frontend standard](../../../../../../../../../conventions/development/repo/repo-conventions.md#frontend-standard):
 Vue 3, strict TypeScript, Vite, Tailwind v4, and reusable capabilities from `@wow-two-beta/fe`.
 No React exception is requested or recorded.
 

@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=../../../../../../../conventions/deployment/descriptor/deploy.schema.json
+# yaml-language-server: $schema=../../../../../../../../../conventions/deployment/descriptor/deploy.schema.json
 # What this product deploys: its services, how each builds, what changes it and which sites it serves.
 # Format and rules: wow-two-ws/conventions/deployment/descriptor/deploy-descriptor.md. Hostnames, secrets and
 # environments live in Wheelhouse targets, never here. Paths are relative to engineering/.

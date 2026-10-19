@@ -1,6 +1,6 @@
 # Deployment and local runtime
 
-*Last updated: 2026-10-17*
+*Last updated: 2026-10-19*
 
 ## Artifacts and ownership
 
@@ -134,7 +134,7 @@ organization API boundary and requires current membership.
 | PostgreSQL | 8270, loopback only |
 | Worker | No HTTP listener |
 
-Use the shared [port ledger](../../../../../../../../career/engineering/wow-two/wow-two-ws/conventions/deployment/hosting/ports.md) when adding services.
+Use the shared [port ledger](../../../../../../../../../conventions/deployment/hosting/ports.md) when adding services.
 Default Vite uses mkcert; certificate trust stays user-controlled. Development and browser checks use HTTPS only. Vite proxies `/api` to the
 HTTPS development API. Browser application and API requests remain same-origin.
 

@@ -1,10 +1,10 @@
 # Ocharo Platform repository instructions
 
-*Last updated: 2026-09-29*
+*Last updated: 2026-10-19*
 
 Apply the enclosing [Ocharo workspace instructions](../../AGENTS.md), this repository's
-[CLAUDE.md](CLAUDE.md), and the upstream [WoW2 instructions](../../../../../AGENTS.md).
-Shared engineering conventions live in the [WoW2 convention index](../../../../../conventions/conventions.md).
+[CLAUDE.md](CLAUDE.md), and the upstream [WoW2 instructions](../../../../../../../AGENTS.md).
+Shared engineering conventions live in the [WoW2 convention index](../../../../../../../conventions/conventions.md).
 The [Ocharo manifest](../../repositories.json) owns checkout navigation and setup.
 
 `ocharo-platform` owns Ocharo Desk, the operator platform. It retains the Brand Workspace

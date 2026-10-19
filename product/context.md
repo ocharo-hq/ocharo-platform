@@ -1,6 +1,6 @@
 # Ocharo Platform — current state
 
-*Last updated: 2026-10-17*
+*Last updated: 2026-10-19*
 
 ## Desk Sourcing direction — 2026-10-09
 
@@ -89,7 +89,7 @@ The request did not specify which image choices; no preferred layout or brand va
 No agent-authored code is known to exist only in chat. External editor buffers and unsaved browser edits
 were not inspected or recovered; saving remains explicit in the current editor.
 
-The [consolidation handoff](/Users/max/Projects/10x-ws/workbench/career/engineering/wow-two/wow-two-ws/workbench/ocharo-hq/ocharo-ws/docs/handoffs/brand-workspace-01a0def2-2f06-74a3-9ae1-989e1bde51e8.md)
+The [consolidation handoff](/Users/max/Projects/10x-ws/workbench/career/engineering/wow-two/wow-two-ws/workbench/mfts-projects/ventures/ocharo-hq/ocharo-ws/docs/handoffs/brand-workspace-01a0def2-2f06-74a3-9ae1-989e1bde51e8.md)
 records current Git/runtime state, preserved work, verification evidence, open decisions and resumption steps.
 Application builds and suites were not rerun for this handoff. The milestones below retain their recorded dates.
 
