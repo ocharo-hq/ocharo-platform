@@ -8,9 +8,11 @@ import { useCatalogueAdmin, useCatalogueStore } from '../../application/catalogu
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import type { CatalogueSettings } from '../../domain/catalogue/CatalogueModels';
 import TagInput from './components/TagInput.vue';
-import InterfacePreferences from '../common/InterfacePreferences.vue';
 
-/** Edits catalogue defaults and imports or downloads product records. */
+/**
+ * Edits catalogue defaults and imports or downloads product records. Interface language, appearance and versions
+ * live in the account menu, so this page holds only catalogue data.
+ */
 defineOptions({ name: 'SettingsPage' });
 const { t } = useUiLocale();
 const store = useCatalogueStore();
@@ -31,11 +33,6 @@ onMounted(() => store.loadSettings(true));
 <template>
   <section class="space-y-6">
     <h1 class="font-editorial text-4xl tracking-tight">{{ t('Settings') }}</h1>
-
-    <section class="panel" aria-labelledby="interface-settings-heading">
-      <h2 id="interface-settings-heading" class="mb-4 font-editorial text-2xl">{{ t('Interface settings') }}</h2>
-      <InterfacePreferences />
-    </section>
 
     <section v-if="form" class="panel" aria-labelledby="catalogue-defaults-heading">
       <h2 id="catalogue-defaults-heading" class="font-editorial text-2xl">{{ t('Catalogue defaults') }}</h2>

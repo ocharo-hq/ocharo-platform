@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import CatalogueDeskEntry from '../src/presentation/common/CatalogueDeskEntry.vue';
-import { resolveCatalogueDeskUrl } from '../src/bootstrap/PlatformLinks';
+import { resolveCatalogueDeskUrl } from '../src/domain/shared/OcharoApps';
 
 describe('Canonical catalogue entry', () => {
   it('opens Desk in another tab without submitting or replacing pilot edits', () => {

@@ -1,1 +1,1 @@
-export { brandBaseUrl, fetchBrandKit } from './BrandKitApi';
+export { fetchBrandKit } from './BrandKitApi';

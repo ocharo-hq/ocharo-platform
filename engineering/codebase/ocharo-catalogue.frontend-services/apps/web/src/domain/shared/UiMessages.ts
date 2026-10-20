@@ -5,6 +5,7 @@ import { catalogueInterfaceUiMessages } from './CatalogueInterfaceUiMessages';
 import { nativeDesignerUiMessages } from './NativeDesignerUiMessages';
 import { catalogueSettingsUiMessages } from './CatalogueSettingsUiMessages';
 import { catalogueAppUiMessages } from './CatalogueAppUiMessages';
+import { catalogueFrameUiMessages } from './CatalogueFrameUiMessages';
 import { catalogueUiMessages } from './CatalogueUiMessages';
 import { productReviewUiMessages } from './ProductReviewUiMessages';
 import { designerUiMessages } from './DesignerUiMessages';
@@ -1786,6 +1787,7 @@ export const uiMessages: UiMessageTable = {
   ...catalogueAppUiMessages,
   ...nativeDesignerUiMessages,
   ...catalogueSettingsUiMessages,
+  ...catalogueFrameUiMessages,
 };
 
 /** Resolves exact interface phrases without interpreting or translating customer-authored data. */

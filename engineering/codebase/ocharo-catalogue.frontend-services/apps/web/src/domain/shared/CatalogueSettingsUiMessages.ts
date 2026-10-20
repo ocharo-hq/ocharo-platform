@@ -2,10 +2,6 @@ import type { UiMessageTable } from './UiMessages';
 
 /** Resolves catalogue defaults and data tools independently from authored records. */
 export const catalogueSettingsUiMessages: UiMessageTable = {
-  'Interface settings': {
-    uz: 'Interfeys sozlamalari',
-    ru: 'Настройки интерфейса',
-  },
   'Changes apply to this browser. Catalogue content languages stay separate.': {
     uz: 'O‘zgarishlar shu brauzerga qo‘llanadi. Katalog matni tillari alohida tanlanadi.',
     ru: 'Изменения действуют в этом браузере. Языки содержимого каталога выбираются отдельно.',

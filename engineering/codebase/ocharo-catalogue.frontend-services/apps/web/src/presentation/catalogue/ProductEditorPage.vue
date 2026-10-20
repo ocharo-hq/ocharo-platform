@@ -220,7 +220,7 @@ async function onFiles(event: Event) {
                   <span
                     v-for="c in editor.detail.value?.collectionIds ?? []"
                     :key="c"
-                    class="chip bg-secondary text-secondary-foreground"
+                    class="chip bg-muted text-muted-foreground"
                     >{{ c }}</span
                   >
                 </p>

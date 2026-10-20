@@ -1,12 +1,19 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+import { useColorMode } from '@wow-two-beta/fe/foundation/primitives';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
-import { useAppearance } from '../../application/shared/UseAppearance';
 import CatalogueSelect from './CatalogueSelect.vue';
 import BuildIdentity from './BuildIdentity.vue';
 
 defineOptions({ name: 'InterfacePreferences' });
 const { t, uiLocale, setUiLocale } = useUiLocale();
-const { appearance, setAppearance } = useAppearance();
+const colorMode = useColorMode();
+/** The SDK provider owns the mode and remembers it; `system` hands it back to the device. */
+const appearance = computed(() => (colorMode.followsSystem ? 'system' : colorMode.mode));
+function setAppearance(value: string): void {
+  if (value === 'system') colorMode.followSystem();
+  else if (value === 'light' || value === 'dark') colorMode.setMode(value);
+}
 </script>
 
 <template>

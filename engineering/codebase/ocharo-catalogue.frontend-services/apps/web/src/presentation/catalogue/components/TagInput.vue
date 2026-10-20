@@ -37,7 +37,7 @@ function remove(value: string) {
     <div
       class="flex min-h-10 flex-wrap items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1.5 focus-within:border-primary"
     >
-      <span v-for="value in displayed" :key="value" class="chip bg-secondary text-secondary-foreground">
+      <span v-for="value in displayed" :key="value" class="chip bg-muted text-muted-foreground">
         {{ value }}
         <button
           type="button"

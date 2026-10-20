@@ -1,14 +1,17 @@
 import type { BrandKit } from '../../domain/catalogue/BrandKit';
 
-const env = import.meta.env as Record<string, string | undefined>;
-
-/** The Brand service root; public brand endpoints allow cross-origin reads. */
-export const brandBaseUrl = env.VITE_OCHARO_BRAND_URL ?? 'https://localhost:8286/';
-
-/** Reads the published brand kit; null when the Brand service is not running (print falls back to text). */
-export async function fetchBrandKit(fetchImplementation: typeof fetch = globalThis.fetch): Promise<BrandKit | null> {
+/**
+ * Reads the published brand kit from the Brand API root (`OCHARO_BRAND_API_URL`, not the Brand app's address); public
+ * brand endpoints allow cross-origin reads. Null when no root is configured or the Brand service is not running, so
+ * print falls back to text.
+ */
+export async function fetchBrandKit(
+  brandApiUrl: string | null,
+  fetchImplementation: typeof fetch = globalThis.fetch,
+): Promise<BrandKit | null> {
+  if (!brandApiUrl) return null;
   try {
-    const response = await fetchImplementation(new URL('api/public/brand?app=catalogue', brandBaseUrl), {
+    const response = await fetchImplementation(new URL('api/public/brand?app=catalogue', brandApiUrl), {
       headers: { Accept: 'application/json' },
     });
     if (!response.ok) return null;
@@ -18,8 +21,8 @@ export async function fetchBrandKit(fetchImplementation: typeof fetch = globalTh
         slot,
         {
           ...logo,
-          url: new URL(logo.url, brandBaseUrl).toString(),
-          fileUrl: new URL(logo.fileUrl, brandBaseUrl).toString(),
+          url: new URL(logo.url, brandApiUrl).toString(),
+          fileUrl: new URL(logo.fileUrl, brandApiUrl).toString(),
         },
       ]),
     );
