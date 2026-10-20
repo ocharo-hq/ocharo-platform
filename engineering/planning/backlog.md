@@ -28,6 +28,11 @@ Build order set by the owner on 2026-10-08: **Events → Sourcing → Catalogue*
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
 | Migration version adoption | engineering | Adopt a published SDK migration field supporting full prerelease versions beyond 20 characters; never truncate identity. |
 | SDK startup migration seam | engineering | `MigrateBespokeOnStartupAsync` needs `AddPostgresPersistence` and creates the database; Desk owns its `NpgsqlDataSource`, so its host calls `IMigrationRunnerService` directly and installs the Hangfire schema itself. Adopt a published helper over a caller's own data source when the SDK offers one. |
+| Frame rollout | feature | Studio, Marketing and Brand take the Ocharo frame, runtime app links and the SDK account menu after Desk and Catalogue (Iteration 22). |
+| SSO session identity | engineering | `Ocharo.Sso`'s `/api/sso/session` returns no display name or email, so Catalogue's account menu cannot name the signed-in operator. |
+| Editorial label key | engineering | The "Editorial" app label shares a message key with the designer theme, so uz reads "Jurnal uslubi" in Desk and Catalogue; give the app its own key. |
+| SDK glass strength | engineering | The SDK `glass` surface (75% fill, 12px blur) is weaker than the approved frame (84–92%, 24px); Desk and Catalogue copy the `oc-glass` utilities. Adopt a glass-strength token once the fe sdk offers one. |
+| SDK menu link item | engineering | `MenuItem` has no link variant, so Catalogue's Desk account item opens with `window.open`; adopt a link item when the fe sdk offers one. |
 
 ## Catalogue review — 2026-10-01
 
@@ -55,7 +60,7 @@ and [owner review scenarios](version-track/v0.1/v0.1.md#iteration-6--catalogue-a
 
 - [ ] Add authenticated Catalogue sessions and server-enforced admin/manager write permissions.
       Loopback-only Catalogue writes must not be exposed publicly before this exists.
-- [ ] Make the signed-in logo open the workspace/app launcher; keep public navigation role-aware.
+- [x] Make the signed-in logo open the workspace/app launcher; keep public navigation role-aware.
 - [ ] Reconcile Catalogue and authenticated Desk product/edition ownership through an explicit migration.
       No automatic cross-store writes or synchronization were added.
 - [ ] Synchronize signed-in saved products; guest saving currently stays in the browser.
