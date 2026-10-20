@@ -1,6 +1,6 @@
 # Catalogue authoring and outputs
 
-*Last updated: 2026-10-01*
+*Last updated: 2026-10-20*
 
 
 ## Current review target
@@ -30,8 +30,9 @@ no second mutable catalogue or product database for this feature.
 
 The checked-in Desk frontend defaults to HTTPS port **8378**, proxying API port **8264**.
 Environment overrides and an IDE session can use other ports. These defaults do not establish
-that a service is running. The retained pilot link uses `VITE_OCHARO_DESK_URL`, defaulting to
-`https://localhost:8264/catalogue`; it accepts only an HTTPS destination without credentials,
+that a service is running. The retained pilot bridge (`resolveCatalogueDeskUrl`) defaults to
+`https://localhost:8264/catalogue`. The Ocharo app menu's Desk link is Desk's root address from runtime config
+`OCHARO_DESK_URL` (build-time `VITE_OCHARO_DESK_URL`). Both accept only an HTTPS destination without credentials,
 query or fragment. No automatic redirect discards the older editor's state.
 
 ## Saved catalogue contract
@@ -147,7 +148,7 @@ catalogue activity or archiving a design does not silently replace an earlier pu
 | Public response | [PublicProjection.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Application/Commerce/PublicProjection.cs) |
 | Gallery and separate designers | [CatalogueGalleryPage.vue](../codebase/brand-workspace.frontend-services/apps/web/src/presentation/workspace/CatalogueGalleryPage.vue), [CatalogueWorkspacePage.vue](../codebase/brand-workspace.frontend-services/apps/web/src/presentation/workspace/CatalogueWorkspacePage.vue) |
 | Canonical navigation | [EditorNavigation.ts](../codebase/brand-workspace.frontend-services/apps/web/src/domain/workspace/EditorNavigation.ts) |
-| Retained pilot bridge | [PlatformLinks.ts](../codebase/ocharo-catalogue.frontend-services/apps/web/src/bootstrap/PlatformLinks.ts), [CatalogueDeskEntry.vue](../codebase/ocharo-catalogue.frontend-services/apps/web/src/presentation/common/CatalogueDeskEntry.vue) |
+| Retained pilot bridge | [OcharoApps.ts](../codebase/ocharo-catalogue.frontend-services/apps/web/src/domain/shared/OcharoApps.ts), [CatalogueDeskEntry.vue](../codebase/ocharo-catalogue.frontend-services/apps/web/src/presentation/common/CatalogueDeskEntry.vue) |
 
 ## Verification boundary
 
