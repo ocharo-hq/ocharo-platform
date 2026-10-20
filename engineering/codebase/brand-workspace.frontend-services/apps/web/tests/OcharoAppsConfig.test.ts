@@ -1,3 +1,5 @@
+import { defineComponent, h } from 'vue';
+import { mount } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigError, staticSource } from '@wow-two-beta/fe/foundation/config';
@@ -5,13 +7,13 @@ import { ConfigError, staticSource } from '@wow-two-beta/fe/foundation/config';
 import { feedbackBus } from '@/application/shared/UseFeedback';
 import {
   OcharoAppsProblem,
-  buildTimeConfigSource,
   loadOcharoApps,
   reportOcharoAppsStartup,
   resolveOcharoAppsConfig,
   runtimeConfigSource,
+  useOcharoApps,
 } from '@/application/shared/UseOcharoApps';
-import { ocharoApps } from '@/domain/shared/OcharoApps';
+import { ocharoApps, type OcharoApp } from '@/domain/shared/OcharoApps';
 
 /** The local-run addresses Desk falls back to when nothing configures an app. */
 const LocalDefaults = {
@@ -55,12 +57,6 @@ describe('Ocharo app addresses', () => {
     expect(config.OCHARO_DESK_URL).toBe(LocalDefaults.OCHARO_DESK_URL);
   });
 
-  it('keeps reading the existing VITE_OCHARO_* build variables', () => {
-    vi.stubEnv('VITE_OCHARO_WEAR_URL', 'https://wear.example.test/');
-
-    expect(resolveOcharoAppsConfig([buildTimeConfigSource()]).OCHARO_WEAR_URL).toBe('https://wear.example.test/');
-  });
-
   it('rejects a malformed runtime value instead of falling back to the build-time one', () => {
     const resolve = () => resolveOcharoAppsConfig([
       runtimeConfigSource({ OCHARO_CATALOGUE_URL: 'not a link' }),
@@ -98,6 +94,27 @@ describe('startup resolution', () => {
     expect(startup.problems).toEqual([]);
     expect(startup.addresses).toMatchObject({ catalogue: 'https://catalogue.example.test/catalogues', desk: LocalDefaults.OCHARO_DESK_URL });
     expect(ocharoApps(startup.addresses)).toHaveLength(9);
+  });
+
+  it('keeps reading the existing VITE_OCHARO_* build variables behind the served settings', async () => {
+    serveRuntimeConfig({ OCHARO_CATALOGUE_URL: 'https://catalogue.example.test/catalogues' });
+    vi.stubEnv('VITE_OCHARO_WEAR_URL', 'https://wear.example.test/');
+    vi.stubEnv('VITE_OCHARO_CATALOGUE_URL', 'https://build.example.test/catalogues');
+
+    const startup = await loadOcharoApps();
+
+    expect(startup.addresses.wear).toBe('https://wear.example.test/');
+    expect(startup.addresses.catalogue).toBe('https://catalogue.example.test/catalogues');
+    expect(startup.problems).toEqual([]);
+  });
+
+  it('reads the build variables in a component mounted without the startup resolution', () => {
+    vi.stubEnv('VITE_OCHARO_STUDIO_URL', 'https://studio.example.test/studio');
+    let apps: OcharoApp[] = [];
+    mount(defineComponent({ setup() { apps = useOcharoApps(); return () => h('div'); } })).unmount();
+
+    expect(apps.find((app) => app.key === 'studio')?.url).toBe('https://studio.example.test/studio');
+    expect(apps.find((app) => app.key === 'desk')?.url).toBe(LocalDefaults.OCHARO_DESK_URL);
   });
 
   it.each([

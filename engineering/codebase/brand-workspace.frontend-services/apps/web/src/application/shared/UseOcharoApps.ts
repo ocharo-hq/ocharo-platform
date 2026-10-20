@@ -2,6 +2,7 @@ import { inject, type InjectionKey, type Plugin } from 'vue';
 import {
   ConfigError,
   defineConfig,
+  importMetaEnvSource,
   staticSource,
   url,
   type ConfigSchema,
@@ -66,14 +67,6 @@ export function runtimeConfigSource(values: RuntimeConfigValues): ConfigSource {
   return staticSource(Object.fromEntries(Object.entries(values).map(([key, value]) => [`${BuildTimePrefix}${key}`, value])));
 }
 
-/**
- * The build-time source: the `VITE_` values Vite inlines into Desk. Read here, in app code, because the SDK's
- * `importMetaEnvSource()` ships pre-built and reads its own `import.meta`, which no consumer build inlines.
- */
-export function buildTimeConfigSource(): ConfigSource {
-  return staticSource(import.meta.env as Record<string, string | undefined>);
-}
-
 /** Resolves every address, earlier sources first; throws one `ConfigError` naming each malformed value. */
 export function resolveOcharoAppsConfig(sources: readonly ConfigSource[]): OcharoAppsConfig {
   return defineConfig(OcharoAppsConfigSchema, { sources, prefix: BuildTimePrefix });
@@ -104,7 +97,9 @@ function resolveAddresses(sources: readonly ConfigSource[]): { addresses: Ocharo
 /** Reads the served settings once, then resolves every address over the build-time values and local defaults. */
 export async function loadOcharoApps(signal: AbortSignal = new AbortController().signal): Promise<OcharoAppsStartup> {
   const runtime = await runtimeConfigApi.get(signal);
-  const sources = runtime.ok ? [runtimeConfigSource(runtime.value), buildTimeConfigSource()] : [buildTimeConfigSource()];
+  // Desk hands the SDK its own `import.meta.env`: Vite inlines the `VITE_` values only in app modules.
+  const buildTime = importMetaEnvSource(import.meta.env);
+  const sources = runtime.ok ? [runtimeConfigSource(runtime.value), buildTime] : [buildTime];
   const { addresses, error } = resolveAddresses(sources);
   return {
     addresses,
@@ -137,5 +132,5 @@ export function ocharoAppsPlugin(addresses: OcharoAppAddresses): Plugin {
 
 /** The app menu's destinations: the startup resolution, or the build-time values and defaults where none is provided. */
 export function useOcharoApps(): OcharoApp[] {
-  return ocharoApps(inject(OcharoAppsKey, () => resolveAddresses([buildTimeConfigSource()]).addresses, true));
+  return ocharoApps(inject(OcharoAppsKey, () => resolveAddresses([importMetaEnvSource(import.meta.env)]).addresses, true));
 }

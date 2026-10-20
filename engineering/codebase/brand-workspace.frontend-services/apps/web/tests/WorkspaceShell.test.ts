@@ -1,4 +1,4 @@
-import { defineComponent, h } from 'vue';
+import { defineComponent, h, nextTick } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,12 +7,18 @@ import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
 import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
 
 import { loadOcharoApps, ocharoAppsPlugin } from '@/application/shared/UseOcharoApps';
+import { provideUiLocale, useUiLocale } from '@/application/shared/UseUiLocale';
 import { useAccess } from '@/application/workspace/UseAccess';
+import DeskFrame from '@/presentation/workspace/frame/DeskFrame.vue';
 import WorkspacePage from '@/presentation/workspace/WorkspacePage.vue';
 
 import { deskRouter } from './helpers/DeskRouter';
 
 const ORG = '11111111-1111-4111-8111-111111111111';
+/** The single membership most tests sign in with. */
+const OwnerMembership = [{ id: ORG, name: 'Ocharo', slug: 'ocharo', role: 'owner' }];
+/** The API version `/api/system/version` reports. */
+const ApiVersion = '0.4.2';
 /** The key earlier Desk builds stored the sidebar rail choice under. */
 const SidebarCollapsedKey = 'ocharo.desk.sidebar-collapsed';
 let wrapper: VueWrapper | undefined;
@@ -20,6 +26,8 @@ let client: ReturnType<typeof createQueryClient> | undefined;
 
 afterEach(() => {
   wrapper?.unmount();
+  useUiLocale().setUiLocale('en');
+  localStorage.removeItem('ocharo.operator.locale');
   client?.clear();
   localStorage.removeItem(SidebarCollapsedKey);
   vi.unstubAllGlobals();
@@ -27,10 +35,15 @@ afterEach(() => {
 });
 
 /**
- * Mounts the workspace at `path` for a viewport `width` wide, with one organization the operator owns. Given
- * `runtimeConfig`, Desk serves it from `/api/runtime-config` and the app menu resolves it the way startup does.
+ * Mounts the workspace at `path` for a viewport `width` wide, by default with one organization the operator owns.
+ * Given `runtimeConfig`, Desk serves it from `/api/runtime-config` and the app menu resolves it the way startup does.
  */
-async function renderAt(path: string, width: number, runtimeConfig?: Record<string, string>) {
+async function renderAt(
+  path: string,
+  width: number,
+  runtimeConfig?: Record<string, string>,
+  organizations: readonly { id: string; name: string; slug: string; role: string }[] = OwnerMembership,
+) {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: width >= Number(query.match(/min-width:\s*(\d+)px/)?.[1] ?? Infinity),
     media: query,
@@ -41,16 +54,15 @@ async function renderAt(path: string, width: number, runtimeConfig?: Record<stri
     removeListener: vi.fn(),
     dispatchEvent: vi.fn(),
   }));
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((input: RequestInfo | URL) => {
-      const url = String(input instanceof Request ? input.url : input);
-      const pathname = new URL(url, 'https://localhost').pathname;
-      if (pathname === '/api/runtime-config') return Promise.resolve(Response.json(runtimeConfig ?? {}));
-      const organizations = [{ id: ORG, name: 'Ocharo', slug: 'ocharo', role: 'owner' }];
-      return Promise.resolve(Response.json({ data: pathname === '/api/organizations' ? organizations : [] }));
-    }),
-  );
+  const fetch = vi.fn((input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    const pathname = new URL(url, 'https://localhost').pathname;
+    if (pathname === '/api/runtime-config') return Promise.resolve(Response.json(runtimeConfig ?? {}));
+    if (pathname === '/api/system/version') return Promise.resolve(Response.json({ version: ApiVersion }));
+    if (pathname === '/api/auth/logout') return Promise.resolve(new Response(null, { status: 204 }));
+    return Promise.resolve(Response.json({ data: pathname === '/api/organizations' ? organizations : [] }));
+  });
+  vi.stubGlobal('fetch', fetch);
   window.history.replaceState(null, '', path);
   const router = await deskRouter();
   const assign = vi.fn();
@@ -59,6 +71,7 @@ async function renderAt(path: string, width: number, runtimeConfig?: Record<stri
   wrapper = mount(
     defineComponent({
       setup() {
+        provideUiLocale();
         const access = useAccess({ assign, reload: vi.fn(), router });
         access.session.value = {
           authenticated: true,
@@ -73,7 +86,47 @@ async function renderAt(path: string, width: number, runtimeConfig?: Record<stri
     { global: { plugins: [queryPlugin(client), router, ...ocharoApps] }, attachTo: document.body },
   );
   await flushPromises();
-  return { router, assign };
+  return { router, assign, fetch };
+}
+
+/**
+ * Lets the menu's teleport and focus settle, then lets the clock move on: Vue's event invoker ignores an event
+ * stamped in the same millisecond its listener was attached.
+ */
+async function settle(): Promise<void> {
+  await flushPromises();
+  for (let tick = 0; tick < 4; tick += 1) await nextTick();
+  const settledAt = Date.now();
+  while (Date.now() === settledAt) await Promise.resolve();
+}
+
+/** The account menu's trigger in the top bar: the button around the account avatar. */
+function accountTrigger(): HTMLButtonElement {
+  const trigger = wrapper!.get('header [data-account-menu-avatar]').element.closest('button');
+  if (!trigger) throw new Error('The top bar has no account menu.');
+  return trigger;
+}
+
+/** Opens the account menu and returns its panel. */
+async function openAccountMenu(): Promise<HTMLElement> {
+  accountTrigger().click();
+  await settle();
+  const panel = [...document.querySelectorAll<HTMLElement>('[role="menu"]')].find((menu) =>
+    menu.querySelector('[data-account-menu-identity]'));
+  if (!panel) throw new Error('The account menu did not open.');
+  return panel;
+}
+
+/** The rows of the open account menu, in order. */
+function accountRows(panel: HTMLElement): HTMLElement[] {
+  return [...panel.querySelectorAll<HTMLElement>('[role^="menuitem"]')];
+}
+
+/** The open menu's row whose text includes `text`. */
+function accountRow(panel: HTMLElement, text: string): HTMLElement {
+  const row = accountRows(panel).find((node) => node.textContent?.includes(text));
+  if (!row) throw new Error(`No account menu row reads ${text}.`);
+  return row;
 }
 
 describe('Ocharo frame in Desk', () => {
@@ -146,5 +199,91 @@ describe('Ocharo frame in Desk', () => {
     expect(window.location.pathname).toBe(`/organizations/${ORG}/media`);
     expect(wrapper!.get('nav[aria-label="Desk sections"] [aria-current="page"]').text()).toBe('Media');
     expect(assign).not.toHaveBeenCalled();
+  });
+});
+
+describe('account menu in Desk', () => {
+  it('names the operator and the sole organization, with every service version and sign-out last', async () => {
+    await renderAt(`/organizations/${ORG}/brands`, 1440);
+
+    expect(accountTrigger().getAttribute('aria-label')).toBe('Account menu for Local verification operator');
+    const panel = await openAccountMenu();
+
+    expect(panel.getAttribute('aria-label')).toBe('Account');
+    const identity = panel.querySelector<HTMLElement>('[data-account-menu-identity]')!;
+    expect(identity.textContent).toContain('Local verification operator');
+    expect(identity.textContent).toContain('operator@example.test');
+    expect(identity.textContent).toContain('Ocharo · owner');
+    expect(panel.querySelector('[data-account-menu-organizations]')).toBeNull();
+    const versions = [...panel.querySelectorAll('[data-account-menu-version]')].map((row) =>
+      [...row.children].map((cell) => cell.textContent?.trim()).join(' '));
+    expect(versions).toEqual([`Desk ${__APP_VERSION__}`, `API ${ApiVersion}`]);
+    const rows = accountRows(panel).map((row) => row.textContent?.trim());
+    expect(rows).toEqual(['Account settings', 'System', 'Light', 'Dark', 'O‘zbekcha', 'Русский', 'English', 'Sign out']);
+  });
+
+  it('opens account settings from its own row', async () => {
+    await renderAt(`/organizations/${ORG}/brands`, 1440);
+
+    accountRow(await openAccountMenu(), 'Account settings').click();
+    await settle();
+
+    expect(wrapper!.findComponent(DeskFrame).emitted('settings')).toHaveLength(1);
+  });
+
+  it('switches organization by replacing the document, and keeps a long membership list in its own band', async () => {
+    const memberships = Array.from({ length: 15 }, (_, index) => ({
+      id: index === 0 ? ORG : `2222222${index.toString(16)}-2222-4222-8222-222222222222`,
+      name: index === 0 ? 'Ocharo' : `Workshop ${index}`,
+      slug: `workshop-${index}`,
+      role: index === 0 ? 'owner' : 'editor',
+    }));
+    const { assign } = await renderAt(`/organizations/${ORG}/brands`, 1440, undefined, memberships);
+
+    const panel = await openAccountMenu();
+    const list = panel.querySelector<HTMLElement>('[data-account-menu-organization-list]')!;
+    expect(list.querySelectorAll('[role="menuitemradio"]')).toHaveLength(15);
+    expect(list.className).toContain('max-h-44');
+    expect(list.className).toContain('overflow-y-auto');
+    const material = panel.querySelector<HTMLElement>('.oc-glass-menu')!;
+    expect(material.className).toContain('max-h-[calc(100dvh-5rem)]');
+    expect(material.className).toContain('overflow-y-auto');
+    expect(accountRows(panel).at(-1)?.textContent?.trim()).toBe('Sign out');
+    expect(accountRow(panel, 'Ocharo').getAttribute('aria-checked')).toBe('true');
+
+    accountRow(panel, 'Workshop 3').click();
+    await settle();
+
+    expect(assign).toHaveBeenCalledWith(`/organizations/${memberships[3]!.id}`);
+  });
+
+  it('switches the interface language and renames its own controls', async () => {
+    await renderAt(`/organizations/${ORG}/brands`, 1440);
+
+    accountRow(await openAccountMenu(), 'Русский').click();
+    await settle();
+
+    expect(useUiLocale().uiLocale.value).toBe('ru');
+    expect(document.documentElement.lang).toBe('ru');
+    expect(accountTrigger().getAttribute('aria-label')).toBe('Меню учётной записи Local verification operator');
+    const panel = await openAccountMenu();
+    expect(panel.getAttribute('aria-label')).toBe('Учётная запись');
+    expect(accountRow(panel, 'Выйти')).toBe(accountRows(panel).at(-1));
+    expect(accountRows(panel).map((row) => row.textContent?.trim())).toEqual(
+      expect.arrayContaining(['Системная', 'Светлая', 'Тёмная']),
+    );
+  });
+
+  it('signs out through the server from the last row', async () => {
+    const { assign, fetch } = await renderAt(`/organizations/${ORG}/brands`, 1440);
+
+    const panel = await openAccountMenu();
+    accountRows(panel).at(-1)!.click();
+    await settle();
+
+    const logout = fetch.mock.calls.find(([input]) => String(input instanceof Request ? input.url : input).endsWith('/api/auth/logout'));
+    // The client passes its request options as a second argument the mock's own signature leaves out.
+    expect(((logout as unknown[] | undefined)?.[1] as RequestInit | undefined)?.method).toBe('POST');
+    expect(assign).toHaveBeenCalledTimes(1);
   });
 });
