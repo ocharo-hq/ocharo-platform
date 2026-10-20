@@ -124,7 +124,10 @@ describe('SDK component wording', () => {
   });
 
   it('declares Uzbek and Russian for every SDK message key it overrides', () => {
-    expect(Object.keys(sdkUiMessages)).toEqual(expect.arrayContaining(['PasswordInput.revealLabel', 'PasswordInput.concealLabel', 'ToastHost.notifications']));
+    const accountMenuKeys = ['menuLabel', 'triggerLabel', 'anonymousTriggerLabel', 'appearanceLabel', 'systemModeLabel', 'lightModeLabel',
+      'darkModeLabel', 'languageLabel', 'organizationLabel', 'versionsLabel', 'signOutLabel'].map((key) => `AccountMenu.${key}`);
+    expect(Object.keys(sdkUiMessages)).toEqual(expect.arrayContaining(['PasswordInput.revealLabel', 'PasswordInput.concealLabel', 'ToastHost.notifications', ...accountMenuKeys]));
+    expect(sdkUiMessages['AccountMenu.triggerLabel']).toEqual({ uz: expect.stringContaining('{name}'), ru: expect.stringContaining('{name}') });
     expect(Object.entries(sdkUiMessages).filter(([, message]) => !message.uz.trim() || !message.ru.trim())).toEqual([]);
   });
 });

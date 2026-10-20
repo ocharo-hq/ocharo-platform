@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, useTemplateRef, watch } from 'vue';
+import { computed, onMounted, useTemplateRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { ChevronRight, RotateCw } from 'lucide-vue-next';
+import { ChevronRight, RotateCw, UserCog } from 'lucide-vue-next';
 import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
 import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
 import {
@@ -11,14 +11,21 @@ import {
   AppShellMain,
   AppShellSidebar,
 } from '@wow-two-beta/fe/presentation/layout';
+import {
+  AccountMenu,
+  MenuItem,
+  type AccountMenuLocale,
+  type AccountMenuOrganization,
+  type AccountMenuVersion,
+} from '@wow-two-beta/fe/presentation/nav';
 
+import { useBuildIdentity } from '@/application/shared/UseBuildIdentity';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
 import { DeskGroupLabels, DeskSections, deskSectionLabel } from '@/domain/workspace/DeskSections';
 import type { WorkspaceLocation } from '@/domain/workspace/Models';
 
-import AccountMenu from './AccountMenu.vue';
 import DeskNav from './DeskNav.vue';
 import OcharoAppsMenu from './OcharoAppsMenu.vue';
 import PhoneNav from './PhoneNav.vue';
@@ -27,6 +34,12 @@ import PhoneNav from './PhoneNav.vue';
 const SidebarWidth = { Full: '244px', Rail: '68px' } as const;
 /** Where this browser remembers the desktop sidebar's rail choice; existing choices keep reading from it. @internal */
 const SidebarCollapsedKey = 'ocharo.desk.sidebar-collapsed';
+/** The interface languages, each named in its own language. @internal */
+const UiLanguages: readonly AccountMenuLocale[] = [
+  { value: 'uz', label: 'O‘zbekcha' },
+  { value: 'ru', label: 'Русский' },
+  { value: 'en', label: 'English' },
+];
 
 /**
  * The Ocharo frame, as Desk wears it. The glass top bar is the suite's: the app button, where you are, and the account
@@ -37,7 +50,8 @@ defineOptions({ name: 'DeskFrame' });
 const props = defineProps<{ access: AccessControls; workspace: WorkspaceControls; location: WorkspaceLocation }>();
 const emit = defineEmits<{ settings: [] }>();
 defineSlots<{ default(): unknown }>();
-const { t } = useUiLocale();
+const { t, uiLocale, setUiLocale } = useUiLocale();
+const { backendVersion, refresh: refreshBackendVersion } = useBuildIdentity();
 const route = useRoute();
 // The stored choice seeds the first render too, so a collapsed rail never animates in from the full sidebar.
 const collapsed = usePersistentState(SidebarCollapsedKey, localStorageStorageBroker.read<boolean>(SidebarCollapsedKey) === true);
@@ -45,6 +59,17 @@ const breakpoint = useBreakpoint(TailwindBreakpoints);
 const main = useTemplateRef<{ el: HTMLElement | null }>('main');
 
 const organization = computed(() => props.workspace.organization.value ?? null);
+const user = computed(() => props.access.session.value?.user ?? null);
+/** The account menu names the person; the email stands in when no display name is set. */
+const accountName = computed(() => user.value?.displayName || user.value?.email || '');
+const accountEmail = computed(() => (user.value?.displayName ? user.value.email : ''));
+const memberships = computed<AccountMenuOrganization[]>(() =>
+  (props.workspace.organizations.value ?? []).map((org) => ({ id: org.id, label: org.name, description: t(org.role) })),
+);
+const versions = computed<AccountMenuVersion[]>(() => [
+  { label: 'Desk', version: __APP_VERSION__ },
+  { label: 'API', version: t(backendVersion.value) },
+]);
 /** Sections need an organization; the organization chooser shows the frame without them. */
 const hasSections = computed(() => Boolean(organization.value));
 const isDesktop = computed(() => ['lg', 'xl', '2xl'].includes(breakpoint.value ?? ''));
@@ -60,6 +85,13 @@ const crumbs = computed(() => {
   const group = entry ? DeskGroupLabels[entry.group] : null;
   return [...(group ? [t(group)] : []), t(deskSectionLabel(props.location.section))];
 });
+
+/** Switching organization replaces the document, so nothing private carries across. @internal */
+function switchOrganization(id: string): void {
+  void props.access.navigate(`/organizations/${id}`);
+}
+
+onMounted(() => void refreshBackendVersion());
 
 /* A new section starts at the top of the scrolling region; a move inside a section keeps its place. */
 watch(
@@ -112,7 +144,24 @@ watch(
         >
           <RotateCw :size="18" :class="{ 'animate-spin motion-reduce:animate-none': workspace.refreshing.value }" aria-hidden="true" />
         </button>
-        <AccountMenu :access="access" :workspace="workspace" @settings="emit('settings')" />
+        <AccountMenu
+          :name="accountName"
+          :description="accountEmail"
+          :organizations="memberships"
+          :organization="organization?.id ?? ''"
+          :locales="UiLanguages"
+          :locale="uiLocale"
+          :versions="versions"
+          :is-busy="access.busy.value"
+          panel-class="oc-glass-menu border-(--oc-glass-edge) text-foreground shadow-(--oc-menu-shadow)"
+          @update:organization="switchOrganization"
+          @update:locale="setUiLocale"
+          @sign-out="access.logout"
+        >
+          <template #items>
+            <MenuItem @select="emit('settings')"><UserCog :size="15" aria-hidden="true" />{{ t('Account settings') }}</MenuItem>
+          </template>
+        </AccountMenu>
       </div>
     </AppShellHeader>
     <AppShellSidebar v-if="hasSections" class="oc-glass-side border-e border-(--oc-glass-edge)">

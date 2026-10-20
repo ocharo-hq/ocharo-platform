@@ -1,6 +1,6 @@
 import type { UiMessageTable } from './UiMessages';
 
-/** The Ocharo frame: the app menu, Desk's sections, the phone bar and the account menu. */
+/** The Ocharo frame: the app menu, Desk's sections and the phone bar; the SDK account menu reads `SdkUiMessages`. */
 export const shellUiMessages: UiMessageTable = {
   "Cards": { "uz": "Vizitkalar", "ru": "Визитки" },
   "Apps": { "uz": "Ilovalar", "ru": "Приложения" },
@@ -35,12 +35,5 @@ export const shellUiMessages: UiMessageTable = {
   "Collapse sidebar": { "uz": "Yon panelni yig‘ish", "ru": "Свернуть боковую панель" },
   "More": { "uz": "Yana", "ru": "Ещё" },
   "More in Desk": { "uz": "Desk’dagi boshqa bo‘limlar", "ru": "Другие разделы Desk" },
-  "Account": { "uz": "Hisob", "ru": "Учётная запись" },
-  "Match device": { "uz": "Qurilmaga moslash", "ru": "Как на устройстве" },
-  "Light": { "uz": "Yorug‘", "ru": "Светлая" },
-  "Dark": { "uz": "Qorong‘i", "ru": "Тёмная" },
-  "Account menu for {name}": { "uz": "{name} hisob menyusi", "ru": "Меню учётной записи {name}" },
-  "Appearance": { "uz": "Ko‘rinish", "ru": "Оформление" },
-  "Desk {app} · API {api}": { "uz": "Desk {app} · API {api}", "ru": "Desk {app} · API {api}" },
   "You are here": { "uz": "Siz shu yerdasiz", "ru": "Вы здесь" }
 };
