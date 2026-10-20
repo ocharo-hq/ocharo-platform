@@ -11,6 +11,18 @@ Defer to `wow-two-ws/conventions/development/frontend/`.
 - App source uses `bootstrap`, `presentation`, `application`, `domain`, and `integration` layers.
 - The greeting endpoint returns plain `{ message }`; the SDK client uses `rawEnvelope` and validates that wire shape.
 
+## Frame and configuration
+
+- `bootstrap/AppLayout.vue` is the one operator frame; `bootstrap/PublicReaderLayout.vue` frames only the published reader.
+- `index.html` carries `theme-ocharo`; `vite.config.ts` serves and emits `/theme.js`, the SDK `colorModeScript` for
+  `ocharo.catalogue.theme`. The sidebar rail choice is stored under `ocharo.catalogue.sidebar-collapsed`.
+- `application/shared/UseOcharoApps.ts` is the config seam. Startup reads `/api/runtime-config` (3 s bound) ahead of
+  the `VITE_` build values and the local defaults. Keys: `OCHARO_DESK_URL`, `OCHARO_CATALOGUE_URL`, `OCHARO_STUDIO_URL`,
+  `OCHARO_MARKETING_URL`, `OCHARO_EDITORIAL_URL`, `OCHARO_BRAND_URL`, `OCHARO_ATLAS_URL`, `OCHARO_WEAR_URL`,
+  `OCHARO_BLOG_URL` (served at runtime) and `OCHARO_BRAND_API_URL` (build-time only, the print sheet's Brand API).
+- The account menu holds appearance, interface language and the Catalogue and API versions; with an Ocharo session it
+  also offers the Desk account and sign-out.
+
 ## Commands
 
 Run from the frontend root:
