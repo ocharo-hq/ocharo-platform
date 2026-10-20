@@ -1,6 +1,6 @@
 # Ocharo Platform — Backlog
 
-*Last updated: 2026-10-19*
+*Last updated: 2026-10-20*
 
 ## Features
 
@@ -27,7 +27,6 @@ Build order set by the owner on 2026-10-08: **Events → Sourcing → Catalogue*
 | Companion consolidation | engineering | Retained Brand/Catalogue pilots stay loopback-only until absorption. |
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
 | Migration version adoption | engineering | Adopt a published SDK migration field supporting full prerelease versions beyond 20 characters; never truncate identity. |
-| Runtime app-menu addresses | engineering | Desk's Ocharo app menu takes app and site URLs from build-time `VITE_OCHARO_*` values with localhost defaults; a deployed build links to localhost. Serve them as runtime public settings (deploy descriptor rule) before the deployed menu is relied on. |
 | SDK startup migration seam | engineering | `MigrateBespokeOnStartupAsync` needs `AddPostgresPersistence` and creates the database; Desk owns its `NpgsqlDataSource`, so its host calls `IMigrationRunnerService` directly and installs the Hangfire schema itself. Adopt a published helper over a caller's own data source when the SDK offers one. |
 
 ## Catalogue review — 2026-10-01

@@ -29,6 +29,7 @@ using BrandWorkspace.Infrastructure.Sourcing.Services;
 using BrandWorkspace.Persistence.Sourcing.Repositories;
 using BrandWorkspace.Api.Events;
 using BrandWorkspace.Api.Mcp;
+using BrandWorkspace.Api.RuntimeConfig.Settings;
 using WoW.Two.Sdk.Beta.Be.Ai.Mcp;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Infrastructure.Events.Services;
@@ -308,6 +309,25 @@ public static partial class HostConfiguration
         };
         builder.Services.AddStatelessMcpServer().WithTools<DeskReadTools>(json);
         return builder;
+    }
+
+    /// <summary>Registers the public runtime settings the SPA reads at startup: the Ocharo app and site addresses.</summary>
+    private static WebApplicationBuilder AddRuntimeConfig(this WebApplicationBuilder builder)
+    {
+        // Every address is optional, and a malformed one is left out rather than failing the host over a menu link.
+        builder.Services.AddValidatedSettings<OcharoAppsSettings>(builder.Configuration, OcharoAppsSettings.SectionName, _ => { });
+        builder.Services.AddControllers();
+        return builder;
+    }
+
+    /// <summary>Maps the runtime-config controller and warns once about any address it leaves out.</summary>
+    private static WebApplication MapRuntimeConfig(this WebApplication app)
+    {
+        var rejected = app.Services.GetRequiredService<OcharoAppsSettings>().RejectedSettings();
+        if (rejected.Count > 0)
+            app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
+        app.MapControllers();
+        return app;
     }
 
     /// <summary>Registers the HTTP surface: forwarded headers trusted only from loopback and <c>Deployment:TrustedProxies</c>, and JSON errors.</summary>

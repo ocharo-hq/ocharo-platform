@@ -6,24 +6,31 @@ import { ColorModeProvider } from '@wow-two-beta/fe/foundation/primitives';
 import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
 import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
 
+import { loadOcharoApps, ocharoAppsPlugin } from '@/application/shared/UseOcharoApps';
 import { useAccess } from '@/application/workspace/UseAccess';
 import WorkspacePage from '@/presentation/workspace/WorkspacePage.vue';
 
 import { deskRouter } from './helpers/DeskRouter';
 
 const ORG = '11111111-1111-4111-8111-111111111111';
+/** The key earlier Desk builds stored the sidebar rail choice under. */
+const SidebarCollapsedKey = 'ocharo.desk.sidebar-collapsed';
 let wrapper: VueWrapper | undefined;
 let client: ReturnType<typeof createQueryClient> | undefined;
 
 afterEach(() => {
   wrapper?.unmount();
   client?.clear();
+  localStorage.removeItem(SidebarCollapsedKey);
   vi.unstubAllGlobals();
   window.history.replaceState(null, '', '/');
 });
 
-/** Mounts the workspace at `path` for a viewport `width` wide, with one organization the operator owns. */
-async function renderAt(path: string, width: number) {
+/**
+ * Mounts the workspace at `path` for a viewport `width` wide, with one organization the operator owns. Given
+ * `runtimeConfig`, Desk serves it from `/api/runtime-config` and the app menu resolves it the way startup does.
+ */
+async function renderAt(path: string, width: number, runtimeConfig?: Record<string, string>) {
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: width >= Number(query.match(/min-width:\s*(\d+)px/)?.[1] ?? Infinity),
     media: query,
@@ -38,13 +45,16 @@ async function renderAt(path: string, width: number) {
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
+      const pathname = new URL(url, 'https://localhost').pathname;
+      if (pathname === '/api/runtime-config') return Promise.resolve(Response.json(runtimeConfig ?? {}));
       const organizations = [{ id: ORG, name: 'Ocharo', slug: 'ocharo', role: 'owner' }];
-      return Promise.resolve(Response.json({ data: new URL(url, 'https://localhost').pathname === '/api/organizations' ? organizations : [] }));
+      return Promise.resolve(Response.json({ data: pathname === '/api/organizations' ? organizations : [] }));
     }),
   );
   window.history.replaceState(null, '', path);
   const router = await deskRouter();
   const assign = vi.fn();
+  const ocharoApps = runtimeConfig ? [ocharoAppsPlugin((await loadOcharoApps()).addresses)] : [];
   client = createQueryClient({ retry: { ...DefaultRetryPolicy, maxRetries: 0 } });
   wrapper = mount(
     defineComponent({
@@ -60,7 +70,7 @@ async function renderAt(path: string, width: number) {
         return () => h(ColorModeProvider, { storageKey: 'ocharo.desk.theme.test' }, () => h(WorkspacePage, { access }));
       },
     }),
-    { global: { plugins: [queryPlugin(client), router] }, attachTo: document.body },
+    { global: { plugins: [queryPlugin(client), router, ...ocharoApps] }, attachTo: document.body },
   );
   await flushPromises();
   return { router, assign };
@@ -93,6 +103,27 @@ describe('Ocharo frame in Desk', () => {
     expect(document.querySelector('a[href="https://localhost:8282/catalogues"]')?.textContent).toContain('Catalogue');
     expect(document.querySelector('a[target="_blank"][href="https://localhost:8284/atlas/"]')).not.toBeNull();
     expect(document.querySelector('[data-phone-layout="fullscreen"]') !== null).toBe(fullScreen);
+  });
+
+  it('links the apps menu to the Catalogue address Desk serves at runtime', async () => {
+    await renderAt(`/organizations/${ORG}/brands`, 1440, { OCHARO_CATALOGUE_URL: 'https://ocharo-catalogue-dev.example.ts.net/catalogues' });
+
+    await wrapper!.get('header button[aria-label="Ocharo apps — Desk"]').trigger('click');
+    await flushPromises();
+
+    expect(document.querySelector('a[href="https://ocharo-catalogue-dev.example.ts.net/catalogues"]')?.textContent).toContain('Catalogue');
+    expect(document.querySelector('a[href="https://localhost:8282/catalogues"]')).toBeNull();
+    expect(document.querySelector('a[target="_blank"][href="https://localhost:8284/atlas/"]')).not.toBeNull();
+  });
+
+  it('keeps the sidebar rail choice this browser already stored, and stores a change under the same key', async () => {
+    localStorage.setItem(SidebarCollapsedKey, 'true');
+    await renderAt(`/organizations/${ORG}/brands`, 1440);
+
+    await wrapper!.get('button[aria-label="Expand sidebar"]').trigger('click');
+
+    expect(wrapper!.find('button[aria-label="Collapse sidebar"]').exists()).toBe(true);
+    expect(localStorage.getItem(SidebarCollapsedKey)).toBe('false');
   });
 
   it('lists every section in the sidebar and marks the open one', async () => {

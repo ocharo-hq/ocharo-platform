@@ -3,6 +3,7 @@ import { computed, useTemplateRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ChevronRight, RotateCw } from 'lucide-vue-next';
 import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
+import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
 import {
   AppShell,
   AppShellContent,
@@ -11,7 +12,6 @@ import {
   AppShellSidebar,
 } from '@wow-two-beta/fe/presentation/layout';
 
-import { useSidebarCollapsed } from '@/application/shared/UseSidebarCollapsed';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
@@ -25,6 +25,8 @@ import PhoneNav from './PhoneNav.vue';
 
 /** The sidebar's widths: full, and the icon rail. @internal */
 const SidebarWidth = { Full: '244px', Rail: '68px' } as const;
+/** Where this browser remembers the desktop sidebar's rail choice; existing choices keep reading from it. @internal */
+const SidebarCollapsedKey = 'ocharo.desk.sidebar-collapsed';
 
 /**
  * The Ocharo frame, as Desk wears it. The glass top bar is the suite's: the app button, where you are, and the account
@@ -37,7 +39,8 @@ const emit = defineEmits<{ settings: [] }>();
 defineSlots<{ default(): unknown }>();
 const { t } = useUiLocale();
 const route = useRoute();
-const collapsed = useSidebarCollapsed();
+// The stored choice seeds the first render too, so a collapsed rail never animates in from the full sidebar.
+const collapsed = usePersistentState(SidebarCollapsedKey, localStorageStorageBroker.read<boolean>(SidebarCollapsedKey) === true);
 const breakpoint = useBreakpoint(TailwindBreakpoints);
 const main = useTemplateRef<{ el: HTMLElement | null }>('main');
 
@@ -45,7 +48,7 @@ const organization = computed(() => props.workspace.organization.value ?? null);
 /** Sections need an organization; the organization chooser shows the frame without them. */
 const hasSections = computed(() => Boolean(organization.value));
 const isDesktop = computed(() => ['lg', 'xl', '2xl'].includes(breakpoint.value ?? ''));
-const isRail = computed(() => !isDesktop.value || collapsed.value);
+const isRail = computed(() => !isDesktop.value || collapsed.value.value);
 const sidebarWidth = computed(() => (hasSections.value ? (isRail.value ? SidebarWidth.Rail : SidebarWidth.Full) : '0px'));
 /** Sections without a refresh control of their own reload the shared workspace reads from the top bar. */
 const sharedRefresh = computed(() => hasSections.value && ['media', 'brands', 'content', 'integrations'].includes(props.location.section));
@@ -118,7 +121,7 @@ watch(
         :current="location.section"
         :collapsed="isRail"
         :can-toggle="isDesktop"
-        @toggle="collapsed = !collapsed"
+        @toggle="collapsed.setValue((previous) => !previous)"
       />
     </AppShellSidebar>
     <AppShellMain ref="main" class="min-w-0">
