@@ -28,7 +28,7 @@ services:
     volumes:
       keys: /var/lib/brand-workspace/keys
     sites:
-      app: { exposure: private }
+      app: { exposure: public }           # a domain, or Wheelhouse's sslip.io host until one is bound
   jobs:
     build: { dockerfile: deployment/Dockerfile.worker }
     paths:
