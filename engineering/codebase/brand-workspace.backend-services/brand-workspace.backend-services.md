@@ -1,6 +1,6 @@
 # Backend foundation
 
-*Last updated: 2026-10-19*
+*Last updated: 2026-10-20*
 
 .NET 10 API and independent worker, with PostgreSQL-owned technical diagnostics.
 The API exposes no business mutation and starts no job processor. Authentication,
@@ -114,6 +114,24 @@ one within 30 seconds means `healthy`; an older or future timestamp means `stale
 This is worker-process liveness, not provider readiness or proof that a particular
 job succeeded. A database outage produces HTTP `503`, never a fabricated heartbeat.
 Unknown `/api` paths, including dotted paths and non-GET methods, return JSON `404`.
+
+- `GET /api/runtime-config`: the public settings the SPA reads once at startup (`RuntimeConfigController`, the
+  only MVC controller). Anonymous, `Cache-Control: no-store`, and never a secret. It answers a flat JSON object of
+  the configured `OcharoApps:*` addresses under the SPA's config keys; an unset or malformed address is left out,
+  and nothing configured answers `{}`:
+
+```json
+{
+  "OCHARO_DESK_URL": "https://ocharo-desk-dev.<tailnet>.ts.net/",
+  "OCHARO_CATALOGUE_URL": "https://ocharo-catalogue-dev.<tailnet>.ts.net/catalogues"
+}
+```
+
+The keys are `OCHARO_{DESK,CATALOGUE,STUDIO,MARKETING,EDITORIAL,BRAND,ATLAS,WEAR,BLOG}_URL`, from the settings
+`OcharoApps:{Desk,Catalogue,Studio,Marketing,Editorial,Brand,Atlas,Wear,Blog}` ([target settings](../../deployment/deployment.md#target-settings)).
+A value is served only as an absolute HTTPS address without credentials, query or fragment; the host logs one startup
+warning naming each setting it leaves out. The SPA layers these values ahead of its build-time `VITE_OCHARO_*_URL`
+values and local `localhost` defaults.
 
 ## SDK adoption boundary
 

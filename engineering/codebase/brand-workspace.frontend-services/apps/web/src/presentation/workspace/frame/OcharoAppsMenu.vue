@@ -2,8 +2,9 @@
 import { computed } from 'vue';
 import { AppSwitcherKind, AppSwitcherMenu, type AppSwitcherItem } from '@wow-two-beta/fe/presentation/nav';
 
+import { useOcharoApps } from '@/application/shared/UseOcharoApps';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import { OcharoAppKind, ocharoApps, type OcharoApp } from '@/domain/shared/OcharoApps';
+import { OcharoAppKind, type OcharoApp } from '@/domain/shared/OcharoApps';
 
 import { AppIcons } from './ShellIcons';
 
@@ -14,7 +15,7 @@ import { AppIcons } from './ShellIcons';
 defineOptions({ name: 'OcharoAppsMenu' });
 const props = defineProps<{ current: OcharoApp['key']; label: string; subtitle?: string | null }>();
 const { t } = useUiLocale();
-const apps = ocharoApps(import.meta.env as Record<string, string | undefined>);
+const apps = useOcharoApps();
 const items = computed<AppSwitcherItem[]>(() =>
   apps.map((app) => ({
     key: app.key,

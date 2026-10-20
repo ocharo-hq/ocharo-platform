@@ -1,6 +1,6 @@
 # Deployment and local runtime
 
-*Last updated: 2026-10-19*
+*Last updated: 2026-10-20*
 
 ## Artifacts and ownership
 
@@ -172,6 +172,28 @@ backend SDK (`10.0.71-beta`) reads it. Both environments run as .NET `Production
   behind the TLS-terminating ingress.
 - `jobs` declares `dependsOn: [desk]`: it refuses to start before the schema exists, and Desk reports
   healthy only after migrating.
+
+`desk` also reads optional public settings, which it serves anonymously at `GET /api/runtime-config` for the
+Ocharo app menu. Each is an absolute HTTPS address without credentials, query or fragment:
+
+| Setting | Runtime-config key | Links to |
+|---|---|---|
+| `OcharoApps:Desk` | `OCHARO_DESK_URL` | Desk |
+| `OcharoApps:Catalogue` | `OCHARO_CATALOGUE_URL` | Catalogue |
+| `OcharoApps:Studio` | `OCHARO_STUDIO_URL` | Studio |
+| `OcharoApps:Marketing` | `OCHARO_MARKETING_URL` | Marketing |
+| `OcharoApps:Editorial` | `OCHARO_EDITORIAL_URL` | Editorial (the Blog studio) |
+| `OcharoApps:Brand` | `OCHARO_BRAND_URL` | Brand |
+| `OcharoApps:Atlas` | `OCHARO_ATLAS_URL` | Atlas public site |
+| `OcharoApps:Wear` | `OCHARO_WEAR_URL` | Wear public site |
+| `OcharoApps:Blog` | `OCHARO_BLOG_URL` | Blog public site |
+
+- Dev and prod values are each environment's tailnet site URL, for example `https://ocharo-desk-dev.<tailnet>.ts.net/`
+  for `OcharoApps:Desk` on dev.
+- A key left unset keeps the build-time `VITE_OCHARO_*` value, else the local-run `localhost` address, so set every
+  key the menu should link to on a deployed target.
+- Desk leaves out a malformed value and logs a startup warning naming the setting; the menu omits that app.
+- A changed address takes effect on the next page load; no rebuild or redeploy of the image is needed.
 
 Production credentials, key encryption, backups, identity recovery, and operational acceptance remain
 separate work before storing real brand data. No real brand account is provisioned by scaffolding.
