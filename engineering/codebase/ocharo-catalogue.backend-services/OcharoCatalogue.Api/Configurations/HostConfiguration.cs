@@ -18,6 +18,7 @@ public static partial class HostConfiguration
             .AddClock()
             .AddCatalogue()
             .AddMediator()
+            .AddRuntimeConfig()
             .AddControllers();
 
         return builder;
@@ -42,7 +43,9 @@ public static partial class HostConfiguration
         app.UseDefaultFiles();
         app.UseStaticFiles();
 
+        app.WarnAboutRejectedRuntimeConfig();
         app.MapControllers();
+        // Retained for existing callers; `GET api/system/status` is the conventional status endpoint.
         app.MapGet("/api/system/version", (HttpContext context) =>
         {
             context.Response.Headers.CacheControl = "no-store";

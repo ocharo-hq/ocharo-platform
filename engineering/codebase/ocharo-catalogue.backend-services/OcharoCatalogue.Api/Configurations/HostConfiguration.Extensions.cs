@@ -2,6 +2,7 @@ using Ocharo.Sso;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using OcharoCatalogue.Api.RuntimeConfig.Settings;
 using OcharoCatalogue.Application;
 using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue.Models;
@@ -11,6 +12,7 @@ using OcharoCatalogue.Infrastructure.Catalogue;
 using OcharoCatalogue.Infrastructure.Time;
 using OcharoCatalogue.Persistence;
 using OcharoCatalogue.Persistence.Catalogue;
+using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
@@ -79,6 +81,22 @@ public static partial class HostConfiguration
     {
         builder.Services.AddMediator(typeof(ApplicationAssembly).Assembly);
         return builder;
+    }
+
+    /// <summary>Registers the public runtime settings the SPA reads at startup: the Ocharo app and site addresses.</summary>
+    private static WebApplicationBuilder AddRuntimeConfig(this WebApplicationBuilder builder)
+    {
+        // Every address is optional, and a malformed one is left out rather than failing the host over a menu link.
+        builder.Services.AddValidatedSettings<OcharoAppsSettings>(builder.Configuration, OcharoAppsSettings.SectionName, _ => { });
+        return builder;
+    }
+
+    /// <summary>Warns once about each configured app address the runtime config leaves out.</summary>
+    private static void WarnAboutRejectedRuntimeConfig(this WebApplication app)
+    {
+        var rejected = app.Services.GetRequiredService<OcharoAppsSettings>().RejectedSettings();
+        if (rejected.Count > 0)
+            app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
     }
 
     /// <summary>Registers the HTTP error boundary, controllers and OpenAPI.</summary>

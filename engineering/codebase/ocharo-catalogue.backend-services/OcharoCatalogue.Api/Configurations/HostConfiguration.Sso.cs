@@ -8,7 +8,8 @@ public static partial class HostConfiguration
     {
         if (!HttpMethods.IsGet(http.Request.Method) && !HttpMethods.IsHead(http.Request.Method)) return false;
         var path = http.Request.Path;
-        return path.StartsWithSegments("/c") || path.StartsWithSegments("/api/public") || path.StartsWithSegments("/api/catalogue/media") || path == "/health" || path == "/api/system/version";
+        return path.StartsWithSegments("/c") || path.StartsWithSegments("/api/public") || path.StartsWithSegments("/api/catalogue/media") || path == "/health"
+            || path == "/api/system/version" || path == "/api/system/status" || path == "/api/runtime-config";
     }
 
     private static Task RequirePublicationApproval(HttpContext http, RequestDelegate next)
