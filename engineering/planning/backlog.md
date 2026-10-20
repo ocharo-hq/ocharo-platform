@@ -28,7 +28,7 @@ Build order set by the owner on 2026-10-08: **Events → Sourcing → Catalogue*
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
 | Migration version adoption | engineering | Adopt a published SDK migration field supporting full prerelease versions beyond 20 characters; never truncate identity. |
 | SDK startup migration seam | engineering | `MigrateBespokeOnStartupAsync` needs `AddPostgresPersistence` and creates the database; Desk owns its `NpgsqlDataSource`, so its host calls `IMigrationRunnerService` directly and installs the Hangfire schema itself. Adopt a published helper over a caller's own data source when the SDK offers one. |
-| Frame rollout | feature | Marketing and Brand take the Ocharo frame, runtime app links and the SDK account menu; Desk and Catalogue (Iteration 22) and Studio (2026-10-20) carry it. |
+| Frame rollout | feature | The Brand pilot takes the Ocharo frame, runtime app links and the SDK account menu; Desk and Catalogue (Iteration 22), Studio (2026-10-20), Marketing and Editorial (2026-10-21) carry it. |
 | SSO session identity | engineering | `Ocharo.Sso`'s `/api/sso/session` returns no display name or email, so Catalogue's account menu cannot name the signed-in operator. |
 | Editorial label key | engineering | The "Editorial" app label shares a message key with the designer theme, so uz reads "Jurnal uslubi" in Desk and Catalogue; give the app its own key. |
 | SDK glass strength | engineering | The SDK `glass` surface (75% fill, 12px blur) is weaker than the approved frame (84–92%, 24px); Desk and Catalogue copy the `oc-glass` utilities. Adopt a glass-strength token once the fe sdk offers one. |
