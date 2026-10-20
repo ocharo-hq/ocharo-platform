@@ -263,9 +263,9 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
                   <span
                     v-for="id in product.collectionIds.slice(0, 2)"
                     :key="id"
-                    class="chip bg-secondary text-secondary-foreground"
+                    class="chip bg-muted text-muted-foreground"
                     >{{ collectionNames.get(id) ?? id }}</span
-                  ><span v-if="product.collectionIds.length > 2" class="chip bg-secondary text-secondary-foreground"
+                  ><span v-if="product.collectionIds.length > 2" class="chip bg-muted text-muted-foreground"
                     >+{{ product.collectionIds.length - 2 }}</span
                   >
                 </div>

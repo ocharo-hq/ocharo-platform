@@ -1,13 +1,14 @@
 import { computed, shallowRef } from 'vue';
 import { brandContactLines, type BrandKit } from '../../domain/catalogue/BrandKit';
 import { fetchBrandKit } from '../../integration/brand';
+import { useBrandApiUrl } from '../shared/UseOcharoApps';
 
 const kit = shallowRef<BrandKit | null>(null);
 let pending: Promise<void> | null = null;
 
 /** The published Ocharo brand kit (logo, links), loaded once per page session. */
 export function useBrandKit() {
-  pending ??= fetchBrandKit().then((value) => {
+  pending ??= fetchBrandKit(useBrandApiUrl()).then((value) => {
     kit.value = value;
   });
   return {

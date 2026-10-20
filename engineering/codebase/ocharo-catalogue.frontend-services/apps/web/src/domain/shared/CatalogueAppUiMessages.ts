@@ -17,11 +17,7 @@ export const catalogueAppUiMessages: UiMessageTable = {
   'No notifications yet.': { uz: 'Hozircha bildirishnoma yo‘q.', ru: 'Уведомлений пока нет.' },
   'Catalogue created.': { uz: 'Katalog yaratildi.', ru: 'Каталог создан.' },
   'Ocharo apps': { uz: 'Ocharo ilovalari', ru: 'Приложения Ocharo' },
-  Workspace: { uz: 'Ish maydoni', ru: 'Рабочее пространство' },
-  'Blog studio': { uz: 'Blog muharriri', ru: 'Редактор блога' },
   Blog: { uz: 'Blog', ru: 'Блог' },
-  Atlas: { uz: 'Atlas', ru: 'Атлас' },
-  Wear: { uz: 'Uslub', ru: 'Стиль' },
   Catalogues: {
     uz: 'Kataloglar',
     ru: 'Каталоги',

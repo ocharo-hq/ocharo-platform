@@ -27,7 +27,7 @@ watch(
         type="button"
         :aria-label="t('Notifications')"
         :title="t('Notifications')"
-        class="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-chrome-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <Icon :icon="Bell" :size="20" />
         <span
@@ -39,7 +39,7 @@ watch(
       </button>
     </PopoverTrigger>
     <PopoverContent
-      class="no-print w-[min(24rem,calc(100vw-2rem))] rounded-2xl border-border bg-menu p-0 text-foreground"
+      class="no-print w-[min(24rem,calc(100vw-2rem))] oc-glass-menu rounded-2xl border-(--oc-glass-edge) p-0 text-foreground shadow-(--oc-menu-shadow)"
     >
       <NotificationCenterGroup
         :bus="feedbackBus"
