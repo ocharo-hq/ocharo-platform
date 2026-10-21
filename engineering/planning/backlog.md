@@ -26,6 +26,8 @@ Build order set by the owner on 2026-10-08: **Events → Sourcing → Catalogue*
 | Merchant evidence | feature | Validate order evidence and real workflow attribution. |
 | Companion consolidation | engineering | Retained Brand/Catalogue pilots stay loopback-only until absorption. |
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
+| Ocharo Identity adoption | engineering | Move Desk's accounts, organizations, memberships and Telegram links into the Ocharo instance of WoW2 Identity; make every app an OIDC client; retire integration tickets, the SSO broker and the `Ocharo.Sso` snapshots. Waits on SDK identity slices I14–I21. |
+| Ocharo File Storage adoption | engineering | Move Catalogue, Brand, Blog and Marketing media, then Desk's `bytea` files, onto the Ocharo instance of WoW2 File Storage. Waits on the SDK files module. |
 | Migration version adoption | engineering | Adopt a published SDK migration field supporting full prerelease versions beyond 20 characters; never truncate identity. |
 | SDK startup migration seam | engineering | `MigrateBespokeOnStartupAsync` needs `AddPostgresPersistence` and creates the database; Desk owns its `NpgsqlDataSource`, so its host calls `IMigrationRunnerService` directly and installs the Hangfire schema itself. Adopt a published helper over a caller's own data source when the SDK offers one. |
 | Brand localization | feature | Localize the Brand pilot's pages (uz/ru/en): about 150–200 Uzbek literals across the five pages, skeletons, store notices, API failure copy and logo slot labels; replace `UzDates` with locale-aware dates; then read `ocharo.operator.locale` and offer the three languages in its account menu. |
