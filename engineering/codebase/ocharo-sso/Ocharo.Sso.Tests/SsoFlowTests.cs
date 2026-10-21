@@ -161,6 +161,61 @@ public sealed class SsoFlowTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.DoesNotContain(response.Headers.GetValues("Set-Cookie"), value => value.StartsWith("__Host-ocharo-catalogue=", StringComparison.Ordinal));
     }
+    [Fact]
+    public async Task Session_ReturnsDeskOperatorNameAndEmail_WithoutCaching()
+    {
+        using var app = await TestApp.Start();
+        var cookie = await app.Login();
+        var response = await app.Send("/api/sso/session", cookie);
+        Assert.True(response.Headers.CacheControl!.NoStore);
+        var data = await Data(response);
+        Assert.Equal("Malika Operator", data.GetProperty("name").GetString());
+        Assert.Equal("operator@example.test", data.GetProperty("email").GetString());
+        app.Desk.DisplayName = "Malika R.";
+        Assert.Equal("Malika R.", (await Data(await app.Send("/api/sso/session", cookie))).GetProperty("name").GetString());
+        Assert.DoesNotContain("Malika", cookie);
+    }
+    [Fact]
+    public async Task Session_ReturnsNullIdentity_ForLegacyDeskIntrospectionWithoutProfile()
+    {
+        using var app = await TestApp.Start();
+        app.Desk.LegacyIntrospection = true;
+        var cookie = await app.Login();
+        var data = await Data(await app.Send("/api/sso/session", cookie));
+        Assert.True(data.GetProperty("authenticated").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("name").ValueKind);
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("email").ValueKind);
+        Assert.Equal(HttpStatusCode.OK, (await app.Send("/api/private", cookie)).StatusCode);
+    }
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("Line\nbreak")]
+    [InlineData(null)]
+    public async Task Session_DropsBlankOrUnsafeProfileValues_WithoutFailing(string? value)
+    {
+        using var app = await TestApp.Start();
+        app.Desk.DisplayName = value;
+        app.Desk.Email = value is null ? new string('e', 300) + "@example.test" : value;
+        var cookie = await app.Login();
+        var data = await Data(await app.Send("/api/sso/session", cookie));
+        Assert.True(data.GetProperty("authenticated").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("name").ValueKind);
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("email").ValueKind);
+    }
+    [Fact]
+    public async Task Session_OmitsIdentity_WhenAnonymousOrDisabled()
+    {
+        using var app = await TestApp.Start();
+        var anonymous = await Data(await app.Client.GetAsync("/api/sso/session"));
+        Assert.False(anonymous.GetProperty("authenticated").GetBoolean());
+        Assert.False(anonymous.TryGetProperty("name", out _));
+        Assert.False(anonymous.TryGetProperty("email", out _));
+        Assert.Equal(0, app.Desk.Introspections);
+        using var disabled = await TestApp.Start(enabled:false);
+        var off = await Data(await disabled.Client.GetAsync("/api/sso/session"));
+        Assert.False(off.TryGetProperty("name", out _));
+        Assert.False(off.TryGetProperty("email", out _));
+    }
     private static async Task<JsonElement> Data(HttpResponseMessage response)
     {
         response.EnsureSuccessStatusCode();
@@ -243,7 +298,8 @@ public sealed class SsoFlowTests
         public string Secret = new('s',48);
         public string? Challenge;
         public int Exchanges,Refreshes,Introspections,Revocations;
-        public bool Active=true, CanEdit=true, OversizedResponse;
+        public bool Active=true, CanEdit=true, OversizedResponse, LegacyIntrospection;
+        public string? DisplayName="Malika Operator", Email="operator@example.test";
         public Guid Organization = TestApp.Org;
         private string refresh = new('r',43);
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -272,7 +328,10 @@ public sealed class SsoFlowTests
                 case "/api/integrations/introspect":
                     Interlocked.Increment(ref Introspections);
                     Assert.Equal("ocharo-catalogue",json.GetProperty("audience").GetString());
-                    return Json(new { data = new { active = Active && json.GetProperty("token").GetString()=="synthetic-ticket", userId="operator", organizationId=Organization, role="owner", canEdit=CanEdit, canApprove=true, expiresAt=clock.Now.AddMinutes(5) } });
+                    var active = Active && json.GetProperty("token").GetString()=="synthetic-ticket";
+                    if (LegacyIntrospection)
+                        return Json(new { data = new { active, userId="operator", organizationId=Organization, role="owner", canEdit=CanEdit, canApprove=true, expiresAt=clock.Now.AddMinutes(5) } });
+                    return Json(new { data = new { active, userId="operator", organizationId=Organization, role="owner", canEdit=CanEdit, canApprove=true, expiresAt=clock.Now.AddMinutes(5), displayName=DisplayName, email=Email } });
                 default: throw new InvalidOperationException("Unexpected backchannel");
             }
         }

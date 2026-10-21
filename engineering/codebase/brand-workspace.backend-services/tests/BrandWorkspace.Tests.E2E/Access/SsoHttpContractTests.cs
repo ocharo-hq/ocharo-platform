@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using BrandWorkspace.Api;
 using BrandWorkspace.Api.Sso;
+using BrandWorkspace.Persistence.Access;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
@@ -72,6 +73,30 @@ public sealed class SsoHttpContractTests(AccessDatabaseFixture database) : IClas
     }
 
     [Fact]
+    public async Task ExchangedTicket_ShouldIntrospectTheOperatorsCurrentDeskProfile()
+    {
+        var organization = Guid.NewGuid();
+        await using var factory = Factory(organization);
+        using var browser = Client(factory);
+        var (_, user) = await SignInMemberAsync(factory, browser, organization);
+        using var server = Client(factory, false);
+        var grant = await TokenAsync(await ExchangeAsync(server, await CodeAsync(browser)));
+        Assert.False(grant.TryGetProperty("email", out _));
+        var ticket = grant.GetProperty("ticket").GetString()!;
+        var actor = await IntrospectAsync(server, ticket);
+        Assert.True(actor.GetProperty("active").GetBoolean());
+        Assert.Equal(organization, actor.GetProperty("organizationId").GetGuid());
+        Assert.Equal("Test operator", actor.GetProperty("displayName").GetString());
+        Assert.Equal(user.Email, actor.GetProperty("email").GetString());
+        await database.ExecuteAsync("UPDATE access.users SET \"DisplayName\"='' WHERE id=$1", user.Id);
+        Assert.Equal(user.Email, (await IntrospectAsync(server, ticket)).GetProperty("displayName").GetString());
+        await database.ExecuteAsync("DELETE FROM access.memberships WHERE organization_id=$1", organization);
+        var revoked = await IntrospectAsync(server, ticket);
+        Assert.False(revoked.GetProperty("active").GetBoolean());
+        Assert.False(revoked.TryGetProperty("email", out _));
+    }
+
+    [Fact]
     public async Task Backchannel_ShouldRejectBrowserOriginAndPlaintextTransport()
     {
         var organization = Guid.NewGuid();
@@ -97,7 +122,7 @@ public sealed class SsoHttpContractTests(AccessDatabaseFixture database) : IClas
         var organization = Guid.NewGuid();
         await using var factory = Factory(organization);
         using var browser = Client(factory);
-        var csrf = await SignInMemberAsync(factory, browser, organization);
+        var (csrf, _) = await SignInMemberAsync(factory, browser, organization);
         using var server = Client(factory, false);
         var issued = await TokenAsync(await ExchangeAsync(server, await CodeAsync(browser)));
         var old = issued.GetProperty("refreshToken").GetString()!;
@@ -191,12 +216,12 @@ public sealed class SsoHttpContractTests(AccessDatabaseFixture database) : IClas
     private static HttpClient Client(WebApiTestHost<ApiAssemblyMarker> factory, bool cookies = true) =>
         factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), AllowAutoRedirect = false, HandleCookies = cookies });
 
-    private async Task<string> SignInMemberAsync(WebApiTestHost<ApiAssemblyMarker> factory, HttpClient browser, Guid organization)
+    private async Task<(string Csrf, AccessUser User)> SignInMemberAsync(WebApiTestHost<ApiAssemblyMarker> factory, HttpClient browser, Guid organization)
     {
         var user = await AccessDatabaseFixture.CreateOperatorAsync(factory);
         await database.ExecuteAsync("INSERT INTO access.organizations(id,name,slug) VALUES ($1,'SSO fixture',$2)", organization, "sso-" + organization.ToString("N"));
         await database.ExecuteAsync("INSERT INTO access.memberships(organization_id,user_id,role) VALUES ($1,$2,'owner')", organization, user.Id);
-        return await AccessDatabaseFixture.LoginAsync(browser, user);
+        return (await AccessDatabaseFixture.LoginAsync(browser, user), user);
     }
 
     private static string AuthorizeUrl(string redirect = Redirect) => QueryHelpers.AddQueryString("/api/sso/authorize", new Dictionary<string, string?>
@@ -222,10 +247,13 @@ public sealed class SsoHttpContractTests(AccessDatabaseFixture database) : IClas
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
     }
-    private static async Task<bool> ActiveAsync(HttpClient server, string ticket)
+    private static async Task<bool> ActiveAsync(HttpClient server, string ticket) =>
+        (await IntrospectAsync(server, ticket)).GetProperty("active").GetBoolean();
+    private static async Task<JsonElement> IntrospectAsync(HttpClient server, string ticket)
     {
         using var response = await server.PostAsJsonAsync("/api/integrations/introspect", new { token = ticket, audience = "ocharo-catalogue" });
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").GetProperty("active").GetBoolean();
+        Assert.True(response.Headers.CacheControl!.NoStore);
+        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
     }
 }

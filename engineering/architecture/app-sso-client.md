@@ -25,7 +25,7 @@ Register the exact `{ClientOrigin}/api/sso/callback` in Desk. Do not derive call
 
 - `GET /api/sso/login?returnUrl=/local/path` starts authorization; destinations are bounded local application paths.
 - `GET /api/sso/callback` requires the initiating browser's correlation cookie and single-use state.
-- `GET /api/sso/session` returns enabled/authenticated state, capabilities and a session CSRF token; no delegated or refresh credentials.
+- `GET /api/sso/session` returns enabled/authenticated state, capabilities, a session CSRF token and, when authenticated, the operator's current Desk `name` and `email` (null when Desk has none); no delegated or refresh credentials.
 - Cookie-based writes require `X-CSRF-Token` and a compatible origin. Bearer integrations still require live, audience-bound authorization.
 - `POST /api/sso/logout` ends this application's grant only. It does **not** end the Desk session. Use Desk's account controls for global sign-out. App navigation may transparently authorize again while Desk remains signed in; no UI claims otherwise.
 - A failed write is never replayed. On session expiry, Catalogue, Brand, Marketing and Editorial reconnect in another tab and preserve unsaved editor content; the user explicitly checks the restored connection before saving again. Studio uses same-tab authorization only after its dirty/saving guard permits navigation, with its existing recovery mechanism preserving other drafts.
@@ -37,7 +37,7 @@ Backchannel calls use five-second budgets, disabled automatic redirects/cookies,
 
 ## Evidence
 
-Shared component: 15 HTTP tests pass against distinct synthetic Desk/app origins, covering PKCE, correlation, callback replay, cookies, CSRF, live revocation, organization and write permissions, concurrent refresh, logout, optional media authority, disabled mode, oversized responses and restart invalidation.
+Shared component: 21 HTTP tests pass against distinct synthetic Desk/app origins, covering PKCE, correlation, callback replay, cookies, CSRF, live revocation, organization and write permissions, concurrent refresh, logout, optional media authority, disabled mode, oversized responses, restart invalidation and session identity (current name/email, legacy Desk responses without them, unsafe values and anonymous omission).
 
 Catalogue: 59 tests pass. Brand: 10 tests pass. Each suite includes enabled-host authorization checks alongside retained pilot behavior, including case-insensitive publication routes with trailing slashes. Catalogue additionally tests anonymous media eligibility, private no-store reads, prepared-only exclusion and historical release withdrawal/archive. The final combined Desk Telegram/password/SSO, integration-ticket and media-authorization gate passes 69 tests against disposable databases and fake Telegram transport. These results do not establish live provider activation or deployment.
 

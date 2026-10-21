@@ -27,14 +27,19 @@ public sealed class IntegrationTickets(IConfiguration configuration, TimeProvide
             new Claim("sid", sessionId.ToString()), new Claim("jti", Guid.NewGuid().ToString())]);
         return new(token, time.GetUtcNow().AddMinutes(5));
     }
+    /// <summary>Live authority for the ticket holder, with that operator's current Desk profile name (email when blank) and email.</summary>
     public async Task<object> IntrospectAsync(string? token, string? audience, CancellationToken cancellation)
     {
         var result = await ValidateAsync(token, audience, cancellation);
         if (result is null) return new { active = false };
         var member = result.Membership;
+        var profile = await access.FindProfileAsync(member.UserId, cancellation);
+        var email = Present(profile?.Email);
         return new { active = true, userId = member.UserId, organizationId = member.OrganizationId, role = member.Role,
-            canEdit = member.CanEdit, canApprove = member.CanApprove, expiresAt = result.ExpiresAt };
+            canEdit = member.CanEdit, canApprove = member.CanApprove, expiresAt = result.ExpiresAt,
+            displayName = Present(profile?.DisplayName) ?? email, email };
     }
+    private static string? Present(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     /// <summary>Resolves a trusted live membership from a bounded audience-specific delegated ticket.</summary>
     public async Task<IntegrationAccess?> ValidateAsync(string? token, string? audience, CancellationToken cancellation)

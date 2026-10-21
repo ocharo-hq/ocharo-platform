@@ -1,6 +1,6 @@
 # Backend foundation
 
-*Last updated: 2026-10-20*
+*Last updated: 2026-10-21*
 
 .NET 10 API and independent worker, with PostgreSQL-owned technical diagnostics.
 The API exposes no business mutation and starts no job processor. Authentication,
@@ -132,6 +132,20 @@ The keys are `OCHARO_{DESK,CATALOGUE,STUDIO,MARKETING,EDITORIAL,BRAND,ATLAS,WEAR
 A value is served only as an absolute HTTPS address without credentials, query or fragment; the host logs one startup
 warning naming each setting it leaves out. The SPA layers these values ahead of its build-time `VITE_OCHARO_*_URL`
 values and local `localhost` defaults.
+
+### App sign-in (SSO)
+
+Desk issues delegated access to Ocharo apps through `/api/sso/{authorize,exchange,refresh,revoke}`; the protocol,
+trust configuration and limits are in the [Ocharo SSO doc](../ocharo-sso/README.md).
+
+- `POST /api/integrations/introspect` (`IntegrationTickets`): anonymous backchannel over HTTPS, `no-store`. For an
+  audience-bound ticket whose Desk session and organization membership are still live it answers
+  `{ data: { active: true, userId, organizationId, role, canEdit, canApprove, expiresAt, displayName, email } }`;
+  anything else answers `{ data: { active: false } }` with no profile.
+- `displayName` and `email` are read from `access.users` on each introspection (`IAccessRepository.FindProfileAsync`),
+  so they are the ticket holder's own current profile. A blank name falls back to the email; a missing user or value
+  is `null`. The exchange and refresh bodies stay credential-only; apps receive identity only through introspection.
+- No schema change: `DisplayName` and `Email` already exist on `access.users` (migration `002-access`).
 
 ## SDK adoption boundary
 

@@ -331,6 +331,7 @@ public sealed class MediaProcessingEndpointTests
             MembershipChecks++;
             return Task.FromResult(organizationId == Organization && userId == "media-test-operator" ? Member : null);
         }
+        public Task<OperatorProfile?> FindProfileAsync(string userId, CancellationToken token) => Task.FromResult<OperatorProfile?>(null);
         public Task CreateSessionAsync(Guid sessionId, string userId, string securityStamp, DateTimeOffset expiresAt, Guid? replacedSessionId, CancellationToken token) => throw new NotSupportedException();
         public Task RevokeSessionAsync(Guid sessionId, DateTimeOffset now, CancellationToken token) => throw new NotSupportedException();
         public Task<IReadOnlyList<Organization>> ListOrganizationsAsync(string userId, CancellationToken token) => throw new NotSupportedException();
