@@ -1,49 +1,137 @@
 @import 'tailwindcss';
 @import '@wow-two-beta/fe/styles.css';
+
+/* The fe SDK's Ocharo theme (Ink and Raspberry / Neutral graphite) and its ambient backdrop, applied by
+   `theme-ocharo` on <html> (index.html) with `dark` from the colour-mode provider. After styles.css, so it wins. */
+@import '@wow-two-beta/fe/themes.css';
 @source '../../node_modules/@wow-two-beta/fe/dist';
 
-/* Shared Ocharo operator palette (same tokens as Ocharo Marketing). */
+/* Type and paper depth are Brand's own; every interface colour comes from the theme. */
 @theme {
-  --color-background: #f5f2eb;
-  --color-foreground: #272924;
-  --color-card: #fffdf8;
-  --color-card-foreground: #272924;
-  --color-primary: #783e4c;
-  --color-primary-foreground: #fffdf8;
-  --color-primary-soft: #f3e7e9;
-  --color-primary-soft-foreground: #783e4c;
-  --color-secondary: #eeeae0;
-  --color-secondary-foreground: #494c43;
-  --color-muted: #efede6;
-  --color-muted-foreground: #76796e;
-  --color-border: #e6e2d8;
-  --color-ring: #783e4c;
-  --color-success: #426553;
-  --color-success-soft: #e9f0e9;
-  --color-success-soft-foreground: #426553;
-  --color-warning: #906623;
-  --color-warning-soft: #f8efdd;
-  --color-warning-soft-foreground: #906623;
-  --color-destructive: #a0443d;
-  --color-destructive-soft: #fae9e6;
-  --color-destructive-soft-foreground: #a0443d;
   --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
   --font-editorial: Georgia, 'Times New Roman', serif;
-  --shadow-paper: 0 12px 35px #25292306;
+  --shadow-paper: 0 12px 35px rgb(24 32 60 / 4%);
+
+  /* Proof surfaces the brand's artwork is judged on: paper, ink and a transparency check. They are part of the
+     brand, not of the interface, so they stay these exact colours in light and dark and no theme redefines them. */
+  --color-artwork-paper: #f8f7f3;
+  --color-artwork-ink: #20211e;
+  --color-artwork-check: #e6e2d8;
+  --color-artwork-check-alt: #fffdf8;
 }
 
-html {
-  color: var(--color-foreground);
-  background: var(--color-background);
-  font-family: var(--font-sans);
+/* The approved Ocharo glass is stronger than the fe SDK `glass` variants (a fixed 75% card fill, 12px blur): 84%
+   header and 92% menu in light, 90% and 96% graphite in dark, 24px blur. Until glass strength is a theme token, the
+   materials live here, matching Desk's and Catalogue's. */
+:root {
+  --oc-glass-color: rgb(255 255 255 / 0.84);
+  --oc-glass-side-color: rgb(255 255 255 / 0.6);
+  --oc-glass-menu-color: rgb(255 255 255 / 0.92);
+  --oc-glass-edge: rgb(24 27 37 / 0.08);
+  --oc-glass-highlight: rgb(255 255 255 / 0.9);
+  --oc-glass-saturate: 120%;
+  --oc-glass-shadow: 0 10px 30px rgb(24 27 37 / 0.06), inset 0 1px 0 var(--oc-glass-highlight);
+  --oc-menu-shadow: 0 18px 50px rgb(24 27 37 / 0.16), inset 0 1px 0 var(--oc-glass-highlight);
 }
-body {
-  margin: 0;
-  min-width: 320px;
+
+.dark {
+  --oc-glass-color: rgb(41 41 45 / 0.9);
+  --oc-glass-side-color: rgb(33 33 37 / 0.7);
+  --oc-glass-menu-color: rgb(41 41 45 / 0.96);
+  --oc-glass-edge: rgb(255 255 255 / 0.07);
+  --oc-glass-highlight: rgb(255 255 255 / 0.06);
+  --oc-glass-saturate: 100%;
+  --oc-glass-shadow: 0 12px 32px rgb(0 0 0 / 0.25), inset 0 1px 0 var(--oc-glass-highlight);
+  --oc-menu-shadow: 0 20px 60px rgb(0 0 0 / 0.5), inset 0 1px 0 var(--oc-glass-highlight);
 }
+
+/* One backdrop layer per surface. Solid card is the baseline for browsers without blur and for reduced transparency;
+   logo artwork and editing fields never sit under glass. */
+@utility oc-glass {
+  --oc-glass-fill: var(--color-card);
+  background-color: var(--oc-glass-fill);
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    --oc-glass-fill: var(--oc-glass-color);
+    -webkit-backdrop-filter: blur(24px) saturate(var(--oc-glass-saturate));
+    backdrop-filter: blur(24px) saturate(var(--oc-glass-saturate));
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    --oc-glass-fill: var(--color-card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@utility oc-glass-side {
+  background-color: var(--color-card);
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    background-color: var(--oc-glass-side-color);
+    -webkit-backdrop-filter: blur(24px) saturate(var(--oc-glass-saturate));
+    backdrop-filter: blur(24px) saturate(var(--oc-glass-saturate));
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-card);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@utility oc-glass-menu {
+  background-color: var(--color-popover);
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    background-color: var(--oc-glass-menu-color);
+    -webkit-backdrop-filter: blur(24px) saturate(var(--oc-glass-saturate));
+    backdrop-filter: blur(24px) saturate(var(--oc-glass-saturate));
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    background-color: var(--color-popover);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* The transparency check behind a logo: two fixed artwork tones in 8px squares. */
+@utility artwork-check {
+  background: repeating-conic-gradient(var(--color-artwork-check) 0% 25%, var(--color-artwork-check-alt) 0% 50%) 50% /
+    16px 16px;
+}
+
+@layer base {
+  /* The frame's main region scrolls; the document never does, so the canvas only needs the page colour for
+     overscroll and the first paint. */
+  html {
+    color: var(--color-foreground);
+    background-color: var(--color-background);
+    font-family: var(--font-sans);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .oc-mark {
+    @apply grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary text-lg font-bold leading-none tracking-tight text-primary-foreground;
+  }
+  .oc-app-icon {
+    @apply grid size-9 shrink-0 place-items-center rounded-[10px] border border-primary/10 bg-primary-soft/70 text-primary-soft-foreground;
+  }
+}
+
 /* Operator form/button vocabulary as Tailwind v4 utilities (composable with @apply). */
 @utility field {
   @apply w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15;
+  border-color: var(--color-input);
 }
 @utility label {
   @apply mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
@@ -65,6 +153,7 @@ body {
 }
 @utility btn-outline {
   @apply btn border border-border bg-card hover:bg-muted;
+  border-color: var(--color-input);
 }
 @media print {
   .no-print {
@@ -73,6 +162,17 @@ body {
   html,
   body {
     background: white;
+  }
+  /* The frame scrolls its main region on screen; paper takes the whole document instead. */
+  html,
+  body,
+  #root,
+  .brand-frame,
+  .brand-frame > main {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
   }
 }
 @media (prefers-reduced-motion: reduce) {

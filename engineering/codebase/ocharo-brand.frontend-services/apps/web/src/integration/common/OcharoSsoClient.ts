@@ -76,9 +76,32 @@ export function createSsoClient(fetchImplementation: typeof fetch = globalThis.f
       headers: { 'content-type': 'application/problem+json' },
     });
   }
+  /**
+   * Ends this app's Desk grant (`POST /api/sso/logout`); the Desk session and other apps stay signed in. Readers may
+   * sign out too, so this bypasses the write gate of `sessionFetch` and sends only the CSRF token. Resolves `true` once
+   * the grant is revoked; the session then reads as signed out without reloading the tab.
+   */
+  async function signOut(): Promise<boolean> {
+    const session = current;
+    if (!session.enabled || !session.authenticated || !session.csrfToken) return false;
+    try {
+      const response = await fetchImplementation('/api/sso/logout', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'X-CSRF-Token': session.csrfToken },
+      });
+      if (!response.ok) return false;
+      update({ ...current, authenticated: false, canEdit: false, canApprove: false, csrfToken: null });
+      return true;
+    } catch {
+      return false;
+    }
+  }
   return {
     initialize,
     fetch: sessionFetch,
+    signOut,
     get current() {
       return current;
     },

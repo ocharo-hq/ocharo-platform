@@ -91,7 +91,7 @@ function size(bytes: number) {
           <img
             :src="brand.urls.media(v.sha256, v.hasPreview)"
             alt=""
-            class="h-16 w-20 shrink-0 rounded bg-[#f8f7f3] object-contain p-1"
+            class="h-16 w-20 shrink-0 rounded bg-artwork-paper object-contain p-1"
             loading="lazy"
           />
           <div class="min-w-0 flex-1 text-xs">
