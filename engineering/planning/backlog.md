@@ -29,7 +29,6 @@ Build order set by the owner on 2026-10-08: **Events → Sourcing → Catalogue*
 | Migration version adoption | engineering | Adopt a published SDK migration field supporting full prerelease versions beyond 20 characters; never truncate identity. |
 | SDK startup migration seam | engineering | `MigrateBespokeOnStartupAsync` needs `AddPostgresPersistence` and creates the database; Desk owns its `NpgsqlDataSource`, so its host calls `IMigrationRunnerService` directly and installs the Hangfire schema itself. Adopt a published helper over a caller's own data source when the SDK offers one. |
 | Brand localization | feature | Localize the Brand pilot's pages (uz/ru/en): about 150–200 Uzbek literals across the five pages, skeletons, store notices, API failure copy and logo slot labels; replace `UzDates` with locale-aware dates; then read `ocharo.operator.locale` and offer the three languages in its account menu. |
-| SDK bottom bar glass | engineering | `BottomNavMenu` has no glass variant and hard-codes `bg-background`, so Desk, Catalogue and Brand force `surface-glass!` on their phone bars. Adopt a glass variant once the fe sdk offers one. |
 
 ## Catalogue review — 2026-10-01
 
