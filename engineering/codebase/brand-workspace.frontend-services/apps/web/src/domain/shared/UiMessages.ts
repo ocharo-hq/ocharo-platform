@@ -10,7 +10,11 @@ import { shellUiMessages } from './ShellUiMessages';
 
 /** Operator interface locales are independent from authored catalogue languages. */
 export type UiLocale = 'uz' | 'ru' | 'en';
-export type UiMessageTable = Record<string, { uz: string; ru: string }>;
+/**
+ * Interface messages by key. A key is its English phrase; `en` is set only where one English word needs two keys, such
+ * as Editorial the app and Editorial the designer theme.
+ */
+export type UiMessageTable = Record<string, { uz: string; ru: string; en?: string }>;
 
 /** English source phrases identify operator messages; authored content never passes through this table. */
 const baseUiMessages: UiMessageTable = {
@@ -1775,6 +1779,6 @@ export const uiMessages: UiMessageTable = {
 
 /** Resolves exact interface phrases without interpreting or translating customer-authored data. */
 export function translateUi(source: string, locale: UiLocale, variables?: Record<string, string | number>): string {
-  const message = locale === 'en' ? source : uiMessages[source]?.[locale] ?? source;
+  const message = (locale === 'en' ? uiMessages[source]?.en : uiMessages[source]?.[locale]) ?? source;
   return message.replace(/\{(\w+)\}/g, (match, key: string) => variables && Object.hasOwn(variables, key) ? String(variables[key]) : match);
 }

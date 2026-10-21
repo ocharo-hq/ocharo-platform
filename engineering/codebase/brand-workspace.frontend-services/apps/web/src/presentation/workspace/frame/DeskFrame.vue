@@ -112,10 +112,7 @@ watch(
     sidebar-breakpoint="md"
     :sidebar-width="sidebarWidth"
   >
-    <AppShellHeader
-      height="auto"
-      class="oc-glass border-b border-(--oc-glass-edge) p-0 pt-[env(safe-area-inset-top)] shadow-(--oc-glass-shadow)"
-    >
+    <AppShellHeader height="auto" variant="glass" class="p-0 pt-[env(safe-area-inset-top)]">
       <div class="flex min-h-15 w-full min-w-0 items-center gap-3 px-3 sm:px-4">
         <OcharoAppsMenu current="desk" label="Desk" :subtitle="organization?.name ?? null" />
         <nav
@@ -153,7 +150,7 @@ watch(
           :locale="uiLocale"
           :versions="versions"
           :is-busy="access.busy.value"
-          panel-class="oc-glass-menu border-(--oc-glass-edge) text-foreground shadow-(--oc-menu-shadow)"
+          variant="glass-menu"
           @update:organization="switchOrganization"
           @update:locale="setUiLocale"
           @sign-out="access.logout"
@@ -164,7 +161,7 @@ watch(
         </AccountMenu>
       </div>
     </AppShellHeader>
-    <AppShellSidebar v-if="hasSections" class="oc-glass-side border-e border-(--oc-glass-edge)">
+    <AppShellSidebar v-if="hasSections" variant="glass">
       <DeskNav
         :organization-id="organization!.id"
         :current="location.section"
