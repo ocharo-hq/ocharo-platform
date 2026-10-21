@@ -29,10 +29,7 @@ Build order set by the owner on 2026-10-08: **Events → Sourcing → Catalogue*
 | Migration version adoption | engineering | Adopt a published SDK migration field supporting full prerelease versions beyond 20 characters; never truncate identity. |
 | SDK startup migration seam | engineering | `MigrateBespokeOnStartupAsync` needs `AddPostgresPersistence` and creates the database; Desk owns its `NpgsqlDataSource`, so its host calls `IMigrationRunnerService` directly and installs the Hangfire schema itself. Adopt a published helper over a caller's own data source when the SDK offers one. |
 | Brand localization | feature | Localize the Brand pilot's pages (uz/ru/en): about 150–200 Uzbek literals across the five pages, skeletons, store notices, API failure copy and logo slot labels; replace `UzDates` with locale-aware dates; then read `ocharo.operator.locale` and offer the three languages in its account menu. |
-| SSO session identity | engineering | `Ocharo.Sso`'s `/api/sso/session` returns no display name or email, so Catalogue's account menu cannot name the signed-in operator. |
-| Editorial label key | engineering | The "Editorial" app label shares a message key with the designer theme, so uz reads "Jurnal uslubi" in Desk and Catalogue; give the app its own key. |
-| SDK glass strength | engineering | The SDK `glass` surface (75% fill, 12px blur) is weaker than the approved frame (84–92%, 24px); Desk and Catalogue copy the `oc-glass` utilities. Adopt a glass-strength token once the fe sdk offers one. |
-| SDK menu link item | engineering | `MenuItem` has no link variant, so Catalogue's Desk account item opens with `window.open`; adopt a link item when the fe sdk offers one. |
+| SDK bottom bar glass | engineering | `BottomNavMenu` has no glass variant and hard-codes `bg-background`, so Desk, Catalogue and Brand force `surface-glass!` on their phone bars. Adopt a glass variant once the fe sdk offers one. |
 
 ## Catalogue review — 2026-10-01
 
