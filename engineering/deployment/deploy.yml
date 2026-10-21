@@ -1,14 +1,17 @@
 # yaml-language-server: $schema=../../../../../../../../../conventions/deployment/descriptor/deploy.schema.json
-# What this product deploys: its services, how each builds, what changes it and which sites it serves.
+# What this product deploys: its sites, its services, how each builds, what changes it and which paths it serves.
 # Format and rules: wow-two-ws/conventions/deployment/descriptor/deploy-descriptor.md. Hostnames, secrets and
 # environments live in Wheelhouse targets, never here. Paths are relative to engineering/.
 #
 # Ocharo Platform deploys Desk, its jobs worker and the private image worker. The adopted Brand and Catalogue
-# pilots stay loopback-only and are never deployed; Desk and jobs compile only their Domain projects.
+# pilots are not listed: their hosts refuse every non-loopback caller, so a deployment waits for their access
+# decision (deployment.md § Brand and Catalogue pilots); Desk and jobs compile only their Domain projects.
 # Both environments run as .NET Production (no dotnetEnvironment). Desk applies the schema as it starts and reports
 # ready only afterwards; jobs refuses to start on a missing schema, so it waits for Desk to be healthy.
-descriptor: 1
+descriptor: 2
 product: ocharo-platform
+sites:
+  app: {}                               # Desk, public: a domain, or Wheelhouse's sslip.io host until one is bound
 services:
   desk:
     build: { dockerfile: deployment/Dockerfile }
@@ -23,12 +26,26 @@ services:
     health: /health/ready
     needs: [postgres]
     settings:
-      required: [ConnectionStrings:Database, AllowedHosts, DataProtection:KeysPath, DataProtection:ApplicationName,
-                 Deployment:TrustedProxies]
+      # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies, and fills ConnectionStrings:Database from the
+      # target's own PostgreSQL; nobody types them.
+      required: [ConnectionStrings:Database, AllowedHosts, Deployment:TrustedProxies]
+      keys:
+        DataProtection:KeysPath: { required: true }          # the keys volume: /var/lib/brand-workspace/keys
+        DataProtection:ApplicationName: { required: true }   # keep the deployed value; a change signs everyone out
+        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
+        OcharoApps:Desk: { type: url }
+        OcharoApps:Catalogue: { type: url }
+        OcharoApps:Studio: { type: url }
+        OcharoApps:Marketing: { type: url }
+        OcharoApps:Editorial: { type: url }
+        OcharoApps:Brand: { type: url }
+        OcharoApps:Atlas: { type: url }
+        OcharoApps:Wear: { type: url }
+        OcharoApps:Blog: { type: url }
     volumes:
       keys: /var/lib/brand-workspace/keys
     sites:
-      app: { exposure: public }           # a domain, or Wheelhouse's sslip.io host until one is bound
+      app: {}
   jobs:
     build: { dockerfile: deployment/Dockerfile.worker }
     paths:
@@ -52,6 +69,7 @@ services:
       command: [python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live',timeout=2)"]
     memory: 2g
     settings:
-      required: [ImageWorker:Key]
+      keys:
+        ImageWorker:Key: { secret: true, required: true }
     volumes:
       models: /models

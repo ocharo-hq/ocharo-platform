@@ -32,7 +32,7 @@ concurrency:
 
 jobs:
   delivery:
-    uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/delivery.yml@v0.9.1
+    uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/delivery.yml@v0.10.0
     with:
       commit: ${{ inputs.commit }}
       # Desk compiles the Brand and Catalogue Domain projects and builds its own SPA; the pilots share ocharo-sso.
