@@ -11,11 +11,13 @@ const appPaths = [
   "brand-workspace.frontend-services/apps/web",
   "ocharo-brand.frontend-services/apps/web",
 ];
-/** Desk generates its pre-paint script from the SDK at build time; Brand still ships a fixed file. */
+/** The `localStorage` key Brand's colour mode lives under (its `src/bootstrap/theme.ts`). */
+const BrandThemeStorageKey = "ocharo.brand.theme";
+/** Desk and Brand both generate their pre-paint script from the SDK at build time. */
 function themeSource(path: string): string {
-  return path.startsWith("brand-workspace.")
-    ? colorModeScript({ storageKey: ThemeStorageKey })
-    : readFileSync(resolve(root, path, "public/theme.js"), "utf8");
+  return colorModeScript({
+    storageKey: path.startsWith("brand-workspace.") ? ThemeStorageKey : BrandThemeStorageKey,
+  });
 }
 function boot(
   path: string,
@@ -133,7 +135,7 @@ it("copies the retained Brand proxy helper and first-paint assets into its conta
     expect(docker).toContain(
       `COPY ocharo-brand.frontend-services/apps/web/${folder}/ ./apps/web/${folder}/`,
     );
-    const file = folder === "dev" ? "ProxyProblem.ts" : "theme.js";
+    const file = folder === "dev" ? "ProxyProblem.ts" : "boot-splash.css";
     expect(
       readFileSync(
         resolve(root, "ocharo-brand.frontend-services/apps/web", folder, file),
