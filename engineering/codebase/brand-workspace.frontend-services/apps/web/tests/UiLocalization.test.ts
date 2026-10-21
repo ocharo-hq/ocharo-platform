@@ -10,7 +10,8 @@ import { PasswordInput } from '@wow-two-beta/fe/presentation/forms';
 
 import { initializeUiLocale, provideUiLocale, useUiLocale } from '@/application/shared/UseUiLocale';
 import { sdkUiMessages } from '@/domain/shared/SdkUiMessages';
-import { translateUi, uiMessages } from '@/domain/shared/UiMessages';
+import { ocharoApps } from '@/domain/shared/OcharoApps';
+import { translateUi, uiMessages, type UiLocale } from '@/domain/shared/UiMessages';
 import { emptyCopy, productCopy, type Product } from '@/domain/workspace/Commerce';
 import ProductEditor from '@/presentation/workspace/ProductEditor.vue';
 import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
@@ -104,6 +105,16 @@ describe('operator translation coverage', () => {
     inspect(join(sourceRoot, 'application'));
     inspect(join(sourceRoot, 'presentation'));
     expect([...missing]).toEqual([]);
+  });
+});
+
+describe('Ocharo app names', () => {
+  it('names the Editorial app apart from the Editorial designer theme', () => {
+    const [editorial] = ocharoApps({ editorial: 'https://example.test/' });
+    const locales: UiLocale[] = ['en', 'uz', 'ru'];
+    expect(locales.map((value) => translateUi(editorial!.label, value))).toEqual(['Editorial', 'Tahririyat', 'Редакция']);
+    expect(locales.map((value) => translateUi(editorial!.summary, value))).toEqual(['Blog stories', 'Blog hikoyalari', 'Истории блога']);
+    expect(locales.map((value) => translateUi('Editorial', value))).toEqual(['Editorial', 'Jurnal uslubi', 'Журнальный стиль']);
   });
 });
 

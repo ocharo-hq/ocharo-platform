@@ -8,6 +8,7 @@ export const shellUiMessages: UiMessageTable = {
   "Brand and content": { "uz": "Brend va kontent", "ru": "Бренд и контент" },
   "Admin": { "uz": "Boshqaruv", "ru": "Администрирование" },
   "Desk": { "uz": "Desk", "ru": "Desk" },
+  "Apps menu: Editorial": { "en": "Editorial", "uz": "Tahririyat", "ru": "Редакция" },
   "Atlas": { "uz": "Atlas", "ru": "Atlas" },
   "Wear": { "uz": "Wear", "ru": "Wear" },
   "Blog": { "uz": "Blog", "ru": "Блог" },

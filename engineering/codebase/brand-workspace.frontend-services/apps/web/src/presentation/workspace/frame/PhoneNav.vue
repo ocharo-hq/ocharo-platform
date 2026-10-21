@@ -25,10 +25,12 @@ const moreIsCurrent = computed(() => moreSections.some((section) => section.id =
 </script>
 
 <template>
+  <!-- The SDK bar paints `bg-background`, which a class cannot replace with the glass material, so the material wins by
+       `!` until BottomNavMenu takes a glass variant. -->
   <BottomNavMenu
     :is-fixed="false"
     :aria-label="t('Desk sections')"
-    class="oc-glass z-sticky border-t border-(--oc-glass-edge) pb-[env(safe-area-inset-bottom)] [grid-area:footer] md:hidden"
+    class="surface-glass! z-sticky border-t border-glass-edge pb-[env(safe-area-inset-bottom)] [grid-area:footer] md:hidden"
   >
     <BottomNavMenuItem v-for="section in barSections" :key="section.id" as-child :is-active="props.current === section.id">
       <template #icon><component :is="SectionIcons[section.id]" :size="20" /></template>
@@ -40,7 +42,7 @@ const moreIsCurrent = computed(() => moreSections.some((section) => section.id =
     </BottomNavMenuItem>
   </BottomNavMenu>
   <Modal v-model:open="moreOpen">
-    <ModalContent v-if="moreOpen" class="oc-glass-menu flex max-h-dvh flex-col gap-4 overflow-y-auto p-5 pt-[calc(1.25rem+env(safe-area-inset-top))] text-foreground sm:max-w-md sm:rounded-2xl">
+    <ModalContent v-if="moreOpen" variant="glass-menu" class="flex max-h-dvh flex-col gap-4 overflow-y-auto p-5 pt-[calc(1.25rem+env(safe-area-inset-top))] text-foreground sm:max-w-md sm:rounded-2xl">
       <div class="flex items-center justify-between gap-3">
         <ModalTitle class="text-lg font-semibold">{{ t('More in Desk') }}</ModalTitle>
         <button

@@ -39,7 +39,7 @@ const items = computed<AppSwitcherItem[]>(() =>
     :close-label="t('Close')"
     :new-tab-label="t('(opens in a new tab)')"
     :trigger-label="t('Ocharo apps — {app}')"
-    panel-class="oc-glass-menu border-(--oc-glass-edge) text-foreground shadow-(--oc-menu-shadow)"
+    variant="glass-menu"
     class="[&[data-state=open]_[data-app-switcher-chevron]]:text-primary-soft-foreground"
   >
     <template #mark><span class="oc-mark">O</span></template>

@@ -19,6 +19,7 @@ export const sdkUiMessages: UiMessageTable = {
   'AccountMenu.organizationLabel': { uz: 'Tashkilot', ru: 'Организация' },
   'AccountMenu.versionsLabel': { uz: 'Versiyalar', ru: 'Версии' },
   'AccountMenu.signOutLabel': { uz: 'Chiqish', ru: 'Выйти' },
+  'MenuItem.newTabLabel': { uz: '(yangi oynada ochiladi)', ru: '(откроется в новой вкладке)' },
 };
 
 /** The SDK messages for one operator locale; a key absent here resolves to the SDK's English default. */

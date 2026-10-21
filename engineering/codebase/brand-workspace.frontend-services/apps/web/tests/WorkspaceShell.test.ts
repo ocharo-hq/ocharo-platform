@@ -245,9 +245,12 @@ describe('account menu in Desk', () => {
     expect(list.querySelectorAll('[role="menuitemradio"]')).toHaveLength(15);
     expect(list.className).toContain('max-h-44');
     expect(list.className).toContain('overflow-y-auto');
-    const material = panel.querySelector<HTMLElement>('.oc-glass-menu')!;
-    expect(material.className).toContain('max-h-[calc(100dvh-5rem)]');
-    expect(material.className).toContain('overflow-y-auto');
+    // The SDK menu glass paints the surface; the scroll box inside it keeps the panel within the viewport.
+    expect(panel.className).toContain('surface-glass-menu');
+    expect(panel.className).toContain('border-glass-edge');
+    const scrollBox = list.parentElement!.closest<HTMLElement>('[class*="max-h-[calc(100dvh-5rem)]"]')!;
+    expect(panel.contains(scrollBox)).toBe(true);
+    expect(scrollBox.className).toContain('overflow-y-auto');
     expect(accountRows(panel).at(-1)?.textContent?.trim()).toBe('Sign out');
     expect(accountRow(panel, 'Ocharo').getAttribute('aria-checked')).toBe('true');
 
