@@ -95,6 +95,29 @@ describe('Ocharo browser sessions', () => {
     expect(await client.signOut()).toBe(false);
     expect(client.current.authenticated).toBe(true);
   });
+  it('carries the Desk operator name and email while signed in, and drops them when the grant ends', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(session({ name: ' Malika Operator ', email: 'operator@example.test' }))
+      .mockResolvedValueOnce(new Response('{}', { status: 401 }));
+    const client = createSsoClient(fetcher);
+    await client.initialize();
+    expect(client.current).toMatchObject({ name: 'Malika Operator', email: 'operator@example.test' });
+    await client.fetch('/api/products');
+    expect(client.current).toMatchObject({ authenticated: false, csrfToken: null, name: null, email: null });
+  });
+  it('reads a Desk without names, blank or non-text values, and an anonymous session as naming no one', async () => {
+    for (const values of [
+      {},
+      { name: null, email: null },
+      { name: '  ', email: 42 },
+      { authenticated: false, name: 'Stale', email: 'stale@example.test' },
+    ]) {
+      const client = createSsoClient(vi.fn().mockResolvedValue(session(values)));
+      await client.initialize();
+      expect(client.current).toMatchObject({ name: null, email: null });
+    }
+  });
   it('fails closed when the session response is unavailable or malformed', async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response('{}'));
     const client = createSsoClient(fetcher);

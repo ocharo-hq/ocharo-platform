@@ -11,7 +11,7 @@ export const brandFrameUiMessages: UiMessageTable = {
   Catalogue: { uz: 'Katalog', ru: 'Каталог' },
   Studio: { uz: 'Studiya', ru: 'Студия' },
   Marketing: { uz: 'Marketing', ru: 'Маркетинг' },
-  Editorial: { uz: 'Jurnal uslubi', ru: 'Журнальный стиль' },
+  'Apps menu: Editorial': { en: 'Editorial', uz: 'Tahririyat', ru: 'Редакция' },
   Brand: { uz: 'Brend', ru: 'Бренд' },
   Atlas: { uz: 'Atlas', ru: 'Atlas' },
   Wear: { uz: 'Wear', ru: 'Wear' },

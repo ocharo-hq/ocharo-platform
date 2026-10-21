@@ -12,6 +12,7 @@ import {
 } from '../src/application/shared/UseOcharoApps';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
 import { ocharoApps } from '../src/domain/shared/OcharoApps';
+import { translateUi } from '../src/domain/shared/UiMessages';
 
 /** The local-run addresses Brand falls back to when nothing configures an app; the keys match Desk's and Catalogue's. */
 const LocalDefaults = {
@@ -117,7 +118,7 @@ describe('Ocharo app addresses', () => {
       blog: LocalDefaults.OCHARO_BLOG_URL,
     });
 
-    expect(apps.map(({ key, label, summary, kind }) => [key, label, summary, kind])).toEqual([
+    expect(apps.map(({ key, label, summary, kind }) => [key, translateUi(label, 'en'), summary, kind])).toEqual([
       ['desk', 'Desk', 'Events, sourcing and products', 'workspace'],
       ['catalogue', 'Catalogue', 'Products, prices and editions', 'workspace'],
       ['studio', 'Studio', 'Garments and fabric', 'workspace'],

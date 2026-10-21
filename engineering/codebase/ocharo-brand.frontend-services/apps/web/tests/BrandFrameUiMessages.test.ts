@@ -64,6 +64,17 @@ describe('Ocharo frame interface languages', () => {
     );
   });
 
+  it('names the Editorial app by its own key, as the other app names, not as a writing style', () => {
+    const [editorial] = ocharoApps({ editorial: 'https://example.test/' });
+    expect((['en', 'uz', 'ru'] as const).map((locale) => translateUi(editorial!.label, locale))).toEqual([
+      'Editorial',
+      'Tahririyat',
+      'Редакция',
+    ]);
+    expect(translateUi(editorial!.summary, 'uz')).toBe('Blog hikoyalari');
+    expect(uiMessages.Editorial).toBeUndefined();
+  });
+
   it('keeps the Uzbek words the sidebar already used for Brand’s own sections', () => {
     expect(BrandSections.map((section) => translateUi(section.label, 'uz'))).toEqual([
       'Umumiy',
