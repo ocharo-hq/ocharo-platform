@@ -26,7 +26,7 @@ const wordmark = computed(() =>
 
 <template>
   <AppShell class="catalogue-frame">
-    <AppShellHeader class="no-print oc-glass border-b border-(--oc-glass-edge)">
+    <AppShellHeader variant="glass" class="no-print">
       <Navbar :has-border="false" container-class="max-w-[1800px] px-5 sm:px-8" class="shrink-0 bg-transparent">
         <template #start>
           <RouterLink

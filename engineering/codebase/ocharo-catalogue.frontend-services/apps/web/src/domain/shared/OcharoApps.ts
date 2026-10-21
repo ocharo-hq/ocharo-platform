@@ -10,6 +10,7 @@ export type OcharoAppKey =
 /** One destination in the app menu. */
 export interface OcharoApp {
   readonly key: OcharoAppKey;
+  /** The message key of the app's name; Editorial has its own, apart from the designer theme of that name. */
   readonly label: string;
   /** One line under the label naming what the app is for. */
   readonly summary: string;
@@ -26,7 +27,7 @@ const OcharoAppEntries: readonly Omit<OcharoApp, 'url'>[] = [
   { key: 'catalogue', label: 'Catalogue', summary: 'Products, prices and editions', kind: OcharoAppKind.Workspace },
   { key: 'studio', label: 'Studio', summary: 'Garments and fabric', kind: OcharoAppKind.Workspace },
   { key: 'marketing', label: 'Marketing', summary: 'Posts and leads', kind: OcharoAppKind.Workspace },
-  { key: 'editorial', label: 'Editorial', summary: 'Blog stories', kind: OcharoAppKind.Workspace },
+  { key: 'editorial', label: 'Apps menu: Editorial', summary: 'Blog stories', kind: OcharoAppKind.Workspace },
   { key: 'brand', label: 'Brand', summary: 'Logo and brand guide', kind: OcharoAppKind.Workspace },
   { key: 'atlas', label: 'Atlas', summary: 'Public site', kind: OcharoAppKind.PublicSite },
   { key: 'wear', label: 'Wear', summary: 'Public site', kind: OcharoAppKind.PublicSite },

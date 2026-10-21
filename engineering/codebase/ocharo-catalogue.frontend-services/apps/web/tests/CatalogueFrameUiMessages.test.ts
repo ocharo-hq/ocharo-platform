@@ -50,6 +50,26 @@ describe('Ocharo frame interface languages', () => {
     expect(phrases.filter((phrase) => !uiMessages[phrase])).toEqual([]);
   });
 
+  it('names the Editorial app apart from the Editorial designer theme', () => {
+    const [editorial] = ocharoApps({ editorial: 'https://example.test/' });
+    const locales = ['en', 'uz', 'ru'] as const;
+    expect(locales.map((locale) => translateUi(editorial!.label, locale))).toEqual([
+      'Editorial',
+      'Tahririyat',
+      'Редакция',
+    ]);
+    expect(locales.map((locale) => translateUi(editorial!.summary, locale))).toEqual([
+      'Blog stories',
+      'Blog hikoyalari',
+      'Истории блога',
+    ]);
+    expect(locales.map((locale) => translateUi('Editorial', locale))).toEqual([
+      'Editorial',
+      'Jurnal uslubi',
+      'Журнальный стиль',
+    ]);
+  });
+
   it('retains every interpolation parameter in both interface translations', () => {
     for (const [source, messages] of Object.entries(catalogueFrameUiMessages)) {
       const parameters = (value: string) => [...value.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();

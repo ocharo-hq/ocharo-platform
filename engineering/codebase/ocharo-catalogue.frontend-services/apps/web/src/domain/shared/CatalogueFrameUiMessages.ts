@@ -4,6 +4,7 @@ import type { UiMessageTable } from './UiMessages';
 export const catalogueFrameUiMessages: UiMessageTable = {
   Admin: { uz: 'Boshqaruv', ru: 'Администрирование' },
   Desk: { uz: 'Desk', ru: 'Desk' },
+  'Apps menu: Editorial': { en: 'Editorial', uz: 'Tahririyat', ru: 'Редакция' },
   Atlas: { uz: 'Atlas', ru: 'Atlas' },
   Wear: { uz: 'Wear', ru: 'Wear' },
   'Events, sourcing and products': { uz: 'Tadbirlar, ta’minot va mahsulotlar', ru: 'События, снабжение и товары' },
