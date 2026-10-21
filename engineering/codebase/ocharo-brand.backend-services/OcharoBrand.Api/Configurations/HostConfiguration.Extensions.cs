@@ -4,6 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OcharoBrand.Api.Brand;
+using OcharoBrand.Api.RuntimeConfig.Settings;
 using OcharoBrand.Application;
 using OcharoBrand.Application.Abstractions;
 using OcharoBrand.Application.Brand;
@@ -12,6 +13,7 @@ using OcharoBrand.Infrastructure.Time;
 using OcharoBrand.Persistence;
 using OcharoBrand.Persistence.Brand;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
+using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
@@ -58,6 +60,22 @@ public static partial class HostConfiguration
         return builder;
     }
 
+    /// <summary>Registers the public runtime settings the SPA reads at startup: the Ocharo app and site addresses.</summary>
+    private static WebApplicationBuilder AddRuntimeConfig(this WebApplicationBuilder builder)
+    {
+        // Every address is optional, and a malformed one is left out rather than failing the host over a menu link.
+        builder.Services.AddValidatedSettings<OcharoAppsSettings>(builder.Configuration, OcharoAppsSettings.SectionName, _ => { });
+        return builder;
+    }
+
+    /// <summary>Warns once about each configured app address the runtime config leaves out.</summary>
+    private static void WarnAboutRejectedRuntimeConfig(this WebApplication app)
+    {
+        var rejected = app.Services.GetRequiredService<OcharoAppsSettings>().RejectedSettings();
+        if (rejected.Count > 0)
+            app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
+    }
+
     /// <summary>Registers controller delivery, OpenAPI and JSON errors for the HTTP surface.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
@@ -80,7 +98,9 @@ public static partial class HostConfiguration
             app.MapOpenApi();
         app.UseDefaultFiles();
         app.UseStaticFiles();
+        app.WarnAboutRejectedRuntimeConfig();
         app.MapControllers();
+        // Retained for existing callers; `GET api/system/status` is the conventional status endpoint.
         app.MapGet("/api/system/version", (HttpContext context) =>
         {
             context.Response.Headers.CacheControl = "no-store";
