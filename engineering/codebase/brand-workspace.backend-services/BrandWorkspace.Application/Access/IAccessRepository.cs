@@ -9,5 +9,6 @@ public interface IAccessRepository
     Task RevokeSessionAsync(Guid sessionId, DateTimeOffset now, CancellationToken token);
     Task<IReadOnlyList<Organization>> ListOrganizationsAsync(string userId, CancellationToken token);
     Task<OrganizationAccess?> FindMembershipAsync(Guid organizationId, string userId, CancellationToken token);
+    Task<OperatorProfile?> FindProfileAsync(string userId, CancellationToken token);
     Task<Organization?> CreateOrganizationAsync(string name, string slug, string userId, CancellationToken token);
 }

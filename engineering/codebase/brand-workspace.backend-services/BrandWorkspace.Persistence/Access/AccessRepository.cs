@@ -76,6 +76,15 @@ public sealed class AccessRepository(NpgsqlDataSource dataSource) : IAccessRepos
             ? new OrganizationAccess(organizationId, userId, role, role is "owner" or "editor", role == "owner") : null;
     }
 
+    public async Task<OperatorProfile?> FindProfileAsync(string userId, CancellationToken token)
+    {
+        await using var command = dataSource.CreateCommand("""SELECT "DisplayName","Email" FROM access.users WHERE id=@user""");
+        command.Parameters.AddWithValue("user", userId);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token)) return null;
+        return new OperatorProfile(reader.IsDBNull(0) ? null : reader.GetString(0), reader.IsDBNull(1) ? null : reader.GetString(1));
+    }
+
     public async Task<Organization?> CreateOrganizationAsync(string name, string slug, string userId, CancellationToken token)
     {
         await using var connection = await dataSource.OpenConnectionAsync(token);

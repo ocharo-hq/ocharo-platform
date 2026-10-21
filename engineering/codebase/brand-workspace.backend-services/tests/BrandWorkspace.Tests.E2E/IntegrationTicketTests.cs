@@ -43,6 +43,33 @@ public sealed class IntegrationTicketTests
         clock.Now += TimeSpan.FromMinutes(5);
         (await Inspect(token)).GetProperty("active").GetBoolean().Should().BeFalse();
     }
+    [Fact]
+    public async Task Ticket_IntrospectionCarriesTheOperatorsCurrentNameAndEmail()
+    {
+        var token = Issue();
+        var current = await Inspect(token);
+        current.GetProperty("displayName").GetString().Should().Be("Desk operator");
+        current.GetProperty("email").GetString().Should().Be("operator@example.test");
+        access.Profile = new("  Renamed operator ", "operator@example.test");
+        (await Inspect(token)).GetProperty("displayName").GetString().Should().Be("Renamed operator");
+        access.Profile = new(" ", "operator@example.test");
+        (await Inspect(token)).GetProperty("displayName").GetString().Should().Be("operator@example.test");
+        access.Profile = null;
+        var missing = await Inspect(token);
+        missing.GetProperty("active").GetBoolean().Should().BeTrue();
+        missing.GetProperty("displayName").ValueKind.Should().Be(JsonValueKind.Null);
+        missing.GetProperty("email").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+    [Fact]
+    public async Task Ticket_InactiveIntrospectionCarriesNoProfile()
+    {
+        var token = Issue();
+        access.Active = false;
+        var inactive = await Inspect(token);
+        inactive.GetProperty("active").GetBoolean().Should().BeFalse();
+        inactive.TryGetProperty("displayName", out _).Should().BeFalse();
+        inactive.TryGetProperty("email", out _).Should().BeFalse();
+    }
     [Theory]
     [InlineData("sub")]
     [InlineData("org")]
@@ -71,6 +98,8 @@ public sealed class IntegrationTicketTests
         public Access() => Member = new(Organization,"operator","owner",true,true);
         public Task<bool> IsSessionActiveAsync(Guid sessionId,string userId,DateTimeOffset now,CancellationToken token) => Task.FromResult(Active && sessionId==Session && userId=="operator");
         public Task<OrganizationAccess?> FindMembershipAsync(Guid organizationId,string userId,CancellationToken token) => Task.FromResult(organizationId==Organization && userId=="operator" ? Member : null);
+        public OperatorProfile? Profile {get;set;} = new("Desk operator","operator@example.test");
+        public Task<OperatorProfile?> FindProfileAsync(string userId,CancellationToken token) => Task.FromResult(userId=="operator" ? Profile : null);
         public Task CreateSessionAsync(Guid sessionId,string userId,string securityStamp,DateTimeOffset expiresAt,Guid? replacedSessionId,CancellationToken token) => throw new NotSupportedException();
         public Task RevokeSessionAsync(Guid sessionId,DateTimeOffset now,CancellationToken token) => throw new NotSupportedException();
         public Task<IReadOnlyList<Organization>> ListOrganizationsAsync(string userId,CancellationToken token) => throw new NotSupportedException();

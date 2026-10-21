@@ -40,8 +40,10 @@ Do not enable production solely because the code builds. Configure HTTPS/reverse
 - `POST /api/sso/exchange` on Desk: clientId, clientSecret, redirectUri, code, codeVerifier.
 - `POST /api/sso/refresh` and `/api/sso/revoke` on Desk: clientId, clientSecret, refreshToken.
 - Successful exchange/refresh: `{ data: { ticket, expiresAt, refreshToken, sessionExpiresAt } }`; revoke: 204. These are backend-only responses.
+- `POST /api/integrations/introspect` on Desk: token, audience. Active: `{ data: { active, userId, organizationId, role, canEdit, canApprove, expiresAt, displayName, email } }`; otherwise `{ data: { active: false } }`. `displayName` is the operator's current Desk profile name, or their email when the name is blank; either value is null when absent. The response is no-store.
 - `GET /api/sso/login?returnUrl=/...` on an app starts sign-in. Local returns must begin one slash, be at most 2048 characters and exclude `%`, backslash, control characters and `/api/` paths.
-- `GET /api/sso/session` on an app: `{ data: { enabled, authenticated, userId?, organizationId?, canEdit?, canApprove?, csrfToken?, accountUrl? } }`.
+- `GET /api/sso/session` on an app: `{ data: { enabled, authenticated, accountUrl?, userId?, organizationId?, name?, email?, canEdit?, canApprove?, csrfToken? } }`. The response is no-store.
+- `name` and `email` come from that request's live Desk introspection (`SsoActor.DisplayName`/`Email`), so a profile change shows on the next request. They are present only when authenticated, and are null when an older Desk omits them or a value is blank, longer than 200 (name) or 256 (email) characters, or contains control characters; a missing value never fails the session. Anonymous and disabled responses carry neither key. Neither value is written to the app cookie or the app session store: the cookie stays a 43-character random id and the store keeps only the grant.
 - App browser mutations attach `X-CSRF-Token` with same-origin credentials. `POST /api/sso/logout` uses the same protection.
 
 Desk SSO bodies are limited to 16 KiB. Authorization/exchange share 30 attempts/minute per remote IP; refresh/revoke share 120. Rejections are ProblemDetails with no-store; rate rejection includes Retry-After. Configure trusted forwarding at the host before using forwarded IPs. Callback/exchange secrets are never request-log fields.
