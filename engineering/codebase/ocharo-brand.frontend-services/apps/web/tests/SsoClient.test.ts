@@ -69,6 +69,32 @@ describe('Ocharo browser sessions', () => {
     await client.fetch('/api/products', { method: 'POST' });
     expect(new Headers(fetcher.mock.calls[1]![1].headers).has('X-CSRF-Token')).toBe(false);
   });
+  it('signs out with the CSRF token only, even as a reader, and reads as signed out without a reload', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(session({ canEdit: false, canApprove: false }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = createSsoClient(fetcher);
+    await client.initialize();
+    expect(await client.signOut()).toBe(true);
+    expect(fetcher).toHaveBeenLastCalledWith(
+      '/api/sso/logout',
+      expect.objectContaining({ method: 'POST', headers: { 'X-CSRF-Token': 'session-csrf' } }),
+    );
+    expect(client.current).toMatchObject({ enabled: true, authenticated: false, csrfToken: null });
+  });
+  it('keeps the session when sign-out fails, and never calls out without one', async () => {
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(session())
+      .mockResolvedValueOnce(new Response('{}', { status: 500 }));
+    const client = createSsoClient(fetcher);
+    expect(await client.signOut()).toBe(false);
+    expect(fetcher).not.toHaveBeenCalled();
+    await client.initialize();
+    expect(await client.signOut()).toBe(false);
+    expect(client.current.authenticated).toBe(true);
+  });
   it('fails closed when the session response is unavailable or malformed', async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response('{}'));
     const client = createSsoClient(fetcher);

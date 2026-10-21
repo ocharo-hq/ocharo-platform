@@ -1,6 +1,5 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { nextTick } from 'vue';
-import { createMemoryHistory, createRouter } from 'vue-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DraftView } from '../src/domain/brand/BrandModels';
 
@@ -147,34 +146,22 @@ describe('Brand command lock', () => {
 });
 
 describe('Identity query rendering', () => {
-  it('keeps its routed editor mounted and refresh in the toolbar through failure and recovery', async () => {
-    api.draft.mockResolvedValue(failed);
-    const { default: IdentityPage } = await import('../src/presentation/brand/IdentityPage.vue');
-    const { default: AppRoot } = await import('../src/bootstrap/AppRoot.vue');
+  it('keeps its routed editor mounted and refresh in the frame bar through failure and recovery', async () => {
+    // The frame's first read stays open until the test answers it, so the loading editor can be inspected.
+    let answerFirstRead!: (value: unknown) => void;
+    api.draft.mockResolvedValue(failed).mockReturnValueOnce(
+      new Promise((resolve) => {
+        answerFirstRead = resolve;
+      }),
+    );
+    // The whole app through its real route table and frame; imported after the module reset, like the store.
+    const { mountBrand } = await import('./helpers/BrandApp');
     const { useBrand } = await import('../src/application/brand');
     const brand = useBrand();
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [
-        { path: '/identity', component: IdentityPage },
-        { path: '/:pathMatch(.*)*', component: IdentityPage },
-      ],
-    });
-    await router.push('/identity');
-    await router.isReady();
-    const wrapper = mount(AppRoot, {
-      global: {
-        plugins: [router],
-        stubs: {
-          BuildIdentity: true,
-          AppErrorBoundary: { template: '<div><slot /></div>' },
-          FeedbackToastHost: true,
-          RouteAnnouncer: true,
-        },
-      },
-    });
+    const { wrapper } = await mountBrand('/identity');
     expect(wrapper.findComponent({ name: 'IdentityFormSkeleton' }).exists()).toBe(true);
     expect(wrapper.findAll('h2').map((heading) => heading.text())).toContain('Rasmiy havolalar');
+    answerFirstRead(failed);
     await settle(brand.refresh());
     expect(wrapper.text()).toContain('Identitet ma’lumotlari hozir mavjud emas.');
     expect(wrapper.text()).not.toContain('Hali identitet ma’lumotlari yo‘q.');
@@ -196,6 +183,8 @@ describe('Identity query rendering', () => {
     expect(wrapper.find('header').text()).toContain('Yangilash');
     await settle(refresh);
     wrapper.unmount();
+    document.body.innerHTML = '';
+    vi.unstubAllGlobals();
   });
 
   it('retains edited fields when refreshed server identity changes', async () => {
