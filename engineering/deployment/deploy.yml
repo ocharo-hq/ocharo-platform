@@ -3,15 +3,17 @@
 # Format and rules: wow-two-ws/conventions/deployment/descriptor/deploy-descriptor.md. Hostnames, secrets and
 # environments live in Wheelhouse targets, never here. Paths are relative to engineering/.
 #
-# Ocharo Platform deploys Desk, its jobs worker and the private image worker. The adopted Brand and Catalogue
+# Ocharo Platform deploys Desk, its jobs worker and the private image worker, as the primary repository of the one
+# `ocharo` product (Wheelhouse decision 70): Studio and Assets deploy beside it, so service, site and volume names stay
+# unique across them, and Desk's site is the product's front door. The adopted Brand and Catalogue
 # pilots are not listed: their hosts refuse every non-loopback caller, so a deployment waits for their access
 # decision (deployment.md § Brand and Catalogue pilots); Desk and jobs compile only their Domain projects.
 # Both environments run as .NET Production (no dotnetEnvironment). Desk applies the schema as it starts and reports
 # ready only afterwards; jobs refuses to start on a missing schema, so it waits for Desk to be healthy.
 descriptor: 2
-product: ocharo-platform
+product: ocharo
 sites:
-  app: {}                               # Desk, public: a domain, or Wheelhouse's sslip.io host until one is bound
+  desk: {}                              # Desk, public: a domain, or Wheelhouse's sslip.io host until one is bound
 services:
   desk:
     build: { dockerfile: deployment/Dockerfile }
@@ -45,7 +47,7 @@ services:
     volumes:
       keys: /var/lib/brand-workspace/keys
     sites:
-      app: {}
+      desk: {}
   jobs:
     build: { dockerfile: deployment/Dockerfile.worker }
     paths:
