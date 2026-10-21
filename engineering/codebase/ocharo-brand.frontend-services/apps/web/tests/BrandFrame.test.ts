@@ -191,6 +191,25 @@ describe('Ocharo frame in Brand', () => {
     ).toHaveProperty('aria-current', 'page');
   });
 
+  it('paints the phone bar with the SDK glass variant', async () => {
+    await renderAt('/logos', 390);
+
+    const bar = wrapper!.get('nav[aria-label="Brand sections"]').classes();
+    // `variant="glass"`: the chrome glass, its edge on the top border, the upward shadow and the safe-area padding.
+    expect(bar).toEqual(
+      expect.arrayContaining([
+        'surface-glass',
+        'border-t',
+        'border-glass-edge',
+        'shadow-(--glass-bottom-shadow)',
+        'pb-[env(safe-area-inset-bottom)]',
+      ]),
+    );
+    expect(bar).not.toContain('bg-background');
+    expect(bar).not.toContain('surface-glass!');
+    expect(bar).toEqual(expect.arrayContaining(['no-print', 'z-sticky', '[grid-area:footer]', 'md:hidden']));
+  });
+
   it('shows the release the draft stands on and refreshes every Brand read from the bar', async () => {
     await renderAt('/', 1440);
 
