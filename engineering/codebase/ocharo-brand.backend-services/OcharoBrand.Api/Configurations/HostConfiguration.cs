@@ -13,7 +13,7 @@ public static partial class HostConfiguration
     {
         builder.AddSettingsFiles();
         builder.Services.AddOcharoSso(builder.Configuration, "brand", "ocharo-brand", requireBoundOrganization: true);
-        return builder.AddSqliteDatabase().AddBrand().AddHttpSurface();
+        return builder.AddSqliteDatabase().AddBrand().AddRuntimeConfig().AddHttpSurface();
     }
 
     /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>
