@@ -1,6 +1,6 @@
 # Deployment and local runtime
 
-*Last updated: 2026-10-20*
+*Last updated: 2026-10-21*
 
 ## Artifacts and ownership
 
@@ -144,7 +144,7 @@ HTTPS development API. Browser application and API requests remain same-origin.
 ## CI and publication
 
 `publish-docker-image.yml` is the Wheelhouse marker and the only CI file: it calls the shared `delivery.yml` of
-`wow-two-platform.pipelines`, pinned to `v0.9.1`, with the checks below. A docs-only push builds nothing; any
+`wow-two-platform.pipelines`, pinned to `v0.10.0`, with the checks below. A docs-only push builds nothing; any
 other runs the checks whose paths changed (each app's frontend, backend and pilot image; the image worker's tests;
 the deployment composition) and every check when a shared file changes. Publication then builds the services in
 `deploy.yml` that changed, as `ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}`; CI builds only the
@@ -155,26 +155,30 @@ Wheelhouse deploys that bundle; PostgreSQL, settings and the model volume come f
 
 ## Target settings
 
-Pipelines `v0.7.0` mounts each service's target settings file at `/app/appsettings.Target.json`; the
+Pipelines mounts each service's target settings file at `/app/appsettings.Target.json`; the
 backend SDK (`10.0.71-beta`) reads it. Both environments run as .NET `Production`: `deploy.yml` leaves
-`dotnetEnvironment` off. The runner refuses a deploy missing a required key:
+`dotnetEnvironment` off. `deploy.yml` is descriptor 2 and types its keys under `settings.keys` (pipelines
+`v0.10.0`): the runner refuses a deploy missing a required key, and Wheelhouse checks each saved value against its
+type and keeps a secret in its vault.
 
-| Service | Required settings |
-|---|---|
-| `desk` | `ConnectionStrings:Database`, `AllowedHosts`, `DataProtection:KeysPath`, `DataProtection:ApplicationName`, `Deployment:TrustedProxies` |
-| `jobs` | `ConnectionStrings:Database` |
-| `image-worker` | `ImageWorker:Key` (2 GB memory) |
+| Service | Site | Required settings | Source |
+|---|---|---|---|
+| `desk` | `app`, public | `ConnectionStrings:Database` | the target's PostgreSQL (`needs: [postgres]`) |
+| | | `AllowedHosts`, `Deployment:TrustedProxies` | derived by Wheelhouse |
+| | | `DataProtection:KeysPath`, `DataProtection:ApplicationName` | the owner, on the first deploy |
+| `jobs` | none | `ConnectionStrings:Database` | the target's PostgreSQL |
+| `image-worker` | none | `ImageWorker:Key` (secret; 2 GB memory) | the owner, on the first deploy |
 
-- `AllowedHosts` lists the public host and `localhost` for health probes, for example `desk.example.com;localhost`.
+- `AllowedHosts` holds the site's hosts, the service's platform name and `localhost` for health probes.
 - `DataProtection:KeysPath` is the `keys` volume, `/var/lib/brand-workspace/keys`.
-- `Deployment:TrustedProxies` is a JSON array naming the ingress, `["172.30.0.2"]` on the shared VPS's
-  `platform` network. Forwarded headers from any other sender are ignored, so without it sign-in fails
-  behind the TLS-terminating ingress.
+- `Deployment:TrustedProxies` names the ingress's address on the server's `platform` network. Forwarded headers
+  from any other sender are ignored, so without it sign-in fails behind the TLS-terminating ingress.
 - `jobs` declares `dependsOn: [desk]`: it refuses to start before the schema exists, and Desk reports
   healthy only after migrating.
 
-`desk` also reads optional public settings, which it serves anonymously at `GET /api/runtime-config` for the
-Ocharo app menu. Each is an absolute HTTPS address without credentials, query or fragment:
+`desk` also reads optional public settings, typed `url` in `deploy.yml`, which it serves anonymously at
+`GET /api/runtime-config` for the Ocharo app menu. Each is an absolute HTTPS address without credentials, query or
+fragment:
 
 | Setting | Runtime-config key | Links to |
 |---|---|---|
@@ -188,8 +192,8 @@ Ocharo app menu. Each is an absolute HTTPS address without credentials, query or
 | `OcharoApps:Wear` | `OCHARO_WEAR_URL` | Wear public site |
 | `OcharoApps:Blog` | `OCHARO_BLOG_URL` | Blog public site |
 
-- Dev and prod values are each environment's tailnet site URL, for example `https://ocharo-desk-dev.<tailnet>.ts.net/`
-  for `OcharoApps:Desk` on dev.
+- Dev and prod values are each environment's site URL as Wheelhouse binds it, such as Desk's own `app` site for
+  `OcharoApps:Desk`.
 - A key left unset keeps the build-time `VITE_OCHARO_*` value, else the local-run `localhost` address, so set every
   key the menu should link to on a deployed target.
 - Desk leaves out a malformed value and logs a startup warning naming the setting; the menu omits that app.
@@ -202,7 +206,20 @@ Executed verification is recorded in [verification](../research/previous-work/ve
 
 ## Convention adoption status
 
-`deploy.yml` lists Desk, jobs and the private image worker; the Brand and Catalogue pilots have no descriptor.
-Desk probes `/health/ready`, its own readiness route, until it adopts the SDK boot bundle's `/health`.
+`deploy.yml` lists Desk, jobs and the private image worker; the Brand and Catalogue pilots are not listed yet
+([below](#brand-and-catalogue-pilots)). Desk probes `/health/ready`, its own readiness route, until it adopts the
+SDK boot bundle's `/health`.
+
+## Brand and Catalogue pilots
+
+The owner asked on 2026-10-21 to deploy both pilots as public sites before authentication, until the identity
+server lands, with their SQLite stores on volumes. They are not in `deploy.yml` yet: each host's
+`LocalPilotBoundaryMiddleware` answers 403 to every caller that is not loopback on a `localhost` host, unless Desk
+SSO (`Identity:Sso:*`) is enabled, so behind the ingress a deployed pilot would refuse every request. Listing them
+waits for the change that lets a deployed host accept remote callers. CI builds both images on every change
+(`Container (brand)`, `Container (catalogue)`); neither publishes.
+
+When they join `deploy.yml`, each is one service with its own site and a `data` volume at `/data`, where its
+image keeps the SQLite store (`/data/ocharo-{brand,catalogue}.db`) and blobs.
 
 See `../research/convention-audit.md` for the earlier verified checks.
