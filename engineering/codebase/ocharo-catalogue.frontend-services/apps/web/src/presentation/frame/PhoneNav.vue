@@ -24,12 +24,11 @@ const moreIsCurrent = computed(() => moreSections.some((section) => section.id =
 </script>
 
 <template>
-  <!-- The SDK bar paints `bg-background`, which a class cannot replace with the glass material, so the material wins by
-       `!` until BottomNavMenu takes a glass variant. -->
   <BottomNavMenu
     :is-fixed="false"
     v-bind="{ 'aria-label': t('Catalogue sections') }"
-    class="no-print surface-glass! z-sticky border-t border-glass-edge pb-[env(safe-area-inset-bottom)] [grid-area:footer] md:hidden"
+    variant="glass"
+    class="no-print z-sticky [grid-area:footer] md:hidden"
   >
     <BottomNavMenuItem
       v-for="section in barSections"
