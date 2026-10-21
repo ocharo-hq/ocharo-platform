@@ -45,7 +45,8 @@ The SPA wears the Ocharo suite frame, as Desk and Catalogue do
 - `bootstrap/AppLayout.vue`, mounted through a layout route, holds every place; Brand has no public SPA route.
 - Top bar: the SDK `AppSwitcherMenu` (current `brand`, the "O" mark), the app version, the breadcrumb from route
   metadata, the release the draft stands on with Refresh, and the SDK `AccountMenu` last — appearance, the Brand and API
-  versions, and with an Ocharo session the Desk account item, identity and sign-out.
+  versions, and with an Ocharo session the Desk account link (a new tab), the operator's Desk name and email (else
+  "Signed in through Ocharo Desk") and sign-out.
 - Sidebar (SDK `SidebarMenu`, rail state in `ocharo.brand.sidebar-collapsed`): Overview, Identity, Logos and Appearances,
   then Connect under Admin. Phones get the SDK `BottomNavMenu` with the first four and a full-screen More dialog.
 - App links resolve runtime config first, then build-time `VITE_OCHARO_*_URL`, then the local-run defaults; a malformed
@@ -53,8 +54,11 @@ The SPA wears the Ocharo suite frame, as Desk and Catalogue do
 - Colour: the SDK `ocharo` theme through `ColorModeProvider` and the generated pre-paint `/theme.js`, key
   `ocharo.brand.theme`. The logo proof surfaces (`--color-artwork-*`: paper `#f8f7f3`, ink `#20211e`, transparency check
   `#e6e2d8`/`#fffdf8`) and palette swatches are artwork colours and never follow the interface mode.
+- Glass: the top bar, sidebar, menus and phone bar take the theme's glass strength through the SDK (`variant="glass"`,
+  `variant="glass-menu"`, `surface-glass`, `border-glass-edge`); Brand keeps no glass copy of its own.
 - Language: frame copy uses English message keys with Uzbek and Russian entries; the interface stays Uzbek because the
-  pages are still Uzbek literals, so the account menu shows no language rows until the pages are localized.
+  pages are still Uzbek literals, so the account menu shows no language rows until the pages are localized. The apps
+  menu names Editorial by the suite's `Apps menu: Editorial` key, apart from the writing-style word.
 
 ## Consumers
 
@@ -63,5 +67,5 @@ The SPA wears the Ocharo suite frame, as Desk and Catalogue do
 
 ## SDK usage and extraction candidates
 
-- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.71-beta` (blob storage, mediator registration, validated settings) and `@wow-two-beta/fe 0.0.28` (HTTP client, config, router, error boundary, icons, colour mode, app shell, app switcher, account menu, sidebar and bottom nav).
+- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.71-beta` (blob storage, mediator registration, validated settings) and `@wow-two-beta/fe 0.0.31` (HTTP client, config, router, error boundary, icons, colour mode, Ocharo theme and glass, app shell, app switcher, account menu and link rows, sidebar and bottom nav).
 - Candidates for SDK extraction (shared with Catalogue/Blog): revisioned document store, content-addressed media store with previews, local-pilot boundary middleware, a generic "published kit" client with cache + fallback.

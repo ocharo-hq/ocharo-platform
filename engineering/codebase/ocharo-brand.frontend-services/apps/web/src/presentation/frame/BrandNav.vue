@@ -70,7 +70,7 @@ const toggleLabel = computed(() => t(props.collapsed ? 'Expand sidebar' : 'Colla
         </SidebarMenuSection>
       </template>
     </SidebarMenu>
-    <div v-if="props.canToggle" class="border-t border-(--oc-glass-edge) p-2">
+    <div v-if="props.canToggle" class="border-t border-glass-edge p-2">
       <button
         type="button"
         class="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
