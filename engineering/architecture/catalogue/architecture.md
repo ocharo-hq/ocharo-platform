@@ -1,6 +1,6 @@
 # ventures.ocharo-catalogue — Architecture
 
-*Last updated: 2026-10-20*
+*Last updated: 2026-10-21*
 
 > Retained local-pilot architecture. Canonical authenticated authoring and named web/PDF editions
 > are documented in [Catalogue authoring and outputs](../catalogue-outputs.md). The pilot remains
@@ -45,9 +45,10 @@ flowchart LR
 - Every authoring route renders inside `bootstrap/AppLayout.vue`, mounted through a layout route: the suite's glass top bar (Ocharo app button with the app version, breadcrumb from route metadata, notifications, SDK `AccountMenu`), a sidebar of Catalogues, Collections, Products, Stock and Admin › Settings that collapses to an icon rail, and a phone bottom bar with More. The published reader `/c/{slug}` keeps its own header and limited Settings dialog.
 - Prices, product copy and the print sheet are retained product-wide tools under Products; they stay out of the sidebar because the product editor and the PDF designer supersede them.
 - App menu addresses resolve at startup through the SDK config seam: `/api/runtime-config`, then `VITE_OCHARO_*` build values, then local defaults.
-- The SDK `ocharo` theme (`theme-ocharo` on `<html>`) supplies every colour; `ColorModeProvider` keeps the stored appearance under `ocharo.catalogue.theme` and `/theme.js` applies it before first paint.
+- The SDK `ocharo` theme (`theme-ocharo` on `<html>`) supplies every colour and the frame glass; `ColorModeProvider` keeps the stored appearance under `ocharo.catalogue.theme` and `/theme.js` applies it before first paint. The top bars, sidebar, menus, notifications and phone bar use the SDK glass variants and `surface-glass*` materials; the image controls over product photos read the theme's `--glass-fill`. Catalogue keeps no glass copy of its own.
+- With an Ocharo session the account menu names the operator by their Desk name and email (else "Signed in through Ocharo Desk") and links the Desk account in a new tab. The apps menu names Editorial by the suite's `Apps menu: Editorial` key, apart from the designer's Editorial style.
 
 ## SDK usage and extraction candidates
 
-- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.71-beta` (blob storage, mediator registration) and `@wow-two-beta/fe 0.0.28` (HTTP client, router, config, colour mode, Ocharo theme, app shell, app switcher, account menu, sidebar and bottom navigation, error boundary, icons).
+- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.71-beta` (blob storage, mediator registration) and `@wow-two-beta/fe 0.0.31` (HTTP client, router, config, colour mode, Ocharo theme and glass, app shell, app switcher, account menu and link rows, sidebar and bottom navigation, error boundary, icons).
 - Product-local candidates for later SDK extraction: revisioned document store (document row + snapshot + expected-revision save), content-addressed media store with previews, local-pilot boundary middleware, CSV formula-safe writer, lazily resolved SQLite/blob paths.

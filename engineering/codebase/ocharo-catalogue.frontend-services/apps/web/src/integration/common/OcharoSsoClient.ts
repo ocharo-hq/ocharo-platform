@@ -6,6 +6,10 @@ export interface SsoSession {
   canApprove?: boolean;
   csrfToken?: string | null;
   accountUrl?: string | null;
+  /** The Desk operator's current display name while authenticated; null when Desk has none. */
+  name?: string | null;
+  /** The Desk operator's current email while authenticated; null when Desk has none. */
+  email?: string | null;
 }
 
 export function createSsoClient(fetchImplementation: typeof fetch = globalThis.fetch) {
@@ -36,6 +40,8 @@ export function createSsoClient(fetchImplementation: typeof fetch = globalThis.f
           canApprove: value.canApprove === true,
           accountUrl: safeAccountUrl(value.accountUrl),
           csrfToken: typeof value.csrfToken === 'string' ? value.csrfToken : null,
+          name: value.authenticated ? identityText(value.name) : null,
+          email: value.authenticated ? identityText(value.email) : null,
         });
       } catch {
         return update({ enabled: true, authenticated: false, canEdit: false, canApprove: false });
@@ -65,8 +71,7 @@ export function createSsoClient(fetchImplementation: typeof fetch = globalThis.f
       headers.set('X-CSRF-Token', session.csrfToken);
     }
     const response = await fetchImplementation(input, { ...init, headers, credentials: 'same-origin' });
-    if (session.enabled && response.status === 401)
-      update({ ...current, authenticated: false, canEdit: false, canApprove: false, csrfToken: null });
+    if (session.enabled && response.status === 401) update({ ...current, ...signedOut });
     else if (session.enabled && response.status === 403) await initialize(true);
     return response;
   };
@@ -92,7 +97,7 @@ export function createSsoClient(fetchImplementation: typeof fetch = globalThis.f
         headers: { 'X-CSRF-Token': session.csrfToken },
       });
       if (!response.ok) return false;
-      update({ ...current, authenticated: false, canEdit: false, canApprove: false, csrfToken: null });
+      update({ ...current, ...signedOut });
       return true;
     } catch {
       return false;
@@ -110,6 +115,21 @@ export function createSsoClient(fetchImplementation: typeof fetch = globalThis.f
       return () => listeners.delete(listener);
     },
   };
+}
+
+/** What a session loses when its grant ends: the capabilities, the token and who held it. */
+const signedOut = {
+  authenticated: false,
+  canEdit: false,
+  canApprove: false,
+  csrfToken: null,
+  name: null,
+  email: null,
+} as const satisfies Partial<SsoSession>;
+
+/** A name or email Desk sent, trimmed; anything else, or a blank, reads as none. */
+function identityText(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
 function safeAccountUrl(value: unknown): string | null {

@@ -38,9 +38,7 @@ watch(
         >
       </button>
     </PopoverTrigger>
-    <PopoverContent
-      class="no-print w-[min(24rem,calc(100vw-2rem))] oc-glass-menu rounded-2xl border-(--oc-glass-edge) p-0 text-foreground shadow-(--oc-menu-shadow)"
-    >
+    <PopoverContent variant="glass-menu" class="no-print w-[min(24rem,calc(100vw-2rem))] rounded-2xl p-0">
       <NotificationCenterGroup
         :bus="feedbackBus"
         :title="t('Notifications')"

@@ -94,9 +94,18 @@ const crumbs = computed(() => {
 /** Who is signed in, and sign-out, exist only with an Ocharo session; the local pilot has neither. */
 const signedIn = computed(() => ssoSession.value.enabled && ssoSession.value.authenticated);
 const accountOpen = ref(false);
-const accountIdentity = computed(() =>
-  signedIn.value ? { description: t('Signed in through Ocharo Desk'), onSignOut: signOut } : {},
-);
+/** The Desk operator's name and email; a session from a Desk that sends neither still says where it came from. */
+const accountIdentity = computed(() => {
+  if (!signedIn.value) return {};
+  const { name, email } = ssoSession.value;
+  if (!name && !email) return { description: t('Signed in through Ocharo Desk'), onSignOut: signOut };
+  return {
+    ...(name ? { name } : {}),
+    // Desk names a person without a display name by their email; it is not repeated under itself.
+    ...(email && email !== name ? { description: email } : {}),
+    onSignOut: signOut,
+  };
+});
 /** The app's own version, then the API's from its status, with the commit the build carries split off. */
 const versions = computed<AccountMenuVersion[]>(() => {
   const [api = '', commit] = backendVersion.value.split('+');
@@ -105,10 +114,6 @@ const versions = computed<AccountMenuVersion[]>(() => {
     { label: 'API', version: t(api), ...(commit ? { commit } : {}) },
   ];
 });
-/** Opens Desk's account page in another tab, so unsaved edits here stay. */
-function openDeskAccount(): void {
-  if (ssoSession.value.accountUrl) window.open(ssoSession.value.accountUrl, '_blank', 'noopener,noreferrer');
-}
 watch(accountOpen, (open) => {
   if (open) void refreshBackendVersion();
 });
@@ -122,10 +127,7 @@ onMounted(() => void store.loadSettings());
     sidebar-breakpoint="md"
     :sidebar-width="sidebarWidth"
   >
-    <AppShellHeader
-      height="auto"
-      class="no-print oc-glass border-b border-(--oc-glass-edge) p-0 pt-[env(safe-area-inset-top)] shadow-(--oc-glass-shadow)"
-    >
+    <AppShellHeader height="auto" variant="glass" class="no-print p-0 pt-[env(safe-area-inset-top)]">
       <div class="flex min-h-15 w-full min-w-0 items-center gap-3 px-3 sm:px-4">
         <div class="flex shrink-0 items-center gap-2">
           <AppSwitcherMenu
@@ -138,7 +140,7 @@ onMounted(() => void store.loadSettings());
             :close-label="t('Close')"
             :new-tab-label="t('(opens in a new tab)')"
             :trigger-label="t('Ocharo apps — {app}')"
-            panel-class="oc-glass-menu border-(--oc-glass-edge) text-foreground shadow-(--oc-menu-shadow)"
+            variant="glass-menu"
             class="[&[data-state=open]_[data-app-switcher-chevron]]:text-primary-soft-foreground"
           >
             <template #mark><span class="oc-mark">O</span></template>
@@ -167,18 +169,19 @@ onMounted(() => void store.loadSettings());
           :locale="uiLocale"
           :versions="versions"
           :is-busy="signingOut"
-          panel-class="oc-glass-menu border-(--oc-glass-edge) text-foreground shadow-(--oc-menu-shadow)"
+          variant="glass-menu"
           @update:locale="setUiLocale"
         >
           <template v-if="ssoSession.enabled && ssoSession.accountUrl" #items>
-            <MenuItem @select="openDeskAccount"
+            <!-- Desk's account page opens in another tab, so unsaved edits here stay. -->
+            <MenuItem :href="ssoSession.accountUrl" target="_blank"
               ><ExternalLink :size="15" class="shrink-0" aria-hidden="true" />{{ t('Account') }}</MenuItem
             >
           </template>
         </AccountMenu>
       </div>
     </AppShellHeader>
-    <AppShellSidebar class="no-print oc-glass-side border-e border-(--oc-glass-edge)">
+    <AppShellSidebar variant="glass" class="no-print">
       <CatalogueNav
         :current="section"
         :collapsed="isRail"

@@ -33,6 +33,7 @@ provideLocale(
     'AccountMenu.organizationLabel': t('Organization'),
     'AccountMenu.versionsLabel': t('Versions'),
     'AccountMenu.signOutLabel': t('Sign out'),
+    'MenuItem.newTabLabel': t('(opens in a new tab)'),
     'OverlayCloseButton.close': t('Close'),
     'SelectPickerContent.searchPlaceholder': t('Search…'),
     'SelectPickerContent.noResultsLabel': t('No results'),
