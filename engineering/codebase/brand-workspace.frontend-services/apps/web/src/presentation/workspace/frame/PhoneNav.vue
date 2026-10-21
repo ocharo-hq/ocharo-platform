@@ -25,12 +25,11 @@ const moreIsCurrent = computed(() => moreSections.some((section) => section.id =
 </script>
 
 <template>
-  <!-- The SDK bar paints `bg-background`, which a class cannot replace with the glass material, so the material wins by
-       `!` until BottomNavMenu takes a glass variant. -->
   <BottomNavMenu
     :is-fixed="false"
     :aria-label="t('Desk sections')"
-    class="surface-glass! z-sticky border-t border-glass-edge pb-[env(safe-area-inset-bottom)] [grid-area:footer] md:hidden"
+    variant="glass"
+    class="z-sticky [grid-area:footer] md:hidden"
   >
     <BottomNavMenuItem v-for="section in barSections" :key="section.id" as-child :is-active="props.current === section.id">
       <template #icon><component :is="SectionIcons[section.id]" :size="20" /></template>

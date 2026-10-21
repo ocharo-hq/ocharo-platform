@@ -13,8 +13,8 @@ starter must be replaced before reporting the scaffold complete.
 The API serves the built frontend from generated `wwwroot/`; development uses the shared proxy
 and port conventions. Preserve draft conflicts and display delivery uncertainty explicitly.
 
-The Ocharo frame's glass is the SDK `ocharo` theme's: `variant="glass"` on the top bar and sidebar,
-`variant="glass-menu"` on the account, apps and phone menus, `surface-glass!` on the phone bar (the SDK
-`BottomNavMenu` paints `bg-background` and takes no glass variant yet). Desk keeps
-no glass copy. App names translate through `ShellUiMessages.ts`; Editorial has its own
-`Apps menu: Editorial` key (with an `en` entry), apart from the designer's Editorial style.
+The Ocharo frame's glass is the SDK `ocharo` theme's: `variant="glass"` on the top bar, sidebar and phone bar
+(`BottomNavMenu`, which supplies its top edge, upward `--glass-bottom-shadow` and safe-area padding),
+`variant="glass-menu"` on the account, apps and phone menus. Desk keeps no glass copy. App names
+translate through `ShellUiMessages.ts`; Editorial has its own `Apps menu: Editorial` key (with an
+`en` entry), apart from the designer's Editorial style.

@@ -169,6 +169,18 @@ describe('Ocharo frame in Desk', () => {
     expect(document.querySelector('a[target="_blank"][href="https://localhost:8284/atlas/"]')).not.toBeNull();
   });
 
+  it('paints the phone bar with the SDK glass variant', async () => {
+    await renderAt(`/organizations/${ORG}/brands`, 390);
+
+    expect(wrapper!.findAll('nav[aria-label="Desk sections"]')).toHaveLength(1);
+    const bar = wrapper!.get('nav[aria-label="Desk sections"]').classes();
+    // `variant="glass"`: the chrome glass, its edge on the top border, the upward shadow and the safe-area padding.
+    expect(bar).toEqual(expect.arrayContaining(['surface-glass', 'border-t', 'border-glass-edge', 'shadow-(--glass-bottom-shadow)', 'pb-[env(safe-area-inset-bottom)]']));
+    expect(bar).not.toContain('bg-background');
+    expect(bar).not.toContain('surface-glass!');
+    expect(bar).toEqual(expect.arrayContaining(['z-sticky', '[grid-area:footer]', 'md:hidden']));
+  });
+
   it('keeps the sidebar rail choice this browser already stored, and stores a change under the same key', async () => {
     localStorage.setItem(SidebarCollapsedKey, 'true');
     await renderAt(`/organizations/${ORG}/brands`, 1440);
