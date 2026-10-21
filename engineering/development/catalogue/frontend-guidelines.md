@@ -23,9 +23,9 @@ Defer to `wow-two-ws/conventions/development/frontend/`.
 - The account menu holds appearance, interface language and the Catalogue and API versions; with an Ocharo session it
   also names the operator by their Desk name and email from `/api/sso/session` (else "Signed in through Ocharo Desk"),
   links the Desk account in a new tab and offers sign-out.
-- The frame glass comes from the SDK `ocharo` theme: `variant="glass"` on the top bars and sidebar, `variant="glass-menu"`
-  on the menus, notifications and phone sheet, `surface-glass!` on the phone bar (the SDK `BottomNavMenu` paints
-  `bg-background` and takes no glass variant yet). `index.css` keeps no glass copy.
+- The frame glass comes from the SDK `ocharo` theme: `variant="glass"` on the top bars, sidebar and phone bar, and
+  `variant="glass-menu"` on the menus, notifications and phone sheet. The phone bar's `BottomNavMenu` supplies its top
+  edge, upward `--glass-bottom-shadow` and safe-area padding. `index.css` keeps no glass copy.
 - Frame copy uses English message keys with uz/ru entries; an `en` entry is set only where the key is not the English
   phrase, as for the apps menu's `Apps menu: Editorial`, apart from the designer's Editorial style.
 

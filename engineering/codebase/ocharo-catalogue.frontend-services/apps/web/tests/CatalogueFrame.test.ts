@@ -199,6 +199,25 @@ describe('Ocharo frame in Catalogue', () => {
     ).toHaveProperty('aria-current', 'page');
   });
 
+  it('paints the phone bar with the SDK glass variant', async () => {
+    await renderAt('/stock', 390);
+
+    const bar = wrapper!.get('nav[aria-label="Catalogue sections"]').classes();
+    // `variant="glass"`: the chrome glass, its edge on the top border, the upward shadow and the safe-area padding.
+    expect(bar).toEqual(
+      expect.arrayContaining([
+        'surface-glass',
+        'border-t',
+        'border-glass-edge',
+        'shadow-(--glass-bottom-shadow)',
+        'pb-[env(safe-area-inset-bottom)]',
+      ]),
+    );
+    expect(bar).not.toContain('bg-background');
+    expect(bar).not.toContain('surface-glass!');
+    expect(bar).toEqual(expect.arrayContaining(['no-print', 'z-sticky', '[grid-area:footer]', 'md:hidden']));
+  });
+
   it('still asks before a section change discards unsaved product edits', async () => {
     const { router } = await renderAt('/products/new', 1440);
     // The editor is a dialog over the product list, so its fields render outside the frame's main region.
