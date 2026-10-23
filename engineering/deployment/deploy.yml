@@ -3,17 +3,20 @@
 # Format and rules: wow-two-ws/conventions/deployment/descriptor/deploy-descriptor.md. Hostnames, secrets and
 # environments live in Wheelhouse targets, never here. Paths are relative to engineering/.
 #
-# Ocharo Platform deploys Desk, its jobs worker and the private image worker, as the primary repository of the one
-# `ocharo` product (Wheelhouse decision 70): Studio and Assets deploy beside it, so service, site and volume names stay
-# unique across them, and Desk's site is the product's front door. The adopted Brand and Catalogue
-# pilots are not listed: their hosts refuse every non-loopback caller, so a deployment waits for their access
-# decision (deployment.md § Brand and Catalogue pilots); Desk and jobs compile only their Domain projects.
+# Ocharo Platform deploys Desk, its jobs worker, the private image worker and the adopted Brand and Catalogue pilots, as
+# the primary repository of the one `ocharo` product (Wheelhouse decision 70): Studio, Marketing and Assets deploy beside
+# it, so service, site and volume names stay unique across them, and Desk's site is the product's front door.
+# Brand and Catalogue are public without sign-in by the owner's decision of 2026-10-24, until the Ocharo identity server
+# lands (deployment.md § Brand and Catalogue pilots); each keeps its SQLite store and blobs on its own volume. Desk and
+# jobs compile only the pilots' Domain projects.
 # Both environments run as .NET Production (no dotnetEnvironment). Desk applies the schema as it starts and reports
 # ready only afterwards; jobs refuses to start on a missing schema, so it waits for Desk to be healthy.
 descriptor: 2
 product: ocharo
 sites:
   desk: {}                              # Desk, public: a domain, or Wheelhouse's sslip.io host until one is bound
+  brand: {}                             # Brand, public without sign-in until the identity server lands
+  catalogue: {}                         # Catalogue authoring, public without sign-in until the identity server lands
 services:
   desk:
     build: { dockerfile: deployment/Dockerfile }
@@ -75,3 +78,60 @@ services:
         ImageWorker:Key: { secret: true, required: true }
     volumes:
       models: /models
+  brand:
+    build: { dockerfile: deployment/brand/Dockerfile }
+    paths:
+      - codebase/ocharo-brand.backend-services/**
+      - codebase/ocharo-brand.frontend-services/**
+      - codebase/ocharo-sso/**
+    health: /health
+    settings:
+      # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies (the ingress, whose forwarded scheme the
+      # same-origin write check needs); nobody types them.
+      required: [AllowedHosts, Deployment:TrustedProxies]
+      keys:
+        # Public without sign-in until the identity server lands; false restores the loopback-only pilot.
+        Brand:PublicAccess: { type: boolean, default: true }
+        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
+        OcharoApps:Desk: { type: url }
+        OcharoApps:Catalogue: { type: url }
+        OcharoApps:Studio: { type: url }
+        OcharoApps:Marketing: { type: url }
+        OcharoApps:Editorial: { type: url }
+        OcharoApps:Brand: { type: url }
+        OcharoApps:Atlas: { type: url }
+        OcharoApps:Wear: { type: url }
+        OcharoApps:Blog: { type: url }
+    volumes:
+      brand-data: /data                # SQLite store (ocharo-brand.db) and blobs
+    sites:
+      brand: {}
+  catalogue:
+    build: { dockerfile: deployment/catalogue/Dockerfile }
+    paths:
+      - codebase/ocharo-catalogue.backend-services/**
+      - codebase/ocharo-catalogue.frontend-services/**
+      - codebase/ocharo-sso/**
+    health: /health
+    memory: 1g
+    settings:
+      # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies (the ingress, whose forwarded scheme the
+      # same-origin write check needs); nobody types them.
+      required: [AllowedHosts, Deployment:TrustedProxies]
+      keys:
+        # Public without sign-in until the identity server lands; false restores the loopback-only pilot.
+        Catalogue:PublicAccess: { type: boolean, default: true }
+        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
+        OcharoApps:Desk: { type: url }
+        OcharoApps:Catalogue: { type: url }
+        OcharoApps:Studio: { type: url }
+        OcharoApps:Marketing: { type: url }
+        OcharoApps:Editorial: { type: url }
+        OcharoApps:Brand: { type: url }
+        OcharoApps:Atlas: { type: url }
+        OcharoApps:Wear: { type: url }
+        OcharoApps:Blog: { type: url }
+    volumes:
+      catalogue-data: /data            # SQLite store (ocharo-catalogue.db) and blobs
+    sites:
+      catalogue: {}

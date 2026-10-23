@@ -1,6 +1,6 @@
 # Codebase
 
-*Last updated: 2026-09-27 12:25 AM*
+*Last updated: 2026-10-24*
 
 `brand-workspace.backend-services/BrandWorkspace.BackendServices.slnx` groups the API, worker,
 Application, Domain, Infrastructure, Persistence, and meaningful test projects. Projects sit directly
@@ -21,7 +21,7 @@ Build and runtime commands live in [development](../development/development.md) 
 
 | Domain | Backend | Frontend | Boundary |
 |---|---|---|---|
-| Brand | `ocharo-brand.backend-services/OcharoBrand.BackendServices.slnx` | `ocharo-brand.frontend-services/` | Loopback identity/release pilot; independent SQLite |
-| Catalogue | `ocharo-catalogue.backend-services/OcharoCatalogue.BackendServices.slnx` | `ocharo-catalogue.frontend-services/` | Loopback product/price/stock editor; independent SQLite |
+| Brand | `ocharo-brand.backend-services/OcharoBrand.BackendServices.slnx` | `ocharo-brand.frontend-services/` | Identity/release pilot: loopback locally, public when deployed until identity lands; independent SQLite |
+| Catalogue | `ocharo-catalogue.backend-services/OcharoCatalogue.BackendServices.slnx` | `ocharo-catalogue.frontend-services/` | Product/price/stock editor: loopback locally, public when deployed until identity lands; independent SQLite |
 
 Each frontend retains its own `apps/web`, lockfile and deploy helper. These preserved service slugs are a temporary naming exception; the foundation prefix remains unchanged. The solutions are not automatically included in the foundation build. [Adoption commands](../research/adoption/adoption.md) select each companion explicitly.

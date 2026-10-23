@@ -4,8 +4,8 @@
 #   other branches → candidate sha-<commit>, bundle as an Actions artifact
 #   workflow_dispatch → a candidate for one commit that has no build yet (Wheelhouse's Build action)
 #   pull request  → ci only
-# Images: ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}, one per service in engineering/deployment/deploy.yml;
-# publish builds the changed ones, so ci builds only the Brand and Catalogue pilot images, which never publish.
+# Images: ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker,brand,catalogue}, one per service in
+# engineering/deployment/deploy.yml; publish builds the changed ones, so ci builds no image.
 # Each check runs when its own paths change; a docs-only push runs nothing. Wheelhouse deploys the bundle.
 name: publish-docker-image
 
@@ -65,16 +65,6 @@ jobs:
           "pip-cache": "engineering/codebase/ocharo-image.backend-services/requirements*.txt", "timeout": 20,
           "run": "python -m pytest -q",
           "paths": ["engineering/codebase/ocharo-image.backend-services/**"]},
-         {"name": "Container (brand)", "lfs": "engineering/codebase/**",
-          "run": "docker build --file engineering/deployment/brand/Dockerfile --tag ocharo-ci:brand --build-arg \"VCS_REF=$GITHUB_SHA\" engineering/codebase",
-          "paths": ["engineering/codebase/ocharo-brand.backend-services/**",
-                    "engineering/codebase/ocharo-brand.frontend-services/**",
-                    "engineering/codebase/ocharo-sso/**", "engineering/deployment/brand/**"]},
-         {"name": "Container (catalogue)", "lfs": "engineering/codebase/**",
-          "run": "docker build --file engineering/deployment/catalogue/Dockerfile --tag ocharo-ci:catalogue --build-arg \"VCS_REF=$GITHUB_SHA\" engineering/codebase",
-          "paths": ["engineering/codebase/ocharo-catalogue.backend-services/**",
-                    "engineering/codebase/ocharo-catalogue.frontend-services/**",
-                    "engineering/codebase/ocharo-sso/**", "engineering/deployment/catalogue/**"]},
          {"name": "Deployment composition", "dir": "engineering/deployment", "timeout": 5,
           "run": "docker compose --env-file .env.example config --quiet",
           "paths": ["engineering/deployment/**"]}]

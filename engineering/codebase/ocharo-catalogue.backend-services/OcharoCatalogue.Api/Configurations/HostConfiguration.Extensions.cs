@@ -16,6 +16,7 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
+using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 
 namespace OcharoCatalogue.Api.Configurations;
@@ -99,9 +100,17 @@ public static partial class HostConfiguration
             app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
     }
 
-    /// <summary>Registers the HTTP error boundary, controllers and OpenAPI.</summary>
+    /// <summary>Registers forwarded headers trusted only from loopback and <c>Deployment:TrustedProxies</c>, the HTTP error
+    /// boundary, controllers and OpenAPI.</summary>
     private static WebApplicationBuilder AddControllers(this WebApplicationBuilder builder)
     {
+        // Behind the TLS-terminating ingress, same-origin write checks need the forwarded scheme; any other sender keeps its own.
+        var proxies = builder.Configuration.GetSection("Deployment:TrustedProxies").Get<string[]>() ?? [];
+        builder.Services.AddProxyAwareHosting(options =>
+        {
+            foreach (var proxy in proxies)
+                options.TrustedProxies.Add(proxy);
+        });
         builder.Services.AddHttpProblemDetails();
         builder.Services.AddControllers();
         builder.Services.AddOpenApi();

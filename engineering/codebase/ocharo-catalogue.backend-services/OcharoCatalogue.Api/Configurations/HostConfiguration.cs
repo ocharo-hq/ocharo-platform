@@ -1,5 +1,6 @@
 using Ocharo.Sso;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
+using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using OcharoCatalogue.Api.Catalogue;
 
@@ -29,6 +30,7 @@ public static partial class HostConfiguration
     {
         await app.InitializeCatalogueAsync();
 
+        app.UseProxyAwareHosting();
         app.UseHttpProblemDetails();
 
         app.UseMiddleware<CatalogueExceptionMiddleware>();

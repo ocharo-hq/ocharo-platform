@@ -1,12 +1,12 @@
 # Brand and Catalogue adoption
 
-*Last updated: 2026-09-29*
+*Last updated: 2026-10-24*
 
 ## Ownership and current boundary
 
 Ocharo Platform owns the Brand identity/release companion and Catalogue authoring companion. Their source is now part of this repository with no nested Git root. Existing namespaces, service slugs, IDs, revisions, media hashes and API contracts are preserved. Independent companion solutions/workspaces are a temporary naming exception while full integration is deferred.
 
-The existing authenticated Desk API, PostgreSQL store, worker, organization isolation and contextual catalogue/card editors are unchanged. These companions retain loopback-only write APIs and their own SQLite/media stores. Importing source does not merge their data or authenticate their write endpoints.
+The existing authenticated Desk API, PostgreSQL store, worker, organization isolation and contextual catalogue/card editors are unchanged. These companions keep their own SQLite/media stores and unauthenticated write APIs: loopback-only on a local run, and public on a deployed host by the owner's decision of 2026-10-24, until the Ocharo identity server lands ([deployment](../../deployment/deployment.md#brand-and-catalogue-pilots)). Importing source does not merge their data or authenticate their write endpoints.
 
 Catalogue's Vue routes are operator product editing, collections, copy, stock, pricing and print. Marketing owns the later public Catalogue reader. The existing `/api/public/catalogue` is a sibling integration feed; locale/price status fields and wholesale tiers require a reviewed buyer projection before unrestricted exposure.
 
@@ -45,7 +45,7 @@ Brand API retains 8286 HTTPS / 8287 HTTP; Brand Vite retains 8288. Catalogue API
 
 Existing `App_Data/` files were copied to the corresponding adopted API roots, including SQLite databases and content-addressed media. These directories are ignored by Git and Docker. Keep one active writer per store; archived donors are preservation copies. Product/logo seed inputs remain read-only in the private mft workspace.
 
-Docker/compose reference files live beneath `engineering/deployment/{brand,catalogue}/`. Their relative build contexts point at the common `engineering/codebase/`. They remain separately selected companion descriptors and are not merged into the authenticated Desk deployment. Do not launch both default compose files on their shared example port without an explicit deployment configuration.
+Docker/compose reference files live beneath `engineering/deployment/{brand,catalogue}/`. Their relative build contexts point at the common `engineering/codebase/`. They remain local companion references; Wheelhouse deploys both pilots from `engineering/deployment/deploy.yml` as their own `brand` and `catalogue` services and sites, beside Desk and not merged into it, each with its SQLite store on its own volume. Do not launch both default compose files on their shared example port without an explicit deployment configuration.
 
 ## Deferred integration
 

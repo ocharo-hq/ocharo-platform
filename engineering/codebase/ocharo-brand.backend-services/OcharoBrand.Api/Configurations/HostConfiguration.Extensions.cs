@@ -17,6 +17,7 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
+using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 
 namespace OcharoBrand.Api.Configurations;
 
@@ -76,9 +77,17 @@ public static partial class HostConfiguration
             app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
     }
 
-    /// <summary>Registers controller delivery, OpenAPI and JSON errors for the HTTP surface.</summary>
+    /// <summary>Registers forwarded headers trusted only from loopback and <c>Deployment:TrustedProxies</c>, controller
+    /// delivery, OpenAPI and JSON errors for the HTTP surface.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
+        // Behind the TLS-terminating ingress, same-origin write checks need the forwarded scheme; any other sender keeps its own.
+        var proxies = builder.Configuration.GetSection("Deployment:TrustedProxies").Get<string[]>() ?? [];
+        builder.Services.AddProxyAwareHosting(options =>
+        {
+            foreach (var proxy in proxies)
+                options.TrustedProxies.Add(proxy);
+        });
         builder.Services.AddHttpProblemDetails();
         builder.Services.AddControllers();
         builder.Services.AddOpenApi();
@@ -88,6 +97,7 @@ public static partial class HostConfiguration
     /// <summary>Configures the existing brand API middleware, technical endpoints and operator SPA.</summary>
     private static WebApplication ConfigureHttpSurface(this WebApplication app)
     {
+        app.UseProxyAwareHosting();
         app.UseHttpProblemDetails();
 
         app.UseMiddleware<BrandExceptionMiddleware>();

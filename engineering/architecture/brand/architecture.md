@@ -1,6 +1,6 @@
 # ventures.ocharo-brand — Architecture
 
-*Last updated: 2026-10-21*
+*Last updated: 2026-10-24*
 
 ```mermaid
 flowchart LR
@@ -14,7 +14,7 @@ flowchart LR
 
 | Project | Responsibility |
 |---|---|
-| `OcharoBrand.Api` | Admin + public controllers, runtime config and system status, local-pilot boundary (loopback, no cross-origin writes, CORS on `/api/public`), ProblemDetails mapping, seed-on-empty |
+| `OcharoBrand.Api` | Admin + public controllers, runtime config and system status, local-pilot boundary (loopback on a local run, public when deployed; no cross-origin writes; CORS on `/api/public`), ProblemDetails mapping, seed-on-empty |
 | `OcharoBrand.Application` | `BrandService` (identity, logo versions, publish with diff, appearances), `PublicBrandService` (kit build, logo fallbacks, tokens CSS, consumer tracking) |
 | `OcharoBrand.Domain` | `BrandDraft`, `BrandIdentity` (localized text, palette, typography, links), `LogoVersion`, `BrandRelease`, `BrandAppearance`, records |
 | `OcharoBrand.Infrastructure` | `MediaStore` (kit `IBlobRepository`, SkiaSharp WebP previews), `BrandSeeder` |
@@ -29,13 +29,15 @@ flowchart LR
 - `GET /api/public/brand/media/{sha}[/preview]` — immutable, content-addressed files (1-year cache), served only once disclosed: part of a published release or of an appearance that has started. Draft uploads and future appearance artwork return 404 publicly (a hash is not confidentiality); the admin app reads them through `/api/brand/media/{sha}`.
 - `GET /api/public/brand/tokens.css` — `--ocharo-{key}` colour variables plus font stacks.
 - Consumers identify themselves with `X-Ocharo-App` or `?app=`; the overview lists them with the release they last read.
-- Editing API under `/api/brand/*` is loopback-only and revision-checked (`expectedRevision`, 409 on conflict).
+- Editing API under `/api/brand/*` is revision-checked (`expectedRevision`, 409 on conflict) and loopback-only on a local run;
+  a deployed host serves it publicly without sign-in until the identity server lands (`Brand:PublicAccess`, owner
+  decision 2026-10-24).
 - `GET /api/runtime-config` — anonymous, `no-store`: the suite's `OCHARO_*_URL` app links from the optional `OcharoApps:*`
   settings (Desk, Catalogue, Studio, Marketing, Editorial, Brand, Atlas, Wear, Blog). Only absolute HTTPS values without
   credentials, query or fragment are served; startup logs one warning naming every rejected setting.
 - `GET /api/system/status` — anonymous, `no-store`: `{ service, status: "live", version }`. `GET /api/system/version`
   stays for existing callers. Both, and runtime config, are exempt from the Ocharo SSO boundary; with SSO off they stay
-  behind the loopback boundary like every other route.
+  behind the pilot boundary like every other route.
 
 ## Operator frame
 

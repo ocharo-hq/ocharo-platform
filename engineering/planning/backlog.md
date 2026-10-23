@@ -1,6 +1,6 @@
 # Ocharo Platform — Backlog
 
-*Last updated: 2026-10-21*
+*Last updated: 2026-10-24*
 
 ## Features
 
@@ -24,7 +24,7 @@ Build order set by the owner on 2026-10-08: **Events → Sourcing → Catalogue*
 | Campaign recurrence | feature | Explicit schedules, channel formats and review collaboration. |
 | Brand vector masters | feature | Sanitized source SVG and exported brand guidelines. |
 | Merchant evidence | feature | Validate order evidence and real workflow attribution. |
-| Companion consolidation | engineering | Retained Brand/Catalogue pilots stay loopback-only until absorption. |
+| Companion consolidation | engineering | Retained Brand/Catalogue pilots run loopback-only locally and public without sign-in when deployed (owner decision 2026-10-24) until the identity server lands; then put them behind sign-in. |
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
 | Ocharo Identity adoption | engineering | Move Desk's accounts, organizations, memberships and Telegram links into the Ocharo instance of WoW2 Identity; make every app an OIDC client; retire integration tickets, the SSO broker and the `Ocharo.Sso` snapshots. Waits on SDK identity slices I14–I21. |
 | Ocharo File Storage adoption | engineering | Move Catalogue, Brand, Blog and Marketing media, then Desk's `bytea` files, onto the Ocharo instance of WoW2 File Storage. Waits on the SDK files module. |
@@ -57,7 +57,7 @@ and [owner review scenarios](version-track/v0.1/v0.1.md#iteration-6--catalogue-a
 ### Remaining integration
 
 - [ ] Add authenticated Catalogue sessions and server-enforced admin/manager write permissions.
-      Loopback-only Catalogue writes must not be exposed publicly before this exists.
+      Until then a deployed Catalogue accepts anonymous writes by the owner's decision of 2026-10-24; this closes it.
 - [x] Make the signed-in logo open the workspace/app launcher; keep public navigation role-aware.
 - [ ] Reconcile Catalogue and authenticated Desk product/edition ownership through an explicit migration.
       No automatic cross-store writes or synchronization were added.

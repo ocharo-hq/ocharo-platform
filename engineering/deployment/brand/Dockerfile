@@ -8,7 +8,7 @@
 #
 #   docker run -d --name ocharobrand -p 127.0.0.1:8200:8080 -v ocharobrand-data:/data ocharobrand
 #
-# On first run the app creates /data/ocharobrand.db automatically.
+# On first run the app creates /data/ocharo-brand.db automatically.
 
 # ---- Stage 1: build the Vue workspace ----
 FROM node:24.11.0-alpine AS spa
@@ -38,7 +38,8 @@ RUN dotnet publish OcharoBrand.Api/OcharoBrand.Api.csproj -c Release -o /app -p:
 # ---- Stage 3: runtime ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
-RUN apt-get update && apt-get install --yes --no-install-recommends libfontconfig1 && rm -rf /var/lib/apt/lists/*
+# curl serves the deployment's /health probe.
+RUN apt-get update && apt-get install --yes --no-install-recommends curl libfontconfig1 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app ./
 
 # SQLite store on a volume so data survives container replacement.

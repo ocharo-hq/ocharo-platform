@@ -4,8 +4,8 @@ using System.Net;
 namespace OcharoCatalogue.Api.Catalogue;
 
 /// <summary>
-/// Keeps the unauthenticated pilot on loopback and rejects cross-origin writes. The read-only public feed and
-/// media routes stay readable cross-origin so sibling Ocharo apps (Marketing, Blog) can consume them locally.
+/// Keeps the unauthenticated pilot on loopback unless it is public (<see cref="IsPublic"/>), and rejects cross-origin
+/// writes. The read-only public feed and media routes stay readable cross-origin so sibling Ocharo apps (Marketing, Blog) can consume them locally.
 /// </summary>
 public sealed class LocalPilotBoundaryMiddleware(RequestDelegate next, IConfiguration configuration)
 {
@@ -24,7 +24,7 @@ public sealed class LocalPilotBoundaryMiddleware(RequestDelegate next, IConfigur
         }
         var address = context.Connection.RemoteIpAddress;
         var localHost = context.Request.Host.Host is "localhost" or "127.0.0.1" or "[::1]" or "::1";
-        if (!localHost || address is not null && !IPAddress.IsLoopback(address))
+        if (!IsPublic(configuration) && (!localHost || address is not null && !IPAddress.IsLoopback(address)))
         {
             await RejectAsync(context, "This pilot accepts loopback requests only.");
             return;
@@ -44,6 +44,15 @@ public sealed class LocalPilotBoundaryMiddleware(RequestDelegate next, IConfigur
 
         await next(context);
     }
+
+    /// <summary>
+    /// Whether any caller may reach the pilot without sign-in. The owner opened the deployed pilots to the public on
+    /// 2026-10-24, until the Ocharo identity server lands: <c>Catalogue:PublicAccess</c> decides, and unset it is on for a
+    /// deployed host (<c>DEPLOY_ENVIRONMENT</c>) and off for a local run, which keeps the loopback boundary.
+    /// </summary>
+    public static bool IsPublic(IConfiguration configuration) =>
+        configuration.GetValue<bool?>("Catalogue:PublicAccess")
+        ?? !string.IsNullOrWhiteSpace(configuration["DEPLOY_ENVIRONMENT"] ?? Environment.GetEnvironmentVariable("DEPLOY_ENVIRONMENT"));
 
     private bool IsAllowedOrigin(string origin, HttpRequest request)
     {

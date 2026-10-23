@@ -1,6 +1,6 @@
 # Deployment and local runtime
 
-*Last updated: 2026-10-21*
+*Last updated: 2026-10-24*
 
 ## Artifacts and ownership
 
@@ -145,13 +145,12 @@ HTTPS development API. Browser application and API requests remain same-origin.
 
 `publish-docker-image.yml` is the Wheelhouse marker and the only CI file: it calls the shared `delivery.yml` of
 `wow-two-platform.pipelines`, pinned to `v0.10.0`, with the checks below. A docs-only push builds nothing; any
-other runs the checks whose paths changed (each app's frontend, backend and pilot image; the image worker's tests;
-the deployment composition) and every check when a shared file changes. Publication then builds the services in
-`deploy.yml` that changed, as `ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker}`; CI builds only the
-Brand and Catalogue pilot images, which never publish. Jobs fetch only the LFS files under `engineering/codebase/`. Work happens on `main` and short-lived
+other runs the checks whose paths changed (each app's frontend and backend; the image worker's tests; the deployment
+composition) and every check when a shared file changes. Publication then builds the services in `deploy.yml` that
+changed, as `ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker,brand,catalogue}`; CI itself builds no image. Jobs fetch only the LFS files under `engineering/codebase/`. Work happens on `main` and short-lived
 branches only: a `main` build releases `vX.Y.Z` with `ocharo-platform-release.tar.gz` and reaches dev
 automatically; any other branch builds a candidate that reaches dev only by hand.
-Wheelhouse deploys that bundle; PostgreSQL, settings and the model volume come from its targets.
+Wheelhouse deploys that bundle; PostgreSQL, settings and the volumes come from its targets.
 
 ## Target settings
 
@@ -163,11 +162,13 @@ type and keeps a secret in its vault.
 
 | Service | Site | Required settings | Source |
 |---|---|---|---|
-| `desk` | `app`, public | `ConnectionStrings:Database` | the target's PostgreSQL (`needs: [postgres]`) |
+| `desk` | `desk`, public | `ConnectionStrings:Database` | the target's PostgreSQL (`needs: [postgres]`) |
 | | | `AllowedHosts`, `Deployment:TrustedProxies` | derived by Wheelhouse |
 | | | `DataProtection:KeysPath`, `DataProtection:ApplicationName` | the owner, on the first deploy |
 | `jobs` | none | `ConnectionStrings:Database` | the target's PostgreSQL |
 | `image-worker` | none | `ImageWorker:Key` (secret; 2 GB memory) | the owner, on the first deploy |
+| `brand` | `brand`, public | `AllowedHosts`, `Deployment:TrustedProxies` | derived by Wheelhouse |
+| `catalogue` | `catalogue`, public | `AllowedHosts`, `Deployment:TrustedProxies` (1 GB memory) | derived by Wheelhouse |
 
 - `AllowedHosts` holds the site's hosts, the service's platform name and `localhost` for health probes.
 - `DataProtection:KeysPath` is the `keys` volume, `/var/lib/brand-workspace/keys`.
@@ -206,20 +207,29 @@ Executed verification is recorded in [verification](../research/previous-work/ve
 
 ## Convention adoption status
 
-`deploy.yml` lists Desk, jobs and the private image worker; the Brand and Catalogue pilots are not listed yet
+`deploy.yml` lists Desk, jobs, the private image worker and the Brand and Catalogue pilots
 ([below](#brand-and-catalogue-pilots)). Desk probes `/health/ready`, its own readiness route, until it adopts the
 SDK boot bundle's `/health`.
 
 ## Brand and Catalogue pilots
 
-The owner asked on 2026-10-21 to deploy both pilots as public sites before authentication, until the identity
-server lands, with their SQLite stores on volumes. They are not in `deploy.yml` yet: each host's
-`LocalPilotBoundaryMiddleware` answers 403 to every caller that is not loopback on a `localhost` host, unless Desk
-SSO (`Identity:Sso:*`) is enabled, so behind the ingress a deployed pilot would refuse every request. Listing them
-waits for the change that lets a deployed host accept remote callers. CI builds both images on every change
-(`Container (brand)`, `Container (catalogue)`); neither publishes.
+The owner decided on 2026-10-24 to deploy both pilots as public sites without sign-in until the Ocharo identity server
+lands; their stores hold nothing valuable yet. Each is one service of `deploy.yml` with its own public site and volume:
 
-When they join `deploy.yml`, each is one service with its own site and a `data` volume at `/data`, where its
-image keeps the SQLite store (`/data/ocharo-{brand,catalogue}.db`) and blobs.
+| Service | Site | Volume at `/data` | Holds |
+|---|---|---|---|
+| `brand` | `brand` | `brand-data` | `ocharo-brand.db` and blobs |
+| `catalogue` | `catalogue` | `catalogue-data` | `ocharo-catalogue.db` and blobs |
+
+- `{Brand,Catalogue}:PublicAccess` (boolean, `deploy.yml` default `true`) opens `LocalPilotBoundaryMiddleware` to every
+  caller. Unset, it is on for a deployed host (`DEPLOY_ENVIRONMENT`) and off for a local run, which keeps the loopback
+  boundary; `false` on a target restores loopback-only.
+- Cross-origin writes stay refused. Behind the ingress the same-origin check needs the forwarded scheme, so each host
+  trusts forwarded headers from loopback and `Deployment:TrustedProxies` only.
+- Desk SSO (`Identity:Sso:*`) still bypasses the boundary when enabled; nothing enables it by default.
+- Anyone who reaches a site can edit and publish that pilot's brand or products. Once the identity server lands, put
+  both behind sign-in before storing anything valuable.
+- A deployed host has no private mft seed folders (`Brand:SeedLogoRoot`, `Catalogue:SourceRoot`): Brand seeds its
+  identity without logos, and Catalogue starts with no products.
 
 See `../research/convention-audit.md` for the earlier verified checks.

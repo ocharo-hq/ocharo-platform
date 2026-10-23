@@ -1,6 +1,6 @@
 # ventures.ocharo-catalogue — Architecture
 
-*Last updated: 2026-10-21*
+*Last updated: 2026-10-24*
 
 > Retained local-pilot architecture. Canonical authenticated authoring and named web/PDF editions
 > are documented in [Catalogue authoring and outputs](../catalogue-outputs.md). The pilot remains
@@ -19,7 +19,7 @@ flowchart LR
 
 | Project | Responsibility |
 |---|---|
-| `OcharoCatalogue.Api` | Controllers, local-pilot boundary (loopback, no cross-origin writes), ProblemDetails mapping, seed-on-empty |
+| `OcharoCatalogue.Api` | Controllers, local-pilot boundary (loopback on a local run, public when deployed; no cross-origin writes), ProblemDetails mapping, seed-on-empty |
 | `OcharoCatalogue.Application` | `ProductService` (validation, revisions, bulk status/prices), `CollectionService`, `SettingsService`, `PublicCatalogueService`, `CatalogueExportService` |
 | `OcharoCatalogue.Domain` | `ProductDocument` (locales, pricing tiers, media, review issues, provenance), `CollectionDocument`, `CatalogueSettings`, records |
 | `OcharoCatalogue.Infrastructure` | `MediaStore` (kit `IBlobRepository`, SkiaSharp WebP previews), `WorkspaceCatalogueImporter` |
@@ -29,7 +29,9 @@ flowchart LR
 
 - `GET /api/public/catalogue?locale=uz|ru|en` — `{ brand, currency, locale, generatedAt, priceNote, garmentTypes, collections[], products[] }`; products carry copy for the requested locale plus all locales, pricing tiers, and image URLs (`/api/catalogue/media/{sha}` + `/preview`).
 - Media URLs are content-addressed and immutable (1-year cache).
-- Editing API under `/api/catalogue/*` is loopback-only and revision-checked (`expectedRevision`, 409 on conflict).
+- Editing API under `/api/catalogue/*` is revision-checked (`expectedRevision`, 409 on conflict) and loopback-only on a local
+  run; a deployed host serves it publicly without sign-in until the identity server lands (`Catalogue:PublicAccess`,
+  owner decision 2026-10-24).
 - Stock: `GET /api/catalogue/products/stock`, `PUT /api/catalogue/products/{id}/stock` `{ expectedRevision, stock: {size: pieces} | null, madeToOrder }`; the public feed adds `availability` and `availableSizes` only.
 - Copy grid: `GET /api/catalogue/products/copy`, `PUT /api/catalogue/products/{id}/copy` `{ expectedRevision, locales }` — replaces only the three-language copy.
 - `GET /api/runtime-config` — anonymous, `no-store`, public values only: the `OcharoApps:{Desk,Catalogue,Studio,Marketing,Editorial,Brand,Atlas,Wear,Blog}` settings as `OCHARO_*_URL` keys, the same keys Desk serves. A value that is not an absolute HTTPS address without credentials, query or fragment is left out, with one startup warning naming the setting.
