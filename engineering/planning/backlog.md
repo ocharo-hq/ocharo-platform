@@ -1,6 +1,6 @@
 # Ocharo Platform — Backlog
 
-*Last updated: 2026-10-24*
+*Last updated: 2026-10-25*
 
 ## Features
 
@@ -13,7 +13,7 @@ Owner focus from 2026-10-24: **Events and Sourcing only**, then WoW2 File Storag
 | Catalogue editions | implemented; owner review open | [catalogue.md](../../product/features/catalogue.md) |
 | Image processing | implemented; owner review open | [image-processing.md](../../product/features/image-processing.md) |
 | Sourcing: suppliers, contacts, shared media | in progress — v0.1 iteration 16 | [sourcing.md](../../product/features/sourcing.md) |
-| Events: showcase events feed | in progress — v0.1 iteration 17 | [events.md](../../product/features/events.md) |
+| Events: showcase events feed | in progress — v0.1 iteration 17; moving into the WoW2 Events SDK module (2026-10-24) | [events.md](../../product/features/events.md) |
 
 ## Product and delivery
 
