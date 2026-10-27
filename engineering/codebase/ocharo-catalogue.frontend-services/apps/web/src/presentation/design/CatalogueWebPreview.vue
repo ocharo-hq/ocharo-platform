@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { EyeOff, Image as ImageIcon, ImageOff, TriangleAlert } from 'lucide-vue-next';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import { catalogueLanguages, productLocale } from '../../domain/catalogue/CatalogueLanguages';
-import type { ProductDetail } from '../../domain/catalogue/CatalogueModels';
+import type { PriceTier, ProductDetail } from '../../domain/catalogue/CatalogueModels';
 import type { CatalogueWebPage, DesignSnapshot } from '../../domain/design/EditorModels';
 import {
   catalogueCopy,
@@ -58,6 +58,11 @@ function productCopy(product: ProductDetail, locale: string) {
 }
 function price(value: number, currency: string) {
   return amount(value, props.snapshot.locale) + ' ' + currency;
+}
+/** Writes a quantity band in the catalogue language's digits, as the published reader does. */
+function quantity(tier: PriceTier) {
+  const count = (value: number) => amount(value, props.snapshot.locale);
+  return `${count(tier.minimumQuantity)}${tier.maximumQuantity === null ? '+' : tier.maximumQuantity === tier.minimumQuantity ? '' : '–' + count(tier.maximumQuantity)}`;
 }
 </script>
 <template>
@@ -140,17 +145,7 @@ function price(value: number, currency: string) {
                     ? price(tier.unitPrice, product.document.pricing.currency)
                     : new Intl.NumberFormat(snapshot.locale, { maximumFractionDigits: 0 }).format(tier.unitPrice)
                 }}</b
-                ><span v-if="settings.priceDisplay.showQuantity">
-                  · {{ tier.minimumQuantity
-                  }}{{
-                    tier.maximumQuantity === null
-                      ? '+'
-                      : tier.maximumQuantity !== tier.minimumQuantity
-                        ? '–' + tier.maximumQuantity
-                        : ''
-                  }}
-                  {{ copy.pieces }}</span
-                >
+                ><span v-if="settings.priceDisplay.showQuantity"> · {{ quantity(tier) }} {{ copy.pieces }}</span>
               </p>
             </div>
             <p v-else-if="settings.priceDisplay.show" class="prices">{{ copy.priceOnRequest }}</p>
