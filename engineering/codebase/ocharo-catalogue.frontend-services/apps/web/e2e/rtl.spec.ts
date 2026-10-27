@@ -7,7 +7,8 @@ import { inspectPdf, ocr, ocrLanguages, readDownload, renderPdf } from './suppor
 import { inkBounds } from './support/pixels';
 import { groupedImages } from './support/products';
 import { seedCatalogue } from './support/seed';
-import { choose, designerStatus, openDesigner } from './support/ui';
+import { choose, designerStatus, openDesigner, prepareAndPublish } from './support/ui';
+import { readWebModel } from './support/webModel';
 
 /** Synthetic garment copy in each right-to-left catalogue language. */
 const samples = [
@@ -165,4 +166,35 @@ test('switching an English catalogue to Persian turns its PDF text right-to-left
   await expect(name).toHaveCSS('direction', 'rtl');
   await expect(page.locator('.canvas-sheet')).toHaveAttribute('lang', 'fa');
   await expect(designerStatus(page)).toContainText(t('Unsaved changes'));
+});
+
+test('Persian preview prices match the released reader', async ({ page, request, t }) => {
+  const token = runToken(),
+    slug = `prices-fa-${token}`;
+  const product = await seedProduct(request, {
+    variant: `${token}q`,
+    locales: { en: { name: 'Linen Vest' }, fa: { name: samples[1].name, fabric: samples[1].fabric } },
+    images: groupedImages([180, 160, 150]),
+  });
+  const { document } = await seedCatalogue(request, {
+    title: `Prices fa ${token}`,
+    slug,
+    locale: 'fa',
+    outputs: { web: true, pdf: false },
+    web: [{ title: 'Looks', productIds: [product.document.id] }],
+  });
+  await openDesigner(page, document.id, 'web', t('Web designer'));
+  await page.getByText(t('Catalogue copy and price display')).click();
+  const pieces = page.getByRole('textbox', { name: t('Quantity label'), exact: true });
+  await pieces.fill(samples[1].pieces);
+  await pieces.press('Tab');
+  await page.getByRole('button', { name: t('Save catalogue'), exact: true }).click();
+  await expect(designerStatus(page)).toContainText(`${t('Saved')} · ${t('Revision')} 2`);
+  const preview = (await readWebModel(page.locator('main.web-catalogue'), 'preview')).sections[0]!.products[0]!.prices;
+
+  await prepareAndPublish(page, t);
+  await page.goto(`/c/${slug}?locale=fa`);
+  await expect(page.locator('article.web-reader .prices p').first()).toBeVisible();
+  const released = (await readWebModel(page.locator('article.web-reader'), 'reader')).sections[0]!.products[0]!.prices;
+  expect(preview, 'draft preview price lines equal the released reader').toEqual(released);
 });

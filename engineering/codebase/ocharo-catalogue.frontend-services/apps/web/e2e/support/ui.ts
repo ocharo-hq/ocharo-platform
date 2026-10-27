@@ -25,3 +25,20 @@ export async function openDesigner(page: Page, id: string, mode: 'web' | 'pdf', 
 
 /** The designer's saved-state line, such as "Saved · Revision 3". */
 export const designerStatus = (page: Page) => page.locator('.designer-bar .status');
+
+/** Prepares the saved revision (accepting an export-check warning) and publishes it from the designer bar. */
+export async function prepareAndPublish(page: Page, t: (source: string) => string): Promise<void> {
+  await page.getByText(t('Publication and saved history')).click();
+  const prepared = page.getByRole('status').filter({ hasText: t('Prepared for review. Publish when ready.') });
+  await page.getByRole('button', { name: t('Prepare release') }).click();
+  const warning = page.getByRole('alertdialog').getByRole('button', { name: t('Continue export') });
+  await expect(prepared.or(warning)).toBeVisible({ timeout: 90_000 });
+  if (await warning.isVisible()) await warning.click();
+  await expect(prepared).toBeVisible({ timeout: 90_000 });
+  await page.getByRole('button', { name: t('Publish catalogue'), exact: true }).click();
+  await page
+    .getByRole('alertdialog')
+    .getByRole('button', { name: t('Publish catalogue') })
+    .click();
+  await expect(page.getByRole('status').filter({ hasText: t('Catalogue published.') })).toBeVisible();
+}

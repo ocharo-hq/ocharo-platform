@@ -67,7 +67,7 @@ export const test = base.extend<CatalogueFixtures>({
       context.pages().forEach(watch);
       context.on('page', watch);
       await use(diagnostics);
-      const body = JSON.stringify(diagnostics, null, 2);
+      const body = JSON.stringify({ ...diagnostics, annotations: testInfo.annotations }, null, 2);
       await writeFile(testInfo.outputPath('diagnostics.json'), body);
       await testInfo.attach('diagnostics', { body, contentType: 'application/json' });
       const unexpected = diagnostics.console.filter(

@@ -123,17 +123,18 @@ export async function seedProduct(request: APIRequestContext, seed: ProductSeed)
   );
 }
 
-export async function setProductLocale(
+/** Changes one language's copy through the product copy endpoint, as the product editor's copy grid does. */
+export async function editProductCopy(
   request: APIRequestContext,
   id: string,
   code: string,
-  status: 'approved' | 'draft',
+  change: Partial<{ status: 'approved' | 'draft'; name: string; fabric: string; description: string }>,
 ): Promise<ProductDetail> {
   const current = await json<ProductDetail>(await request.get(`/api/catalogue/products/${id}`), 'Read product');
   const locales = JSON.parse(JSON.stringify(current.document.locales)) as ProductDetail['document']['locales'];
   const target = code === 'uz' || code === 'ru' || code === 'en' ? locales[code] : (locales.additional ?? {})[code];
   if (!target) throw new Error(`Product ${id} has no ${code} copy.`);
-  target.status = status;
+  Object.assign(target, change);
   return json<ProductDetail>(
     await request.put(`/api/catalogue/products/${id}/copy`, { data: { expectedRevision: current.revision, locales } }),
     'Update product copy',

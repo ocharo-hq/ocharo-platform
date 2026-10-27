@@ -1,30 +1,13 @@
 import { writeFile } from 'node:fs/promises';
-import type { Page } from '@playwright/test';
-import { releases, runToken, seedProduct, setProductLocale } from './support/catalogueApi';
+import { releases, runToken, seedProduct, editProductCopy } from './support/catalogueApi';
 import { download, expect, horizontalOverflow, test, timed } from './support/fixtures';
 import { pngSize } from './support/images';
 import { inspectPdf, readDownload, renderPdf } from './support/pdf';
 import { toJpeg } from './support/pixels';
 import { groupedImages } from './support/products';
 import { seedCatalogue } from './support/seed';
-import { designerStatus, openDesigner } from './support/ui';
+import { designerStatus, openDesigner, prepareAndPublish } from './support/ui';
 import { readWebModel } from './support/webModel';
-
-async function prepareAndPublish(page: Page, t: (source: string) => string) {
-  await page.getByText(t('Publication and saved history')).click();
-  const prepared = page.getByRole('status').filter({ hasText: t('Prepared for review. Publish when ready.') });
-  await page.getByRole('button', { name: t('Prepare release') }).click();
-  const warning = page.getByRole('alertdialog').getByRole('button', { name: t('Continue export') });
-  await expect(prepared.or(warning)).toBeVisible({ timeout: 90_000 });
-  if (await warning.isVisible()) await warning.click();
-  await expect(prepared).toBeVisible({ timeout: 90_000 });
-  await page.getByRole('button', { name: t('Publish catalogue'), exact: true }).click();
-  await page
-    .getByRole('alertdialog')
-    .getByRole('button', { name: t('Publish catalogue') })
-    .click();
-  await expect(page.getByRole('status').filter({ hasText: t('Catalogue published.') })).toBeVisible();
-}
 
 test('a missing translation is omitted from web and PDF; the release serves its reader and downloads', async ({
   page,
@@ -158,7 +141,7 @@ test('a missing translation is omitted from web and PDF; the release serves its 
   await page.screenshot({ path: test.info().outputPath('reader-pdf-390.png') });
 
   // The release is immutable: revoking a published product's translation later does not change what it serves.
-  await setProductLocale(request, a.document.id, 'ru', 'draft');
+  await editProductCopy(request, a.document.id, 'ru', { status: 'draft' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.reload();
   await page.getByRole('button', { name: t('Read online') }).click();

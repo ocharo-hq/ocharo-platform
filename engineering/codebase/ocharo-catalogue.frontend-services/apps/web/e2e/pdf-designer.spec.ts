@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import type { Page } from '@playwright/test';
-import { getDesign, runToken } from './support/catalogueApi';
+import { editProductCopy, getDesign, runToken } from './support/catalogueApi';
 import { download, expect, test, timed } from './support/fixtures';
 import { pngSize } from './support/images';
 import { inspectPdf, ocr, ocrLanguages, readDownload, renderPdf } from './support/pdf';
@@ -228,5 +228,45 @@ test.describe('PDF designer', () => {
     }
     const after = await canvasImages(page);
     expect(after[1]).toEqual(before[1]);
+  });
+
+  test('refreshing product fields updates bound text and keeps the page layout', async ({ page, request, t }) => {
+    const token = runToken();
+    const products = await seedGarments(request, token);
+    const { document } = await seedCatalogue(request, {
+      title: `Refresh ${token}`,
+      slug: `refresh-${token}`,
+      locale: 'en',
+      outputs: { web: false, pdf: true },
+      pdf: [{ productId: products.a!.document.id }],
+    });
+    await openDesigner(page, document.id, 'pdf', t('PDF designer'));
+    await selectPdfPage(page, 2);
+    const frames = () =>
+      page
+        .locator('.canvas-sheet .design-element')
+        .evaluateAll((items) =>
+          items.map(
+            (item) =>
+              (item as HTMLElement)
+                .getAttribute('style')
+                ?.match(/left[^;]+;\s*top[^;]+;\s*width[^;]+;\s*height[^;]+/)?.[0],
+          ),
+        );
+    const before = await frames();
+    expect(before.length > 5 && before.every(Boolean), 'element frames were read').toBe(true);
+    const name = page.locator('.canvas-sheet .design-element.is-text').filter({ hasText: garmentName(0, token) });
+    await expect(name).toHaveText(garmentName(0, token));
+
+    await editProductCopy(request, products.a!.document.id, 'en', { name: `Renewed ${token}` });
+    await page.getByRole('button', { name: t('Refresh product fields') }).click();
+    await expect(
+      page.getByRole('status').filter({ hasText: t('Product fields refreshed. Save to keep this version.') }),
+    ).toBeVisible();
+    await expect(
+      page.locator('.canvas-sheet .design-element.is-text').filter({ hasText: `Renewed ${token}` }),
+    ).toHaveCount(1);
+    expect(await frames(), 'every element keeps its frame').toEqual(before);
+    await expect(designerStatus(page)).toContainText(t('Unsaved changes'));
   });
 });
