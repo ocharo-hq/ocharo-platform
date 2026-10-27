@@ -17,6 +17,7 @@
     "format": "pnpm --filter @ocharocatalogue/web format",
     "format:check": "pnpm --filter @ocharocatalogue/web format:check",
     "lint": "pnpm --filter @ocharocatalogue/web lint",
+    "e2e": "pnpm --filter @ocharocatalogue/web e2e",
     "deploy": "pnpm build && node scripts/deploy.mjs"
   }
 }
