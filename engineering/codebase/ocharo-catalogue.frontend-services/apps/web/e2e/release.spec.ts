@@ -115,7 +115,7 @@ test('a missing translation is omitted from web and PDF; the release serves its 
     () => page.getByRole('link', { name: t('Download catalogue PDF') }).click(),
     t('Continue export'),
   );
-  expect.soft(whole.suggestedFilename(), "released PDF keeps the reader's file name").toBe(`ocharo-${slug}-ru.pdf`);
+  expect(whole.suggestedFilename(), "released PDF keeps the reader's file name").toBe(`ocharo-${slug}-ru.pdf`);
   const wholeBytes = await readDownload(await whole.path());
   await writeFile(test.info().outputPath('released-catalogue.pdf'), wholeBytes);
   const released = await inspectPdf(wholeBytes);
@@ -138,7 +138,7 @@ test('a missing translation is omitted from web and PDF; the release serves its 
         .click(),
     t('Continue export'),
   );
-  expect.soft(second.suggestedFilename(), "released page keeps the reader's file name").toBe(`ocharo-${slug}-2.pdf`);
+  expect(second.suggestedFilename(), "released page keeps the reader's file name").toBe(`ocharo-${slug}-2.pdf`);
   const page2 = await inspectPdf(await readDownload(await second.path()));
   expect(page2.pageCount).toBe(1);
   expect(page2.pages[0]).toMatchObject({ widthMm: 210, heightMm: 297 });

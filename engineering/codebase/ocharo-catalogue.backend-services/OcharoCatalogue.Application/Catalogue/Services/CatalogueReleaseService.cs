@@ -106,10 +106,18 @@ public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogue
         var code=locale??"uz";CatalogueDesignValidation.Require(CatalogueLocales.Supported(code),"Choose a supported catalogue language.");var records=await designs.PublicationsAsync(ct);
         return records.Where(r=>r.Locale==code).Select(r=>{var release=CatalogueJson.Read<CataloguePreparedRelease>(r.Json);return new {release.Id,release.Slug,release.Title,release.Description,release.Locale,updatedAt=release.CreatedAtUtc,availableLocales=records.Where(x=>x.Slug==release.Slug).Select(x=>x.Locale).Distinct().ToArray(),hasWeb=release.Web is not null,hasPdf=release.PdfAsset is not null};}).ToArray();
     }
-    public async Task<CatalogueReleaseAssetRecord> PublicAssetAsync(string slug,string locale,Guid releaseId,string asset,CancellationToken ct)
+    public async Task<CataloguePublicAsset> PublicAssetAsync(string slug,string locale,Guid releaseId,string asset,CancellationToken ct)
     {
         var record=await designs.PublishedAsync(slug,locale,releaseId,ct)??throw CatalogueException.NotFound("Published catalogue");var release=CatalogueJson.Read<CataloguePreparedRelease>(record.Json);
-        if(!release.Assets.TryGetValue(asset,out var hash))throw CatalogueException.NotFound("Catalogue artifact");return await designs.AssetAsync(hash,ct)??throw CatalogueException.NotFound("Catalogue artifact");
+        if(!release.Assets.TryGetValue(asset,out var hash))throw CatalogueException.NotFound("Catalogue artifact");var stored=await designs.AssetAsync(hash,ct)??throw CatalogueException.NotFound("Catalogue artifact");
+        return new(DownloadName(release,asset),stored.Sha256,stored.ContentType,stored.Bytes);
+    }
+    /// <summary>The file name the public reader offers: the whole edition by language, a single page by its number.</summary>
+    private static string DownloadName(CataloguePreparedRelease release,string asset)
+    {
+        if(asset==release.PdfAsset)return $"ocharo-{release.Slug}-{release.Locale}.pdf";
+        var number=release.Pages.ToList().FindIndex(page=>page.PdfAsset==asset||page.PngAsset==asset)+1;
+        return $"ocharo-{release.Slug}-{number}{Path.GetExtension(asset)}";
     }
     private static IEnumerable<JsonElement> PdfPages(Preparation p)=>!p.Definition.Outputs.Pdf?[]:p.Snapshot.GetProperty("pages").EnumerateArray().Where(page=>CatalogueDesignValidation.Active(page)&&References(page,p.Products).All(id=>Eligible(p,id))&&PageImagesEligible(page,p.Products));
     private static bool Eligible(Preparation p,string id)=>p.Products.TryGetValue(id,out var product)&&ProductPublicationEligibility.Eligible(product,p.Design.Locale);

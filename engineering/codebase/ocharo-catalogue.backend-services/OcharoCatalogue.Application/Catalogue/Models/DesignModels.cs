@@ -13,4 +13,5 @@ public sealed record CatalogueReleasePage(string Id, string Title, double WidthM
 public sealed record CataloguePreparedRelease(Guid Id, Guid DesignId, int DesignRevision, string Slug, string Title, string Description, string Locale,
     DateTimeOffset CreatedAtUtc, JsonElement? Web, IReadOnlyList<PublicProduct> Products, IReadOnlyList<CatalogueReleasePage> Pages,
     string? PdfAsset, IReadOnlyDictionary<string,string> Assets);
+public sealed record CataloguePublicAsset(string FileName, string Sha256, string ContentType, byte[] Bytes);
 public sealed record CatalogueReleaseSummary(Guid Id, Guid DesignId, int DesignRevision, string Slug, string Locale, DateTimeOffset CreatedAtUtc, DateTimeOffset? PublishedAtUtc, DateTimeOffset? WithdrawnAtUtc);
