@@ -144,7 +144,8 @@ test.describe('web designer', () => {
     ]);
     expect(previewSections[1]!.products[0]!.images).toEqual([groupImage(b, 'detail')]);
     expect(previewSections[1]!.products[0]!.prices).toEqual([`510,000 UZS · 1–9 ${'pieces'}`]);
-    await page.locator('.native-designer').screenshot({ path: test.info().outputPath('web-designer-desktop.png') });
+    await page.locator('.preview-panel').scrollIntoViewIfNeeded();
+    await page.screenshot({ path: test.info().outputPath('web-designer-desktop.png') });
 
     for (const width of ['768', '390']) {
       await choose(page, t('Preview size'), `${t(width === '768' ? 'Tablet' : 'Mobile')} · ${width}`);
