@@ -129,11 +129,7 @@ test.describe('catalogue gallery', () => {
     }
   });
 
-  test('a designer address for a disabled output says so instead of offering that designer', async ({
-    page,
-    request,
-    t,
-  }) => {
+  test('the PDF designer of a web-only catalogue says that PDF output is disabled', async ({ page, request, t }) => {
     const token = runToken();
     await page.goto('/catalogues');
     await page.getByRole('button', { name: t('New catalogue'), exact: true }).click();
