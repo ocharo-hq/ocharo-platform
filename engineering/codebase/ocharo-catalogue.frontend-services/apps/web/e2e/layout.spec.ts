@@ -26,11 +26,7 @@ function clippedControls(page: Page): Promise<string[]> {
   );
 }
 
-test('gallery, both designers and the public reader fit phone, tablet and desktop widths', async ({
-  page,
-  request,
-  t,
-}) => {
+test('gallery and both designers fit phone, tablet and desktop widths', async ({ page, request, t }) => {
   const token = runToken();
   const products = await seedGarments(request, token);
   const { document } = await seedCatalogue(request, {
