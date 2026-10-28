@@ -47,6 +47,6 @@ public sealed class PublishedDesignsController(CatalogueReleaseService releases)
         return File(
             result.Bytes,
             result.ContentType,
-            asset);
+            result.FileName);
     }
 }
