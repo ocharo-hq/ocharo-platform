@@ -17,6 +17,13 @@ sites:
   desk: {}                              # Desk, public: a domain, or Wheelhouse's sslip.io host until one is bound
   brand: {}                             # Brand, public without sign-in until the identity server lands
   catalogue: {}                         # Catalogue authoring, public without sign-in until the identity server lands
+  identity: {}                          # Ocharo's own Identity: sign-in and tokens for every Ocharo app
+# Ocharo's Identity applies its `identity` migration set to Ocharo's database before the service restarts
+# (pipelines v0.12.0); Wheelhouse fills Migrations:ConnectionString from the target's database.
+migrate:
+  - service: identity
+    command: [dotnet, Identity.Api.dll, migrate]
+    timeout: 10m
 services:
   desk:
     build: { dockerfile: deployment/Dockerfile }
@@ -78,6 +85,30 @@ services:
         ImageWorker:Key: { secret: true, required: true }
     volumes:
       models: /models
+  # Ocharo's own Identity instance: WoW2's public platform image, pinned by tag (Renovate moves it), its schema in
+  # Ocharo's database. Wheelhouse makes every secret on the first deploy of each environment, so no key passes through a
+  # person (pipelines v0.14.0, Wheelhouse v0.11; descriptor § Generated and linked keys), and the issuer follows the
+  # identity site's host. Self sign-up stays off: an admin adds every account. Clients join as Ocharo's apps adopt it,
+  # each secret generated here and linked into its app with `from`.
+  identity:
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.3.6
+    health: /health
+    memory: 256m
+    needs: [postgres]
+    settings:
+      keys:
+        DatabaseSettings:ConnectionString: { required: true }
+        Identity:Server:Issuer: { from: Sites:identity:Url }
+        Identity:Server:Keys:Ephemeral: { type: boolean, default: false }
+        Identity:SignUp:Enabled: { type: boolean, default: false }
+        Identity:Server:Keys:Signing:0:
+          { secret: true, required: true, generate: { command: [dotnet, Identity.Api.dll, keys, generate, --role, signing] } }
+        Identity:Server:Keys:Encryption:0:
+          { secret: true, required: true, generate: { command: [dotnet, Identity.Api.dll, keys, generate, --role, encryption] } }
+        Identity:DataProtection:Certificates:0:
+          { secret: true, required: true, generate: { command: [dotnet, Identity.Api.dll, keys, generate, --role, data-protection] } }
+    sites:
+      identity: { paths: [/, /api] }
   brand:
     build: { dockerfile: deployment/brand/Dockerfile }
     paths:
