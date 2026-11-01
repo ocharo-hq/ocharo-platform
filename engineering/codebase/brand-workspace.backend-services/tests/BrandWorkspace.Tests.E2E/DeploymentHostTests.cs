@@ -26,7 +26,7 @@ public sealed class DeploymentHostTests
     [Fact]
     public async Task Production_ShouldMigrateAnEmptyDatabaseBeforeItReportsReady()
     {
-        await using var database = new PostgresFixture(new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build());
+        await using var database = new PostgresFixture(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
         await database.StartAsync();
         var keys = Directory.CreateTempSubdirectory("brand-workspace-deployed-keys-");
         try
@@ -47,7 +47,7 @@ public sealed class DeploymentHostTests
     [Fact]
     public async Task Startup_ShouldFail_WhenRecordedSchemaHistoryNoLongerMatchesTheSource()
     {
-        await using var database = new PostgresFixture(new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build());
+        await using var database = new PostgresFixture(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
         await database.StartAsync();
         await using (var migrated = ApiContractTests.CreateFactory(database.ConnectionString))
             migrated.CreateClient().Dispose();

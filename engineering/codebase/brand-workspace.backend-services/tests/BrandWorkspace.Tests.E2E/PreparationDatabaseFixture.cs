@@ -24,7 +24,7 @@ namespace BrandWorkspace.Tests.E2E;
 /// <summary>Uses real PostgreSQL, real Identity users, and test-only organizations.</summary>
 public sealed class PreparationDatabaseFixture : IAsyncLifetime
 {
-    private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build());
+    private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
     public WebApiTestHost<ApiAssemblyMarker> Factory { get; private set; } = null!;
     public NpgsqlDataSource DataSource => Factory.Services.GetRequiredService<NpgsqlDataSource>();
     public PreparationService Service { get; private set; } = null!;

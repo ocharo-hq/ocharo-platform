@@ -3,7 +3,7 @@
 *Last updated: 2026-10-20*
 
 Run `dotnet test tests/BrandWorkspace.Tests.E2E` from the backend solution directory.
-Docker must be available; the suite starts its own PostgreSQL 17 container through the SDK test fixture.
+Docker must be available; the suite starts its own PostgreSQL 18 container through the SDK test fixture.
 It checks JSON API fallbacks, DB readiness, absence of API job processing, migration repeatability,
 queue persistence through a PostgreSQL container restart, worker host replacement, and idempotent receipts.
 `DeploymentHostTests` start Desk as a Production target over an empty database (it migrates before it is
