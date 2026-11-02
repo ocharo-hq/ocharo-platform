@@ -129,6 +129,13 @@ image `0.5.7`, amd64 only.
   `10.0.19-beta`, npm `0.0.10` ship #8 and #9 — `Identity:SignUp:Profile:{DisplayName,Picture}` (Ocharo: both
   `Required`), `Identity:ProfilePictures:*` defaults per #34, migration `007-invite-sign-up`, codeless verify through
   a per-sign-up bot link, and a `picture` claim served from the issuer. Not yet checked on a real bot.
+- Released 2026-11-03: `v0.5.13` (NuGet `10.0.22-beta`, npm `0.0.11`) opens the console to organization owners and
+  admins, narrows `admin create` to the instance admin (#43) and guards recycled phone numbers (migration
+  `008-telegram-link-changes`); `v0.5.14` (`10.0.23-beta`, `0.0.12`) adds the console shell with Sign out, live
+  instance roles, session revocation on any role change, the signed-in pass-through on `/sign-in`, and equal
+  owner/admin member management with zero owners allowed. Trusted contacts (#36) are in design with the developer.
+- fe sdk gaps found by the console, outside this goal: `SidebarMenu` types reject `aria-label` under
+  `strictTemplates`, and the fe sdk exports no icons (Identity drew six app-local glyphs).
 - The sign-up slice pins SkiaSharp to core's `3.119.2` (`6b24984`): core's older native library shadowed 4.x on
   Linux. Moving core to SkiaSharp 4.x is a core be sdk change outside this goal.
 - Also open in Identity, outside the target flow: arm64 image, HTTPS from a mounted PEM, compose build fix, stranding
