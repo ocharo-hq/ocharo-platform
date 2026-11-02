@@ -159,6 +159,9 @@ Snapshot `d295565`.
   Wheelhouse generates the certificates, signing, OTP and webhook keys and client 0's secret; the developer types
   the bot user name and token and client 0's two redirect URIs per environment, since `from:` takes no path
   suffix. Clients 1–5 join with their apps in G4. Desk sits on `Identity.Client` `10.0.18-beta` (`746f53c`).
+- Closed 2026-11-02, #17's cache (#37): core be sdk `10.0.98-beta` adds `AddPostgresDistributedCache` with its own
+  migration set `distributed_cache` (schema `cache`); Desk adopts it in `61b3045`, so a restart or deploy keeps
+  people signed in. The `migrate` role needs `CREATE` on Desk's database.
 - 19. G4 per app, in order: Brand + Catalogue (one release, drop `*:PublicAccess`), Marketing + Editorial (shared
   `packages/connect`), Studio (keep its workspace-id formula on `org_id` and `sub`), then retire `ocharo-sso`, the
   `shared/Ocharo.Sso` copies, integration tickets and Desk migration `011-identity-cutover`.
