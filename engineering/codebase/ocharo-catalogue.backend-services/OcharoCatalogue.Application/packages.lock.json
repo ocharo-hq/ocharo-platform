@@ -2700,10 +2700,7 @@
         "contentHash": "OZfAVu88hl87BffQ+rlWCj/vLvAhhCK4QnFaoveeF/MY8SjHNSYBQ3qyUEWlPKNgBQGh1syXhCDg10vUnCsqkg=="
       },
       "ocharocatalogue.domain": {
-        "type": "Project",
-        "dependencies": {
-          "WoW2.Sdk.Beta.Be": "[10.0.71-beta, )"
-        }
+        "type": "Project"
       },
       "Microsoft.AspNetCore.OpenApi": {
         "type": "CentralTransitive",

@@ -2524,16 +2524,10 @@
         }
       },
       "ocharobrand.domain": {
-        "type": "Project",
-        "dependencies": {
-          "WoW2.Sdk.Beta.Be": "[10.0.71-beta, )"
-        }
+        "type": "Project"
       },
       "ocharocatalogue.domain": {
-        "type": "Project",
-        "dependencies": {
-          "WoW2.Sdk.Beta.Be": "[10.0.71-beta, )"
-        }
+        "type": "Project"
       },
       "Npgsql.EntityFrameworkCore.PostgreSQL": {
         "type": "CentralTransitive",

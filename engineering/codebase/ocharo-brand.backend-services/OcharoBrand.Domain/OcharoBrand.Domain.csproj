@@ -1,8 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <ItemGroup>
-    <!-- Kit: IKeyedEntity<T> base for entities. -->
-    <PackageReference Include="WoW2.Sdk.Beta.Be" />
-  </ItemGroup>
+  <!-- Plain domain types with no SDK dependency, so Desk, which compiles this project, resolves only its own core. -->
 
 </Project>

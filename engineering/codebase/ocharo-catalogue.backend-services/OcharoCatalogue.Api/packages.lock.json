@@ -2325,10 +2325,7 @@
         }
       },
       "ocharocatalogue.domain": {
-        "type": "Project",
-        "dependencies": {
-          "WoW2.Sdk.Beta.Be": "[10.0.71-beta, )"
-        }
+        "type": "Project"
       },
       "ocharocatalogue.infrastructure": {
         "type": "Project",
