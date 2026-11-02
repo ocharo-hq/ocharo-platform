@@ -5,7 +5,7 @@ import { readSourcingLocation, type SourcingLocation } from './Sourcing';
  *  `desk:*` permissions, and the CSRF token unsafe requests carry. Signed out, every member but `authenticated` is empty. */
 export interface Session {
   authenticated: boolean;
-  user: { id: string; email: string; displayName: string; phone?: string | null } | null;
+  user: { id: string; email: string; displayName: string; phone?: string | null; picture?: string | null } | null;
   sessionId: string | null;
   csrfToken: string;
   organizationId: string | null;

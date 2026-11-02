@@ -41,7 +41,7 @@ describe('published SDK workspace transport', () => {
   it('maps an authenticated BFF session onto the Desk session', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: {
       isAuthenticated: true,
-      person: { sub: 'person', name: null, email: null, phoneNumber: '+998901234567' },
+      person: { sub: 'person', name: null, email: null, phoneNumber: '+998901234567', picture: 'https://localhost:8404/api/account/pictures/person?v=1' },
       organization: { id: 'org', role: 'owner' },
       permissions: ['desk:edit', 'desk:approve'],
       csrfToken: 'bound-token',
@@ -49,7 +49,7 @@ describe('published SDK workspace transport', () => {
     } })));
     expect(await createWorkspaceApi(() => '').getSession()).toEqual({ ok: true, value: {
       authenticated: true,
-      user: { id: 'person', email: '', displayName: '+998901234567', phone: '+998901234567' },
+      user: { id: 'person', email: '', displayName: '+998901234567', phone: '+998901234567', picture: 'https://localhost:8404/api/account/pictures/person?v=1' },
       sessionId: 'person',
       csrfToken: 'bound-token',
       organizationId: 'org',

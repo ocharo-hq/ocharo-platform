@@ -34,6 +34,12 @@ const isBffSession = (v: unknown): v is Record<string, unknown> =>
     (v.organization === null || (record(v.organization) && typeof v.organization.id === 'string'))));
 /** @internal Reads an optional string member. */
 const text = (v: unknown): string | null => (typeof v === 'string' && v.trim().length > 0 ? v : null);
+/** @internal Keeps an absolute HTTPS link (Identity's `picture`, a link under its issuer); anything else is dropped. */
+const httpsUrl = (v: unknown): string | null => {
+  const value = text(v);
+  if (!value) return null;
+  try { return new URL(value).protocol === 'https:' ? value : null; } catch { return null; }
+};
 /** Maps the BFF's `GET /api/identity/session` into Desk's session. */
 export const sessionDecoder: ApiDecoder<Session> = (value) => {
   if (!isBffSession(value)) return ResultExtensions.fail(ApiFailureFactory.create('protocol'));
@@ -45,7 +51,7 @@ export const sessionDecoder: ApiDecoder<Session> = (value) => {
   const email = text(person.email), phone = text(person.phoneNumber);
   return ResultExtensions.ok({
     authenticated: true,
-    user: { id: String(person.sub), email: email ?? '', displayName: text(person.name) ?? email ?? phone ?? '', phone },
+    user: { id: String(person.sub), email: email ?? '', displayName: text(person.name) ?? email ?? phone ?? '', phone, picture: httpsUrl(person.picture) },
     sessionId: String(person.sub),
     csrfToken: String(value.csrfToken),
     organizationId: organization ? String(organization.id) : null,

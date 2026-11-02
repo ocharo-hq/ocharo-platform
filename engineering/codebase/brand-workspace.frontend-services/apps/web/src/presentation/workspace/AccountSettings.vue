@@ -16,6 +16,7 @@ const role = computed(() => props.access.session.value?.role ?? null);
     <ModalContent class="w-full max-w-lg rounded-2xl border border-border bg-card p-6 text-foreground">
       <ModalTitle class="text-xl font-semibold">{{ t('Account settings') }}</ModalTitle>
       <section class="mt-5 space-y-2">
+        <img v-if="user?.picture" :src="user.picture" alt="" class="size-16 rounded-full object-cover" referrerpolicy="no-referrer" />
         <p v-if="user?.displayName" class="font-medium">{{ user.displayName }}</p>
         <p v-if="user?.phone" class="text-sm">{{ user.phone }}</p>
         <p v-if="user?.email" class="text-sm">{{ user.email }}</p>
