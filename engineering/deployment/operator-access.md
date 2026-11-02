@@ -49,7 +49,9 @@ The certificate is mounted read-only into the API. It is never an image input. S
 flow against Identity through the SDK's BFF: a Secure, HttpOnly cookie carries only a session reference, the tokens stay
 server-side, unsafe API requests carry the session-bound `X-Csrf-Token`, and the session ends with the Identity sign-in
 session. Organization authority comes from the session's `org_id`, `org_role` and `org_permission` claims; Desk projects
-each signed-in person into `access.users` on their first organization request.
+each signed-in person into `access.users`, and the token's organization into `access.organizations`, on
+their first organization request; a hosted Desk with no restored data needs no seed. The organization is named
+`Organization` (slug `org-{id}`) until Identity sends `org_name` and `org_slug`.
 
 The named `brand-workspace_data-protection-keys` volume preserves cookie protection across API
 replacement. The application discriminator is `brand-workspace:Production` for the packaged stack.

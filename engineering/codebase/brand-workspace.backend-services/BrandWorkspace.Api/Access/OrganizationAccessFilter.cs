@@ -23,6 +23,7 @@ public sealed class OrganizationAccessFilter(IAccessRepository repository) : IEn
             || http.User.GetOrganizationRole(organizationId) is not { } role)
             return AccessProblems.Create(404, "Not found", "not_found");
         var userId = AccessClaims.UserId(http.User);
+        await repository.ProjectOrganizationAsync(organizationId, AccessClaims.OrganizationName(http.User), AccessClaims.OrganizationSlug(http.User), http.RequestAborted);
         await repository.ProjectUserAsync(userId, http.User.FindFirstValue("name"), http.User.FindFirstValue("email"), http.RequestAborted);
         http.Items[AccessKey] = new OrganizationAccess(organizationId, userId, role,
             http.User.HasOrganizationPermission(organizationId, EditPermission),

@@ -15,9 +15,12 @@ public static class AccessEndpoints
         {
             var organizations = new List<Organization>();
             if (Guid.TryParse(http.User.FindFirstValue(OrganizationClaimTypeConstants.Id), out var id)
-                && http.User.GetOrganizationRole(id) is { } role
-                && await repository.FindOrganizationAsync(id, role, http.RequestAborted) is { } organization)
-                organizations.Add(organization);
+                && http.User.GetOrganizationRole(id) is { } role)
+            {
+                await repository.ProjectOrganizationAsync(id, AccessClaims.OrganizationName(http.User), AccessClaims.OrganizationSlug(http.User), http.RequestAborted);
+                if (await repository.FindOrganizationAsync(id, role, http.RequestAborted) is { } organization)
+                    organizations.Add(organization);
+            }
             return Results.Ok(new { data = organizations });
         });
         return app;

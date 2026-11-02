@@ -116,6 +116,24 @@ public sealed class AccessIdentityTests(PreparationDatabaseFixture fixture) : IC
     }
 
     [Fact]
+    public async Task FirstSignIn_ShouldProjectTheTokensOrganization_WhenDeskHasNoRowForIt()
+    {
+        var organization = Guid.NewGuid();
+        var subject = Guid.NewGuid().ToString("D");
+        DeskTestHost.Register(new DeskTestHost.Person(subject, organization, "owner", "Hosted owner", $"hosted-{Guid.NewGuid():N}@example.test"));
+        using var client = DeskTestHost.CreateClient(fixture.Factory, subject);
+
+        var listed = await Data(await client.GetAsync("/api/organizations"));
+        using var scoped = await client.GetAsync($"/api/organizations/{organization}/events");
+
+        listed.GetArrayLength().Should().Be(1, "a hosted Desk with no restored data still lists the token's organization");
+        listed[0].GetProperty("id").GetString().Should().Be(organization.ToString("D"));
+        listed[0].GetProperty("slug").GetString().Should().Be("org-" + organization.ToString("N")[..12]);
+        listed[0].GetProperty("role").GetString().Should().Be("owner");
+        scoped.StatusCode.Should().Be(HttpStatusCode.OK, await scoped.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task SignInSessions_ShouldLiveInDesksDatabase_SoARestartKeepsThem()
     {
         var cache = fixture.Factory.Services.GetRequiredService<IDistributedCache>();

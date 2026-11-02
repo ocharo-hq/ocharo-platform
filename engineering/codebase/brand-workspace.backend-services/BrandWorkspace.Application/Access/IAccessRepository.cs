@@ -9,4 +9,5 @@ public interface IAccessRepository
     Task<OrganizationAccess?> FindMembershipAsync(Guid organizationId, string userId, CancellationToken token);
     Task<OperatorProfile?> FindProfileAsync(string userId, CancellationToken token);
     Task ProjectUserAsync(string userId, string? displayName, string? email, CancellationToken token);
+    Task ProjectOrganizationAsync(Guid organizationId, string? name, string? slug, CancellationToken token);
 }

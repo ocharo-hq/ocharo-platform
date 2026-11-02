@@ -102,5 +102,6 @@ public sealed class IntegrationTicketTests
         public Task<OperatorProfile?> FindProfileAsync(string userId,CancellationToken token) => Task.FromResult(userId=="operator" ? Profile : null);
         public Task<Organization?> FindOrganizationAsync(Guid organizationId,string role,CancellationToken token) => throw new NotSupportedException();
         public Task ProjectUserAsync(string userId,string? displayName,string? email,CancellationToken token) => throw new NotSupportedException();
+        public Task ProjectOrganizationAsync(Guid organizationId,string? name,string? slug,CancellationToken token) => throw new NotSupportedException();
     }
 }

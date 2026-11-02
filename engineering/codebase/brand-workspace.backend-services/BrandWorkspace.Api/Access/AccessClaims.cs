@@ -10,4 +10,9 @@ public static class AccessClaims
     public static string UserId(ClaimsPrincipal principal) =>
         principal.FindFirstValue(Subject) ?? throw new InvalidOperationException("Authenticated user id is missing.");
     public static string? Session(ClaimsPrincipal principal) => principal.FindFirstValue(SessionId);
+    /// <summary>The active organization's name and slug, once the Identity instance sends them; Desk names its projection from them.</summary>
+    public const string OrganizationNameClaim = "org_name";
+    public const string OrganizationSlugClaim = "org_slug";
+    public static string? OrganizationName(ClaimsPrincipal principal) => principal.FindFirstValue(OrganizationNameClaim);
+    public static string? OrganizationSlug(ClaimsPrincipal principal) => principal.FindFirstValue(OrganizationSlugClaim);
 }
