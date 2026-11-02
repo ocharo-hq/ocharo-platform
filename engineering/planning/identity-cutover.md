@@ -118,8 +118,12 @@ image `0.5.7`, amd64 only.
 | 13 | Members and invitations panel in `fe-identity` (v0.5 iteration 4) | missing — `fe-identity` exports `./contracts` and `./kit` only |
 | 14 | Deploy: pipelines `v0.15.0` in Identity's workflows, then `configCheck:` live in its `deploy.yml` | ready to do — `config check` is built and tested; workflows pin `v0.14.0`; the step is commented out |
 
-- Shipped 2026-11-02: #14 (`19841af`), #10 (`c7d5cfc`), #11 and #12 (`18bfed0`); tags `v0.5.8`, `be-v10.0.18-beta`,
-  `fe-v0.0.8`. #13 is committed (`7e122a0`); #8 and #9 build as the sign-up slice (#34).
+- Released 2026-11-02 from `4737e9b`: image `v0.5.8`, NuGet `10.0.18-beta`, npm `0.0.8` — #14 (`19841af`), #10
+  (`c7d5cfc`), #11 and #12 (`18bfed0`). #13 publishes from `7e122a0`; #8 and #9 build as the sign-up slice (#34).
+- For Ocharo, 0.5.8 binds `Identity:Methods:{Password,Email}:IsEnabled` (both `false`) and refuses
+  `Identity:SignUp:IsEnabled` in config check; `Identity:Organizations:OwnerRole` is unbound and silently ignored.
+- Apps read `org_role` as `{org_id}:{role}` and `org_permission` as a JSON array of `{org_id}:{permission}`.
+- An arm64 image needs platforms in `wow-two-platform.pipelines` `delivery.yml`, a repo no lane owns; outside this goal.
 - `/api/organizations/{id}/members` has no add route; members join by invitation.
 - Also open in Identity, outside the target flow: arm64 image, HTTPS from a mounted PEM, compose build fix, stranding
   checks, uz/ru texts; the be sdk's 500 on a missing required member and MailKit's message built outside its `try`.
