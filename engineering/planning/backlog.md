@@ -27,6 +27,7 @@ Owner focus from 2026-10-24: **Events and Sourcing only**, then WoW2 File Storag
 | Merchant evidence | feature | Validate order evidence and real workflow attribution. |
 | Companion consolidation | engineering | Retained Brand/Catalogue pilots run loopback-only locally and public without sign-in when deployed (owner decision 2026-10-24) until the identity server lands; then put them behind sign-in. |
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
+| Identity cutover | engineering | Ocharo people sign in by Telegram through Ocharo's WoW2 Identity, local → dev → prod, then every app; track: [identity-cutover.md](identity-cutover.md). |
 | Dev and prod follow-ups | engineering | Deferred by the owner on 2026-10-24: Marketing's card preview answers 500 on dev; Motion's private site gets no route; dev Desk has no operator yet; prod has never been deployed. |
 | Ocharo Identity adoption | engineering | Move Desk's accounts, organizations, memberships and Telegram links into the Ocharo instance of WoW2 Identity; make every app an OIDC client; retire integration tickets, the SSO broker and the `Ocharo.Sso` snapshots. Waits on SDK identity slices I14–I21. |
 | Ocharo File Storage adoption | engineering | Move Catalogue, Brand, Blog and Marketing media, then Desk's `bytea` files, onto the Ocharo instance of WoW2 File Storage. Waits on the SDK files module. |
