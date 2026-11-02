@@ -1,6 +1,6 @@
 # Telegram bot sign-in
 
-*Last updated: 2026-10-19*
+*Last updated: 2026-11-02*
 
 ## Decision
 
@@ -87,13 +87,6 @@ Live bot credentials, real delivery, and manual account linking have not been ex
 
 OTP delivery is bounded to ten seconds; timeout invalidates the pending code and keeps the generic response. Database serialization covers delivery to prevent resend/verification races. The bot supports `/start` and `/help`, both guiding existing users to **Connect Telegram**.
 
-## Bot profile prepared for BotFather
+## Bot profile
 
-- Name: **Ocharo**; username: **@ocharo_bot**.
-- About: `Sign in to Ocharo apps with Telegram.`
-- Description: `Connect your Telegram account to Ocharo and receive sign-in codes here. Start from your Ocharo account settings to connect. Never share your codes.`
-- Profile image: the existing compact Ocharo mark; leave description media blank.
-- Commands: `start - Connect your Ocharo account`; `help - Get sign-in help`.
-- Privacy-policy URL must point to a real published policy; that publication remains pending.
-
-These are prepared profile values, not evidence that BotFather settings were changed. Linking starts after password sign-in: open settings, choose **Connect Telegram**, confirm the password, follow the one-time bot link, and share your own contact. Keep bot secrets in server-local configuration only.
+The prod, dev and local bots, their BotFather settings and profile copy live in [Telegram bots](telegram-bots.md). The privacy-policy URL must point to a real published policy; that publication remains pending.
