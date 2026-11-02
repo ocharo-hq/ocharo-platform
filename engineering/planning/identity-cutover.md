@@ -265,6 +265,13 @@ Settled:
   verb, so #12 is withdrawn and the one-off runs `admin create` only (developer, 2026-11-02). Maftuna's owner invite
   is made there by Sultonbek. The same release adds `org_name` / `org_slug` claims (`9cb95d0`), which Desk uses to
   name the organization row it creates on first sign-in (`5339b9d`).
+- 43. `admin create` makes only the instance admin, once (developer, option B, 2026-11-03); the instance admin
+  creates organizations in the Identity console, with a preset id for Ocharo (`b8c672a6-…`), then invites from it.
+  The bootstrap per environment becomes migrate → `admin create` → console sign-in by phone → create Ocharo →
+  invite Maftuna as owner. Ocharo dev's redeploy on identity `0.5.12` runs today's verb once; the end state is the
+  same. The next Identity release also guards against a recycled phone moving a Telegram link.
+- 44. Wheelhouse `v0.13.3` (`4cacf67`) renders descriptor defaults and keeps each repo's `configCheck:`; proven
+  on dev, its prod promotion is the developer's click and gates the Ocharo dev redeploy.
 
 Open, cross-lane: none.
 
