@@ -1,6 +1,6 @@
 # Catalogue designer audit
 
-*Last updated: 2026-10-27*
+*Last updated: 2026-11-02*
 
 Do the Catalogue pilot's Web designer and PDF designer work? This audit drove both designers, the gallery and
 the public reader in Chromium against a real `OcharoCatalogue.Api`, and left the
@@ -19,7 +19,7 @@ Both designers are fit for the owner's review; nothing found blocks it. Owner-re
 
 ## Scenarios
 
-Run on 2026-10-27: **24 of 24 browser tests pass** in 1.7 min (2 workers), after the fixes below. Every test
+Run on 2026-11-02, rebased onto current `main`: **25 of 25 browser tests pass** in 1.8 min (2 workers), after the fixes below. Every test
 fails on an uncaught page error or unexpected console error; the only console error in the run is the
 deliberate `409` of the stale-save test. No request failed. All data is synthetic.
 
@@ -61,7 +61,7 @@ deliberate `409` of the stale-save test. No request failed. All data is syntheti
 | Page duplicate, remove, undo; revision restore; recovery copy; stale save | Pass | Stale save refused with "This item changed elsewhere", edits kept |
 | Phone, tablet and desktop widths | Pass after fix | No page overflow at 390 / 820 / 1440; web layout picker clipped at 390 → **fixed** (F3); PDF canvas needs panning (O2); [web 390](evidence/web-designer-phone.jpg), [PDF 390](evidence/pdf-designer-phone.jpg), [PDF 1440](evidence/pdf-designer-desktop.jpg) |
 | Export speed with photo-sized images | Pass | 7 pages, twelve 3000 × 4000 images: export 7.6 s, prepare 6.7 s (budget 60 s / 120 s) |
-| "Use original design" | Blocked | Its template images are Git LFS objects that this container could not fetch |
+| "Use original design" | Pass | All 16 template pages connect to the 29 products they name and export (5.7 s, 13.1 MiB); the release prepares and publishes in 12.7 s within the API limits. Added 2026-11-02, once Git LFS was reachable |
 | Running Desk's designer | Blocked | See [E3 comparison](#e3-desk-and-pilot-designers) |
 
 ## Bugs
@@ -119,7 +119,7 @@ and its catalogue routes require a signed-in organization member. Desk sources:
 | History | Revision list with page previews; restore as unsaved copy; recovery copy | Revision list without previews; restore as unsaved draft; recovery copy |
 | Publication | Prepare/publish with a reviewed-pages confirmation and publication note | Prepare, publish, withdraw; releases list |
 | Business cards | Same editor | Not present |
-| Verification | Unit and API tests with PostgreSQL containers | Unit tests and this 24-test browser suite |
+| Verification | Unit and API tests with PostgreSQL containers | Unit tests and this 25-test browser suite |
 
 For the decision:
 
@@ -132,10 +132,9 @@ For the decision:
 
 ## What stays unverified
 
-- Real photographs: file sizes and the 64 MiB whole-PDF and 256 MiB release limits. Synthetic images compress to
-  0.3 MiB for 7 pages; real photos at 240 dpi will be far larger.
-- "Use original design" and the brand logos (Git LFS objects unavailable here; the logo shows as a broken image in
-  reader screenshots).
+- Large catalogues against the 64 MiB whole-PDF and 256 MiB release limits. The original design's photography
+  gives 13.1 MiB for 16 pages (about 0.8 MiB a page), so the whole-PDF limit is near 75–80 such pages; no catalogue
+  of that size was prepared.
 - Desk's designers in a browser.
 - Firefox, Safari and real touch devices; only Chromium ran, with emulated viewports.
 - Deployed dev and prod hosts (public mode, ingress); everything ran on localhost.
@@ -153,6 +152,7 @@ For the decision:
 | Toolchain | .NET SDK 10.0.113, Node 24.22.1, pnpm 10.33.2, Playwright 1.63.0 with Chromium |
 | Transport | HTTPS on both apps, unchanged; Vite used an Ubuntu `mkcert` binary because the plugin's own download was refused |
 | Optional tools | `tesseract` with `eng`, `ara`, `fas`, `urd` for OCR checks; Noto fonts |
+| Git LFS | Unreachable on 2026-10-27, so screenshots from that run show the reader's logo as a broken image; fetched on 2026-11-02 for the original-design test |
 
 The suite starts its own API (`18278`) and Vite (`18282`) with a temporary store, so it never touches a
 developer's `App_Data`.
