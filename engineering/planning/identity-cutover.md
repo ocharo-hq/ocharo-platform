@@ -13,7 +13,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 ## Status
 
 - 🔄 G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone and the edit check pass (2026-11-03); the console invite waits for the console fixes
-- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.15` runs on dev and `admin create` ran (2026-11-03); the `0.5.14` push, sign-in and invite remain
+- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.16` (identity `0.5.14`) runs on dev and `admin create` ran (2026-11-03); sign-in and the invite remain
 - ⬜ G3 prod: the same on prod with `@ocharo_bot`
 - ⬜ G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired
 
@@ -232,6 +232,12 @@ for an unopened v0.13.
   it exited 0 with status `created`, both preset ids echoed and the instance role `admin` granted. An earlier try
   exited 2 on a placeholder phone and wrote nothing. The PLAT push to identity `0.5.14` follows, and its fresh set
   compose is the config check's live proof.
+- Third dev deploy, 2026-11-03: PLAT `555011d` released `v0.1.16`, and Ocharo dev took it automatically (deployment
+  `2e998f6e`, 1m 11s): identity `0.5.12` → `0.5.14`, desk and jobs `0.1.16`, all 10 services healthy. Identity
+  migrated 7 → 8 (`008-telegram-link-changes`, expand) and kept its webhook. The freshly composed set ran the config
+  check live for the first time: "Config check identity: Consistent". The instance admin's survival is shown by code
+  only (008 adds one table); auto mode refuses database reads on the shared host, so the developer's console sign-in
+  is its live proof.
 - Custom domains are planned, not built; until then the webhook URL is the baseline host, and `setWebhook` is
   Identity's job.
 - Grants: Wheelhouse prod is promoted only for dev-proven releases; a rollback waits for the owner; another product's
