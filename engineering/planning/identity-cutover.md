@@ -152,6 +152,11 @@ Snapshot `d295565`.
   retired `Identity:SignUp:IsEnabled`, which a 0.5.7 boot refuses); the Ocharo instance settings (#20); clients 0–5;
   `Identity:Client:*` per app (#21); `configCheck:`; the delivery workflow on pipelines `v0.15.0` (today `v0.14.0`,
   which refuses `configCheck:`).
+- Committed 2026-11-02, #18: `192ecd7` (unpushed, #38) — identity `0.5.8` with 55 keys and the #20 defaults, a
+  `configCheck:` item, delivery on pipelines `v0.15.0`, Desk's `Identity:Client` from `Sites:identity:Url` and client 0.
+  Wheelhouse generates the certificates, signing, OTP and webhook keys and client 0's secret; the developer types
+  the bot user name and token and client 0's two redirect URIs per environment, since `from:` takes no path
+  suffix. Clients 1–5 join with their apps in G4. Desk sits on `Identity.Client` `10.0.18-beta` (`746f53c`).
 - 19. G4 per app, in order: Brand + Catalogue (one release, drop `*:PublicAccess`), Marketing + Editorial (shared
   `packages/connect`), Studio (keep its workspace-id formula on `org_id` and `sub`), then retire `ocharo-sso`, the
   `shared/Ocharo.Sso` copies, integration tickets and Desk migration `011-identity-cutover`.
