@@ -110,11 +110,11 @@ services:
   # key passes through a person (pipelines v0.14.0, Wheelhouse v0.11; descriptor § Generated and linked keys), and the
   # issuer follows the identity site's host. Ocharo people sign in by phone with a code from the environment's Telegram
   # bot only: password and email sign-in are off, and no Identity:Email key is set (owner, 2026-11-02). Sign-up takes an
-  # invitation from an owner or admin. Every key binds a 0.5.13 settings record (Identity's deployment.md at v0.5.13); its
+  # invitation from an owner or admin. Every key binds a 0.5.14 settings record (Identity's deployment.md at v0.5.14); its
   # config check refuses an unbound one, such as a stored value of the retired Identity:SignUp:IsEnabled, which the
   # first 0.5.x deploy needs deleted from each environment.
   identity:
-    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.13
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.14
     health: /health
     memory: 256m
     needs: [postgres]

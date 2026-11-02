@@ -3635,22 +3635,22 @@
       },
       "WoW2.Sdk.Beta.Be.Identity.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.22-beta",
-        "contentHash": "byUTlWs7Ham8Qno2CnqtNbFrJ2atuuneIaBuHHNplbk5o/XTwYEJzc1RVHsqBA4M9Lhg5cyqFddmquklOVe5lQ==",
+        "resolved": "10.0.23-beta",
+        "contentHash": "uIqEYoOusjHqvb7nAzt+ORw6HWWbHSuWBftCZefKemaSnPIT1Gp4TIECEg4d8o9Y6kc5Q2c3o4D2Ir9uL6Jk0w==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be.Abstractions": "10.0.96-beta"
         }
       },
       "WoW2.Sdk.Beta.Be.Identity.Auth": {
         "type": "Transitive",
-        "resolved": "10.0.22-beta",
-        "contentHash": "PmGeb5M+8jzhV/o1d9tkPF6zCKRRAGCLppd+K+H/f/6gR5aW5RiLlTYzKy30yNJQRTP64zGmqIVxUdo/hBJFlw==",
+        "resolved": "10.0.23-beta",
+        "contentHash": "nVXKFIpkHLlU50tGkloN0nKIJ4PZqVbudByWRQtzBkihQioMlLlfHo/Mn9e5coHemO+9qAuT49pGPSfaipJJVA==",
         "dependencies": {
           "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.3",
           "Microsoft.IdentityModel.JsonWebTokens": "8.14.0",
           "Microsoft.IdentityModel.Tokens": "8.14.0",
           "WoW2.Sdk.Beta.Be": "10.0.96-beta",
-          "WoW2.Sdk.Beta.Be.Identity.Abstractions": "10.0.22-beta"
+          "WoW2.Sdk.Beta.Be.Identity.Abstractions": "10.0.23-beta"
         }
       },
       "XPath2": {
@@ -3730,7 +3730,7 @@
           "BrandWorkspace.Infrastructure": "[0.0.0, )",
           "BrandWorkspace.Persistence": "[0.0.0, )",
           "WoW2.Sdk.Beta.Be": "[10.0.98-beta, )",
-          "WoW2.Sdk.Beta.Be.Identity.Client": "[10.0.22-beta, )"
+          "WoW2.Sdk.Beta.Be.Identity.Client": "[10.0.23-beta, )"
         }
       },
       "brandworkspace.application": {
@@ -4013,13 +4013,13 @@
       },
       "WoW2.Sdk.Beta.Be.Identity.Client": {
         "type": "CentralTransitive",
-        "requested": "[10.0.22-beta, )",
-        "resolved": "10.0.22-beta",
-        "contentHash": "zzhIGJNIGBCpZGdPvC9oADM39LDXZkj1KnJ8JqJh2VhcrGBHvRz+zlWa92XvICyLTVps/Kb0tuoYe2obSKFYbQ==",
+        "requested": "[10.0.23-beta, )",
+        "resolved": "10.0.23-beta",
+        "contentHash": "PRppPZrxXFNRicTIjXCfZtNsf1kc1+F6f1oSPzjTfz59xf0/IkvNDrCGxY9mtGo/HzPdnWks090eM72+SXyesw==",
         "dependencies": {
           "Microsoft.AspNetCore.Authentication.OpenIdConnect": "10.0.3",
           "WoW2.Sdk.Beta.Be": "10.0.96-beta",
-          "WoW2.Sdk.Beta.Be.Identity.Auth": "10.0.22-beta"
+          "WoW2.Sdk.Beta.Be.Identity.Auth": "10.0.23-beta"
         }
       }
     }
