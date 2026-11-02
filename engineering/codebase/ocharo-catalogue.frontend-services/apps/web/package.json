@@ -6,7 +6,7 @@
   "description": "Ocharo Catalogue — product, price and collection editor.",
   "scripts": {
     "dev": "vite",
-    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && pnpm check:sfc",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && pnpm check:sfc",
     "check:sfc": "node scripts/check-sfc.mjs",
     "build": "pnpm typecheck && vite build",
     "preview": "vite preview",
@@ -14,7 +14,7 @@
     "format": "prettier --write src tests scripts *.ts *.mjs *.json index.html",
     "format:check": "prettier --check src tests scripts *.ts *.mjs *.json index.html",
     "lint": "eslint .",
-    "e2e": "playwright test"
+    "e2e": "tsc --noEmit -p tsconfig.e2e.json && playwright test"
   },
   "dependencies": {
     "@tanstack/vue-query": "5.102.8",

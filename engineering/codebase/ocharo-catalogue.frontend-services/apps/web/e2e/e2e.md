@@ -16,6 +16,9 @@ pnpm e2e rtl.spec.ts          # one file
 pnpm e2e -g "PDF designer"    # by title
 ```
 
+`pnpm e2e` type-checks the suite (`tsconfig.e2e.json`) before running it; the app's `typecheck` and `build` leave it out,
+because the container build copies only the application sources.
+
 Requirements: the .NET 10 SDK, the workspace's Node and pnpm, and Playwright's Chromium
 (`pnpm --filter @ocharocatalogue/web exec playwright install chromium` when it is missing).
 The optional `tesseract` command with the `eng`, `ara`, `fas` and `urd` languages enables the checks that

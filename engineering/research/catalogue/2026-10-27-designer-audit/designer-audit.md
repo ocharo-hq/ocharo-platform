@@ -147,7 +147,7 @@ For the decision:
 |---|---|
 | Backend tests | 89 passed (`OcharoCatalogue.Tests`), plus 21 `Ocharo.Sso.Tests`; the same counts after the fixes |
 | Frontend unit tests | 30 test files (33 files in `tests/` including 3 helpers), 218 tests passed; unchanged after the fixes |
-| Typecheck | Passed (39 SFCs); now also covers the browser suite through `tsconfig.e2e.json` |
+| Typecheck | Passed (39 SFCs); `pnpm e2e` type-checks the browser suite through `tsconfig.e2e.json` before it runs |
 | Lint | 0 errors, 2 existing warnings in `tests/ProductReviewUi.test.ts` |
 | Toolchain | .NET SDK 10.0.113, Node 24.22.1, pnpm 10.33.2, Playwright 1.63.0 with Chromium |
 | Transport | HTTPS on both apps, unchanged; Vite used an Ubuntu `mkcert` binary because the plugin's own download was refused |
