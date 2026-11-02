@@ -65,8 +65,8 @@ Identifiers are UUID strings except framework Identity user IDs (opaque strings)
 | POST /api/organizations/{organizationId}/drafts/{draftId}/exports | expectedRevision,idempotencyKey | ManualExport |
 | GET /api/organizations/{organizationId}/exports/{exportId}/download | none | authenticated ZIP snapshot |
 
-Session: `{ authenticated, user: {id,email,displayName} | null, sessionId: string | null,
-csrfToken, setupRequired }`. Setup-required means no operator exists, not a public bootstrap grant.
+Session (the BFF's): `{ isAuthenticated, person: {sub,name,picture,email,phoneNumber}, organization: {id,name,slug,role} | null,
+permissions: string[], csrfToken, expiresAt }`; signed out it is `{ isAuthenticated: false }`.
 Organization: `{id,name,slug,role}`. Brand: `{id,organizationId,name,timeZone}`.
 MediaAsset: `{id,organizationId,fileName,contentType,byteLength,sha256,provenance,createdAtUtc}`.
 DraftInput: `{brandId,title,caption,language,destination,sourceNotes,mediaIds: string[]}`.

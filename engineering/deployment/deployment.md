@@ -201,6 +201,15 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   none).
 - A 0.5.x boot and its config check refuse the retired `Identity:SignUp:IsEnabled`: delete any value of it Wheelhouse
   stores per environment before the first `0.5.x` deploy.
+- Each environment's Identity starts empty and is bootstrapped once, after the first deploy (Identity after `0.5.12`):
+  1. the deploy's `migrate` item applies the `identity` set;
+  2. Wheelhouse runs the one-off `admin create`, which makes the instance admin only;
+  3. the admin signs in to the Identity console by phone (the environment's bot);
+  4. in the console, creates the organization "Ocharo" with Desk's preset organization id, becoming its owner;
+  5. invites people from the console, each link carrying a role.
+  The preset ids travel in the lane chats, never in a repository. Identity `0.5.12` (release `v0.1.15`) still makes the
+  organization and its owner in step 2's verb, with the same end state. Desk needs no seed: it projects the organization
+  and each person on their first sign-in.
 - Clients sit at fixed indexes, since Identity's seeder deletes a client that leaves its settings: 0 `desk` now; 1 `brand`,
   2 `catalogue`, 3 `marketing`, 4 `editorial` and 5 `studio` stay reserved until each app's cutover (G4). Each secret is generated, and the app links
   its own `Identity:Client:ClientSecret` to it with `from:`, so no secret is typed.
