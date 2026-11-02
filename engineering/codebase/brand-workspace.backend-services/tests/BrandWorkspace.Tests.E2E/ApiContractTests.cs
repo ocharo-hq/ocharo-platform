@@ -43,7 +43,7 @@ public sealed class ApiContractTests(ApiDatabaseFixture database) : IClassFixtur
     public async Task Health_ShouldSeparateLivenessAndReadiness_WhenDatabaseIsUnavailable()
     {
         // Startup applies the schema, so the database leaves only after the API is up.
-        var container = new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build();
+        var container = new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build();
         await using var unavailable = new PostgresFixture(container);
         await unavailable.StartAsync();
         await using var factory = CreateFactory(unavailable.ConnectionString);
@@ -90,7 +90,7 @@ public sealed class ApiContractTests(ApiDatabaseFixture database) : IClassFixtur
 /// <summary>One PostgreSQL database for contract tests; the first API host to start applies its schema.</summary>
 public sealed class ApiDatabaseFixture : IAsyncLifetime
 {
-    private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build());
+    private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
     public string Connection => _database.ConnectionString;
     public async Task InitializeAsync() => await _database.StartAsync();
     public async Task DisposeAsync() => await _database.DisposeAsync();

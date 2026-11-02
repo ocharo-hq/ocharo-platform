@@ -20,7 +20,7 @@ namespace BrandWorkspace.Tests.E2E.Access;
 
 public sealed class AccessDatabaseFixture : IAsyncLifetime
 {
-    private readonly PostgresFixture database = new(new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build());
+    private readonly PostgresFixture database = new(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
     public string KeysPath { get; } = Path.Combine(Path.GetTempPath(), "brand-workspace-access-tests-" + Guid.NewGuid());
     public string Connection => database.ConnectionString;
 

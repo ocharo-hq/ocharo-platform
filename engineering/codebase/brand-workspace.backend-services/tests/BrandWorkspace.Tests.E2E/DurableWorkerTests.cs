@@ -24,7 +24,7 @@ public sealed class DurableWorkerTests
     [Fact]
     public async Task Worker_ShouldCompleteDurableProbe_WhenDatabaseAndWorkerRestart()
     {
-        var container = new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build();
+        var container = new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build();
         await using var database = new PostgresFixture(container);
         await database.StartAsync();
         var connection = database.ConnectionString;
