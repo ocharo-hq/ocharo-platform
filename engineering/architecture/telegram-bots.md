@@ -10,7 +10,7 @@ Ocharo runs 3 Telegram bots, one per WoW2 Identity instance. Identity's Telegram
 |---|---|---|---|---|
 | prod | `@ocharo_bot` | Ocharo | webhook on the prod Identity | `Identity:Telegram:BotToken` secret on the prod Identity |
 | dev | `@ocharo_dev_bot` | Ocharo Dev | webhook on the hosted dev Identity | `Identity:Telegram:BotToken` secret on the dev Identity |
-| local | `@ocharo_local_bot` | Ocharo Local | polling while a developer's machine runs Identity | `Identity__Telegram__BotToken` in the ignored `identity.local.env` |
+| local | `@ocharo_local_bot` | Ocharo Local | polling while a developer's machine runs Identity | `Identity__Telegram__BotToken` in the ignored `.local/identity/telegram.env` |
 
 - `Identity:Telegram:BotUserName` carries the username per environment; the username is public, the token never enters a repository.
 - The owner keeps every token in the NordPass family vault.

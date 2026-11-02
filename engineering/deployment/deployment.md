@@ -30,9 +30,9 @@ From the repository root on this Mac:
 python3 engineering/deployment/run-review.py
 ```
 
-Open `https://localhost:8264`. Use `smoke@example.test` and the existing password in
-`.local/verification/operator-password.txt`; the launcher never displays or resets it.
-It requires Python 3.9+, the existing ignored `.local/verification/compose.env`, local Docker Desktop,
+Open `https://localhost:8264` and sign in by phone through Ocharo's local Identity at `https://localhost:8404`
+(`.local/identity/`, `@ocharo_local_bot` polling). It requires Python 3.9+, the existing ignored
+`.local/verification/compose.env`, the ignored `BrandWorkspace.Api/appsettings.Local.json` (`Identity:Client`), local Docker Desktop,
 the .NET 10 SDK, pnpm 10, and the exact Node version in `.nvmrc`. An existing matching
 NVM installation is selected automatically; no tools or certificate trust are installed.
 

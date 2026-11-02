@@ -1,6 +1,6 @@
 # Ocharo Platform — Backlog
 
-*Last updated: 2026-10-25*
+*Last updated: 2026-11-02*
 
 ## Features
 
@@ -80,6 +80,8 @@ Design and sources: [analysis](../research/desk/2026-10-09-sourcing-events-integ
 - [ ] Add material requests, supplier offers, quotation evidence and sample review before price comparison.
 - [ ] Add event editions, source observations and reviewable import candidates without overwriting confirmed facts.
 - [ ] Add one verified feed/provider adapter with provenance, cancellation handling and bounded requests.
-- [ ] Add client authorization/refresh for unattended MCP; current access lasts five minutes.
+- [ ] [parked] Desk MCP on Identity agent tokens: an MCP client gets its own Identity OAuth token, not Desk's browser
+  session. Integration tickets bound to Desk's sessions answer 503 since the 2026-11-02 Identity cutover, so MCP stays
+  off until then (owner, 2026-11-02).
 - [ ] Add calendar OAuth only after calendar selection and outbound synchronization rules are agreed.
 - [ ] Adopt SDK refresh timing in Desk; the current 0.0.6 package lacks the required orchestration exports.

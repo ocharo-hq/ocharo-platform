@@ -1,6 +1,6 @@
 # Preparation foundation contract
 
-*Last updated: 2026-09-26*
+*Last updated: 2026-11-02*
 
 ## Implemented increment
 
@@ -29,15 +29,13 @@ to the session identifier through `IAntiforgeryAdditionalDataProvider`, not just
 issues a request token; the UI sends `X-CSRF-TOKEN`. Require HTTPS for authentication; do not add an
 insecure development sign-in bypass. Test-only principals remain in test assemblies.
 
-Organization route filters resolve membership from the authenticated user on every request. Body/header
+Organization route filters resolve access from the Identity session's claims on every request: the route organization
+must equal `org_id`, the role is `org_role`, and `desk:edit` / `desk:approve` grant editing and approval. Body/header
 organization or actor IDs never confer authority. Every preparation query includes organization scope;
 composite foreign keys prevent cross-organization associations. Missing/foreign resources return 404.
-Roles: owner can approve and administer; editor can prepare; viewer can read. Membership changes are
-not exposed in this initial UI, but removing a row must immediately revoke its authority.
+Members, roles and invitations are managed at Identity; a changed role reaches Desk with the next token refresh.
 
-CLI contract: `--provision-operator --email <email> --name <display-name>` reads a strong password from
-standard input without logging it. It creates only a missing operator, rejects existing accounts, and
-never creates an implicit organization or owner membership. Tests use reserved example.test addresses.
+Desk creates no accounts or organizations; tests use reserved example.test addresses and test principals.
 
 ## HTTP conventions
 
@@ -48,11 +46,10 @@ Identifiers are UUID strings except framework Identity user IDs (opaque strings)
 
 | Endpoint | Request | Data response |
 |---|---|---|
-| GET /api/auth/session | none | Session |
-| POST /api/auth/login | email,password | authenticated:true |
-| POST /api/auth/logout | empty JSON | HTTP204 |
-| GET /api/organizations | none | Organization[] |
-| POST /api/organizations | name,slug | Organization (current actor becomes owner atomically) |
+| GET /api/identity/session | none | BFF session: isAuthenticated, person, organization, permissions, csrfToken, expiresAt |
+| GET /api/identity/sign-in?returnUrl= | browser navigation | redirect to Identity |
+| POST /api/identity/sign-out | empty JSON, X-Csrf-Token | endSessionUrl |
+| GET /api/organizations | none | Organization[] (the session's organization) |
 | GET /api/organizations/{organizationId}/brands | none | Brand[] |
 | POST /api/organizations/{organizationId}/brands | name,timeZone | Brand |
 | GET /api/organizations/{organizationId}/media | none | MediaAsset[] (bytes excluded) |
