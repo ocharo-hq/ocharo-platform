@@ -2,6 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AwesomeAssertions;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection;
+using WoW.Two.Sdk.Beta.Be.Caching.Postgres;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
@@ -110,6 +113,18 @@ public sealed class AccessIdentityTests(PreparationDatabaseFixture fixture) : IC
 
         response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         (await response.Content.ReadAsStringAsync()).Should().Contain("integration_tickets_unavailable");
+    }
+
+    [Fact]
+    public async Task SignInSessions_ShouldLiveInDesksDatabase_SoARestartKeepsThem()
+    {
+        var cache = fixture.Factory.Services.GetRequiredService<IDistributedCache>();
+        cache.Should().BeOfType<PostgresDistributedCache>("the BFF's memory default would sign everyone out on each deploy");
+
+        await cache.SetStringAsync("desk-session-probe", "kept");
+        await using var command = fixture.DataSource.CreateCommand("SELECT count(*) FROM cache.distributed_cache WHERE id='desk-session-probe'");
+        ((long)(await command.ExecuteScalarAsync())!).Should().Be(1);
+        await cache.RemoveAsync("desk-session-probe");
     }
 
     private async Task<(string Name, string? Email)?> Projection(string subject)

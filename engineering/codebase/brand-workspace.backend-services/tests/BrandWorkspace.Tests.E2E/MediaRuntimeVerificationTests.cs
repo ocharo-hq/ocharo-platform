@@ -15,7 +15,7 @@ public sealed class MediaRuntimeVerificationTests
     [Fact]
     public async Task Probe_ShouldDecodeAndExit_WithoutStartingTheHostOrRequiringDatabaseAndKeys()
     {
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Production });
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Production });
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["ConnectionStrings:Database"] = "Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1"

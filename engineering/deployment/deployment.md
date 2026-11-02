@@ -207,8 +207,9 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   Identity registers verbatim and matches exactly against `{origin}/api/identity/callback` and `{origin}/`.
 - Marketing, Editorial and Studio register with their own cutover: their sites live in other repositories, and a `from:`
   names only a key or a site this descriptor declares (pipelines `v0.15.0`).
-- Desk's BFF keeps sign-in sessions in memory until Desk registers a shared `IDistributedCache` (Valkey from
-  Wheelhouse, or a PostgreSQL cache in the core sdk), so every Desk restart signs everyone out; needed before G2.
+- Desk's BFF keeps sign-in sessions in its own database: the be sdk's PostgreSQL `IDistributedCache`, table
+  `cache.distributed_cache` from the `distributed_cache` migration set, which Desk applies with its own schema. With
+  the key ring on the `keys` volume, a restart or deploy keeps everyone signed in.
 
 `desk` also reads optional public settings, typed `url` in `deploy.yml`, which it serves anonymously at
 `GET /api/runtime-config` for the Ocharo app menu. Each is an absolute HTTPS address without credentials, query or

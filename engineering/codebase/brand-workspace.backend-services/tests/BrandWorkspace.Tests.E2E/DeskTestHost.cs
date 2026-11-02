@@ -20,6 +20,10 @@ namespace BrandWorkspace.Tests.E2E;
 /// carries the informational version <c>dev</c>, which the migrator refuses and CI replaces with the product version.</summary>
 public static class DeskTestHost
 {
+    /// <summary>The API's application name, which a test host that migrates takes too: the module migration sets claim
+    /// their schema as <c>{application}@local</c>, as Desk's own <c>--migrate</c> does.</summary>
+    public static readonly string ApplicationName = typeof(ApiAssemblyMarker).Assembly.GetName().Name!;
+
     /// <summary>Names the registered person a request signs in as.</summary>
     public const string PersonHeader = "X-Test-Person";
 

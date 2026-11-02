@@ -40,6 +40,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WoW.Two.Sdk.Beta.Be.Identity.Authorization;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
+using WoW.Two.Sdk.Beta.Be.Caching.Postgres;
 using System.Data.Common;
 using BrandWorkspace.Application.Foundation.Repositories;
 using BrandWorkspace.Domain.Foundation.Models;
@@ -115,6 +116,11 @@ public static partial class HostConfiguration
         builder.Services.AddSingleton<IAccessRepository, AccessRepository>();
         builder.Services.AddScoped<OrganizationAccessFilter>();
         builder.Services.AddIdentityBff();
+        // The BFF keeps sign-in sessions in IDistributedCache: a table in Desk's own database, so a restart or deploy
+        // keeps everyone signed in; its `distributed_cache` set migrates beside Desk's own.
+        builder.Services.AddPostgresDistributedCache();
+        builder.Services.AddOptions<PostgresDistributedCacheOptions>().Configure<IConfiguration>((options, configuration) =>
+            options.ConnectionString = configuration.GetConnectionString("Database") ?? string.Empty);
         builder.Services.AddDefaultDenyAuthorization(BffAuthenticationSchemeConstants.Cookie);
         // Resolve final configuration after test/deployment overrides have been applied.
         builder.Services.AddDataProtection();
@@ -326,13 +332,14 @@ public static partial class HostConfiguration
     /// <summary>Applies pending schema migrations, then the job queue's provider-owned schema, and returns the labels applied.</summary>
     private static async Task<IReadOnlyList<string>> MigrateSchemaAsync(this WebApplication app, string appliedBy)
     {
-        var result = await app.Services.GetRequiredService<IMigrationRunnerService>().ApplyPendingAsync(appliedBy);
-        if (result is not Result<IReadOnlyList<string>>.Success success)
-            throw new InvalidOperationException("Migration failed; inspect schema history and source integrity.");
+        // Desk's own set, then every set a module registers (the session cache's `distributed_cache`).
+        var result = await app.Services.ApplyMigrationSetsAsync(appliedBy);
+        if (result is not Result<IReadOnlyList<MigrationSetApplied>>.Success success)
+            throw new InvalidOperationException($"Migration failed ({result}); inspect schema history and source integrity.");
         // The queue's own installer is idempotent; the serving API registers no job client or server.
         await using var connection = await app.Services.GetRequiredService<NpgsqlDataSource>().OpenConnectionAsync();
         PostgreSqlObjectsInstaller.Install(connection);
-        return success.Value;
+        return [.. success.Value.SelectMany(set => set.Applied)];
     }
 
     /// <summary>Applies the schema before the API listens, so readiness never precedes it.</summary>

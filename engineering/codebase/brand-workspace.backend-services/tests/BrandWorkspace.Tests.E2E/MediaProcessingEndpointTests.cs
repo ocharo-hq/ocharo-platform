@@ -255,7 +255,7 @@ public sealed class MediaProcessingEndpointTests
         {
             var clock = new FakeTimeProvider(new DateTimeOffset(2026, 9, 30, 0, 0, 0, TimeSpan.Zero));
             var access = new Access(); var worker = new Worker();
-            var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions { ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development });
             builder.WebHost.UseTestServer();
             builder.Logging.ClearProviders();
             builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Integrations:SigningKey"] = Key });

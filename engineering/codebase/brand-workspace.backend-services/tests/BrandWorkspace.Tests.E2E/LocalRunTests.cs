@@ -58,7 +58,7 @@ public sealed class LocalRunTests
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            Args = args, EnvironmentName = Environments.Development, ContentRootPath = contentRoot ?? AppContext.BaseDirectory
+            ApplicationName = DeskTestHost.ApplicationName, Args = args, EnvironmentName = Environments.Development, ContentRootPath = contentRoot ?? AppContext.BaseDirectory
         });
         builder.Configure();
         return builder.Build();

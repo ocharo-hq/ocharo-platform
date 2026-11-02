@@ -46,9 +46,9 @@ services:
     # Desk serves its own readiness probe (PostgreSQL and schema); it does not use the SDK boot bundle's /health.
     health: /health/ready
     needs: [postgres]
-    # Pending before G2: Desk's BFF keeps its sign-in sessions in the in-memory cache until Desk registers a shared
-    # IDistributedCache (Valkey from Wheelhouse, or a PostgreSQL cache in the core sdk), so every Desk restart signs
-    # everyone out; the Data Protection key ring below already persists on the `keys` volume.
+    # Desk's BFF keeps sign-in sessions in the `cache.distributed_cache` table of its own database (be sdk
+    # AddPostgresDistributedCache, set `distributed_cache`, applied with Desk's schema) and its Data Protection key
+    # ring on the `keys` volume, so a restart or deploy keeps everyone signed in.
     settings:
       # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies, and fills ConnectionStrings:Database from the
       # target's own PostgreSQL; nobody types them.

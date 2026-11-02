@@ -135,7 +135,7 @@ public sealed class DeploymentHostTests
         ];
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            Args = args, EnvironmentName = Environments.Production, ContentRootPath = AppContext.BaseDirectory
+            ApplicationName = DeskTestHost.ApplicationName, Args = args, EnvironmentName = Environments.Production, ContentRootPath = AppContext.BaseDirectory
         });
         builder.WebHost.UseTestServer();
         builder.Configure();

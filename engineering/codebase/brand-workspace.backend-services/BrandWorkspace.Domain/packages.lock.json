@@ -2612,7 +2612,7 @@
       },
       "WoW2.Sdk.Beta.Be": {
         "type": "CentralTransitive",
-        "requested": "[10.0.97-beta, )",
+        "requested": "[10.0.98-beta, )",
         "resolved": "10.0.71-beta",
         "contentHash": "s1r5XQbHA1dP1TeHATF1oITKD/buLl8R+uh6/cq0vZ9gftTxXL4Z2OQ2B5mDiZj2nkUkMAuj5lOuwxftQpN/yQ==",
         "dependencies": {
