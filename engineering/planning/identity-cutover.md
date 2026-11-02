@@ -186,6 +186,11 @@ for an unopened v0.13.
 - 23. Missing, built before G2: a one-off command in a service's release image with that service's rendered settings
   — `admin create`, `admin invite` — since control verbs stop at `stop`, `start`, `restart` and `reset`. The backlog
   already holds it as an `admin create` / `admin sign-in-link` one-off.
+- Shipped 2026-11-02, #23: Wheelhouse `v0.13.1` (`6795280`, `5d7630e`) runs a one-off command in a service's
+  running release image with its rendered settings (console: service menu › Run a command; API control
+  `operation: run`); it keeps the exit code and a redacted last line, and history shows only a masked label. Live on
+  Wheelhouse dev; Ocharo's server sits in Wheelhouse prod's console, so G2's `admin create` waits for its prod
+  promotion. A `sign-in-link` result needs a reveal-once read (backlog).
 - 24. Missing, wanted: a value-level settings record (renders keep fingerprints and changed keys, no values) and a
   warning for stale stored keys. Not proven live: the rollback gate's config check, and refusing a missing required
   setting — Identity's first deploy can prove both.
