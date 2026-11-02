@@ -93,25 +93,22 @@ export async function timed<T>(diagnostics: Diagnostics, label: string, action: 
   }
 }
 
-/** Accepts the app's confirmation modal when it appears; export checks only ask when they find warnings. */
-export async function confirmIfAsked(page: Page, confirmLabel: string, timeout = 1500): Promise<boolean> {
-  const button = page.getByRole('alertdialog').getByRole('button', { name: confirmLabel, exact: true });
-  try {
-    await button.waitFor({ state: 'visible', timeout });
-  } catch {
-    return false;
-  }
-  await button.click();
-  return true;
-}
-
 /** Clicks an export button and waits for its file, accepting a preflight warning when one is raised. */
 export async function download(page: Page, click: () => Promise<void>, continueLabel: string, timeout = 90_000) {
   const pending = page.waitForEvent('download', { timeout });
   await click();
-  const warned = await confirmIfAsked(page, continueLabel);
+  // The page check can take seconds on image-heavy pages, so wait for whichever comes first: the file or its warning.
+  const warning = page.getByRole('alertdialog').getByRole('button', { name: continueLabel, exact: true });
+  const first = await Promise.race([
+    pending.then(() => 'file' as const).catch(() => 'file' as const),
+    warning
+      .waitFor({ state: 'visible', timeout })
+      .then(() => 'warning' as const)
+      .catch(() => 'file' as const),
+  ]);
+  if (first === 'warning') await warning.click();
   const file: Download = await pending;
-  return Object.assign(file, { warned });
+  return Object.assign(file, { warned: first === 'warning' });
 }
 
 /** True when the document is wider than the viewport, the usual sign of a layout break on a phone. */

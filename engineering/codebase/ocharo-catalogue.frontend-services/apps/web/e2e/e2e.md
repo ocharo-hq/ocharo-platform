@@ -1,6 +1,6 @@
 # Catalogue browser suite
 
-*Last updated: 2026-10-27*
+*Last updated: 2026-11-02*
 
 Playwright tests that drive the gallery, the Web designer, the PDF designer and the public reader in Chromium
 against a real `OcharoCatalogue.Api`. Findings and results: the
@@ -20,6 +20,8 @@ Requirements: the .NET 10 SDK, the workspace's Node and pnpm, and Playwright's C
 (`pnpm --filter @ocharocatalogue/web exec playwright install chromium` when it is missing).
 The optional `tesseract` command with the `eng`, `ara`, `fas` and `urd` languages enables the checks that
 read exported PDF text; without it those checks are skipped and noted in the test annotations.
+`original-design.spec.ts` needs the template images from Git LFS (`git lfs pull`) and runs only on the suite's own
+store, because it seeds products with the original catalogue's product IDs; otherwise it is skipped.
 
 ## Isolation
 
@@ -53,5 +55,6 @@ refused stale save, allows it explicitly.
 | `release.spec.ts` | Missing translation omitted from web and PDF; release, reader, downloads; pinned releases |
 | `designer-safety.spec.ts` | Page duplicate/remove/undo, revision restore, recovery copy, stale-save conflict |
 | `layout.spec.ts` | Gallery and both designers at phone, tablet and desktop widths |
+| `original-design.spec.ts` | "Use original design": 16 template pages connected to products, exported and released |
 | `export-timing.spec.ts` | Export and preparation time with photo-sized images |
 | `support/` | API seeding, synthetic images, PDF inspection, pixel checks and fixtures |
