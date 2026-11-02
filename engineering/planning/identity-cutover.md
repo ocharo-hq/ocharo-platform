@@ -32,7 +32,7 @@ G1–G3 are done when, on that environment:
 - that person signs in to Desk by phone;
 - Desk's `GET /api/identity/session` shows the organization `b8c672a6-…` (Ocharo), their role and `desk:*`
   permissions;
-- the real suppliers and events list, and an edit saves.
+- on G1 only, the real suppliers and events list, and an edit saves (#39).
 
 G4 is done when each app signs in through Identity on every environment, and a grep of the Ocharo repos finds no
 `Ocharo.Sso`, `integration-tickets`, `/api/sso` or `/api/auth/`.
@@ -249,9 +249,13 @@ Settled:
   Ocharo dev prepared — the one-off shipped, stale identity keys deleted, owner keys and the dev bot token set —
   since a `main` push releases and auto-deploys to dev.
 
-Open, cross-lane — the orchestrator asks the developer:
+- 39. Desk's real data stays local for now: Identity working end to end comes first, and a separate workflow moves
+  the data once File Storage and Events run (OQ-3, developer, 2026-11-02). G2 and G3 drop the data checks; hosted
+  Desk projects the Ocharo organization row and each person idempotently, with no dump.
+- 40. Core be sdk's backlog gains the SkiaSharp 4.x move (`6f91b36`, unpushed, since every core `main` push
+  publishes a release).
 
-- OQ-3 Desk's real local data to hosted: now (restore Desk's schemas) · later.
+Open, cross-lane: none.
 
 Open, lane-local — each lane asks in its own chat:
 
