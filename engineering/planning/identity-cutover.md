@@ -12,8 +12,8 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 
 ## Status
 
-- 🔄 G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone and the edit check pass (2026-11-03); the console invite waits for the console fixes
-- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.16` (identity `0.5.14`) runs on dev and `admin create` ran (2026-11-03); sign-in and the invite remain
+- 🔄 G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone and the edit check pass (2026-11-03); the invite check waits on trusted contacts (#45)
+- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.16` (identity `0.5.14`) runs on dev, and the instance admin is verified live (2026-11-03); sign-in and the invite remain
 - ⬜ G3 prod: the same on prod with `@ocharo_bot`
 - ⬜ G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired
 
@@ -82,6 +82,8 @@ Accounts:
 7. platform: G4, app by app (#19).
 
 - #1, #2 and #3 run at once; #4 waits for #1; #5 waits for #2 and #4.
+- G1's and G2's invite checks wait on Identity's trusted-contacts slice 1 and its re-pin (#45), unless the invitee
+  joins on her own phone.
 - Each goal closes with a cross-lane check against its done-when before the next starts.
 
 ## Contracts
@@ -235,9 +237,8 @@ for an unopened v0.13.
 - Third dev deploy, 2026-11-03: PLAT `555011d` released `v0.1.16`, and Ocharo dev took it automatically (deployment
   `2e998f6e`, 1m 11s): identity `0.5.12` → `0.5.14`, desk and jobs `0.1.16`, all 10 services healthy. Identity
   migrated 7 → 8 (`008-telegram-link-changes`, expand) and kept its webhook. The freshly composed set ran the config
-  check live for the first time: "Config check identity: Consistent". The instance admin's survival is shown by code
-  only (008 adds one table); auto mode refuses database reads on the shared host, so the developer's console sign-in
-  is its live proof.
+  check live for the first time: "Config check identity: Consistent". Once the developer allowed read-only product
+  database queries in auto mode, a query on `ocharo_dev` showed the preset owner holding the instance role `admin`.
 - Custom domains are planned, not built; until then the webhook URL is the baseline host, and `setWebhook` is
   Identity's job.
 - Grants: Wheelhouse prod is promoted only for dev-proven releases; a rollback waits for the owner; another product's
@@ -293,6 +294,11 @@ Settled:
   same. The next Identity release also guards against a recycled phone moving a Telegram link.
 - 44. Wheelhouse `v0.13.3` (`4cacf67`) renders descriptor defaults and keeps each repo's `configCheck:`; proven
   on dev, its prod promotion is the developer's click and gates the Ocharo dev redeploy.
+- 45. Trusted contacts move into this goal (supersedes #36's "outside this goal" for contacts; trusted devices stay
+  backlog): the invite check's second person, Maftuna, joins and signs in with codes sent to a trusted contact, and
+  adds her own phone later by sharing her contact with the bot. The platform lane wrote the requirements; Identity
+  settled the flow and its slice 1 API in `9f224fe` and builds slice 1; the platform lane re-pins on its release
+  (2026-11-03). The flow's open choices are asked in the identity lane.
 
 Open, cross-lane: none.
 
