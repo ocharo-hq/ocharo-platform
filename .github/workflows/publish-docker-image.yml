@@ -2,16 +2,19 @@
 # wow-two-platform.pipelines (current → plan → ci → publish):
 #   main          → release vX.Y.Z (X.Y from the newest version-track folder), bundle on the GitHub release
 #   other branches → candidate sha-<commit>, bundle as an Actions artifact
+#   renovate/**   → ci only; Renovate fast-forwards main once it passes (the pinned Identity image's tag bumps)
 #   workflow_dispatch → a candidate for one commit that has no build yet (Wheelhouse's Build action)
 #   pull request  → ci only
 # Images: ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker,brand,catalogue}, one per service in
-# engineering/deployment/deploy.yml; publish builds the changed ones, so ci builds no image.
+# engineering/deployment/deploy.yml; publish builds the changed ones, so ci builds no image. `identity` runs WoW2's
+# public Identity image, pinned by tag, and builds nothing.
 # Each check runs when its own paths change; a docs-only push runs nothing. Wheelhouse deploys the bundle.
+# Pipelines v0.15.0 is the first tag whose generator accepts deploy.yml's `configCheck:`.
 name: publish-docker-image
 
 on:
   push:
-    branches: ['**', '!renovate/**']
+    branches: ['**']
   pull_request:
   workflow_dispatch:
     inputs:
@@ -32,7 +35,7 @@ concurrency:
 
 jobs:
   delivery:
-    uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/delivery.yml@v0.14.0
+    uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/delivery.yml@v0.15.0
     with:
       commit: ${{ inputs.commit }}
       # Desk compiles the Brand and Catalogue Domain projects and builds its own SPA; the pilots share ocharo-sso.

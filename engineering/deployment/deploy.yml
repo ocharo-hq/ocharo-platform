@@ -3,9 +3,10 @@
 # Format and rules: wow-two-ws/conventions/deployment/descriptor/deploy-descriptor.md. Hostnames, secrets and
 # environments live in Wheelhouse targets, never here. Paths are relative to engineering/.
 #
-# Ocharo Platform deploys Desk, its jobs worker, the private image worker and the adopted Brand and Catalogue pilots, as
-# the primary repository of the one `ocharo` product (Wheelhouse decision 70): Studio, Marketing and Assets deploy beside
-# it, so service, site and volume names stay unique across them, and Desk's site is the product's front door.
+# Ocharo Platform deploys Desk, its jobs worker, the private image worker, the adopted Brand and Catalogue pilots and
+# Ocharo's own Identity instance, through which Desk signs in, as the primary repository of the one `ocharo` product
+# (Wheelhouse decision 70): Studio, Marketing and Assets deploy beside it, so service, site and volume names stay unique
+# across them, and Desk's site is the product's front door.
 # Brand and Catalogue are public without sign-in by the owner's decision of 2026-10-24, until the Ocharo identity server
 # lands (deployment.md § Brand and Catalogue pilots); each keeps its SQLite store and blobs on its own volume. Desk and
 # jobs compile only the pilots' Domain projects.
@@ -24,6 +25,14 @@ migrate:
   - service: identity
     command: [dotnet, Identity.Api.dll, migrate]
     timeout: 10m
+# After migrate and before any restart, and on every settings-only apply, Identity's image checks the settings the deploy
+# applies (pipelines v0.15.0, Wheelhouse v0.12): exit 0 consistent, 1 refused, 2 failed, a `config-result` line last; a
+# refused or retired key stops the deploy while the running release keeps serving. Desk, jobs, the image worker and the
+# pilots have settings too, but their images answer no `config check` yet, so they get an item once they do.
+configCheck:
+  - service: identity
+    command: [dotnet, Identity.Api.dll, config, check]
+    timeout: 2m
 services:
   desk:
     build: { dockerfile: deployment/Dockerfile }
@@ -37,6 +46,9 @@ services:
     # Desk serves its own readiness probe (PostgreSQL and schema); it does not use the SDK boot bundle's /health.
     health: /health/ready
     needs: [postgres]
+    # Pending before G2: Desk's BFF keeps its sign-in sessions in the in-memory cache until Desk registers a shared
+    # IDistributedCache (Valkey from Wheelhouse, or a PostgreSQL cache in the core sdk), so every Desk restart signs
+    # everyone out; the Data Protection key ring below already persists on the `keys` volume.
     settings:
       # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies, and fills ConnectionStrings:Database from the
       # target's own PostgreSQL; nobody types them.
@@ -44,6 +56,14 @@ services:
       keys:
         DataProtection:KeysPath: { required: true }          # the keys volume: /var/lib/brand-workspace/keys
         DataProtection:ApplicationName: { required: true }   # keep the deployed value; a change signs everyone out
+        # Sign-in through Ocharo's Identity (the BFF reads section Identity:Client from the target settings file). The
+        # authority is the identity site's origin, the very value identity's issuer takes, and the secret is identity's
+        # client 0, linked, so nobody types either.
+        Identity:Client:Authority: { from: Sites:identity:Url }
+        Identity:Client:ClientId: { default: desk }
+        Identity:Client:ClientSecret: { from: Identity:Server:Clients:0:ClientSecret }
+        Identity:Client:CookieName: { default: __Host-ocharo-desk }
+        Identity:Client:PostSignOutRedirectPath: { default: "/" }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }
         OcharoApps:Catalogue: { type: url }
@@ -86,12 +106,15 @@ services:
     volumes:
       models: /models
   # Ocharo's own Identity instance: WoW2's public platform image, pinned by tag (Renovate moves it), its schema in
-  # Ocharo's database. Wheelhouse makes every secret on the first deploy of each environment, so no key passes through a
-  # person (pipelines v0.14.0, Wheelhouse v0.11; descriptor § Generated and linked keys), and the issuer follows the
-  # identity site's host. Self sign-up stays off: an admin adds every account. Clients join as Ocharo's apps adopt it,
-  # each secret generated here and linked into its app with `from`.
+  # Ocharo's database. Wheelhouse makes every secret but the bot token on the first deploy of each environment, so no
+  # key passes through a person (pipelines v0.14.0, Wheelhouse v0.11; descriptor § Generated and linked keys), and the
+  # issuer follows the identity site's host. Ocharo people sign in by phone with a code from the environment's Telegram
+  # bot only: password and email sign-in are off, and no Identity:Email key is set (owner, 2026-11-02). Sign-up takes an
+  # invitation from an owner or admin. Every key binds a 0.5.8 settings record (Identity's deployment.md at v0.5.8); its
+  # config check refuses an unbound one, such as a stored value of the retired Identity:SignUp:IsEnabled, which the
+  # first 0.5.8 deploy needs deleted from each environment.
   identity:
-    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.3.7
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.8
     health: /health
     memory: 256m
     needs: [postgres]
@@ -100,13 +123,77 @@ services:
         DatabaseSettings:ConnectionString: { required: true }
         Identity:Server:Issuer: { from: Sites:identity:Url }
         Identity:Server:Keys:IsEphemeral: { type: boolean, default: false }
-        Identity:SignUp:IsEnabled: { type: boolean, default: false }
         Identity:Server:Keys:Signing:0:
           { secret: true, required: true, generate: { command: [dotnet, Identity.Api.dll, keys, generate, --role, signing] } }
         Identity:Server:Keys:Encryption:0:
           { secret: true, required: true, generate: { command: [dotnet, Identity.Api.dll, keys, generate, --role, encryption] } }
         Identity:DataProtection:Certificates:0:
           { secret: true, required: true, generate: { command: [dotnet, Identity.Api.dll, keys, generate, --role, data-protection] } }
+        Identity:Tokens:SigningKey: { secret: true, required: true, generate: { random: 32 } }
+        # Invitation-only sign-up; a session slides 5 days ahead of each use.
+        Identity:SignUp:Mode: { type: choice, values: [Invite, Open], default: Invite }
+        Identity:Sessions:Expiration: { type: choice, values: [Fixed, Sliding], default: Sliding }
+        Identity:Sessions:SlidingLifetime: { default: "5.00:00:00" }
+        # Telegram only: no password and no email; Uzbek numbers only.
+        Identity:Methods:Password:IsEnabled: { type: boolean, default: false }
+        Identity:Methods:Email:IsEnabled: { type: boolean, default: false }
+        Identity:Phone:AllowedCountries:0: { default: UZ }
+        # The environment's own bot, on a webhook the boot registers at {issuer}/api/telegram/webhook. The developer
+        # enters its user name without @ (dev ocharo_dev_bot, prod ocharo_bot) and its token in Wheelhouse.
+        Identity:Telegram:IsEnabled: { type: boolean, default: true }
+        Identity:Telegram:UpdateMode: { type: choice, values: [Webhook, Polling], default: Webhook }
+        Identity:Telegram:BotUserName: { required: true }
+        Identity:Telegram:BotToken: { secret: true, required: true }
+        Identity:Telegram:WebhookSecret: { secret: true, required: true, generate: { random: 32, encoding: hex } }
+        Identity:Otp:HashKey: { secret: true, required: true, generate: { random: 32 } }
+        # The hosted pages' one look for this instance.
+        Identity:Pages:Theme: { default: ocharo }
+        Identity:Pages:BrandName: { default: Ocharo }
+        # What each catalog role grants in Ocharo's apps (owner, admin, editor, viewer, billing; never a role of its
+        # own); apps read them as org_permission, each client only its own namespace. viewer and billing grant none.
+        Identity:Organizations:Roles:owner:0: { default: "desk:edit" }
+        Identity:Organizations:Roles:owner:1: { default: "desk:approve" }
+        Identity:Organizations:Roles:owner:2: { default: "brand:edit" }
+        Identity:Organizations:Roles:owner:3: { default: "brand:approve" }
+        Identity:Organizations:Roles:owner:4: { default: "catalogue:edit" }
+        Identity:Organizations:Roles:owner:5: { default: "catalogue:approve" }
+        Identity:Organizations:Roles:owner:6: { default: "marketing:edit" }
+        Identity:Organizations:Roles:owner:7: { default: "marketing:approve" }
+        Identity:Organizations:Roles:owner:8: { default: "editorial:edit" }
+        Identity:Organizations:Roles:owner:9: { default: "editorial:approve" }
+        Identity:Organizations:Roles:owner:10: { default: "studio:edit" }
+        Identity:Organizations:Roles:admin:0: { default: "desk:edit" }
+        Identity:Organizations:Roles:admin:1: { default: "desk:approve" }
+        Identity:Organizations:Roles:admin:2: { default: "brand:edit" }
+        Identity:Organizations:Roles:admin:3: { default: "brand:approve" }
+        Identity:Organizations:Roles:admin:4: { default: "catalogue:edit" }
+        Identity:Organizations:Roles:admin:5: { default: "catalogue:approve" }
+        Identity:Organizations:Roles:admin:6: { default: "marketing:edit" }
+        Identity:Organizations:Roles:admin:7: { default: "marketing:approve" }
+        Identity:Organizations:Roles:admin:8: { default: "editorial:edit" }
+        Identity:Organizations:Roles:admin:9: { default: "editorial:approve" }
+        Identity:Organizations:Roles:admin:10: { default: "studio:edit" }
+        Identity:Organizations:Roles:editor:0: { default: "desk:edit" }
+        Identity:Organizations:Roles:editor:1: { default: "brand:edit" }
+        Identity:Organizations:Roles:editor:2: { default: "catalogue:edit" }
+        Identity:Organizations:Roles:editor:3: { default: "marketing:edit" }
+        Identity:Organizations:Roles:editor:4: { default: "editorial:edit" }
+        Identity:Organizations:Roles:editor:5: { default: "studio:edit" }
+        # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk now; 1 brand,
+        # 2 catalogue, 3 marketing, 4 editorial and 5 studio stay reserved until each app's own cutover (G4). Each secret
+        # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
+        # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
+        # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
+        # Identity registers verbatim and matches exactly against the BFF's callback and sign-out URIs. A client
+        # registers whole or not at all: an id and a secret without RedirectUris fail Identity's boot ("has no
+        # RedirectUris"), so a client joins with its app. Marketing, editorial and studio sites live in other
+        # repositories, and pipelines v0.15.0 `link_sources` accepts a `from` only for a site this descriptor declares.
+        Identity:Server:Clients:0:ClientId: { default: desk }
+        Identity:Server:Clients:0:DisplayName: { default: Ocharo Desk }
+        Identity:Server:Clients:0:PermissionNamespace: { default: desk }
+        Identity:Server:Clients:0:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:0:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:0:PostSignOutRedirectUris:0: { type: url, required: true }
     sites:
       identity: { paths: [/, /api] }
   brand:
