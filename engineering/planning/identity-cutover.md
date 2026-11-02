@@ -1,6 +1,6 @@
 # Identity cutover
 
-*Last updated: 2026-11-02*
+*Last updated: 2026-11-03*
 
 Ocharo people sign in by Telegram through Ocharo's own WoW2 Identity instance on local, dev and prod, and every
 Ocharo app moves off `Ocharo.Sso`. This is the goal's cross-lane track: vectors, lanes, order, contracts, decisions
@@ -13,7 +13,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 ## Status
 
 - 🔄 G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone and the edit check pass (2026-11-03); the console invite waits for the console fixes
-- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.15` runs on dev; `admin create` and the invite remain
+- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.15` runs on dev and `admin create` ran (2026-11-03); the `0.5.14` push, sign-in and invite remain
 - ⬜ G3 prod: the same on prod with `@ocharo_bot`
 - ⬜ G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired
 
@@ -227,8 +227,11 @@ for an unopened v0.13.
 - Second dev deploy, 2026-11-03, after Wheelhouse prod moved to `v0.13.3`: Ocharo dev runs `v0.1.15` healthy
   (deployment `7e0c4289`, 10 services, 61 descriptor defaults rendered); identity sits at migration 7, its issuer is
   the site origin and its Telegram webhook is registered. The config check still did not run, since the set bundle
-  for `v0.1.15` was composed by `0.12.0` and cached; the next Ocharo release composes it fresh. `admin create` waits
-  in the run dialog for the developer's name and phone.
+  for `v0.1.15` was composed by `0.12.0` and cached; the next Ocharo release composes it fresh.
+- Dev bootstrap, 2026-11-03: the developer ran `admin create` (identity `0.5.12` verb) from the Wheelhouse run dialog;
+  it exited 0 with status `created`, both preset ids echoed and the instance role `admin` granted. An earlier try
+  exited 2 on a placeholder phone and wrote nothing. The PLAT push to identity `0.5.14` follows, and its fresh set
+  compose is the config check's live proof.
 - Custom domains are planned, not built; until then the webhook URL is the baseline host, and `setWebhook` is
   Identity's job.
 - Grants: Wheelhouse prod is promoted only for dev-proven releases; a rollback waits for the owner; another product's
