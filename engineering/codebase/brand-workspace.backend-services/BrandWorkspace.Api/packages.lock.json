@@ -153,13 +153,13 @@
       },
       "WoW2.Sdk.Beta.Be.Identity.Client": {
         "type": "Direct",
-        "requested": "[10.0.17-beta, )",
-        "resolved": "10.0.17-beta",
-        "contentHash": "Z9SKqrp8RdNvCYzTD2XyqUBPnLKZim1G7TYKc28EQKMP1z/7jX3BTmHxzCiSC3keRTUBAC4BBmMvl1e2dmld2g==",
+        "requested": "[10.0.18-beta, )",
+        "resolved": "10.0.18-beta",
+        "contentHash": "0rRCcBctBgS1WEgQTTUpsNPVB3KpMLaVkHdyG9y2AJrY1TXH/sYW8UrU0sybDsiR11PNAtGEeDgmqAxOyklpRA==",
         "dependencies": {
           "Microsoft.AspNetCore.Authentication.OpenIdConnect": "10.0.3",
           "WoW2.Sdk.Beta.Be": "10.0.96-beta",
-          "WoW2.Sdk.Beta.Be.Identity.Auth": "10.0.17-beta"
+          "WoW2.Sdk.Beta.Be.Identity.Auth": "10.0.18-beta"
         }
       },
       "Ardalis.GuardClauses": {
@@ -2135,22 +2135,22 @@
       },
       "WoW2.Sdk.Beta.Be.Identity.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.17-beta",
-        "contentHash": "QUtr1THixoYKeru22zeNbWAP/UxKE24CDSjElyGQ57eXQTx78643FZUd1jym9uLxMnDupFRUKpCSbbgguTLd9Q==",
+        "resolved": "10.0.18-beta",
+        "contentHash": "RxuPsqtkhqHqHP+cv8RrR0qAzgSM9xtTgDEcLZ6Q7REP/12aAnWHRm61CROiERskjSSv1ZT+pXM99zswSvb5FA==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be.Abstractions": "10.0.96-beta"
         }
       },
       "WoW2.Sdk.Beta.Be.Identity.Auth": {
         "type": "Transitive",
-        "resolved": "10.0.17-beta",
-        "contentHash": "y70qjH1oh4CKrr6rgPG2wvZaSmexwMNi5Rzd2Mnf1FbQnrbZyoBv9aB2GrzWMCWoqahWnZH2Vnu3LDkvVokn2Q==",
+        "resolved": "10.0.18-beta",
+        "contentHash": "BOyqoOHTavLXJwF4pfUa5lfUS35Reg4UxBhedH2/nYdzwVjB4AtTy+bVNn9j9xrByObMNcCE5CmBxwR/jj4zjQ==",
         "dependencies": {
           "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.3",
           "Microsoft.IdentityModel.JsonWebTokens": "8.14.0",
           "Microsoft.IdentityModel.Tokens": "8.14.0",
           "WoW2.Sdk.Beta.Be": "10.0.96-beta",
-          "WoW2.Sdk.Beta.Be.Identity.Abstractions": "10.0.17-beta"
+          "WoW2.Sdk.Beta.Be.Identity.Abstractions": "10.0.18-beta"
         }
       },
       "YamlDotNet": {
