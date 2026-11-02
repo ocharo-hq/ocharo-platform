@@ -125,6 +125,10 @@ image `0.5.7`, amd64 only.
 - Apps read `org_role` as `{org_id}:{role}` and `org_permission` as a JSON array of `{org_id}:{permission}`.
 - An arm64 image needs platforms in `wow-two-platform.pipelines` `delivery.yml`, a repo no lane owns; outside this goal.
 - `/api/organizations/{id}/members` has no add route; members join by invitation.
+- Released 2026-11-02: `v0.5.9` / npm `0.0.9` ship #13 (`./admin` members and invitations panels); `v0.5.10`, NuGet
+  `10.0.19-beta`, npm `0.0.10` ship #8 and #9 — `Identity:SignUp:Profile:{DisplayName,Picture}` (Ocharo: both
+  `Required`), `Identity:ProfilePictures:*` defaults per #34, migration `007-invite-sign-up`, codeless verify through
+  a per-sign-up bot link, and a `picture` claim served from the issuer. Not yet checked on a real bot.
 - The sign-up slice pins SkiaSharp to core's `3.119.2` (`6b24984`): core's older native library shadowed 4.x on
   Linux. Moving core to SkiaSharp 4.x is a core be sdk change outside this goal.
 - Also open in Identity, outside the target flow: arm64 image, HTTPS from a mounted PEM, compose build fix, stranding
