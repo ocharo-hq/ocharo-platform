@@ -37,7 +37,8 @@ public static class DeskTestHost
     private static readonly ConcurrentDictionary<string, Person> People = new(StringComparer.Ordinal);
 
     /// <summary>A signed-in person; a null <paramref name="OrganizationId"/> or <paramref name="Role"/> carries no organization claims.</summary>
-    public sealed record Person(string Subject, Guid? OrganizationId, string? Role, string Name, string Email);
+    public sealed record Person(string Subject, Guid? OrganizationId, string? Role, string Name, string Email,
+        string? OrganizationName = null, string? OrganizationSlug = null);
 
     /// <summary>Registers, or replaces, the claims a person signs in with; later requests of any client see the change.</summary>
     public static void Register(Person person) => People[person.Subject] = person;
@@ -89,6 +90,8 @@ public static class DeskTestHost
                 var id = organization.ToString("D", CultureInfo.InvariantCulture);
                 claims.Add(new Claim(OrganizationClaimTypeConstants.Id, id));
                 claims.Add(new Claim(OrganizationClaimTypeConstants.Role, $"{id}:{role}"));
+                if (person.OrganizationName is { } name) claims.Add(new Claim(OrganizationClaimTypeConstants.Name, name));
+                if (person.OrganizationSlug is { } slug) claims.Add(new Claim(OrganizationClaimTypeConstants.Slug, slug));
                 claims.AddRange(Permissions(role).Select(permission => new Claim(OrganizationClaimTypeConstants.Permission, $"{id}:{permission}")));
             }
             var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, Scheme.Name, "name", "role"));

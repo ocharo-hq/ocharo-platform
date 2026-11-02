@@ -50,8 +50,8 @@ flow against Identity through the SDK's BFF: a Secure, HttpOnly cookie carries o
 server-side, unsafe API requests carry the session-bound `X-Csrf-Token`, and the session ends with the Identity sign-in
 session. Organization authority comes from the session's `org_id`, `org_role` and `org_permission` claims; Desk projects
 each signed-in person into `access.users`, and the token's organization into `access.organizations`, on
-their first organization request; a hosted Desk with no restored data needs no seed. The organization is named
-`Organization` (slug `org-{id}`) until Identity sends `org_name` and `org_slug`.
+their first organization request; a hosted Desk with no restored data needs no seed. The row takes its name and
+slug from the token's `org_name` and `org_slug`; a slug another organization holds falls back to `org-{id}`.
 
 The named `brand-workspace_data-protection-keys` volume preserves cookie protection across API
 replacement. The application discriminator is `brand-workspace:Production` for the packaged stack.

@@ -134,6 +134,23 @@ public sealed class AccessIdentityTests(PreparationDatabaseFixture fixture) : IC
     }
 
     [Fact]
+    public async Task FirstSignIn_ShouldNameTheProjectedOrganization_FromTheTokensNameAndSlug()
+    {
+        var organization = Guid.NewGuid();
+        var subject = Guid.NewGuid().ToString("D");
+        var slug = $"ocharo-{Guid.NewGuid():N}"[..20];
+        DeskTestHost.Register(new DeskTestHost.Person(subject, organization, "admin", "Hosted admin", $"named-{Guid.NewGuid():N}@example.test",
+            "Ocharo", slug));
+        using var client = DeskTestHost.CreateClient(fixture.Factory, subject);
+
+        var listed = await Data(await client.GetAsync("/api/organizations"));
+
+        listed[0].GetProperty("name").GetString().Should().Be("Ocharo");
+        listed[0].GetProperty("slug").GetString().Should().Be(slug);
+        listed[0].GetProperty("role").GetString().Should().Be("admin");
+    }
+
+    [Fact]
     public async Task SignInSessions_ShouldLiveInDesksDatabase_SoARestartKeepsThem()
     {
         var cache = fixture.Factory.Services.GetRequiredService<IDistributedCache>();
