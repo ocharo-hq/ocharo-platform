@@ -187,19 +187,20 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   from any other sender are ignored, so without it sign-in fails behind the TLS-terminating ingress.
 - `jobs` declares `dependsOn: [desk]`: it refuses to start before the schema exists, and Desk reports
   healthy only after migrating.
-- `identity` runs WoW2's Identity image `0.5.8`. Its `migrate` item (`identity` set, Ocharo's database) runs before it
+- `identity` runs WoW2's Identity image `0.5.10`. Its `migrate` item (`identity` set, Ocharo's database) runs before it
   restarts, then its `configCheck:` item (`dotnet Identity.Api.dll config check`, Wheelhouse v0.12) checks the settings
   the deploy applies, so a refused or retired key stops the deploy while the running release keeps serving. Wheelhouse
   v0.11 makes its three certificates by running the image's `keys generate` without network; each certificate's end
   date is its secret's expiry. Its setup: Identity's `deployment.md` § Pinning the instance.
 - The Ocharo instance's own settings are `deploy.yml` defaults (cutover track #20): sign-up by invitation only
   (`Identity:SignUp:Mode` `Invite`), sessions sliding 5 days (`Sliding`, `5.00:00:00`), password and email sign-in off
-  (`Identity:Methods:*:IsEnabled` `false`) with no `Identity:Email:*` key, `UZ` phone numbers only, the Telegram bot on
+  (`Identity:Methods:*:IsEnabled` `false`) with no `Identity:Email:*` key, invite sign-up asking a name and a picture
+  (`Identity:SignUp:Profile:{DisplayName,Picture}` `Required`) before a codeless bot verification, `UZ` phone numbers only, the Telegram bot on
   a webhook, the hosted pages' `ocharo` theme and `Ocharo` name, and each catalog role's app permissions
   (owner and admin: every app's `edit` and `approve`, Studio's `edit` only; editor: every `edit`; viewer and billing:
   none).
 - A 0.5.x boot and its config check refuse the retired `Identity:SignUp:IsEnabled`: delete any value of it Wheelhouse
-  stores per environment before the first `0.5.8` deploy.
+  stores per environment before the first `0.5.x` deploy.
 - Clients sit at fixed indexes, since Identity's seeder deletes a client that leaves its settings: 0 `desk` now; 1 `brand`,
   2 `catalogue`, 3 `marketing`, 4 `editorial` and 5 `studio` stay reserved until each app's cutover (G4). Each secret is generated, and the app links
   its own `Identity:Client:ClientSecret` to it with `from:`, so no secret is typed.
