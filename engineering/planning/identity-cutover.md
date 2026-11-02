@@ -220,6 +220,12 @@ Settled:
   carries no `Identity:Email:*` keys (OQ-2, developer, 2026-11-02).
 - 36. Identity's backlog gains trusted devices and trusted contacts: a person signs in with a code sent to someone
   they trust (developer, 2026-11-02); outside this goal.
+- 37. Wheelhouse provisions no Valkey yet (it parses `needs: [valkey]` but fills only PostgreSQL keys), so hosted
+  Desk's shared session cache (#27) is a PostgreSQL `IDistributedCache` in the core be sdk, written by the platform
+  lane after #18; dev may run on the BFF's memory default until then, prod may not (orchestrator, 2026-11-02).
+- 38. The platform lane pushes PLAT once: the descriptor plus the Desk cutover, after the wheelhouse lane reports
+  Ocharo dev prepared — the one-off shipped, stale identity keys deleted, owner keys and the dev bot token set —
+  since a `main` push releases and auto-deploys to dev.
 
 Open, cross-lane — the orchestrator asks the developer:
 
