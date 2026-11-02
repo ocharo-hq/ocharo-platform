@@ -125,6 +125,8 @@ image `0.5.7`, amd64 only.
 - Apps read `org_role` as `{org_id}:{role}` and `org_permission` as a JSON array of `{org_id}:{permission}`.
 - An arm64 image needs platforms in `wow-two-platform.pipelines` `delivery.yml`, a repo no lane owns; outside this goal.
 - `/api/organizations/{id}/members` has no add route; members join by invitation.
+- The sign-up slice pins SkiaSharp to core's `3.119.2` (`6b24984`): core's older native library shadowed 4.x on
+  Linux. Moving core to SkiaSharp 4.x is a core be sdk change outside this goal.
 - Also open in Identity, outside the target flow: arm64 image, HTTPS from a mounted PEM, compose build fix, stranding
   checks, uz/ru texts; the be sdk's 500 on a missing required member and MailKit's message built outside its `try`.
 
@@ -196,6 +198,9 @@ for an unopened v0.13.
   `operation: run`); it keeps the exit code and a redacted last line, and history shows only a masked label. Live on
   Wheelhouse dev; Ocharo's server sits in Wheelhouse prod's console, so G2's `admin create` waits for its prod
   promotion. A `sign-in-link` result needs a reveal-once read (backlog).
+- Ocharo dev prepared 2026-11-02 except the dev bot token: the owner keys are typed and saved, not applied, and no
+  stale identity value is stored there; until the PLAT push nobody applies Ocharo dev settings, since undeclared
+  keys would reach every old service. Wheelhouse `v0.13.2` adds a show-once read for `admin invite` links.
 - 24. Missing, wanted: a value-level settings record (renders keep fingerprints and changed keys, no values) and a
   warning for stale stored keys. Not proven live: the rollback gate's config check, and refusing a missing required
   setting — Identity's first deploy can prove both.
