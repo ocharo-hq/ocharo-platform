@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 VERIFICATION = ROOT / ".local/verification"
 BACKEND = ROOT / "engineering/codebase/brand-workspace.backend-services"
 PROJECT = BACKEND / "BrandWorkspace.Api/BrandWorkspace.Api.csproj"
+LOCAL_SETTINGS = BACKEND / "BrandWorkspace.Api/appsettings.Local.json"
 ORIGIN = "https://localhost:8264"
 
 
@@ -200,9 +201,9 @@ def run_review(children: Children) -> int:
     if healthy():
         print(f"Review is already running: {ORIGIN}", flush=True)
         return 0
-    required = (VERIFICATION / "compose.env", VERIFICATION / "operator-password.txt")
+    required = (VERIFICATION / "compose.env", LOCAL_SETTINGS)
     if any(not path.is_file() or path.stat().st_size == 0 for path in required):
-        raise ReviewError("Existing .local/verification/compose.env and operator-password.txt are required; no credentials were created.")
+        raise ReviewError("Existing .local/verification/compose.env and BrandWorkspace.Api/appsettings.Local.json (Identity:Client) are required; no credentials were created.")
     # The lock prevents two launcher instances from taking ownership of the same local services.
     children.lock = (VERIFICATION / "review.lock").open("a")
     lock = children.lock
@@ -271,6 +272,8 @@ def run_review(children: Children) -> int:
         "ASPNETCORE_URLS": ORIGIN + ";http://localhost:8265", "AllowedHosts": "localhost;127.0.0.1",
         "DataProtection__KeysPath": str(VERIFICATION / "host-keys"),
         "DataProtection__ApplicationName": "brand-workspace:Development",
+        # Reads the ignored appsettings.Local.json: the Identity:Client authority, client and secret.
+        "LOCAL_SETTINGS": "true",
     })
     command = ["dotnet", "run", "--project", str(PROJECT), "--no-build", "--no-launch-profile"]
     children.run(command + ["--", "--migrate"], env=runtime_env, cwd=BACKEND, label="Explicit migrations", timeout=120)
@@ -282,7 +285,7 @@ def run_review(children: Children) -> int:
         if time.monotonic() >= deadline:
             raise ReviewError("The API did not become ready within 60 seconds; check its logs and existing certificate trust.")
         time.sleep(0.5)
-    print(f"\nReview: {ORIGIN}\nOperator: smoke@example.test\nPassword: .local/verification/operator-password.txt\nKeep this terminal open. Ctrl+C stops only services started here.\n", flush=True)
+    print(f"\nReview: {ORIGIN}\nSign-in: Ocharo's local Identity at https://localhost:8404 (phone, code in Telegram)\nKeep this terminal open. Ctrl+C stops only services started here.\n", flush=True)
     while api.poll() is None:
         if postgres is not None and postgres.poll() is not None:
             raise ReviewError("The owned PostgreSQL process stopped; ending this review runtime.")

@@ -7,10 +7,8 @@ import { FileUploadPicker } from '@wow-two-beta/fe/presentation/forms';
 import { feedbackBus } from '@/application/shared/UseFeedback';
 import type { AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
-import OrganizationPage from '@/presentation/workspace/OrganizationPage.vue';
 import BrandsPage from '@/presentation/workspace/BrandsPage.vue';
 import MediaPage from '@/presentation/workspace/MediaPage.vue';
-import LoginPage from '@/presentation/workspace/LoginPage.vue';
 
 afterEach(() => vi.restoreAllMocks());
 const failure = () => ResultExtensions.fail(ApiFailureFactory.create('http', new Response(null, { status: 500 })));
@@ -18,14 +16,14 @@ function controls() {
   const command = vi.fn().mockResolvedValue(failure());
   return {
     command,
-    access: { busy: ref(false), session: ref(null), api: { getTelegram: vi.fn().mockResolvedValue(ResultExtensions.ok({ enabled: false, linked: false, phone: null, botUsername: null })) }, setDirty: vi.fn(), navigate: vi.fn(), login: command, authenticated: vi.fn() } as unknown as AccessControls,
+    access: { busy: ref(false), session: ref(null), setDirty: vi.fn(), navigate: vi.fn(), authenticated: vi.fn() } as unknown as AccessControls,
     workspace: { organizations: ref([]), brands: ref([]), media: ref([]), canEdit: ref(true), canApprove: ref(true),
-      createOrganization: command, createBrand: command, uploadMedia: command } as unknown as WorkspaceControls,
+      createBrand: command, uploadMedia: command } as unknown as WorkspaceControls,
   };
 }
 
 describe('operator command failures', () => {
-  it.each([OrganizationPage, BrandsPage, LoginPage])('toasts one safe request failure and preserves editable fields in %s', async (component) => {
+  it.each([BrandsPage])('toasts one safe request failure and preserves editable fields in %s', async (component) => {
     const notices = vi.spyOn(feedbackBus, 'notify');
     const { access, workspace, command } = controls();
     const wrapper = mount(component, { props: { access, workspace }, global: { stubs: { BuildIdentity: true } } });

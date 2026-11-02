@@ -1,10 +1,16 @@
+using System.Globalization;
+using System.Security.Claims;
 using BrandWorkspace.Application.Access;
+using WoW.Two.Sdk.Beta.Be.Identity.Core.Organizations;
 
 namespace BrandWorkspace.Api.Access;
 
-/// <summary>Resolves live membership before an organization-scoped endpoint executes.</summary>
+/// <summary>Resolves the signed-in person's organization access from the Identity claims before an organization-scoped
+/// endpoint executes, and projects that person into Desk so authored records keep their foreign keys.</summary>
 public sealed class OrganizationAccessFilter(IAccessRepository repository) : IEndpointFilter
 {
+    public const string EditPermission = "desk:edit";
+    public const string ApprovePermission = "desk:approve";
     private static readonly object AccessKey = new();
 
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
@@ -12,11 +18,15 @@ public sealed class OrganizationAccessFilter(IAccessRepository repository) : IEn
         var http = context.HttpContext;
         if (http.User.Identity?.IsAuthenticated != true)
             return AccessProblems.Create(401, "Authentication required", "authentication_required");
-        if (!Guid.TryParse(http.Request.RouteValues["organizationId"]?.ToString(), out var organizationId))
+        if (!Guid.TryParse(http.Request.RouteValues["organizationId"]?.ToString(), out var organizationId)
+            || http.User.FindFirstValue(OrganizationClaimTypeConstants.Id) != organizationId.ToString("D", CultureInfo.InvariantCulture)
+            || http.User.GetOrganizationRole(organizationId) is not { } role)
             return AccessProblems.Create(404, "Not found", "not_found");
-        var access = await repository.FindMembershipAsync(organizationId, AccessClaims.UserId(http.User), http.RequestAborted);
-        if (access is null) return AccessProblems.Create(404, "Not found", "not_found");
-        http.Items[AccessKey] = access;
+        var userId = AccessClaims.UserId(http.User);
+        await repository.ProjectUserAsync(userId, http.User.FindFirstValue("name"), http.User.FindFirstValue("email"), http.RequestAborted);
+        http.Items[AccessKey] = new OrganizationAccess(organizationId, userId, role,
+            http.User.HasOrganizationPermission(organizationId, EditPermission),
+            http.User.HasOrganizationPermission(organizationId, ApprovePermission));
         return await next(context);
     }
 

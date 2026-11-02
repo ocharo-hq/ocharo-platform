@@ -44,8 +44,11 @@ export function useWorkspace(access: AccessControls, location: MaybeRefOrGetter<
     enabled: () => enabled() && Boolean(draftId() && draftId() !== 'new'),
     queryFn: ({ signal }) => access.api.getDraft(orgId, draftId()!, signal),
   });
-  const canEdit = computed(() => organization.value?.role === 'owner' || organization.value?.role === 'editor');
-  const canApprove = computed(() => organization.value?.role === 'owner');
+  /** The session's `desk:*` permissions apply only to its own organization. */
+  const permissions = computed(() =>
+    access.session.value?.organizationId?.toLowerCase() === orgId.toLowerCase() ? access.session.value.permissions : []);
+  const canEdit = computed(() => permissions.value.includes('desk:edit'));
+  const canApprove = computed(() => permissions.value.includes('desk:approve'));
   const reads = [organizationsQuery, brandsQuery, mediaQuery, draftsQuery, draftQuery];
   // Transient refresh failures must not unmount an editor with unsaved work.
   const error = computed(() => reads.find(query => query.error.value &&
@@ -78,9 +81,6 @@ export function useWorkspace(access: AccessControls, location: MaybeRefOrGetter<
       if (organization.value && draftId() && draftId() !== 'new') keys.push(draftKey());
       await Promise.all(keys.map(key => cache.invalidate(key)));
     } finally { refreshing.value = false; }
-  }
-  function createOrganization(input: { name: string; slug: string }, signal: AbortSignal) {
-    return access.write((s) => access.api.createOrganization(input, s), signal);
   }
   async function createBrand(input: { name: string; timeZone: string }, signal: AbortSignal) {
     const result = await access.write((s) => access.api.createBrand(orgId, input, s), signal);
@@ -129,7 +129,6 @@ export function useWorkspace(access: AccessControls, location: MaybeRefOrGetter<
     initialLoading,
     refreshing,
     refresh,
-    createOrganization,
     createBrand,
     uploadMedia,
     saveDraft,

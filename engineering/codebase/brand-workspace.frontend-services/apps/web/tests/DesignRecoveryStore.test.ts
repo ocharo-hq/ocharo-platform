@@ -17,7 +17,7 @@ function setup() {
   const scope = effectScope(); scopes.push(scope);
   return scope.run(() => {
     const access = useAccess({ assign: vi.fn(), reload: vi.fn() });
-    access.session.value = { authenticated: true, user: { id: user, email: 'test@example.test', displayName: 'Test' }, sessionId: 'session', csrfToken: 'must-not-persist', setupRequired: false };
+    access.session.value = { authenticated: true, user: { id: user, email: 'test@example.test', displayName: 'Test' }, sessionId: 'session', csrfToken: 'must-not-persist', organizationId: null, role: null, permissions: [] };
     const store = useDesignDocument(access, organization, 'business-card');
     vi.spyOn(access.api, 'getDesigns').mockResolvedValue(ResultExtensions.ok([]));
     return { access, store, scope };

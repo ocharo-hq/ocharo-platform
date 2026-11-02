@@ -139,7 +139,7 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     }
 
     [Fact]
-    public async Task Roles_ShouldRecheckMembershipAndAntiforgeryForEveryRequest()
+    public async Task Roles_ShouldRecheckMembershipAndSessionForEveryRequest()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         DesignDocument document = await Service().CreateDocumentAsync(owner, "business-card", Input("Owner"), Token);
@@ -158,9 +158,9 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         {
             title = "Editor", snapshot = Snapshot("Allowed"), expectedRevision = 1
         })).StatusCode.Should().Be(HttpStatusCode.OK);
-        client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
-        (await client.PostAsJsonAsync($"{path}/archive", new { expectedRevision = 2 })).StatusCode
-            .Should().Be(HttpStatusCode.Forbidden);
+        using HttpClient anonymous = DeskTestHost.CreateClient(fixture.Factory);
+        (await anonymous.PostAsJsonAsync($"{path}/archive", new { expectedRevision = 2 })).StatusCode
+            .Should().Be(HttpStatusCode.Unauthorized);
         await fixture.SetRoleAsync(owner, null);
         (await client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }

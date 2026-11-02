@@ -110,7 +110,7 @@ public sealed class DeploymentHostTests
                 {
                     ["DEPLOY_ENVIRONMENT"] = "prod", ["Deployment:TrustedProxies:0"] = Ingress
                 })),
-            ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(new Dictionary<string, string?>(DeskTestHost.IdentityClientSettings)
             {
                 ["ConnectionStrings:Database"] = connection,
                 ["AllowedHosts"] = "desk.example.test;localhost",
@@ -130,6 +130,7 @@ public sealed class DeploymentHostTests
             "--DEPLOY_ENVIRONMENT=prod", "--AllowedHosts=desk.example.test;localhost",
             "--ConnectionStrings:Database=Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1",
             $"--DataProtection:KeysPath={keys}", "--DataProtection:ApplicationName=brand-workspace:proxy-tests",
+            .. DeskTestHost.IdentityClientSettings.Select(setting => $"--{setting.Key}={setting.Value}"),
             .. trustedProxy is null ? Array.Empty<string>() : [$"--Deployment:TrustedProxies:0={trustedProxy}"]
         ];
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions

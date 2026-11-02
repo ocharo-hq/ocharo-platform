@@ -29,8 +29,19 @@ const session = {
   user: { id: 'user', email: 'operator@example.test', displayName: 'Operator' },
   sessionId: 'session-a',
   csrfToken: 'token',
-  setupRequired: false,
+  organizationId: null,
+  role: null,
+  permissions: [],
 };
+/** The BFF's session payload for a Desk session fixture. */
+const bff = (value: { sessionId: string | null; csrfToken: string }) => ({
+  isAuthenticated: true,
+  person: { sub: value.sessionId ?? '', name: 'Operator', email: 'operator@example.test', phoneNumber: null },
+  organization: null,
+  permissions: [],
+  csrfToken: value.csrfToken,
+  expiresAt: '2026-11-07T00:00:00Z',
+});
 let access: AccessControls;
 let wrapper: VueWrapper;
 const navigation = { assign: vi.fn(), reload: vi.fn() };
@@ -102,7 +113,7 @@ describe('document session boundary', () => {
       vi
         .fn()
         .mockRejectedValueOnce(new TypeError('offline'))
-        .mockResolvedValueOnce(Response.json({ data: { ...session, sessionId: 'session-b' } })),
+        .mockResolvedValueOnce(Response.json({ data: bff({ ...session, sessionId: 'session-b' }) })),
     );
     access.dirty.value = true;
     await access.recheck();
@@ -116,7 +127,7 @@ describe('document session boundary', () => {
   it('adopts a fresh token only after revalidation confirms the same session', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(Response.json({ data: { ...session, csrfToken: 'another-valid-token' } })),
+      vi.fn().mockResolvedValue(Response.json({ data: bff({ ...session, csrfToken: 'another-valid-token' }) })),
     );
     await access.recheck();
     await flushPromises();
@@ -126,8 +137,8 @@ describe('document session boundary', () => {
   });
 
   it('replaces the document when a write rejects its session-bound CSRF token', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ code: 'csrf_validation_failed' }, { status: 403 })));
-    await access.login({ email: 'operator@example.test', password: 'test-password' }, new AbortController().signal);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ code: 'AntiforgeryValidationFailed' }, { status: 400 })));
+    await access.write((signal) => access.api.logout(signal));
     expect(access.invalidated.value).toBe(true);
     expect(navigation.reload).toHaveBeenCalledOnce();
   });

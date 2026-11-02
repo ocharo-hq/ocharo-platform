@@ -13,8 +13,16 @@ const session = {
   user: { id: 'user', email: 'operator@example.test', displayName: 'Operator' },
   sessionId: 'session-a',
   csrfToken: 'token',
-  setupRequired: false,
 };
+/** The BFF's session payload for a Desk session fixture. */
+const bff = (value: { sessionId: string; csrfToken: string }) => ({
+  isAuthenticated: true,
+  person: { sub: value.sessionId, name: 'Operator', email: 'operator@example.test', phoneNumber: null },
+  organization: null,
+  permissions: [],
+  csrfToken: value.csrfToken,
+  expiresAt: '2026-11-07T00:00:00Z',
+});
 const navigation = { assign: vi.fn(), reload: vi.fn() };
 let wrapper: VueWrapper | undefined;
 
@@ -32,7 +40,7 @@ async function signedIn(respond: () => Response): Promise<AccessControls> {
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const path = new URL(String(input instanceof Request ? input.url : input), 'https://localhost').pathname;
-      return Promise.resolve(path === '/api/auth/session' ? Response.json({ data: session }) : respond());
+      return Promise.resolve(path === '/api/identity/session' ? Response.json({ data: bff(session) }) : respond());
     }),
   );
   let access!: AccessControls;
@@ -66,15 +74,5 @@ describe('session expiry', () => {
     expect(access.invalidated.value).toBe(true);
     expect(navigation.reload).toHaveBeenCalledOnce();
     expect(notify).not.toHaveBeenCalled();
-  });
-
-  it('treats a rejected password as an answer, not an expired session', async () => {
-    const access = await signedIn(() => Response.json({ code: 'invalid_credentials' }, { status: 401 }));
-
-    const result = await access.api.linkTelegram('wrong password', new AbortController().signal);
-
-    expect(result.ok ? null : result.failure.status).toBe(401);
-    expect(access.invalidated.value).toBe(false);
-    expect(navigation.reload).not.toHaveBeenCalled();
   });
 });

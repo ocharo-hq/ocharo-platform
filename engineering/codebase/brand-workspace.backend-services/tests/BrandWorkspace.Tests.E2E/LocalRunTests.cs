@@ -1,6 +1,5 @@
 using AwesomeAssertions;
 using BrandWorkspace.Api.Configurations;
-using BrandWorkspace.Api.Identity.Telegram;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Configuration;
@@ -14,12 +13,6 @@ namespace BrandWorkspace.Tests.E2E;
 /// <summary>The Desk host reads its settings files through the SDK and keeps local conveniences to a local run.</summary>
 public sealed class LocalRunTests
 {
-    private static readonly string[] Telegram =
-    [
-        "--Identity:Telegram:Enabled=true", "--Identity:Telegram:BotUsername=ocharo_test_bot",
-        "--Identity:Telegram:BotToken=123456789:synthetic_token_for_offline_tests_ABC", "--Identity:Telegram:PollingEnabled=true"
-    ];
-
     [Fact]
     public void LocalRun_ReadsTheMachineFileOnlyWhenTheLaunchProfileAsks()
     {
@@ -45,22 +38,19 @@ public sealed class LocalRunTests
     }
 
     [Fact]
-    public async Task DeployedDev_RefusesPollingAndAKeyRingWithoutDurableStorage()
+    public async Task DeployedDev_RefusesAKeyRingWithoutDurableStorage()
     {
-        await using var app = Build(["--DEPLOY_ENVIRONMENT=dev", .. Telegram]);
+        await using var app = Build(["--DEPLOY_ENVIRONMENT=dev"]);
 
-        var polling = () => app.Services.GetRequiredService<IOptions<TelegramAuthSettings>>().Value;
-        polling.Should().Throw<OptionsValidationException>().WithMessage("*only on a local run*");
         var keys = () => app.Services.GetRequiredService<IOptions<KeyManagementOptions>>().Value;
         keys.Should().Throw<InvalidOperationException>().WithMessage("DataProtection:KeysPath must name durable storage.");
     }
 
     [Fact]
-    public async Task LocalRun_KeepsPollingAndTheMachineKeyRing()
+    public async Task LocalRun_KeepsTheMachineKeyRing()
     {
-        await using var app = Build(Telegram);
+        await using var app = Build([]);
 
-        app.Services.GetRequiredService<IOptions<TelegramAuthSettings>>().Value.PollingEnabled.Should().BeTrue();
         app.Services.GetRequiredService<IOptions<KeyManagementOptions>>().Value.XmlRepository.Should().NotBeNull();
     }
 

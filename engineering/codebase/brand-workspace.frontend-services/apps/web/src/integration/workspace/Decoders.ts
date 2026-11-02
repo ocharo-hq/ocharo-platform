@@ -3,14 +3,15 @@ import type { DesignRevision } from '@/domain/workspace/DesignRevisions';
 import { ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
-import type {
-  Brand,
-  Draft,
-  DraftSummary,
-  ManualExport,
-  MediaAsset,
-  Organization,
-  Session,
+import {
+  organizationRoles,
+  type Brand,
+  type Draft,
+  type DraftSummary,
+  type ManualExport,
+  type MediaAsset,
+  type Organization,
+  type Session,
 } from '@/domain/workspace/Models';
 
 /** @internal Checks an untrusted JSON object. */
@@ -24,17 +25,36 @@ function decoder<T>(guard: (value: unknown) => value is T): ApiDecoder<T> {
   return (value) =>
     guard(value) ? ResultExtensions.ok(value) : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
 }
-export const isSession = (v: unknown): v is Session =>
-  record(v) &&
-  typeof v.authenticated === 'boolean' &&
-  typeof v.setupRequired === 'boolean' &&
-  typeof v.csrfToken === 'string' &&
-  v.csrfToken.length > 0 &&
-  (v.authenticated
-    ? typeof v.sessionId === 'string' && record(v.user) && strings(v.user, ['id', 'email', 'displayName'])
-    : v.sessionId === null && v.user === null);
+/** @internal The BFF's session payload; the person and organization are absent while signed out. */
+const isBffSession = (v: unknown): v is Record<string, unknown> =>
+  record(v) && typeof v.isAuthenticated === 'boolean' && (!v.isAuthenticated || (
+    record(v.person) && typeof v.person.sub === 'string' && v.person.sub.length > 0 &&
+    typeof v.csrfToken === 'string' && v.csrfToken.length > 0 &&
+    Array.isArray(v.permissions) && v.permissions.every((permission) => typeof permission === 'string') &&
+    (v.organization === null || (record(v.organization) && typeof v.organization.id === 'string'))));
+/** @internal Reads an optional string member. */
+const text = (v: unknown): string | null => (typeof v === 'string' && v.trim().length > 0 ? v : null);
+/** Maps the BFF's `GET /api/identity/session` into Desk's session. */
+export const sessionDecoder: ApiDecoder<Session> = (value) => {
+  if (!isBffSession(value)) return ResultExtensions.fail(ApiFailureFactory.create('protocol'));
+  if (!value.isAuthenticated)
+    return ResultExtensions.ok({ authenticated: false, user: null, sessionId: null, csrfToken: '', organizationId: null, role: null, permissions: [] });
+  const person = value.person as Record<string, unknown>;
+  const organization = record(value.organization) ? value.organization : null;
+  const role = organizationRoles.find((item) => item === organization?.role) ?? null;
+  const email = text(person.email), phone = text(person.phoneNumber);
+  return ResultExtensions.ok({
+    authenticated: true,
+    user: { id: String(person.sub), email: email ?? '', displayName: text(person.name) ?? email ?? phone ?? '', phone },
+    sessionId: String(person.sub),
+    csrfToken: String(value.csrfToken),
+    organizationId: organization ? String(organization.id) : null,
+    role,
+    permissions: value.permissions as string[],
+  });
+};
 export const isOrganization = (v: unknown): v is Organization =>
-  record(v) && strings(v, ['id', 'name', 'slug']) && ['owner', 'editor', 'viewer'].includes(String(v.role));
+  record(v) && strings(v, ['id', 'name', 'slug']) && organizationRoles.some((role) => role === v.role);
 export const isBrand = (v: unknown): v is Brand =>
   record(v) && strings(v, ['id', 'organizationId', 'name', 'timeZone']);
 export const isMedia = (v: unknown): v is MediaAsset =>
@@ -65,8 +85,6 @@ export const isExport = (v: unknown): v is ManualExport =>
   v.packageKind === 'manual-content-package' &&
   v.mediaIncluded === true &&
   v.publicationStatus === 'unverified';
-export const sessionDecoder = decoder(isSession);
-export const organizationDecoder = decoder(isOrganization);
 export const brandDecoder = decoder(isBrand);
 export const mediaDecoder = decoder(isMedia);
 export const draftDecoder = decoder(isDraft);
@@ -75,7 +93,7 @@ export const exportDecoder = decoder(isExport);
 export function listDecoder<T>(guard: (value: unknown) => value is T): ApiDecoder<T[]> {
   return decoder((v): v is T[] => Array.isArray(v) && v.every(guard));
 }
-export const loginDecoder = decoder((v): v is { authenticated: true } => record(v) && v.authenticated === true);
+export const signOutDecoder = decoder((v): v is { endSessionUrl: string } => record(v) && typeof v.endSessionUrl === 'string' && v.endSessionUrl.length > 0);
 
 function catalogueSummary(value:unknown):boolean {
   if(value===undefined||value===null)return true;

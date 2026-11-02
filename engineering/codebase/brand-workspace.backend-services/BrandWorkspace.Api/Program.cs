@@ -3,15 +3,15 @@ using BrandWorkspace.Api.Configurations;
 // Build and configure the host.
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
-    Args = args.Contains("--migrate") || args.Contains("--provision-operator") || args.Contains("--import-sourcing") || args.Contains("--import-events") || args.Contains("--verify-media-runtime") ? [] : args,
+    Args = args.Contains("--migrate") || args.Contains("--import-sourcing") || args.Contains("--import-events") || args.Contains("--verify-media-runtime") ? [] : args,
     ContentRootPath = AppContext.BaseDirectory
 });
 // Serving and --migrate apply the schema; the other commands run against an existing one.
-builder.Configure(migrate: !args.Any(argument => argument is "--provision-operator" or "--import-sourcing" or "--import-events" or "--verify-media-runtime"));
+builder.Configure(migrate: !args.Any(argument => argument is "--import-sourcing" or "--import-events" or "--verify-media-runtime"));
 
 // Build and configure the app.
 var app = builder.Build();
-app.Configure(serveHttp: !args.Any(argument => argument is "--migrate" or "--provision-operator" or "--import-sourcing" or "--import-events" or "--verify-media-runtime"));
+app.Configure(serveHttp: !args.Any(argument => argument is "--migrate" or "--import-sourcing" or "--import-events" or "--verify-media-runtime"));
 
 // Run.
 await app.RunCommandOrHostAsync(args);

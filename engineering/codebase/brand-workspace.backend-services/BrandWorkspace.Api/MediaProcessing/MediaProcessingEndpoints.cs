@@ -14,8 +14,7 @@ public static class MediaProcessingEndpoints
     /// <summary>Maps HTTPS endpoints authenticated exclusively by a current Marketing or Editorial audience ticket.</summary>
     public static WebApplication MapMediaProcessingEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/integrations/media/background-removal")
-            .WithMetadata(new SkipAntiforgeryValidation()).AllowAnonymous();
+        var group = app.MapGroup("/api/integrations/media/background-removal").AllowAnonymous();
         group.MapGet("/capabilities", async (HttpContext http, IntegrationTickets tickets, IBackgroundRemovalService worker, CancellationToken ct) => {
             http.Response.Headers.CacheControl = "no-store";
             var access = await AuthenticateAsync(http, tickets, ct);

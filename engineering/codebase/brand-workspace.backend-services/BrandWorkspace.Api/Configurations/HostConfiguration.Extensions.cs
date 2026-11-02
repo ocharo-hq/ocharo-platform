@@ -1,10 +1,5 @@
-using BrandWorkspace.Api.Identity.Telegram;
-using Telegram.Bot;
-using WoW.Two.Sdk.Beta.Be.Identity.Otp;
-using WoW.Two.Sdk.Beta.Be.Identity.Otp.Telegram;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
-using System.Threading.RateLimiting;
 using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using BrandWorkspace.Api.MediaProcessing;
@@ -39,14 +34,12 @@ using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using BrandWorkspace.Api.Preparation;
 using BrandWorkspace.Application.Access;
 using BrandWorkspace.Persistence.Access;
-using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WoW.Two.Sdk.Beta.Be.Identity.Authorization;
-using WoW.Two.Sdk.Beta.Be.Identity.Cookies;
+using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 using System.Data.Common;
 using BrandWorkspace.Application.Foundation.Repositories;
 using BrandWorkspace.Domain.Foundation.Models;
@@ -74,12 +67,11 @@ public static partial class HostConfiguration
         if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is { } urls) values["urls"] = urls;
         if (Environment.GetEnvironmentVariable("AllowedHosts") is { } allowedHosts) values["AllowedHosts"] = allowedHosts;
         foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Integrations__SigningKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
-                     "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password" })
+                     "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password",
+                     "Identity__Client__Authority", "Identity__Client__ClientId", "Identity__Client__ClientSecret", "Identity__Client__CookieName",
+                     "Identity__Client__PostSignOutRedirectPath", "Identity__Client__Environment" })
             if (Environment.GetEnvironmentVariable(key) is { } value) values[key.Replace("__", ":")] = value;
         if (Environment.GetEnvironmentVariable("MCP_ENABLED") is { } mcpEnabled) values["Mcp:Enabled"] = mcpEnabled;
-        foreach (var (alias, name) in new[] { ("TELEGRAM_AUTH_ENABLED", "Enabled"), ("TELEGRAM_BOT_USERNAME", "BotUsername"),
-                     ("TELEGRAM_BOT_TOKEN", "BotToken"), ("TELEGRAM_WEBHOOK_SECRET", "WebhookSecret"), ("TELEGRAM_POLLING_ENABLED", "PollingEnabled") })
-            if (Environment.GetEnvironmentVariable(alias) is { } value) values[$"{TelegramAuthSettings.SectionName}:{name}"] = value;
         builder.Configuration.AddInMemoryCollection(values);
         return builder;
     }
@@ -104,64 +96,26 @@ public static partial class HostConfiguration
         builder.Services.AddDatabaseBespokeMigrations(typeof(FoundationRepository).Assembly, options =>
         {
             options.Version = BuildIdentity.ProductVersion;
+            options.Release = BuildIdentity.Release;
             options.AdvisoryLockId = 8_264_001;
         });
         return builder;
     }
 
-    /// <summary>Registers framework identity, durable sessions, and the published SDK cookie/default-deny contracts.</summary>
+    /// <summary>Registers sign-in through Ocharo's Identity instance (BFF, section <c>Identity:Client</c>), the Desk projection of
+    /// its people, and default deny.</summary>
+    /// <remarks>The framework identity store stays for the import commands, which resolve <c>--actor</c> by email, until
+    /// migration 011 retires Desk's own accounts.</remarks>
     private static WebApplicationBuilder AddAccess(this WebApplicationBuilder builder)
     {
         builder.Services.AddDbContext<AccessDbContext>((services, options) =>
             options.UseNpgsql(services.GetRequiredService<NpgsqlDataSource>()));
-        builder.Services.AddIdentityCore<AccessUser>(options =>
-        {
-            options.User.RequireUniqueEmail = true;
-            options.Password.RequiredLength = 12;
-            options.Password.RequiredUniqueChars = 4;
-            options.Lockout.MaxFailedAccessAttempts = 5;
-            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-        }).AddEntityFrameworkStores<AccessDbContext>().AddSignInManager();
+        builder.Services.AddIdentityCore<AccessUser>(options => options.User.RequireUniqueEmail = true)
+            .AddEntityFrameworkStores<AccessDbContext>();
         builder.Services.AddSingleton<IAccessRepository, AccessRepository>();
         builder.Services.AddScoped<OrganizationAccessFilter>();
-        builder.Services.AddCookieAuthentication(options =>
-        {
-            options.CookieName = "__Host-brand-workspace-session";
-            options.ExpireTimeSpan = TimeSpan.FromHours(8);
-            options.SlidingExpiration = false;
-            options.Mode = AuthChallengeMode.Api;
-        });
-        builder.Services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme, options =>
-        {
-            options.Cookie.Path = "/";
-            options.Events.OnValidatePrincipal = async context =>
-            {
-                var session = AccessClaims.Session(context.Principal!);
-                var userId = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-                var services = context.HttpContext.RequestServices;
-                if (session is null || userId is null || !await services.GetRequiredService<IAccessRepository>()
-                    .IsSessionActiveAsync(session.Value, userId, services.GetRequiredService<TimeProvider>().GetUtcNow(), context.HttpContext.RequestAborted))
-                {
-                    context.RejectPrincipal();
-                    await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-                }
-            };
-            options.Events.OnRedirectToLogin = context =>
-                AccessProblems.Create(401, "Authentication required", "authentication_required").ExecuteAsync(context.HttpContext);
-            options.Events.OnRedirectToAccessDenied = context =>
-                AccessProblems.Create(403, "Access denied", "forbidden").ExecuteAsync(context.HttpContext);
-        });
-        builder.Services.AddDefaultDenyAuthorization(CookieAuthenticationDefaults.AuthenticationScheme);
-        builder.Services.AddSingleton<IAntiforgeryAdditionalDataProvider, SessionAntiforgeryDataProvider>();
-        builder.Services.AddAntiforgery(options =>
-        {
-            options.HeaderName = "X-CSRF-TOKEN";
-            options.Cookie.Name = "__Host-brand-workspace-antiforgery";
-            options.Cookie.Path = "/";
-            options.Cookie.HttpOnly = true;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-            options.Cookie.SameSite = SameSiteMode.Strict;
-        });
+        builder.Services.AddIdentityBff();
+        builder.Services.AddDefaultDenyAuthorization(BffAuthenticationSchemeConstants.Cookie);
         // Resolve final configuration after test/deployment overrides have been applied.
         builder.Services.AddDataProtection();
         builder.Services.AddOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>()
@@ -178,46 +132,6 @@ public static partial class HostConfiguration
             });
         builder.Services.AddOptions<DataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
             options.ApplicationDiscriminator = configuration["DataProtection:ApplicationName"] ?? $"brand-workspace:{environment.EnvironmentName}");
-        return builder;
-    }
-
-    /// <summary>Registers opt-in bot account linking, transactional OTP verification and local-run-only polling.</summary>
-    private static WebApplicationBuilder AddTelegramAccess(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddValidatedSettings<TelegramAuthSettings>(builder.Configuration, TelegramAuthSettings.SectionName,
-            options => options.Validate(value => !value.Enabled ||
-                    (System.Text.RegularExpressions.Regex.IsMatch(value.BotUsername, "^[A-Za-z][A-Za-z0-9_]{4,31}$")
-                     && System.Text.RegularExpressions.Regex.IsMatch(value.BotToken, "^[0-9]+:[A-Za-z0-9_-]{30,}$")
-                     && (value.PollingEnabled || System.Text.RegularExpressions.Regex.IsMatch(value.WebhookSecret, "^[A-Za-z0-9_-]{32,256}$"))),
-                    "Enabled Telegram sign-in requires a bot username, server token, and webhook secret unless local polling is selected.")
-                .Validate<IHostEnvironment, IConfiguration>((value, environment, configuration) => !value.PollingEnabled || environment.IsLocalRun(configuration),
-                    "Telegram polling is allowed only on a local run."));
-        builder.Services.AddScoped<TelegramAuthRepository>();
-        builder.Services.AddScoped<IOtpRepository>(services => services.GetRequiredService<TelegramAuthRepository>());
-        builder.Services.AddOtpService();
-        builder.Services.AddTelegramOtpDelivery(options => options.ScopeDisplayNames[TelegramAuthEndpoints.Scope] = "Ocharo");
-        builder.Services.PostConfigure<OtpOptions>(options =>
-        {
-            options.CodeLength = 6;
-            options.CodeKind = OtpCodeKind.Numeric;
-            options.CodeLifetime = TimeSpan.FromMinutes(5);
-            options.RateLimitWindow = TimeSpan.FromSeconds(30);
-            options.MaxAttempts = 5;
-        });
-        builder.Services.AddSingleton<ITelegramBotClient>(services => new TelegramBotClient(services.GetRequiredService<TelegramAuthSettings>().BotToken));
-        builder.Services.AddScoped<TelegramBotUpdatesHandler>();
-        builder.Services.AddHostedService<TelegramPollingService>();
-        builder.Services.AddRateLimiter(options =>
-        {
-            options.AddPolicy(TelegramAuthEndpoints.RatePolicy, http => RateLimitPartition.GetFixedWindowLimiter(
-                http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
-            options.OnRejected = async (context, ct) =>
-            {
-                context.HttpContext.Response.Headers.RetryAfter = "60";
-                await AccessProblems.Create(429, "Wait before trying again", "telegram_rate_limited").ExecuteAsync(context.HttpContext);
-            };
-        });
         return builder;
     }
 
@@ -355,7 +269,7 @@ public static partial class HostConfiguration
         app.UseDeskMcpBoundary();
         app.Use(async (context, next) =>
         {
-            if (context.Request.Path.StartsWithSegments("/api/auth") || context.Request.Path.StartsWithSegments("/api/organizations"))
+            if (context.Request.Path.StartsWithSegments("/api/identity") || context.Request.Path.StartsWithSegments("/api/organizations"))
             {
                 context.Response.OnStarting(() =>
                 {
@@ -371,31 +285,7 @@ public static partial class HostConfiguration
             }
             await next(context);
         });
-        app.UseAuthentication();
-        app.UseAuthorization();
-        app.UseRateLimiter();
-        app.Use(async (context, next) =>
-        {
-            if (context.Request.Path.StartsWithSegments("/api")
-                && !HttpMethods.IsGet(context.Request.Method) && !HttpMethods.IsHead(context.Request.Method)
-                && !HttpMethods.IsOptions(context.Request.Method) && !HttpMethods.IsTrace(context.Request.Method)
-                && context.GetEndpoint()?.Metadata.GetMetadata<SkipAntiforgeryValidation>() is null)
-            {
-                try
-                {
-                    if (string.IsNullOrWhiteSpace(context.Request.Headers["X-CSRF-TOKEN"]))
-                        throw new AntiforgeryValidationException("Request token is missing.");
-                    await context.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(context);
-                }
-                catch (AntiforgeryValidationException)
-                {
-                    await AccessProblems.Create(403, "Refresh the page before trying again", "csrf_validation_failed").ExecuteAsync(context);
-                    return;
-                }
-            }
-            await next(context);
-        });
-        app.UseAntiforgery();
+        app.UseIdentityBff();
         app.MapGet("/api/system/version", (HttpContext context) =>
         {
             context.Response.Headers.CacheControl = "no-store";
@@ -428,8 +318,7 @@ public static partial class HostConfiguration
                 return Results.Problem(statusCode: 503, title: "Database schema is not ready");
             }
         }).AllowAnonymous();
-        app.MapFallback("/api/{**path}", () => Results.Problem(statusCode: 404, title: "Not Found"))
-            .WithMetadata(new SkipAntiforgeryValidation()).AllowAnonymous();
+        app.MapFallback("/api/{**path}", () => Results.Problem(statusCode: 404, title: "Not Found")).AllowAnonymous();
         app.MapFallbackToFile("index.html").AllowAnonymous();
         return app;
     }
@@ -494,12 +383,6 @@ public static partial class HostConfiguration
         if (args.Contains("--import-events"))
         {
             try { await EventImportCommand.RunAsync(app.Services, args); }
-            finally { await app.DisposeAsync(); }
-            return;
-        }
-        if (args.Contains("--provision-operator"))
-        {
-            try { await OperatorProvisioning.RunAsync(app.Services, args); }
             finally { await app.DisposeAsync(); }
             return;
         }

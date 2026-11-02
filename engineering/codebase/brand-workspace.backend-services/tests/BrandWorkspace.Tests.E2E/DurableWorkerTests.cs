@@ -110,7 +110,8 @@ public sealed class DurableWorkerTests
     private static async Task MigrateAsync(string connection)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = connection });
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(DeskTestHost.IdentityClientSettings)
+        { ["ConnectionStrings:Database"] = connection });
         builder.Configure(migrate: true);
         var app = builder.Build();
         app.Configure();

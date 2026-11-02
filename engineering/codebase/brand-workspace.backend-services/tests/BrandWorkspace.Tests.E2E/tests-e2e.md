@@ -8,6 +8,8 @@ It checks JSON API fallbacks, DB readiness, absence of API job processing, migra
 queue persistence through a PostgreSQL container restart, worker host replacement, and idempotent receipts.
 `DeploymentHostTests` start Desk as a Production target over an empty database (it migrates before it is
 ready), refuse startup on drifted schema history, and apply forwarded headers only from the configured ingress.
-`LocalRunTests` cover the SDK settings files and the local-run gating of Telegram polling and the key ring.
+`LocalRunTests` cover the SDK settings files and the local-run gating of the key ring.
+Test hosts sign in through `DeskTestHost`, a stand-in for the Identity BFF cookie scheme driven by the `X-Test-Person` header;
+no call reaches an Identity instance, and `AccessIdentityTests` cover the claims-based organization access.
 `RuntimeConfigTests` serve the configured `OcharoApps:*` addresses anonymously and `no-store`, and drop malformed ones.
 No shared development database is changed. The suite does not contact social providers.

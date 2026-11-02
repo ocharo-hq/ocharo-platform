@@ -1,18 +1,25 @@
 import { readEventsLocation, type EventsLocation } from './Events';
 import { readSourcingLocation, type SourcingLocation } from './Sourcing';
 
+/** The Identity session Desk's BFF answers at `/api/identity/session`: the person, their active organization and its
+ *  `desk:*` permissions, and the CSRF token unsafe requests carry. Signed out, every member but `authenticated` is empty. */
 export interface Session {
   authenticated: boolean;
-  user: { id: string; email: string; displayName: string } | null;
+  user: { id: string; email: string; displayName: string; phone?: string | null } | null;
   sessionId: string | null;
   csrfToken: string;
-  setupRequired: boolean;
+  organizationId: string | null;
+  role: OrganizationRole | null;
+  permissions: string[];
 }
+/** Identity's fixed organization role catalog. */
+export const organizationRoles = ['owner', 'admin', 'editor', 'viewer', 'billing'] as const;
+export type OrganizationRole = (typeof organizationRoles)[number];
 export interface Organization {
   id: string;
   name: string;
   slug: string;
-  role: 'owner' | 'editor' | 'viewer';
+  role: OrganizationRole;
 }
 export interface Brand {
   id: string;

@@ -93,8 +93,9 @@ class LauncherTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / 'compose.env').write_text('POSTGRES_PASSWORD=\'quoted";literal\'\n')
-            (root / 'operator-password.txt').write_text('fixture-only')
+            (root / 'appsettings.Local.json').write_text('{}')
             with patch.object(review, 'VERIFICATION', root), \
+                 patch.object(review, 'LOCAL_SETTINGS', root / 'appsettings.Local.json'), \
                  patch.object(review, 'healthy', side_effect=[False, False, True]), \
                  patch.object(review, 'port_in_use', return_value=False), \
                  patch.object(review, 'node_environment', return_value={'PATH': '/fixture'}), \

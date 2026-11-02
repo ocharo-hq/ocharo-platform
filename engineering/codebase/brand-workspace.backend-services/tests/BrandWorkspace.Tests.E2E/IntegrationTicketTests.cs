@@ -100,9 +100,7 @@ public sealed class IntegrationTicketTests
         public Task<OrganizationAccess?> FindMembershipAsync(Guid organizationId,string userId,CancellationToken token) => Task.FromResult(organizationId==Organization && userId=="operator" ? Member : null);
         public OperatorProfile? Profile {get;set;} = new("Desk operator","operator@example.test");
         public Task<OperatorProfile?> FindProfileAsync(string userId,CancellationToken token) => Task.FromResult(userId=="operator" ? Profile : null);
-        public Task CreateSessionAsync(Guid sessionId,string userId,string securityStamp,DateTimeOffset expiresAt,Guid? replacedSessionId,CancellationToken token) => throw new NotSupportedException();
-        public Task RevokeSessionAsync(Guid sessionId,DateTimeOffset now,CancellationToken token) => throw new NotSupportedException();
-        public Task<IReadOnlyList<Organization>> ListOrganizationsAsync(string userId,CancellationToken token) => throw new NotSupportedException();
-        public Task<Organization?> CreateOrganizationAsync(string name,string slug,string userId,CancellationToken token) => throw new NotSupportedException();
+        public Task<Organization?> FindOrganizationAsync(Guid organizationId,string role,CancellationToken token) => throw new NotSupportedException();
+        public Task ProjectUserAsync(string userId,string? displayName,string? email,CancellationToken token) => throw new NotSupportedException();
     }
 }

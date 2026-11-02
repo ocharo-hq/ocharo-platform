@@ -11,7 +11,7 @@ import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/resul
 
 import { readWorkspaceLocation, type Session } from '@/domain/workspace/Models';
 import { safeWorkspaceDestination } from '@/domain/workspace/EditorNavigation';
-import { createWorkspaceApi, type SessionTransport } from '@/integration/workspace/WorkspaceApi';
+import { createWorkspaceApi, signInPath, type SessionTransport } from '@/integration/workspace/WorkspaceApi';
 
 /** Produces safe product messages without rendering server diagnostic text. */
 export function failureMessage(error: ApiFailure): string {
@@ -121,7 +121,7 @@ export function useAccess(navigation: DocumentNavigation = documentNavigation())
     pendingWrites.value += 1;
     try {
       const result = await operation(AbortSignal.any([controller.signal, ...(signal ? [signal] : [])]));
-      if (!result.ok && result.failure.problem?.code === 'csrf_validation_failed') invalidate();
+      if (!result.ok && result.failure.problem?.code === 'AntiforgeryValidationFailed') invalidate();
       return result;
     } finally {
       pendingWrites.value -= 1;
@@ -133,16 +133,21 @@ export function useAccess(navigation: DocumentNavigation = documentNavigation())
     channel.post('changed');
     navigation.assign(signInDestination(new URL(destination, window.location.origin).search, safeWorkspaceDestination(destination)));
   }
-  /** Exchanges local operator credentials using the anonymous document's antiforgery token. */
-  function login(input: { email: string; password: string }, signal: AbortSignal) {
-    return write((requestSignal) => api.login(input, requestSignal), signal);
+  /** Sends the browser to sign in at Ocharo's Identity instance, returning to the current address. */
+  function signIn(): void {
+    if (busy.value || disposed) return;
+    navigation.assign(signInPath(safeWorkspaceDestination(window.location.pathname + window.location.search)));
   }
-  /** Confirms the server logout before replacing the current document. */
+  /** Ends the session here, then sends the browser to end it at the Identity instance. */
   async function logout(): Promise<void> {
     if (busy.value || (dirty.value && !await requestConfirmation(t('Discard unsaved changes and sign out?'), {confirmLabel:t('Discard changes')}))) return;
     if (busy.value || disposed) return;
     const result = await write((signal) => api.logout(signal));
-    if (result.ok) authenticated();
+    if (result.ok) {
+      dirty.value = false;
+      channel.post('changed');
+      navigation.assign(result.value.endSessionUrl);
+    }
     else { sessionError.value = failureMessage(result.failure); notifyError(sessionError.value); }
   }
   /** Revalidates cookies after tab resumption while preventing writes with unchecked authority. */
@@ -216,7 +221,7 @@ export function useAccess(navigation: DocumentNavigation = documentNavigation())
     api,
     navigate,
     write,
-    login,
+    signIn,
     authenticated,
     logout,
     recheck,

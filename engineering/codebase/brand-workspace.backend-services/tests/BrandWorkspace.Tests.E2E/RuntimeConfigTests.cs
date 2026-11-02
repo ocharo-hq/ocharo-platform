@@ -142,9 +142,12 @@ public sealed class RuntimeConfigTests(ApiDatabaseFixture database) : IClassFixt
         var factory = new WebApiTestHost<ApiAssemblyMarker>
         {
             ConfigureHostHook = builder => builder.UseEnvironment(Environments.Development),
+            ConfigureServicesHook = DeskTestHost.Use,
             ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(
                 new Dictionary<string, string?>(apps)
                 {
+                    ["Identity:Client:Authority"] = DeskTestHost.IdentityClientSettings["Identity:Client:Authority"],
+                    ["Identity:Client:ClientId"] = DeskTestHost.IdentityClientSettings["Identity:Client:ClientId"],
                     ["ConnectionStrings:Database"] = database.Connection,
                     ["AllowedHosts"] = "localhost;127.0.0.1"
                 })

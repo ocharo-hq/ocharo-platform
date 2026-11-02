@@ -6,6 +6,10 @@ public static class BuildIdentity
     /// <summary>Migration history stores the product version, excluding commit build metadata.</summary>
     public static string ProductVersion => ProductVersionFrom(Version);
 
+    /// <summary>The release the migrator compares migration contracts with: the product version, or <c>0.0.0</c> for a
+    /// local build, which reports <c>dev</c>.</summary>
+    public static string Release => ProductVersion == "dev" ? "0.0.0" : ProductVersion;
+
     /// <summary>Preserves prerelease identity; only informational metadata follows '+'.</summary>
     public static string ProductVersionFrom(string informationalVersion) => informationalVersion.Split('+', 2)[0];
 

@@ -78,14 +78,12 @@ public static class IntegrationEndpoints
     public static WebApplication MapIntegrationEndpoints(this WebApplication app)
     {
         app.MapPost("/api/organizations/{organizationId:guid}/integration-tickets",
-            (TicketRequest request, HttpContext http, IntegrationTickets tickets) =>
+            (TicketRequest request, HttpContext http) =>
             {
                 http.Response.Headers.CacheControl = "no-store";
                 if (!IntegrationTickets.ValidAudience(request.Audience)) return Results.Problem(statusCode: 400, title: "Unknown integration audience");
-                var session = AccessClaims.Session(http.User);
-                if (session is null) return Results.Unauthorized();
-                var issued = tickets.Issue(request.Audience, OrganizationAccessFilter.GetAccess(http), session.Value);
-                return issued is null ? Results.Problem(statusCode: 503, title: "Integration signing key is not configured") : Results.Ok(new { data = issued });
+                // Tickets were bound to Desk's own sessions, which Identity sign-in replaced; they return with Identity agent tokens.
+                return AccessProblems.Create(503, "Integration tickets are unavailable until Identity issues agent tokens", "integration_tickets_unavailable");
             }).RequireAuthorization().AddEndpointFilter<OrganizationAccessFilter>();
         app.MapPost("/api/integrations/introspect", async (IntrospectionRequest request, HttpContext http,
             IntegrationTickets tickets, CancellationToken token) =>
@@ -93,7 +91,7 @@ public static class IntegrationEndpoints
                 http.Response.Headers.CacheControl = "no-store";
                 if (!http.Request.IsHttps) return Results.Problem(statusCode: 400, title: "HTTPS is required");
                 return Results.Ok(new { data = await tickets.IntrospectAsync(request.Token, request.Audience, token) });
-            }).WithMetadata(new SkipAntiforgeryValidation()).AllowAnonymous();
+            }).AllowAnonymous();
         return app;
     }
 }

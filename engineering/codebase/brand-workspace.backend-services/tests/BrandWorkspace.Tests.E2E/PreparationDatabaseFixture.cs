@@ -1,15 +1,10 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using AwesomeAssertions;
 using BrandWorkspace.Api;
 using BrandWorkspace.Api.Configurations;
 using BrandWorkspace.Application.Access;
 using BrandWorkspace.Infrastructure.Preparation.Services;
-using BrandWorkspace.Persistence.Access;
 using BrandWorkspace.Persistence.Preparation.Repositories;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,20 +16,20 @@ using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Uses real PostgreSQL, real Identity users, and test-only organizations.</summary>
+/// <summary>Uses real PostgreSQL, people the Identity token would name, and test-only organizations.</summary>
 public sealed class PreparationDatabaseFixture : IAsyncLifetime
 {
     private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
     public WebApiTestHost<ApiAssemblyMarker> Factory { get; private set; } = null!;
     public NpgsqlDataSource DataSource => Factory.Services.GetRequiredService<NpgsqlDataSource>();
     public PreparationService Service { get; private set; } = null!;
-    private const string Password = "Preparation_Fixture_42!";
 
     public async Task InitializeAsync()
     {
         await _database.StartAsync();
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = Environments.Development });
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = _database.ConnectionString });
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(DeskTestHost.IdentityClientSettings)
+        { ["ConnectionStrings:Database"] = _database.ConnectionString });
         builder.Configure(migrate: true);
         var app = builder.Build();
         app.Configure();
@@ -43,47 +38,71 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
         Service = new PreparationService(new PreparationRepository(DataSource, TimeProvider.System, new ManualPackageBuilder()), new ImageValidationService());
     }
 
+    /// <summary>Creates a person, a new organization they own, and the claims their sign-in carries.</summary>
     public async Task<OrganizationAccess> CreateOwnerAsync()
     {
-        using var scope = Factory.Services.CreateScope();
-        var users = scope.ServiceProvider.GetRequiredService<UserManager<AccessUser>>();
+        var subject = Guid.NewGuid().ToString("D");
+        var organization = Guid.NewGuid();
         var email = $"preparation-{Guid.NewGuid():N}@example.test";
-        var user = new AccessUser { UserName = email, Email = email, DisplayName = "Preparation fixture" };
-        var result = await users.CreateAsync(user, Password);
-        result.Succeeded.Should().BeTrue(string.Join("; ", result.Errors.Select(error => error.Description)));
-        var repository = scope.ServiceProvider.GetRequiredService<IAccessRepository>();
-        var organization = await repository.CreateOrganizationAsync("Non-apparel fixture", $"fixture-{Guid.NewGuid():N}", user.Id, CancellationToken.None);
-        return (await repository.FindMembershipAsync(organization!.Id, user.Id, CancellationToken.None))!;
+        await using var command = DataSource.CreateCommand("""
+            INSERT INTO access.users(id,"DisplayName","Email","IsActive","SecurityStamp","EmailConfirmed","PhoneNumberConfirmed","TwoFactorEnabled","LockoutEnabled","AccessFailedCount")
+            VALUES (@user,'Preparation fixture',@email,true,@stamp,false,false,false,false,0);
+            INSERT INTO access.organizations(id,name,slug) VALUES (@organization,'Non-apparel fixture',@slug);
+            INSERT INTO access.memberships(organization_id,user_id,role) VALUES (@organization,@user,'owner');
+            """);
+        command.Parameters.AddWithValue("user", subject);
+        command.Parameters.AddWithValue("email", email);
+        command.Parameters.AddWithValue("stamp", Guid.NewGuid().ToString("N"));
+        command.Parameters.AddWithValue("organization", organization);
+        command.Parameters.AddWithValue("slug", $"fixture-{Guid.NewGuid():N}");
+        await command.ExecuteNonQueryAsync();
+        DeskTestHost.Register(new(subject, organization, "owner", "Preparation fixture", email));
+        return new OrganizationAccess(organization, subject, "owner", true, true);
     }
 
-    public async Task<HttpClient> LoginAsync(OrganizationAccess access)
-    {
-        using var scope = Factory.Services.CreateScope();
-        var user = await scope.ServiceProvider.GetRequiredService<UserManager<AccessUser>>().FindByIdAsync(access.UserId);
-        var client = Factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri("https://localhost"),
-            AllowAutoRedirect = false,
-            HandleCookies = true
-        });
-        var session = await client.GetFromJsonAsync<JsonElement>("/api/auth/session");
-        client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", session.GetProperty("data").GetProperty("csrfToken").GetString());
-        var login = await client.PostAsJsonAsync("/api/auth/login", new { email = user!.Email, password = Password });
-        login.IsSuccessStatusCode.Should().BeTrue(await login.Content.ReadAsStringAsync());
-        session = await client.GetFromJsonAsync<JsonElement>("/api/auth/session");
-        client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
-        client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", session.GetProperty("data").GetProperty("csrfToken").GetString());
-        return client;
-    }
+    /// <summary>A client of the shared host that signs in as the person; it follows later <see cref="SetRoleAsync"/> changes.</summary>
+    public Task<HttpClient> LoginAsync(OrganizationAccess access) => LoginAsync(Factory, access);
 
+    /// <summary>A client of another host over the same database that signs in as the person.</summary>
+    public Task<HttpClient> LoginAsync(WebApiTestHost<ApiAssemblyMarker> factory, OrganizationAccess access) =>
+        Task.FromResult(DeskTestHost.CreateClient(factory, access.UserId));
+
+    /// <summary>Changes the person's role in the claims and the membership row; null removes the membership.</summary>
     public async Task SetRoleAsync(OrganizationAccess access, string? role)
     {
+        var person = DeskTestHost.Find(access.UserId)!;
+        DeskTestHost.Register(person with { Role = role });
         await using var command = DataSource.CreateCommand(role is null
             ? "DELETE FROM access.memberships WHERE organization_id=$1 AND user_id=$2"
-            : "UPDATE access.memberships SET role=$3 WHERE organization_id=$1 AND user_id=$2");
+            : """
+              INSERT INTO access.memberships(organization_id,user_id,role) VALUES ($1,$2,$3)
+              ON CONFLICT (organization_id,user_id) DO UPDATE SET role=EXCLUDED.role
+              """);
         command.Parameters.AddWithValue(access.OrganizationId);
         command.Parameters.AddWithValue(access.UserId);
         if (role is not null) command.Parameters.AddWithValue(role);
+        await command.ExecuteNonQueryAsync();
+    }
+
+    /// <summary>Opens a live Desk session row for the person, which integration tickets are still checked against.</summary>
+    public async Task<Guid> OpenSessionAsync(OrganizationAccess access)
+    {
+        var id = Guid.NewGuid();
+        await using var command = DataSource.CreateCommand("""
+            INSERT INTO access.sessions(id,user_id,security_stamp,expires_at)
+            SELECT @id,id,"SecurityStamp",now()+interval '1 day' FROM access.users WHERE id=@user
+            """);
+        command.Parameters.AddWithValue("id", id);
+        command.Parameters.AddWithValue("user", access.UserId);
+        (await command.ExecuteNonQueryAsync()).Should().Be(1);
+        return id;
+    }
+
+    /// <summary>Revokes a session row opened by <see cref="OpenSessionAsync"/>.</summary>
+    public async Task RevokeSessionAsync(Guid sessionId)
+    {
+        await using var command = DataSource.CreateCommand("UPDATE access.sessions SET revoked_at=now() WHERE id=@id");
+        command.Parameters.AddWithValue("id", sessionId);
         await command.ExecuteNonQueryAsync();
     }
 

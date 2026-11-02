@@ -59,7 +59,7 @@ async function renderAt(
     const pathname = new URL(url, 'https://localhost').pathname;
     if (pathname === '/api/runtime-config') return Promise.resolve(Response.json(runtimeConfig ?? {}));
     if (pathname === '/api/system/version') return Promise.resolve(Response.json({ version: ApiVersion }));
-    if (pathname === '/api/auth/logout') return Promise.resolve(new Response(null, { status: 204 }));
+    if (pathname === '/api/identity/sign-out') return Promise.resolve(Response.json({ data: { endSessionUrl: 'https://localhost:8404/connect/endsession' } }));
     return Promise.resolve(Response.json({ data: pathname === '/api/organizations' ? organizations : [] }));
   });
   vi.stubGlobal('fetch', fetch);
@@ -78,7 +78,9 @@ async function renderAt(
           user: { id: 'operator', email: 'operator@example.test', displayName: 'Local verification operator' },
           sessionId: 'session',
           csrfToken: 'token',
-          setupRequired: false,
+          organizationId: ORG,
+          role: 'owner',
+          permissions: ['desk:edit', 'desk:approve'],
         };
         return () => h(ColorModeProvider, { storageKey: 'ocharo.desk.theme.test' }, () => h(WorkspacePage, { access }));
       },
@@ -296,9 +298,9 @@ describe('account menu in Desk', () => {
     accountRows(panel).at(-1)!.click();
     await settle();
 
-    const logout = fetch.mock.calls.find(([input]) => String(input instanceof Request ? input.url : input).endsWith('/api/auth/logout'));
+    const logout = fetch.mock.calls.find(([input]) => String(input instanceof Request ? input.url : input).endsWith('/api/identity/sign-out'));
     // The client passes its request options as a second argument the mock's own signature leaves out.
     expect(((logout as unknown[] | undefined)?.[1] as RequestInit | undefined)?.method).toBe('POST');
-    expect(assign).toHaveBeenCalledTimes(1);
+    expect(assign).toHaveBeenCalledExactlyOnceWith('https://localhost:8404/connect/endsession');
   });
 });

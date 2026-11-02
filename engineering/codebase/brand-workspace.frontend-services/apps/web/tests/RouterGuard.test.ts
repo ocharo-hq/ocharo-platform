@@ -34,7 +34,9 @@ beforeEach(async () => {
     user: { id: 'user', email: 'operator@example.test', displayName: 'Operator' },
     sessionId: 'session',
     csrfToken: 'token',
-    setupRequired: false,
+    organizationId: null,
+    role: null,
+    permissions: [],
   };
 });
 afterEach(() => {

@@ -27,7 +27,7 @@ async function render(document = documentId, page = 'detail', missing = false) {
   let getDesign!: ReturnType<typeof vi.fn<ReturnType<typeof createWorkspaceApi>['getDesign']>>;
   wrapper = mount(defineComponent({setup() {
     const access = useAccess({assign: vi.fn(), reload: vi.fn()});
-    access.session.value = {authenticated: true, user: {id: 'operator', email: 'review@example.test', displayName: 'Review'}, sessionId: 's', csrfToken: 'c', setupRequired: false};
+    access.session.value = {authenticated: true, user: {id: 'operator', email: 'review@example.test', displayName: 'Review'}, sessionId: 's', csrfToken: 'c', organizationId: null, role: null, permissions: []};
     vi.spyOn(access.api, 'getDesigns').mockResolvedValue(ResultExtensions.ok([doc]));
     getDesign = vi.fn<ReturnType<typeof createWorkspaceApi>['getDesign']>().mockResolvedValue(missing ? ResultExtensions.fail(ApiFailureFactory.create('http', new Response(null, {status: 404}))) : ResultExtensions.ok(doc));
     access.api.getDesign = getDesign;

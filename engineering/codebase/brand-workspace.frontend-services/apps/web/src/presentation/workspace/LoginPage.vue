@@ -1,47 +1,17 @@
 <script setup lang="ts">
-import { onMounted, onScopeDispose, ref } from 'vue';
-import TelegramSignIn from './TelegramSignIn.vue';
-import { notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
 import BuildIdentity from '../shared/BuildIdentity.vue';
-import { useAppForm } from '@wow-two-beta/fe/forms-engine/house';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
-import { Field, EmailInput, PasswordInput } from '@wow-two-beta/fe/presentation/forms';
 
-import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
+import type { AccessControls } from '@/application/workspace/UseAccess';
 
 const { t } = useUiLocale();
 
-/** Presents the explicitly provisioned operator sign-in. */
+/** Sends operators to sign in at Ocharo's Identity instance; a failed return names itself. */
 defineOptions({ name: 'LoginPage' });
-const props = defineProps<{ access: AccessControls }>();
-const telegramEnabled = ref(false);
-const method = ref<'password' | 'telegram'>('password');
-const passwordStarted = ref(false);
-const availabilityController = new AbortController();
-onScopeDispose(() => availabilityController.abort());
-onMounted(async () => {
-  const result = await props.access.api.getTelegram(availabilityController.signal);
-  if (!availabilityController.signal.aborted && result.ok) {
-    telegramEnabled.value = result.value.enabled;
-    if (result.value.enabled && !passwordStarted.value && !form.state.isDirty && !form.state.isSubmitting) method.value = 'telegram';
-  }
-});
-const form = useAppForm(() => ({
-  defaultValues: { email: '', password: '' },
-  isDisabled: props.access.busy.value,
-  onSubmit: async (values, { signal }) => {
-    const result = await props.access.login(values, signal);
-    form.setValue('password', '');
-    if (result.ok) props.access.authenticated(window.location.pathname + window.location.search);
-    if (!result.ok && result.failure.code !== 'cancelled') notifyError(
-      result.failure.status === 401 || result.failure.status === 400
-        ? 'Sign-in was not completed. Check your credentials and retry; repeated failures may temporarily lock the account.'
-        : failureMessage(result.failure), 'operator-sign-in');
-    return result;
-  },
-}));
+defineProps<{ access: AccessControls }>();
+const signInFailed = new URLSearchParams(window.location.search).has('signInError');
 </script>
 
 <template>
@@ -62,35 +32,10 @@ const form = useAppForm(() => ({
     <section class="workspace-card p-7 sm:p-10" aria-labelledby="signin-title">
       <div class="mb-5"><UiLanguagePicker /></div>
       <h2 id="signin-title" class="text-2xl font-semibold">{{ t("Operator sign-in") }}</h2>
-      <template v-if="access.session.value?.setupRequired">
-        <p class="mt-5 leading-7 text-muted-foreground">
-          {{ t("An administrator needs to provision the first operator before sign-in is available.") }}
-        </p>
-        <p class="mt-4 text-sm text-muted-foreground">{{ t("This workspace does not offer public registration.") }}</p>
-      </template>
-      <template v-else>
-      <div v-if="telegramEnabled" class="my-5 flex gap-2" :aria-label="t('Sign-in method')">
-        <Button variant="outline" :aria-pressed="method === 'telegram'" :is-disabled="access.busy.value" @click="method = 'telegram'">Telegram</Button>
-        <Button variant="outline" :aria-pressed="method === 'password'" :is-disabled="access.busy.value" @click="method = 'password'">{{ t('Email and password') }}</Button>
-      </div>
-      <TelegramSignIn v-if="telegramEnabled && method === 'telegram'" :access="access" />
-      <form v-else class="mt-6 space-y-5" @focusin="passwordStarted = true" @input="passwordStarted = true" @submit.prevent="passwordStarted = true; form.handleSubmit($event)">
-        <form.Field v-slot="f" name="email" is-required
-          ><Field :label="t('Email')"
-            ><EmailInput v-model="f.value" autocomplete="username" is-required @blur="f.onBlur" /></Field
-        ></form.Field>
-        <form.Field v-slot="f" name="password" is-required
-          ><Field :label="t('Password')"
-            ><PasswordInput v-model="f.value" autocomplete="current-password" is-required @blur="f.onBlur" /></Field
-        ></form.Field>
-        <Button type="submit" :is-loading="form.state.isSubmitting" :is-disabled="access.busy.value" is-full-width
-          >{{ t("Sign in") }}</Button
-        >
-        <p class="text-xs leading-5 text-muted-foreground">
-          {{ t("Use the account provisioned by your administrator.") }}
-        </p>
-      </form>
-      </template>
+      <p class="mt-5 leading-7 text-muted-foreground">{{ t("Sign in with your phone; the code arrives in Telegram.") }}</p>
+      <p v-if="signInFailed" role="alert" class="mt-4 text-sm text-destructive">{{ t("Sign-in was not completed. Try again.") }}</p>
+      <Button class="mt-6" :is-disabled="access.busy.value" is-full-width @click="access.signIn()">{{ t("Sign in") }}</Button>
+      <p class="mt-4 text-xs leading-5 text-muted-foreground">{{ t("New to Ocharo? Ask an owner or admin for an invite.") }}</p>
     </section>
   </main>
 </template>

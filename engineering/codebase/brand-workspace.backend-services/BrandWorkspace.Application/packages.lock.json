@@ -2581,7 +2581,7 @@
       },
       "Microsoft.Data.Sqlite": {
         "type": "CentralTransitive",
-        "requested": "[10.0.3, )",
+        "requested": "[10.0.14, )",
         "resolved": "10.0.3",
         "contentHash": "R/7g5hddFTzey+XOH7Hb3x71DdX5yDu3YqKDJbyn3QKiV6P38bYqkhsoDotanurh5mHLRc9hITE+pxL6Kjcpzw==",
         "dependencies": {
@@ -2619,7 +2619,7 @@
       },
       "WoW2.Sdk.Beta.Be": {
         "type": "CentralTransitive",
-        "requested": "[10.0.71-beta, )",
+        "requested": "[10.0.97-beta, )",
         "resolved": "10.0.71-beta",
         "contentHash": "s1r5XQbHA1dP1TeHATF1oITKD/buLl8R+uh6/cq0vZ9gftTxXL4Z2OQ2B5mDiZj2nkUkMAuj5lOuwxftQpN/yQ==",
         "dependencies": {

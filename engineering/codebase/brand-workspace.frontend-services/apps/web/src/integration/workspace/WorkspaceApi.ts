@@ -1,4 +1,3 @@
-import { telegramAvailabilityDecoder, telegramLinkDecoder, telegramCodeDecoder } from './TelegramDecoders';
 import type { DesignKind, DesignSnapshot } from '@/domain/workspace/EditorModels';
 import { createApiClient, type ApiClientOptions } from '@wow-two-beta/fe/foundation/http';
 
@@ -16,33 +15,28 @@ import {
   isOrganization,
   isSummary,
   listDecoder,
-  loginDecoder,
   mediaDecoder,
-  organizationDecoder,
   sessionDecoder,
+  signOutDecoder,
 } from './Decoders';
 
 /** The signed-in session's request lifetime: its scope and the 401 handler that expires it. */
 export type SessionTransport = Pick<ApiClientOptions, 'scope' | 'onUnauthorized'>;
 
+/** The BFF route that starts sign-in at Ocharo's Identity instance and returns to a local path. */
+export const signInPath = (returnUrl: string) => `/api/identity/sign-in?returnUrl=${encodeURIComponent(returnUrl)}`;
+
 /** Creates one document's cookie client. Each unsafe request captures its session-bound CSRF token. */
 export function createWorkspaceApi(csrfToken: () => string, session: SessionTransport = {}) {
-  // A rejected password is a sign-in answer, not an expired session.
-  const client = createApiClient({ credentials: 'same-origin', ...session, retry: false,
-    onUnauthorized: (failure, origin) => { if (failure.problem?.code !== 'invalid_credentials') session.onUnauthorized?.(failure, origin); } });
+  const client = createApiClient({ credentials: 'same-origin', ...session, retry: false });
   const request = (signal?: AbortSignal) => ({
     signal: AbortSignal.any([AbortSignal.timeout(30_000), ...(signal ? [signal] : [])]),
   });
-  const write = (signal?: AbortSignal) => ({ ...request(signal), headers: { 'X-CSRF-TOKEN': csrfToken() } });
+  const write = (signal?: AbortSignal) => ({ ...request(signal), headers: { 'X-Csrf-Token': csrfToken() } });
   const org = (id: string) => `/api/organizations/${encodeURIComponent(id)}`;
   const draft = (orgId: string, id: string) => `${org(orgId)}/drafts/${encodeURIComponent(id)}`;
   const design = (orgId: string, id?: string) => `${org(orgId)}/design-documents${id ? `/${encodeURIComponent(id)}` : ''}`;
   return {
-    getTelegram: (signal: AbortSignal) => client.get('/api/auth/telegram', { ...request(signal), decode: telegramAvailabilityDecoder }),
-    linkTelegram: (password: string, signal: AbortSignal) => client.post('/api/auth/telegram/link', { ...write(signal), body: { password }, decode: telegramLinkDecoder }),
-    unlinkTelegram: (password: string, signal: AbortSignal) => client.delete('/api/auth/telegram/link', { ...write(signal), body: { password }, response: 'empty' }),
-    requestTelegramCode: (phone: string, signal: AbortSignal) => client.post('/api/auth/telegram/code', { ...write(signal), body: { phone }, decode: telegramCodeDecoder }),
-    loginTelegram: (phone: string, code: string, signal: AbortSignal) => client.post('/api/auth/telegram/login', { ...write(signal), body: { phone, code }, decode: loginDecoder }),
     getDesigns: (orgId: string, kind: DesignKind, signal: AbortSignal) =>
       client.get(`${design(orgId)}?kind=${kind}&limit=100`, { ...request(signal), decode: listDecoder(isDesignSummary) }),
     getDesign: (orgId: string, id: string, signal: AbortSignal) =>
@@ -57,14 +51,11 @@ export function createWorkspaceApi(csrfToken: () => string, session: SessionTran
     archiveDesign: (orgId: string, id: string, expectedRevision: number, signal: AbortSignal) =>
       client.post(`${design(orgId, id)}/archive`, { ...write(signal), body: { expectedRevision }, decode: designDocumentDecoder }),
     getSession: (signal?: AbortSignal) =>
-      client.get('/api/auth/session', { ...request(signal), decode: sessionDecoder }),
-    login: (input: { email: string; password: string }, signal: AbortSignal) =>
-      client.post('/api/auth/login', { ...write(signal), body: input, decode: loginDecoder }),
-    logout: (signal?: AbortSignal) => client.post('/api/auth/logout', { ...write(signal), body: {}, response: 'empty' }),
+      client.get('/api/identity/session', { ...request(signal), decode: sessionDecoder }),
+    /** Ends the BFF session; the answer names Identity's end-session address the browser goes to next. */
+    logout: (signal?: AbortSignal) => client.post('/api/identity/sign-out', { ...write(signal), body: {}, decode: signOutDecoder }),
     getOrganizations: (signal: AbortSignal) =>
       client.get('/api/organizations', { ...request(signal), decode: listDecoder(isOrganization) }),
-    createOrganization: (input: { name: string; slug: string }, signal: AbortSignal) =>
-      client.post('/api/organizations', { ...write(signal), body: input, decode: organizationDecoder }),
     getBrands: (id: string, signal: AbortSignal) =>
       client.get(`${org(id)}/brands`, { ...request(signal), decode: listDecoder(isBrand) }),
     createBrand: (id: string, input: { name: string; timeZone: string }, signal: AbortSignal) =>

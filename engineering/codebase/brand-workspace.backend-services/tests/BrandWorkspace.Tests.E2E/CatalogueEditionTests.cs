@@ -177,7 +177,7 @@ public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : 
     }
 
     [Fact]
-    public async Task Access_RejectsForeignDesignsViewerAttachmentsEditorPublicationAndMissingCsrf()
+    public async Task Access_RejectsForeignDesignsViewerAttachmentsEditorPublicationAndAnonymousRequests()
     {
         var x=await Create();using var client=x.Client;
         var y=await Create();using var other=y.Client;
@@ -188,8 +188,8 @@ public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : 
         await fixture.SetRoleAsync(x.Owner,"editor");
         using var attach=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));attach.StatusCode.Should().Be(HttpStatusCode.OK);
         using var editor=await client.PostAsJsonAsync(x.Path+"/catalogue-editions/en/publish",new{expectedRevision=2,note="Cannot approve"});editor.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
-        using var csrf=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,2));csrf.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        client.DefaultRequestHeaders.Remove(DeskTestHost.PersonHeader);
+        using var anonymous=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,2));anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]

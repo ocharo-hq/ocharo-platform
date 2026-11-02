@@ -5,9 +5,8 @@ using System.Text.Json;
 using AwesomeAssertions;
 using BrandWorkspace.Api;
 using BrandWorkspace.Api.Mcp;
+using BrandWorkspace.Api.Integrations;
 using BrandWorkspace.Application.Access;
-using BrandWorkspace.Persistence.Access;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,7 +40,7 @@ public sealed class DeskMcpTests(PreparationDatabaseFixture fixture) : IClassFix
         using var anonymous = BearerClient(factory);
         (await SendAsync(anonymous, "tools/list")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await SendAsync(operatorClient, "tools/list")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        using var otherAudience = BearerClient(factory, await IssueAsync(operatorClient, owner, "ocharo-studio"));
+        using var otherAudience = BearerClient(factory, await IssueAsync(factory, owner, audience: "ocharo-studio"));
         (await SendAsync(otherAudience, "tools/list")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         using var malformed = BearerClient(factory, "malformed-ticket");
         using var invalid = await SendAsync(malformed, "tools/list");
@@ -55,8 +54,7 @@ public sealed class DeskMcpTests(PreparationDatabaseFixture fixture) : IClassFix
     {
         await using var factory = CreateFactory();
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
-        using var operatorClient = await LoginAsync(factory, owner);
-        using var client = BearerClient(factory, await IssueAsync(operatorClient, owner));
+        using var client = BearerClient(factory, await IssueAsync(factory, owner));
         using var initialized = await SendAsync(client, "initialize", new
         {
             protocolVersion = "2025-11-25", capabilities = new { }, clientInfo = new { name = "desk-test", version = "1" }
@@ -96,7 +94,7 @@ public sealed class DeskMcpTests(PreparationDatabaseFixture fixture) : IClassFix
         { name = "Visible mill", stage = "lead" }))).GetProperty("id").GetGuid();
         Guid foreignSupplier = (await DataAsync(await strangerClient.PostAsJsonAsync(Suppliers(stranger), new
         { name = "Other organization mill", stage = "lead" }))).GetProperty("id").GetGuid();
-        using var client = BearerClient(factory, await IssueAsync(operatorClient, owner));
+        using var client = BearerClient(factory, await IssueAsync(factory, owner));
         using var events = await CallAsync(client, "list_events");
         events.RootElement.GetProperty("result").ToString().Should().Contain("Visible market").And.NotContain("Other organization");
         using var suppliers = await CallAsync(client, "list_suppliers");
@@ -123,11 +121,11 @@ public sealed class DeskMcpTests(PreparationDatabaseFixture fixture) : IClassFix
     {
         await using var factory = CreateFactory();
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
-        using var operatorClient = await LoginAsync(factory, owner);
-        using var client = BearerClient(factory, await IssueAsync(operatorClient, owner));
+        Guid session = await fixture.OpenSessionAsync(owner);
+        using var client = BearerClient(factory, await IssueAsync(factory, owner, session));
         (await SendAsync(client, "tools/list")).StatusCode.Should().Be(HttpStatusCode.OK);
         if (change == "membership") await fixture.SetRoleAsync(owner, null);
-        else if (change == "session") (await operatorClient.PostAsync("/api/auth/logout", null)).IsSuccessStatusCode.Should().BeTrue();
+        else if (change == "session") await fixture.RevokeSessionAsync(session);
         else factory.Clock.Advance(TimeSpan.FromMinutes(6));
         (await SendAsync(client, "tools/list")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -173,7 +171,8 @@ public sealed class DeskMcpTests(PreparationDatabaseFixture fixture) : IClassFix
         var factory = new WebApiTestHost<ApiAssemblyMarker>
         {
             ConfigureHostHook = builder => builder.UseEnvironment(Environments.Development),
-            ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            ConfigureServicesHook = DeskTestHost.Use,
+            ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(new Dictionary<string, string?>(DeskTestHost.IdentityClientSettings)
             {
                 ["ConnectionStrings:Database"] = fixture.Factory.Services.GetRequiredService<IConfiguration>().GetConnectionString("Database")!,
                 ["AllowedHosts"] = "localhost;127.0.0.1", ["Mcp:Enabled"] = "true", ["Integrations:SigningKey"] = signingKey
@@ -183,27 +182,12 @@ public sealed class DeskMcpTests(PreparationDatabaseFixture fixture) : IClassFix
         return factory;
     }
 
-    private async Task<HttpClient> LoginAsync(WebApiTestHost<ApiAssemblyMarker> factory, OrganizationAccess access)
-    {
-        using var scope = fixture.Factory.Services.CreateScope();
-        var user = await scope.ServiceProvider.GetRequiredService<UserManager<AccessUser>>().FindByIdAsync(access.UserId);
-        var client = factory.CreateClient(new WebApplicationFactoryClientOptions
-        { BaseAddress = new Uri("https://localhost"), HandleCookies = true, AllowAutoRedirect = false });
-        var session = await DataAsync(await client.GetAsync("/api/auth/session"));
-        client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", session.GetProperty("csrfToken").GetString());
-        (await client.PostAsJsonAsync("/api/auth/login", new { email = user!.Email, password = "Preparation_Fixture_42!" }))
-            .IsSuccessStatusCode.Should().BeTrue();
-        session = await DataAsync(await client.GetAsync("/api/auth/session"));
-        client.DefaultRequestHeaders.Remove("X-CSRF-TOKEN");
-        client.DefaultRequestHeaders.Add("X-CSRF-TOKEN", session.GetProperty("csrfToken").GetString());
-        return client;
-    }
+    private Task<HttpClient> LoginAsync(WebApiTestHost<ApiAssemblyMarker> factory, OrganizationAccess access) =>
+        fixture.LoginAsync(factory, access);
 
-    private static async Task<string> IssueAsync(HttpClient client, OrganizationAccess owner, string audience = Audience)
-    {
-        var issued = await DataAsync(await client.PostAsJsonAsync($"/api/organizations/{owner.OrganizationId}/integration-tickets", new { audience }));
-        return issued.GetProperty("token").GetString()!;
-    }
+    /// <summary>Signs a delegated ticket directly: the endpoint that issued them answers 503 until Identity issues agent tokens.</summary>
+    private async Task<string> IssueAsync(WebApiTestHost<ApiAssemblyMarker> factory, OrganizationAccess owner, Guid? session = null, string audience = Audience) =>
+        factory.Services.GetRequiredService<IntegrationTickets>().Issue(audience, owner, session ?? await fixture.OpenSessionAsync(owner))!.Token;
 
     private static HttpClient BearerClient(WebApiTestHost<ApiAssemblyMarker> factory, string? ticket = null)
     {

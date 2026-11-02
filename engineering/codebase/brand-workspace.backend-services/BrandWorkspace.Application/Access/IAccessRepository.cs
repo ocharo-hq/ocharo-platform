@@ -1,14 +1,12 @@
 namespace BrandWorkspace.Application.Access;
 
-/// <summary>Persists revocable sessions and organization membership authority.</summary>
+/// <summary>Reads Desk's organizations and projects signed-in people; the legacy session and membership reads serve
+/// integration tickets and the import commands until migration 011.</summary>
 public interface IAccessRepository
 {
-    Task CreateSessionAsync(Guid sessionId, string userId, string securityStamp, DateTimeOffset expiresAt,
-        Guid? replacedSessionId, CancellationToken token);
     Task<bool> IsSessionActiveAsync(Guid sessionId, string userId, DateTimeOffset now, CancellationToken token);
-    Task RevokeSessionAsync(Guid sessionId, DateTimeOffset now, CancellationToken token);
-    Task<IReadOnlyList<Organization>> ListOrganizationsAsync(string userId, CancellationToken token);
+    Task<Organization?> FindOrganizationAsync(Guid organizationId, string role, CancellationToken token);
     Task<OrganizationAccess?> FindMembershipAsync(Guid organizationId, string userId, CancellationToken token);
     Task<OperatorProfile?> FindProfileAsync(string userId, CancellationToken token);
-    Task<Organization?> CreateOrganizationAsync(string name, string slug, string userId, CancellationToken token);
+    Task ProjectUserAsync(string userId, string? displayName, string? email, CancellationToken token);
 }

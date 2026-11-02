@@ -2,12 +2,12 @@ using System.Security.Claims;
 
 namespace BrandWorkspace.Api.Access;
 
-/// <summary>Names and reads the authenticated operator/session claims.</summary>
+/// <summary>Reads the person and sign-in session the Identity instance names (<c>sub</c>, <c>sid</c>).</summary>
 public static class AccessClaims
 {
-    public const string SessionId = "brand_workspace_session";
+    public const string Subject = "sub";
+    public const string SessionId = "sid";
     public static string UserId(ClaimsPrincipal principal) =>
-        principal.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new InvalidOperationException("Authenticated user id is missing.");
-    public static Guid? Session(ClaimsPrincipal principal) =>
-        Guid.TryParse(principal.FindFirstValue(SessionId), out var id) ? id : null;
+        principal.FindFirstValue(Subject) ?? throw new InvalidOperationException("Authenticated user id is missing.");
+    public static string? Session(ClaimsPrincipal principal) => principal.FindFirstValue(SessionId);
 }
