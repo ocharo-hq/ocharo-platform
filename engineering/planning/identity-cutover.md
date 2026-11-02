@@ -12,7 +12,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 
 ## Status
 
-- ⬜ G1 local: Desk signs in through Ocharo's local Identity
+- 🔄 G1 local: Desk signs in through Ocharo's local Identity — the developer signed in by phone (2026-11-02); the bot invite waits for #8
 - ⬜ G2 dev: the same on hosted dev with `@ocharo_dev_bot`
 - ⬜ G3 prod: the same on prod with `@ocharo_bot`
 - ⬜ G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired
@@ -39,13 +39,14 @@ G4 is done when each app signs in through Identity on every environment, and a g
 
 ## Target flow
 
-Set by the developer on 2026-11-02:
+Set by the developer on 2026-11-02 (revised the same day, #33):
 
-- An Ocharo `owner` or `admin` makes an invite link carrying a role.
-- The link opens the bot; one contact share gives phone, name and verification at once.
-- The link is spent; the person joins Ocharo with that role.
-- Sign-in: the person types the phone and gets the code in Telegram at once; Ocharo people have no email and no
-  password.
+- Sign-up: an Ocharo `owner` or `admin` sends an invite link carrying a role. The link opens a sign-up page where the
+  person enters their name and profile picture, then takes one action to verify the phone: it sends them to the bot,
+  whose verification proves the phone and links their Telegram chat. The link is spent; the person joins Ocharo with
+  that role.
+- Sign-in: the app's sign-in forwards to Identity; the person types the phone, receives a code from the bot, enters it
+  and is signed in. Ocharo people have no email and no password.
 
 Accounts:
 
@@ -59,9 +60,11 @@ Accounts:
 
 | Lane | Session | Repos | Owns containers | Own track |
 |---|---|---|---|---|
-| identity | `ocharo - identity` | `wow-two-sdk-beta.identity` | `identity-local-*` | Identity `version-track/v0.5/v0.5.md` |
-| platform | `ocharo - platform` | `ocharo-platform` first, then `ocharo-marketing`, `ocharo-studio` | `ocharo-identity-*`, `brand-workspace-*` | this doc |
-| wheelhouse | `ocharo - wheelhouse` | `wow-two-platform.wheelhouse` | `wheelhouse-*` | Wheelhouse version track |
+| identity | `ocharo - identity` (`local_ad26c1c8-…`) | `wow-two-sdk-beta.identity` | `identity-local-*` | Identity `version-track/v0.5/v0.5.md` |
+| platform | `ocharo - platform` (`local_0c76416a-…`) | `ocharo-platform` first, then `ocharo-marketing`, `ocharo-studio` | `ocharo-identity-*`, `brand-workspace-*` | this doc |
+| wheelhouse | `ocharo - wheelhouse` (`local_f7b86dc6-…`) | `wow-two-platform.wheelhouse` | `wheelhouse-*` | Wheelhouse version track |
+
+- The orchestrator is `w2 - ocharo with tg sign in` (`local_89e16694-…`); all four launched 2026-11-02.
 
 - Every lane launches at the WoW2 workspace root; its hooks cover all three repos.
 - One writer per repo; a lane hands a gap found in another lane's repo to the orchestrator.
@@ -69,7 +72,7 @@ Accounts:
 
 ## Order
 
-1. identity: gaps #8–#12 and #14 ship in one release (image, NuGet, npm); #13 runs beside.
+1. identity: gaps #10–#12 and #14 shipped, #8 and #9 as the sign-up slice (#34); one release (image, NuGet, npm); #13 runs beside.
 2. wheelhouse: builds the one-off command (#23) and confirms the rest of Identity's deploy needs (#22).
 3. platform: starts at once on the published `0.5.7` / `10.0.17-beta` — local Identity to `0.5.7` (#15), Desk cutover
    (#16, #17), the owner signs in to Desk by phone; G1 closes on #1's release with the bot-first invite.
@@ -107,14 +110,16 @@ image `0.5.7`, amd64 only.
 
 | # | Gap | State at `4197034` |
 |---|---|---|
-| 8 | Bot-first invite: an invite deep link opens the bot; one contact share creates the person, joins the organization with the role, links the chat and spends the invite; a known phone joins with the role | missing — `/start {token}` serves only the `phone-sign-in` link a web send made for a known number; invitations redeem only in the web phone verify step; needs an invitation link purpose, unbound invites whose phone comes from the contact, and a `t.me/<bot>?start=` link builder |
-| 9 | The shared contact's name fills `DisplayName` when empty | missing — phone sign-up stores user name and phone only; nothing reads the contact's names |
+| 8 | Invite sign-up (revised by #33): the invite opens a sign-up page — name, profile picture, one verify-phone action through the bot that proves the phone and links the chat — then joins the organization with the role and spends the invite; a known phone joins with the role | missing — `/start {token}` serves only the `phone-sign-in` link a web send made for a known number; invitations redeem only in the web phone verify step; needs an invitation link purpose, unbound invites whose phone comes from the contact, and a `t.me/<bot>?start=` link builder |
+| 9 | Profile on sign-up: the entered name fills `DisplayName` (the shared contact's name when empty); the profile picture is stored and reaches apps | missing — phone sign-up stores user name and phone only; nothing reads the contact's names |
 | 10 | Phone-only instance: no password, forgot-password or email on the hosted pages | partial — pages render only declared methods, but password counts as on whenever its services register, and the service always registers them; no `Methods:*` setting is bound |
-| 11 | Instance admin: `AddRoles()` in the service, an `admin` seed, `admin create --role admin` (or a verb), a console gate, sign-in per OQ-1; instance roles never enter app tokens | missing — no instance role exists, the console has no gate, `admin` has `create` only; app tokens already drop role claims |
+| 11 | Instance admin: `AddRoles()` in the service, an `admin` seed, `admin create --role admin` (or a verb), a console gate, sign-in by phone and bot code (#33); instance roles never enter app tokens | missing — no instance role exists, the console has no gate, `admin` has `create` only; app tokens already drop role claims |
 | 12 | `admin invite` CLI for the first invite | missing; widens the 2026-11-01 decision "the host CLI creates the first admin only" |
 | 13 | Members and invitations panel in `fe-identity` (v0.5 iteration 4) | missing — `fe-identity` exports `./contracts` and `./kit` only |
 | 14 | Deploy: pipelines `v0.15.0` in Identity's workflows, then `configCheck:` live in its `deploy.yml` | ready to do — `config check` is built and tested; workflows pin `v0.14.0`; the step is commented out |
 
+- Shipped 2026-11-02: #14 (`19841af`), #10 (`c7d5cfc`), #11 and #12 (`18bfed0`); tags `v0.5.8`, `be-v10.0.18-beta`,
+  `fe-v0.0.8`. #13 is committed (`7e122a0`); #8 and #9 build as the sign-up slice (#34).
 - `/api/organizations/{id}/members` has no add route; members join by invitation.
 - Also open in Identity, outside the target flow: arm64 image, HTTPS from a mounted PEM, compose build fix, stranding
   checks, uz/ru texts; the be sdk's 500 on a missing required member and MailKit's message built outside its `try`.
@@ -196,10 +201,24 @@ Settled:
 - 27. Hosted Desk's BFF uses a shared `IDistributedCache` and a persisted Data Protection key ring, or every deploy
   signs everyone out.
 
+- 33. The instance `admin` signs in like every Ocharo person: phone and a code from the bot; TOTP or a passkey come
+  once others get console access (OQ-1, developer, 2026-11-02). The same day the invite stopped being bot-first: it
+  lands on a sign-up page with name, profile picture and one verify-phone action through the bot, which also links
+  the chat; gaps #8 and #9 wait for OQ-4.
+- 34. The invite sign-up is built in the generic Identity server, not a custom Ocharo host (OQ-4, developer,
+  2026-11-02): a custom host first needs Identity to export host composition, pages and claim hooks, then owns invite
+  redemption and sessions. The slice ships before G2 — `Identity:SignUp:Profile:{DisplayName,Picture}` each Off,
+  Optional or Required (Ocharo: both Required, nothing else asked); the picture stored in Identity's database behind a
+  seam and served as a `picture` claim; JPEG, PNG and WebP checked by magic bytes, at most 5 MB, 256–4096 px,
+  re-encoded to a square 512 px WebP; codeless verify through the bot. The full pass follows G3: any custom field,
+  self-service profile edit, File Storage with image variants, the Telegram photo as a prefill.
+- 35. Ocharo signs in by Telegram only: email and password are off through `Identity:Methods`, and hosted Identity
+  carries no `Identity:Email:*` keys (OQ-2, developer, 2026-11-02).
+- 36. Identity's backlog gains trusted devices and trusted contacts: a person signs in with a code sent to someone
+  they trust (developer, 2026-11-02); outside this goal.
+
 Open, cross-lane — the orchestrator asks the developer:
 
-- OQ-1 Identity admin sign-in: Wheelhouse one-time links · the Telegram code alone · the code plus TOTP or passkey.
-- OQ-2 Hosted email: phone-only for now (recommended; no sender domain yet) · an SMTP relay.
 - OQ-3 Desk's real local data to hosted: now (restore Desk's schemas) · later.
 
 Open, lane-local — each lane asks in its own chat:
