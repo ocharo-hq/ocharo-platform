@@ -211,6 +211,12 @@ for an unopened v0.13.
 - 24. Missing, wanted: a value-level settings record (renders keep fingerprints and changed keys, no values) and a
   warning for stale stored keys. Not proven live: the rollback gate's config check, and refusing a missing required
   setting — Identity's first deploy can prove both.
+- First dev deploy, 2026-11-02, Ocharo `v0.1.15` (`b59a522`): migrate passed (identity set 3 → 7, no reset), then
+  identity `0.5.12` exited "A client has no ClientId" — the render never writes a descriptor `default:` value — and
+  no config check ran, since release-set composition drops each repo's `configCheck:` items. The rollback to
+  `v0.1.14` left identity `0.3.7` crash-looping on the new `Clients:0:*` values, which reach every service while
+  undeclared; Desk, Brand and Catalogue run healthy. Wheelhouse fixes both as `v0.13.3`; after its dev proof and the
+  developer's prod promotion, it reconciles Ocharo dev and redeploys `v0.1.15` with no PLAT change.
 - Custom domains are planned, not built; until then the webhook URL is the baseline host, and `setWebhook` is
   Identity's job.
 - Grants: Wheelhouse prod is promoted only for dev-proven releases; a rollback waits for the owner; another product's
@@ -275,4 +281,5 @@ Open, lane-local — each lane asks in its own chat:
 | 29 | Integration tickets die with Desk's cutover: Marketing/Editorial `connected` mode, Studio's ticket path, Editorial's image path, Desk MCP | Run those apps in `local` mode until their own cutover |
 | 30 | Wheelhouse values stored under retired identity keys make a 0.5.x deployed boot refuse | Delete them per environment before the deploy |
 | 31 | Identity behind the ingress without forwarded headers answers `ID2083` | After the first deploy, check `/.well-known/openid-configuration` shows the site origin as issuer |
+| 42 | A safety net marked "not proven live" (#25) is trusted on a first deploy | Prove it on the canary first; Ocharo's first deploy assumed the config check would refuse, and it never ran |
 | 32 | Desk scripts sign in through `/api/auth/login` (`verify-platform.py`, `review-platform.py`) | Update or retire them with #16 |
