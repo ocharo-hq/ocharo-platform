@@ -187,7 +187,7 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   from any other sender are ignored, so without it sign-in fails behind the TLS-terminating ingress.
 - `jobs` declares `dependsOn: [desk]`: it refuses to start before the schema exists, and Desk reports
   healthy only after migrating.
-- `identity` runs WoW2's Identity image `0.5.12`. Its `migrate` item (`identity` set, Ocharo's database) runs before it
+- `identity` runs WoW2's Identity image `0.5.13`. Its `migrate` item (`identity` set, Ocharo's database) runs before it
   restarts, then its `configCheck:` item (`dotnet Identity.Api.dll config check`, Wheelhouse v0.12) checks the settings
   the deploy applies, so a refused or retired key stops the deploy while the running release keeps serving. Wheelhouse
   v0.11 makes its three certificates by running the image's `keys generate` without network; each certificate's end
@@ -201,7 +201,7 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   none).
 - A 0.5.x boot and its config check refuse the retired `Identity:SignUp:IsEnabled`: delete any value of it Wheelhouse
   stores per environment before the first `0.5.x` deploy.
-- Each environment's Identity starts empty and is bootstrapped once, after the first deploy (Identity after `0.5.12`):
+- Each environment's Identity starts empty and is bootstrapped once, after the first deploy (Identity `0.5.13` on):
   1. the deploy's `migrate` item applies the `identity` set;
   2. Wheelhouse runs the one-off `admin create`, which makes the instance admin only;
   3. the admin signs in to the Identity console by phone (the environment's bot);
