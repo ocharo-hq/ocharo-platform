@@ -29,7 +29,10 @@ export default [
       'vue/first-attribute-linebreak': 'off',
     },
   },
-  { files: ['*.mjs', 'scripts/**/*.mjs', '*config.ts'], languageOptions: { globals: globals.node } },
+  {
+    files: ['*.mjs', 'scripts/**/*.mjs', '*config.ts', 'e2e/**/*.{ts,mjs}'],
+    languageOptions: { globals: globals.node },
+  },
   {
     files: ['src/domain/**/*.ts'],
     rules: { 'no-restricted-imports': disallow(['bootstrap', 'application', 'integration', 'presentation']) },

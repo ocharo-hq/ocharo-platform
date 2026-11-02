@@ -282,7 +282,11 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
       <ResultEmpty v-else-if="!editor.snapshot.value" :label="t('Content unavailable')" />
       <SkeletonStateGroup v-else :is-loading="resultBusy" :label="t('Loading catalogue')">
         <section class="native-designer">
-          <CatalogueDesignerBar :editor="editor" mode="pdf" /><CatalogueSharedSettings :editor="editor" />
+          <CatalogueDesignerBar :editor="editor" mode="pdf" />
+          <p v-if="editor.snapshot.value.catalogue && !editor.snapshot.value.catalogue.outputs.pdf" class="panel">
+            {{ t('PDF output is disabled. Enable it in catalogue settings.') }}
+          </p>
+          <CatalogueSharedSettings :editor="editor" />
           <div class="export-bar">
             <button
               class="btn-primary"

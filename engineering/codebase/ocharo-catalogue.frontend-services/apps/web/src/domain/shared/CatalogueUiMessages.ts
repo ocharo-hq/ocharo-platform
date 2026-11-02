@@ -260,6 +260,10 @@ export const catalogueUiMessages: Record<string, { uz: string; ru: string }> = {
     uz: 'Bu katalog uchun PDF format o‘chirilgan.',
     ru: 'PDF-формат для этого каталога выключен.',
   },
+  'PDF output is disabled. Enable it in catalogue settings.': {
+    uz: 'PDF format o‘chirilgan. Uni katalog sozlamalarida yoqing.',
+    ru: 'PDF-формат выключен. Включите его в настройках каталога.',
+  },
   'Activate at least one PDF page before exporting.': {
     uz: 'Eksportdan oldin kamida bitta PDF sahifasini faollashtiring.',
     ru: 'Перед экспортом активируйте хотя бы одну PDF-страницу.',

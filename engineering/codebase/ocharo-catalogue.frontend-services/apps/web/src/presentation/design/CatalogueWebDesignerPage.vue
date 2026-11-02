@@ -260,7 +260,7 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                     class="min-h-11 gap-2"
                   >
                     <Icon :icon="layout.icon" :size="16" />
-                    <span>{{ layout.label }}</span>
+                    <span class="max-sm:sr-only">{{ layout.label }}</span>
                   </ToggleInput>
                 </SegmentedPicker>
               </div>

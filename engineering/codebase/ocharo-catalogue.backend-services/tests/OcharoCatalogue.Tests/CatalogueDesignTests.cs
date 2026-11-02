@@ -92,7 +92,8 @@ public sealed class CatalogueDesignTests
         var extra=new Dictionary<string,byte[]>(files){["page-mixed.pdf"]=files["catalogue.pdf"]};await Assert.ThrowsAsync<CatalogueException>(()=>rs.PrepareAsync(d.Id,1,fingerprint,extra,Ct));
         var prepared=await rs.PrepareAsync(d.Id,1,fingerprint,files,Ct);Assert.Equal(new[]{"cover","good"},prepared.Pages.Select(x=>x.Id));await rs.PublishAsync(d.Id,prepared.Id,1,Ct);
         var publicView=Json(await rs.PublicAsync("spring","en",null,Ct));Assert.Contains("release=",publicView.GetProperty("pdf").GetProperty("pdfUrl").GetString());
-        var downloaded=await rs.PublicAssetAsync("spring","en",prepared.Id,"catalogue.pdf",Ct);Assert.Equal(files["catalogue.pdf"],downloaded.Bytes);
+        var downloaded=await rs.PublicAssetAsync("spring","en",prepared.Id,"catalogue.pdf",Ct);Assert.Equal(files["catalogue.pdf"],downloaded.Bytes);Assert.Equal("ocharo-spring-en.pdf",downloaded.FileName);
+        Assert.Equal("ocharo-spring-2.pdf",(await rs.PublicAssetAsync("spring","en",prepared.Id,"page-good.pdf",Ct)).FileName);Assert.Equal("ocharo-spring-2.png",(await rs.PublicAssetAsync("spring","en",prepared.Id,"page-good.png",Ct)).FileName);
         await Assert.ThrowsAsync<CatalogueException>(()=>rs.PublicAssetAsync("spring","ru",prepared.Id,"catalogue.pdf",Ct));await Assert.ThrowsAsync<CatalogueException>(()=>rs.PublicAssetAsync("spring","en",prepared.Id,"../catalogue.pdf",Ct));
     }
     [Fact] public async Task Pdf_preparation_requires_saved_product_revisions_and_active_selected_images()
