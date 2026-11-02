@@ -254,6 +254,11 @@ Settled:
   Desk projects the Ocharo organization row and each person idempotently, with no dump.
 - 40. Core be sdk's backlog gains the SkiaSharp 4.x move (`6f91b36`, unpushed, since every core `main` push
   publishes a release).
+- 41. Invites come only from the Identity console: an owner or admin signs in by phone, picks an organization they
+  own or administer and makes the link in the invitations panel; Identity's next release removes the `admin invite`
+  verb, so #12 is withdrawn and the one-off runs `admin create` only (developer, 2026-11-02). Maftuna's owner invite
+  is made there by Sultonbek. The same release adds `org_name` / `org_slug` claims (`9cb95d0`), which Desk uses to
+  name the organization row it creates on first sign-in (`5339b9d`).
 
 Open, cross-lane: none.
 
