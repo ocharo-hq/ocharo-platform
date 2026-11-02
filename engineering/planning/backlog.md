@@ -80,6 +80,8 @@ Design and sources: [analysis](../research/desk/2026-10-09-sourcing-events-integ
 - [ ] Add material requests, supplier offers, quotation evidence and sample review before price comparison.
 - [ ] Add event editions, source observations and reviewable import candidates without overwriting confirmed facts.
 - [ ] Add one verified feed/provider adapter with provenance, cancellation handling and bounded requests.
+- [ ] Revoke and replace `@ocharo_dev_bot`'s token in BotFather, then update it in Wheelhouse's dev vault: it was briefly
+  pasted into a Wheelhouse secret note, since cleared (owner, 2026-11-02).
 - [ ] [parked] Desk MCP on Identity agent tokens: an MCP client gets its own Identity OAuth token, not Desk's browser
   session. Integration tickets bound to Desk's sessions answer 503 since the 2026-11-02 Identity cutover, so MCP stays
   off until then (owner, 2026-11-02).
