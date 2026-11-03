@@ -1,7 +1,4 @@
-using Ocharo.Sso;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
-using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
-using OcharoBrand.Api.Brand;
 
 namespace OcharoBrand.Api.Configurations;
 
@@ -12,8 +9,7 @@ public static partial class HostConfiguration
     public static WebApplicationBuilder Configure(this WebApplicationBuilder builder)
     {
         builder.AddSettingsFiles();
-        builder.Services.AddOcharoSso(builder.Configuration, "brand", "ocharo-brand", requireBoundOrganization: true);
-        return builder.AddSqliteDatabase().AddBrand().AddRuntimeConfig().AddHttpSurface();
+        return builder.AddAccess().AddSqliteDatabase().AddBrand().AddRuntimeConfig().AddHttpSurface();
     }
 
     /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>

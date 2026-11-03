@@ -73,7 +73,7 @@ export const brandFrameUiMessages: UiMessageTable = {
   Organization: { uz: 'Tashkilot', ru: 'Организация' },
   Versions: { uz: 'Versiyalar', ru: 'Версии' },
   'Sign out': { uz: 'Chiqish', ru: 'Выйти' },
-  'Signed in through Ocharo Desk': { uz: 'Ocharo Desk orqali kirilgan', ru: 'Вход выполнен через Ocharo Desk' },
+  'Signed in to Ocharo': { uz: 'Ocharo hisobiga kirilgan', ru: 'Вход выполнен в Ocharo' },
   'Could not sign out. Try again.': {
     uz: 'Hisobdan chiqib bo‘lmadi. Qayta urinib ko‘ring.',
     ru: 'Не удалось выйти. Попробуйте ещё раз.',
@@ -88,6 +88,14 @@ export const brandFrameUiMessages: UiMessageTable = {
     ru: 'Подключитесь к Ocharo снова. Несохранённые изменения останутся в этой вкладке.',
   },
   'Sign in to Ocharo': { uz: 'Ocharo hisobiga kirish', ru: 'Войти в Ocharo' },
+  'Sign-in was not completed. Try again.': {
+    uz: 'Kirish yakunlanmadi. Qayta urinib ko‘ring.',
+    ru: 'Вход не завершён. Попробуйте ещё раз.',
+  },
+  'This Ocharo account has no access to Brand. Sign out and sign in with an Ocharo account.': {
+    uz: 'Bu hisob Ocharo Brand’ga kira olmaydi. Chiqing va Ocharo hisobi bilan kiring.',
+    ru: 'У этой учётной записи нет доступа к Brand. Выйдите и войдите с учётной записью Ocharo.',
+  },
   'Check connection': { uz: 'Ulanishni tekshirish', ru: 'Проверить подключение' },
   'You have read-only access.': { uz: 'Sizda faqat ko‘rish ruxsati bor.', ru: 'У вас доступ только для чтения.' },
 

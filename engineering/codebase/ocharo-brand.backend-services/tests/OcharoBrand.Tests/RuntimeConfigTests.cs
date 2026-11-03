@@ -52,34 +52,20 @@ public sealed class RuntimeConfigTests
     }
 
     [Fact]
-    public async Task RuntimeConfig_ShouldAnswerWithoutASession_WhenSsoGuardsTheRestOfTheApi()
+    public async Task RuntimeConfig_ShouldAnswerWithoutASession_WhileSignInGuardsTheRestOfTheApi()
     {
-        await using var host = BrandHost.Create(EveryApp, sso: true);
-        using var client = host.Factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri(BrandHost.SsoOrigin), AllowAutoRedirect = false, HandleCookies = false
-        });
+        await using var host = BrandHost.Create(EveryApp);
+        using var client = BrandTestIdentity.Anonymous(host.Factory);
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/runtime-config");
-        request.Headers.Add("Cookie", "__Host-ocharo-brand=forged");
+        request.Headers.Add("Cookie", $"{BrandTestIdentity.CookieName}=forged");
 
         using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.CacheControl!.NoStore);
         Assert.Contains("OCHARO_DESK_URL", (await ReadAsync(response)).Keys);
-        // The SSO boundary still holds for the private API.
+        // Sign-in still guards the private API.
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/brand/draft")).StatusCode);
-    }
-
-    [Fact]
-    public async Task RuntimeConfig_ShouldStayBehindTheLoopbackBoundary_WhenSsoIsOff()
-    {
-        await using var host = BrandHost.Create(EveryApp);
-        using var client = host.Factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://brand.example") });
-
-        using var response = await client.GetAsync("/api/runtime-config");
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
@@ -169,12 +155,11 @@ public sealed class RuntimeConfigTests
     }
 }
 
-/// <summary>An isolated Brand host with its own SQLite file and blob folder, optionally behind enabled SSO.</summary>
+/// <summary>An isolated Brand host with its own SQLite file, blob folder and key ring, signed in through
+/// <see cref="BrandTestIdentity"/>; <c>settings</c> apply last, so a test may change or clear (null) any default.</summary>
 /// <remarks>The seed folder does not exist, so an empty store seeds without logos and no real artwork is read.</remarks>
 internal sealed class BrandHost : IAsyncDisposable
 {
-    public const string SsoOrigin = "https://brand.example";
-
     private readonly string root;
 
     private BrandHost(string root, WebApplicationFactory<Program> factory)
@@ -185,31 +170,25 @@ internal sealed class BrandHost : IAsyncDisposable
 
     public WebApplicationFactory<Program> Factory { get; }
 
-    public static BrandHost Create(IReadOnlyDictionary<string, string?> settings, bool sso = false, CapturedLogs? logs = null)
+    public static BrandHost Create(IReadOnlyDictionary<string, string?> settings, CapturedLogs? logs = null)
     {
         var root = Path.Combine(Path.GetTempPath(), "ocharo-brand-host", Guid.NewGuid().ToString("N"));
-        var configuration = new Dictionary<string, string?>(settings)
-        {
-            ["ConnectionStrings:OcharoBrand"] = $"Data Source={Path.Combine(root, "test.db")};Pooling=False",
-            ["Brand:DataRoot"] = Path.Combine(root, "data"),
-            ["Brand:SeedLogoRoot"] = Path.Combine(root, "missing-logos"),
-        };
-        if (sso)
-        {
-            configuration["Identity:Sso:Enabled"] = "true";
-            configuration["Identity:Sso:DeskOrigin"] = "https://desk.example";
-            configuration["Identity:Sso:ClientOrigin"] = SsoOrigin;
-            configuration["Identity:Sso:ClientId"] = "brand";
-            configuration["Identity:Sso:ClientSecret"] = new string('s', 48);
-            configuration["Identity:Sso:OrganizationId"] = Guid.NewGuid().ToString();
-        }
+        var configuration = BrandTestIdentity.Settings(root);
+        configuration["ConnectionStrings:OcharoBrand"] = $"Data Source={Path.Combine(root, "test.db")};Pooling=False";
+        configuration["Brand:DataRoot"] = Path.Combine(root, "data");
+        configuration["Brand:SeedLogoRoot"] = Path.Combine(root, "missing-logos");
+        foreach (var (key, value) in settings)
+            configuration[key] = value;
         Directory.CreateDirectory(root);
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(configuration));
-            if (logs is not null)
-                builder.ConfigureServices(services => services.AddSingleton<ILoggerProvider>(logs));
+            builder.ConfigureServices(services =>
+            {
+                BrandTestIdentity.Use(services);
+                if (logs is not null) services.AddSingleton<ILoggerProvider>(logs);
+            });
         });
         return new BrandHost(root, factory);
     }

@@ -43,6 +43,9 @@ export default defineConfig(({ command }) => {
       strictPort: true,
       https: {},
       proxy: {
+        // Every API route rides this proxy, the Identity session routes too (`/api/identity/session`, `sign-in`, the
+        // OIDC `callback`, `sign-out`). `changeOrigin` stays off, so the API sees this origin: the BFF builds its
+        // callback as https://localhost:8288/api/identity/callback and the session cookie lands on this origin.
         '/api': {
           target: httpsTarget(process.env.VITE_API_TARGET ?? 'https://localhost:8286'),
           changeOrigin: false,

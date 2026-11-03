@@ -47,10 +47,19 @@ function draft(name = 'Ocharo', revision = 1): DraftView {
 }
 const failed = { ok: false, failure: { code: 'transport' } };
 
-beforeEach(() => {
+/** Signs the freshly imported session client in as the organization's owner, as startup does before mounting. */
+async function signInAsOwner() {
+  const { OwnerSession } = await import('./helpers/BrandApp');
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: OwnerSession })));
+  const { identitySession } = await import('../src/integration/common/IdentitySessionClient');
+  await identitySession.initialize(true);
+}
+
+beforeEach(async () => {
   vi.resetModules();
   vi.useFakeTimers();
   vi.clearAllMocks();
+  await signInAsOwner();
   api.draft.mockResolvedValue({ ok: true, value: draft() });
   api.releases.mockResolvedValue({ ok: true, value: [] });
   api.appearances.mockResolvedValue({ ok: true, value: [] });

@@ -1,4 +1,4 @@
-import { ssoClient } from '../common/OcharoSsoClient';
+import { identitySession } from '../common/IdentitySessionClient';
 import {
   ApiFailureFactory,
   createApiClient,
@@ -111,7 +111,7 @@ export function createBrandApi(fetchImplementation: typeof fetch = globalThis.fe
   } as const;
 }
 
-export const brandApi = createBrandApi(ssoClient.fetch);
+export const brandApi = createBrandApi(identitySession.fetch);
 
 export const brandUrls = {
   logo: (slot: string) => `/api/public/brand/logo/${slot}`,

@@ -30,7 +30,6 @@ RUN pnpm build
 FROM mcr.microsoft.com/dotnet/sdk:10.0.300 AS build
 WORKDIR /src/ocharo-brand.backend-services
 COPY ocharo-brand.backend-services/ ./
-COPY ocharo-sso/ /src/ocharo-sso/
 # the built SPA lands in wwwroot so `dotnet publish` bundles it into the output.
 COPY --from=spa /spa/apps/web/dist ./OcharoBrand.Api/wwwroot
 RUN dotnet publish OcharoBrand.Api/OcharoBrand.Api.csproj -c Release -o /app -p:RestoreLockedMode=true -p:UseAppHost=false
@@ -42,9 +41,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install --yes --no-install-recommends curl libfontconfig1 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app ./
 
-# SQLite store on a volume so data survives container replacement.
+# SQLite store, blobs and the Data Protection key ring that encrypts sign-in sessions on a volume, so data and
+# the keys survive container replacement.
 ENV ConnectionStrings__OcharoBrand="Data Source=/data/ocharo-brand.db" \
-    Brand__DataRoot=/data
+    Brand__DataRoot=/data \
+    DataProtection__KeysPath=/data/keys
 RUN mkdir -p /data && chown app:app /data
 VOLUME ["/data"]
 

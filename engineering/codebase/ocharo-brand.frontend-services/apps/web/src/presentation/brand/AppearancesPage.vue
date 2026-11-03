@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit } = useIdentitySession();
 import { computed, ref } from 'vue';
 import {
   SelectPicker,
@@ -107,7 +107,7 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
           chizilmaydi.
         </p>
       </div>
-      <button :disabled="!ssoCanEdit" class="btn-primary" @click="startNew">
+      <button :disabled="!canEdit" class="btn-primary" @click="startNew">
         <Icon :icon="CalendarPlus" :size="15" />Yangi tadbir
       </button>
     </div>
@@ -202,7 +202,7 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
         </div>
       </div>
       <div class="mt-5 flex justify-end">
-        <button class="btn-primary" :disabled="!ssoCanEdit || brand.busy.value || !form.name.trim()" @click="save">
+        <button class="btn-primary" :disabled="!canEdit || brand.busy.value || !form.name.trim()" @click="save">
           Saqlash
         </button>
       </div>
@@ -227,7 +227,7 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
           <button class="btn-outline" @click="edit(a.id)">Tahrirlash</button>
           <button
             class="btn-ghost text-destructive"
-            :disabled="!ssoCanEdit || brand.busy.value"
+            :disabled="!canEdit || brand.busy.value"
             @click="brand.cancelAppearance(a.id)"
           >
             Bekor qilish

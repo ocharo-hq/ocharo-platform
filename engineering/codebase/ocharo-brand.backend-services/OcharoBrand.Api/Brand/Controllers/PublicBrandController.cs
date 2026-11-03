@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OcharoBrand.Application.Brand;
 
@@ -8,6 +9,7 @@ namespace OcharoBrand.Api.Brand.Controllers;
 /// "consumers" panel. Stable logo URLs follow publishes and appearances; media URLs are immutable.
 /// </summary>
 [ApiController]
+[AllowAnonymous]
 [Route("api/public/brand")]
 public sealed class PublicBrandController(PublicBrandService brand, IMediaStore media) : ControllerBase
 {

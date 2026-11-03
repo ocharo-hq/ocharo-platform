@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit } = useIdentitySession();
 import { ref } from 'vue';
 import { Check, Upload } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
@@ -50,7 +50,7 @@ function size(bytes: number) {
             placeholder="Izoh (ixtiyoriy)"
             :aria-label="`${slotLabels[slot]!.label} izohi`"
           />
-          <button class="btn-outline" :disabled="!ssoCanEdit || brand.busy.value" @click="inputs[slot]?.click()">
+          <button class="btn-outline" :disabled="!canEdit || brand.busy.value" @click="inputs[slot]?.click()">
             <Icon :icon="Upload" :size="14" />Yuklash
           </button>
           <input
@@ -112,7 +112,7 @@ function size(bytes: number) {
               <button
                 v-if="brand.draft.value?.draft.currentLogos[slot] !== v.id"
                 class="chip bg-primary text-primary-foreground"
-                :disabled="!ssoCanEdit || brand.busy.value"
+                :disabled="!canEdit || brand.busy.value"
                 @click="brand.setCurrent(slot, v.id)"
               >
                 Joriy qilish
@@ -120,7 +120,7 @@ function size(bytes: number) {
               <span v-else class="chip bg-primary-soft text-primary"><Icon :icon="Check" :size="11" />joriy</span>
               <button
                 class="chip bg-secondary text-secondary-foreground"
-                :disabled="!ssoCanEdit || brand.busy.value"
+                :disabled="!canEdit || brand.busy.value"
                 @click="brand.setStatus(v.id, v.status === 'approved' ? 'draft' : 'approved')"
               >
                 {{ v.status === 'approved' ? 'Tasdiqni olish' : 'Tasdiqlash' }}

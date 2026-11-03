@@ -111,7 +111,7 @@ public sealed class BrandAdminController(
 
     public sealed record StatusInput(string Status);
 
-    /// <summary>Any stored file, drafts included (loopback admin only; public media serves disclosed files only).</summary>
+    /// <summary>Any stored file, drafts included (members only; public media serves disclosed files only).</summary>
     [HttpGet("media/{sha256}")]
     public Task<IActionResult> Media(string sha256, CancellationToken ct)
     {

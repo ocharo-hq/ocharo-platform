@@ -10,7 +10,8 @@ using SkiaSharp;
 
 namespace OcharoBrand.Tests;
 
-/// <summary>Full HTTP pipeline over a temp store, seeded from generated stand-ins for the approved logo files.</summary>
+/// <summary>Full HTTP pipeline over a temp store, seeded from generated stand-ins for the approved logo files, as the
+/// organization's owner (<see cref="BrandTestIdentity.Owner"/>) with the session's CSRF token.</summary>
 public sealed class BrandApiTests : IAsyncDisposable
 {
     private readonly string root = Path.Combine(Path.GetTempPath(), "ocharo-brand-tests", Guid.NewGuid().ToString("N"));
@@ -26,12 +27,13 @@ public sealed class BrandApiTests : IAsyncDisposable
         factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
-            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>(BrandTestIdentity.Settings(root))
             {
                 ["ConnectionStrings:OcharoBrand"] = $"Data Source={Path.Combine(root, "brand.db")};Pooling=False",
                 ["Brand:DataRoot"] = Path.Combine(root, "data"),
                 ["Brand:SeedLogoRoot"] = logos,
             }));
+            builder.ConfigureServices(BrandTestIdentity.Use);
         });
     }
 
@@ -54,7 +56,7 @@ public sealed class BrandApiTests : IAsyncDisposable
     [Fact]
     public async Task Seed_publishes_release_one_with_the_approved_logos_and_recorded_identity()
     {
-        var client = factory.CreateClient();
+        using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/public/brand?locale=ru");
         request.Headers.Add("X-Ocharo-App", "catalogue");
 
@@ -78,7 +80,7 @@ public sealed class BrandApiTests : IAsyncDisposable
     [Fact]
     public async Task A_new_logo_reaches_the_stable_url_only_after_publishing()
     {
-        var client = factory.CreateClient();
+        using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
         var draft = await client.GetFromJsonAsync<JsonElement>("/api/brand/draft");
         var revision = draft.GetProperty("revision").GetInt32();
         var replacement = Png(200);
@@ -119,7 +121,7 @@ public sealed class BrandApiTests : IAsyncDisposable
     [Fact]
     public async Task An_active_appearance_overrides_logos_and_accent_until_cancelled()
     {
-        var client = factory.CreateClient();
+        using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
         using var form = new MultipartFormDataContent();
         var file = new ByteArrayContent(Png(240));
         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
@@ -157,7 +159,7 @@ public sealed class BrandApiTests : IAsyncDisposable
     [Fact]
     public async Task Future_appearance_artwork_stays_private_and_caps_public_cache_lifetimes()
     {
-        var client = factory.CreateClient();
+        using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
         using var form = new MultipartFormDataContent();
         var artwork = Png(170);
         var file = new ByteArrayContent(artwork);
@@ -197,9 +199,9 @@ public sealed class BrandApiTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task Identity_edits_are_validated_revision_checked_and_cross_origin_safe()
+    public async Task Identity_edits_are_validated_revision_checked_and_need_the_session_csrf_token()
     {
-        var client = factory.CreateClient();
+        using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
         var draft = await client.GetFromJsonAsync<JsonElement>("/api/brand/draft");
         var revision = draft.GetProperty("revision").GetInt32();
         var identity = JsonSerializer.Deserialize<Dictionary<string, object?>>(draft.GetProperty("draft").GetProperty("identity").GetRawText())!;
@@ -209,15 +211,17 @@ public sealed class BrandApiTests : IAsyncDisposable
         identity["palette"] = new[] { new { key = "accent", name = "Accent", hex = "#aa3322", role = "accent" } };
         var saved = await client.PutAsJsonAsync("/api/brand/identity", new { expectedRevision = revision, identity });
         var stale = await client.PutAsJsonAsync("/api/brand/identity", new { expectedRevision = revision, identity });
+        using var forger = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner, csrf: false);
         using var crossOrigin = new HttpRequestMessage(HttpMethod.Put, "/api/brand/identity") { Content = JsonContent.Create(new { expectedRevision = revision + 1, identity }) };
         crossOrigin.Headers.Add("Origin", "https://evil.example");
-        var rejected = await client.SendAsync(crossOrigin);
+        var rejected = await forger.SendAsync(crossOrigin);
         var publicKit = await client.GetAsync("/api/public/brand");
 
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, stale.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, rejected.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+        Assert.Equal("AntiforgeryValidationFailed", (await rejected.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         Assert.Equal("*", publicKit.Headers.GetValues("Access-Control-Allow-Origin").Single());
     }
     [Theory]
@@ -227,7 +231,7 @@ public sealed class BrandApiTests : IAsyncDisposable
     [InlineData("PUT", "/api/brand/identity", "text/plain", "invalid", 415)]
     public async Task ErrorsRemainProblemJsonWhenHtmlIsRequested(string method, string path, string? contentType, string? body, int expected)
     {
-        using var client = factory.CreateClient();
+        using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
         using var request = new HttpRequestMessage(new HttpMethod(method), path);
         request.Headers.Accept.ParseAdd("text/html");
         if (body is not null) request.Content = new StringContent(body, System.Text.Encoding.UTF8, contentType!);

@@ -59,7 +59,7 @@ describe('Ocharo frame in Brand', () => {
     expect(controls.at(-1)!.attributes()).toMatchObject({ 'aria-label': 'Account menu', 'aria-haspopup': 'menu' });
   });
 
-  it('reports the app and API versions and the appearance, with no languages or sign-out in the local pilot', async () => {
+  it('reports the app and API versions and the appearance, with the signed-in person and sign-out but no languages', async () => {
     await renderAt('/logos', 1440);
 
     await wrapper!.get('header button[aria-label="Account menu"]').trigger('click');
@@ -77,8 +77,8 @@ describe('Ocharo frame in Brand', () => {
     expect(menu.find('[data-account-menu-appearance]').exists()).toBe(true);
     // Brand's pages are Uzbek-only, so the menu offers no interface language until they are localized.
     expect(menu.find('[data-account-menu-languages]').exists()).toBe(false);
-    expect(menu.find('[data-account-menu-sign-out]').exists()).toBe(false);
-    expect(menu.find('[data-account-menu-identity]').exists()).toBe(false);
+    expect(menu.find('[data-account-menu-sign-out]').exists()).toBe(true);
+    expect(menu.find('[data-account-menu-identity]').exists()).toBe(true);
   });
 
   it.each([

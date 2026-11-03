@@ -45,11 +45,12 @@ public sealed class SettingsFilesTests
             builder.UseContentRoot(root);
             builder.UseSetting("LOCAL_SETTINGS", "true");
             if (deployEnvironment is not null) builder.UseSetting("DEPLOY_ENVIRONMENT", deployEnvironment);
-            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
+            builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>(BrandTestIdentity.Settings(root))
             {
                 ["ConnectionStrings:OcharoBrand"] = $"Data Source={Path.Combine(root, "brand.db")};Pooling=False",
                 ["Brand:DataRoot"] = Path.Combine(root, "data"),
             }));
+            builder.ConfigureServices(BrandTestIdentity.Use);
         });
 
     private static string? SeedLogoRoot(WebApplicationFactory<Program> factory) =>

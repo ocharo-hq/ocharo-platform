@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
-import { ChevronRight, ExternalLink, RefreshCw, X } from 'lucide-vue-next';
+import { ChevronRight, RefreshCw, X } from 'lucide-vue-next';
 import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
@@ -18,7 +18,6 @@ import {
   AccountMenu,
   AppSwitcherKind,
   AppSwitcherMenu,
-  MenuItem,
   type AccountMenuVersion,
   type AppSwitcherItem,
 } from '@wow-two-beta/fe/presentation/nav';
@@ -27,13 +26,13 @@ import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 import { useBrand } from '../application/brand';
 import { useBuildIdentity } from '../application/common/UseBuildIdentity';
 import { notifyError } from '../application/common/UseFeedback';
-import { useSsoSession } from '../application/common/UseSsoSession';
+import { useIdentitySession } from '../application/common/UseIdentitySession';
 import { useOcharoApps } from '../application/shared/UseOcharoApps';
 import { useUiLocale } from '../application/shared/UseUiLocale';
 import { BrandGroupLabels, brandSection, readBrandSection } from '../domain/shared/BrandSections';
 import { OcharoAppKind } from '../domain/shared/OcharoApps';
 import BrandQueryState from '../presentation/common/BrandQueryState.vue';
-import SsoConnection from '../presentation/common/SsoConnection.vue';
+import IdentityConnection from '../presentation/common/IdentityConnection.vue';
 import BrandNav from '../presentation/frame/BrandNav.vue';
 import PhoneNav from '../presentation/frame/PhoneNav.vue';
 import { AppIcons } from '../presentation/frame/ShellIcons';
@@ -53,7 +52,7 @@ defineOptions({ name: 'AppLayout' });
 const { t } = useUiLocale();
 const route = useRoute();
 const brand = useBrand();
-const { session: ssoSession, signingOut, signOut } = useSsoSession();
+const { session: identity, signingOut, signOut } = useIdentitySession();
 const { backendVersion, refresh: refreshBackendVersion } = useBuildIdentity();
 const apps = useOcharoApps();
 const appVersion = __APP_VERSION__;
@@ -100,18 +99,20 @@ const releaseStatus = computed(() => {
     : t('Release {release} · {count} unpublished changes', { release: latest, count: brand.pending.value.length });
 });
 
-/** Who is signed in, and sign-out, exist only with an Ocharo session; the local pilot has neither. */
-const signedIn = computed(() => ssoSession.value.enabled && ssoSession.value.authenticated);
 const accountOpen = ref(false);
-/** The Desk operator's name and email; a session from a Desk that sends neither still says where it came from. */
+/** Who is signed in, from Identity: the name, then the email or, for a phone sign-in, the number; sign-out with it. A
+ *  person Identity names by neither still says where the session came from. */
 const accountIdentity = computed(() => {
-  if (!signedIn.value) return {};
-  const { name, email } = ssoSession.value;
-  if (!name && !email) return { description: t('Signed in through Ocharo Desk'), onSignOut: signOut };
+  const { authenticated, person } = identity.value;
+  if (!authenticated || !person) return {};
+  const contact = person.email ?? person.phoneNumber;
+  const avatar = person.picture ? { avatarSrc: person.picture } : {};
+  if (!person.name && !contact) return { description: t('Signed in to Ocharo'), ...avatar, onSignOut: signOut };
   return {
-    ...(name ? { name } : {}),
-    // Desk names a person without a display name by their email; it is not repeated under itself.
-    ...(email && email !== name ? { description: email } : {}),
+    ...(person.name ? { name: person.name } : {}),
+    // A person without a display name is named by their contact; it is not repeated under itself.
+    ...(contact && contact !== person.name ? { description: contact } : {}),
+    ...avatar,
     onSignOut: signOut,
   };
 });
@@ -205,14 +206,7 @@ onMounted(() => void brand.refresh());
           :versions="versions"
           :is-busy="signingOut"
           variant="glass-menu"
-        >
-          <template v-if="ssoSession.enabled && ssoSession.accountUrl" #items>
-            <!-- Desk's account page opens in another tab, so unsaved edits here stay. -->
-            <MenuItem :href="ssoSession.accountUrl" target="_blank"
-              ><ExternalLink :size="15" class="shrink-0" aria-hidden="true" />{{ t('Account') }}</MenuItem
-            >
-          </template>
-        </AccountMenu>
+        />
       </div>
     </AppShellHeader>
     <AppShellSidebar variant="glass" class="no-print">
@@ -235,7 +229,7 @@ onMounted(() => void brand.refresh());
             <Icon :icon="X" :size="15" />
           </button>
         </div>
-        <SsoConnection />
+        <IdentityConnection />
         <AppErrorBoundary>
           <RouterView v-slot="{ Component }">
             <component :is="Component" v-if="brand.draft.value || section === 'identity'" :key="route.fullPath" />

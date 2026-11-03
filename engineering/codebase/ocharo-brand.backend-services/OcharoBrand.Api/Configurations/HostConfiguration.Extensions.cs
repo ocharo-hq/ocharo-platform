@@ -1,4 +1,3 @@
-using Ocharo.Sso;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +17,7 @@ using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
 using WoW.Two.Sdk.Beta.Be.Web.Hosting;
+using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 
 namespace OcharoBrand.Api.Configurations;
 
@@ -94,31 +94,34 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Configures the existing brand API middleware, technical endpoints and operator SPA.</summary>
+    /// <summary>Configures the brand API middleware, the Identity session routes, technical endpoints and operator SPA.
+    /// Static files, the SPA fallback and the public routes (<see cref="Access.BrandAccess.IsPublic"/>) answer anonymously.</summary>
     private static WebApplication ConfigureHttpSurface(this WebApplication app)
     {
         app.UseProxyAwareHosting();
         app.UseHttpProblemDetails();
 
         app.UseMiddleware<BrandExceptionMiddleware>();
-        app.UseOcharoSso(IsPublicSsoRequest);
-        app.UseMiddleware<LocalPilotBoundaryMiddleware>();
-        app.Use(RequirePublicationApproval);
-        if (app.Environment.IsLocalRun(app.Configuration))
-            app.MapOpenApi();
+        app.UseMiddleware<BrandResponseHeadersMiddleware>();
         app.UseDefaultFiles();
         app.UseStaticFiles();
+        app.UseRouting();
+        app.UseAccess();
+        if (app.Environment.IsLocalRun(app.Configuration))
+            app.MapOpenApi().AllowAnonymous();
         app.WarnAboutRejectedRuntimeConfig();
         app.MapControllers();
+        app.MapIdentityBffEndpoints();
         // Retained for existing callers; `GET api/system/status` is the conventional status endpoint.
         app.MapGet("/api/system/version", (HttpContext context) =>
         {
             context.Response.Headers.CacheControl = "no-store";
             return Results.Ok(new { service = "OcharoBrand", version = BuildIdentity.Version });
         }).AllowAnonymous();
-        app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "OcharoBrand", mode = "local-pilot" }));
+        app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "OcharoBrand" })).AllowAnonymous();
+        // An unknown private route needs a session too, so it discloses nothing to an anonymous caller.
         app.MapFallback("/api/{**slug}", () => Results.Problem(statusCode: 404, title: "API route not found"));
-        app.MapFallbackToFile("index.html");
+        app.MapFallbackToFile("index.html").AllowAnonymous();
         return app;
     }
 

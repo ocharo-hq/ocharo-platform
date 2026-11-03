@@ -1,23 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace OcharoBrand.Tests;
 
 /// <summary>The conventional status endpoint reports the running version, anonymously, beside the retained version route.</summary>
 public sealed class SystemStatusTests
 {
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Status_ShouldReportTheInformationalVersionWithoutASession(bool sso)
+    [Fact]
+    public async Task Status_ShouldReportTheInformationalVersionWithoutASession()
     {
-        await using var host = BrandHost.Create(new Dictionary<string, string?>(), sso);
-        using var client = host.Factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri(sso ? BrandHost.SsoOrigin : "https://localhost"), AllowAutoRedirect = false
-        });
+        await using var host = BrandHost.Create(new Dictionary<string, string?>());
+        using var client = BrandTestIdentity.Anonymous(host.Factory);
 
         using var status = await client.GetAsync("/api/system/status");
         using var version = await client.GetAsync("/api/system/version");
