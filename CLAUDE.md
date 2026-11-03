@@ -38,8 +38,7 @@ Catalogue retains its existing SQLite products, media hashes and product revisio
 New design/release tables are added idempotently; this work does not adopt or overwrite live data.
 No automatic synchronization with Desk Commerce exists. Do not edit the same brand in both stores
 and imply they are synchronized. Authentication and canonical-store consolidation remain explicit
-integration work; until the Ocharo identity server lands, Catalogue deploys publicly without sign-in
-by the owner's decision of 2026-10-24 (see the companions below).
+integration work; Catalogue signs in through Ocharo's Identity since 2026-11-03 (see the companions below).
 
 Routes: `/` products; `/catalogues` saved gallery; `/catalogues/{id}/web` responsive designer;
 `/catalogues/{id}/pdf` page designer; `/c/{slug}?locale=en` published reader.
@@ -57,8 +56,7 @@ new product work targets this canonical repository.
 - Preserved service slugs under `engineering/codebase/ocharo-{brand,catalogue}.{backend,frontend}-services/` are a temporary naming exception.
 - Each companion has an independent solution and pnpm workspace; run frontend commands from its own workspace root.
 - Keep namespaces, record IDs, immutable revisions, media hashes, published release behavior and offline fallbacks intact.
-- Companions have no accounts. By the owner's decision of 2026-10-24 both deploy as public sites without sign-in until the Ocharo identity server lands: a deployed host (`DEPLOY_ENVIRONMENT`) accepts every caller, a local run keeps the loopback boundary, and `Brand:PublicAccess` / `Catalogue:PublicAccess` override either way. Cross-origin writes stay refused.
-- Once the identity server lands, put both behind sign-in before storing anything valuable; the decision covers only these two pilots and Marketing's two hosts.
+- Both companions sign in through Ocharo's Identity (BFF clients `brand` and `catalogue`, 2026-11-03): reads need membership of `{Brand,Catalogue}:OrganizationId`, writes `{app}:edit`, publish and withdraw `{app}:approve`; Brand's public feed and Catalogue's published reader stay anonymous. Details: `engineering/deployment/deployment.md` § Brand and Catalogue pilots.
 - Runtime `App_Data/` is ignored and was copied with the donor data; never commit it or include it in container build inputs.
 - Private mft product/logo directories remain read-only seed inputs. Published Brand releases are the only public identity source.
 - Catalogue authoring belongs here; the buyer-facing Catalogue UI belongs to Marketing and is not implemented by this import.
@@ -67,7 +65,7 @@ new product work targets this canonical repository.
 
 ## Adopted component identities
 
-The canonical product is Ocharo Platform. `brand-workspace.*` owns Desk and Commerce; retained `ocharo-brand.*` and `ocharo-catalogue.*` are adopted source pilots, public without sign-in when deployed until identity lands. Their assembly namespaces, data identities and folder slugs remain explicit compatibility exceptions; deployment includes Desk/jobs, the private image worker and both pilots. New components follow Ocharo naming.
+The canonical product is Ocharo Platform. `brand-workspace.*` owns Desk and Commerce; retained `ocharo-brand.*` and `ocharo-catalogue.*` are adopted source pilots, signed in through Ocharo's Identity. Their assembly namespaces, data identities and folder slugs remain explicit compatibility exceptions; deployment includes Desk/jobs, the private image worker and both pilots. New components follow Ocharo naming.
 
 ## Canonical planning
 

@@ -26,7 +26,7 @@ Catalogue retains its existing SQLite products, media hashes and product revisio
 New design/release tables are added idempotently; this work does not adopt or overwrite live data.
 No automatic synchronization with Desk Commerce exists. Do not edit the same brand in both stores
 and imply they are synchronized. Authentication and canonical-store consolidation remain explicit
-integration work before deploying Catalogue's loopback-only write APIs publicly.
+integration work; Catalogue's write APIs need a signed-in `catalogue:edit` session since 2026-11-03.
 
 Routes: `/` products; `/catalogues` saved gallery; `/catalogues/{id}/web` responsive designer;
 `/catalogues/{id}/pdf` page designer; `/c/{slug}?locale=en` published reader.

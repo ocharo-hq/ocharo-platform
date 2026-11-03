@@ -25,7 +25,8 @@ Owner focus from 2026-10-24: **Events and Sourcing only**, then WoW2 File Storag
 | Campaign recurrence | feature | Explicit schedules, channel formats and review collaboration. |
 | Brand vector masters | feature | Sanitized source SVG and exported brand guidelines. |
 | Merchant evidence | feature | Validate order evidence and real workflow attribution. |
-| Companion consolidation | engineering | Retained Brand/Catalogue pilots run loopback-only locally and public without sign-in when deployed (owner decision 2026-10-24) until the identity server lands; then put them behind sign-in. |
+| Companion consolidation | engineering | Retained Brand/Catalogue pilots sign in through Ocharo's Identity since 2026-11-03 (G4); consolidating their stores with Desk stays open. |
+| Pilot sign-in follow-ups | engineering | After G4 (2026-11-03): Catalogue's Playwright suite (`e2e/support/start-api.mjs`) has no `Identity:Client`, `Catalogue:OrganizationId` or signed-in session, so it no longer starts or seeds the API; each pilot's `deployment/{brand,catalogue}/docker-compose.yml` no longer boots without those settings; both keep BFF sessions in memory, so a restart signs everyone out (a durable SQLite or shared cache would end that). |
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
 | Identity cutover | engineering | Ocharo people sign in by Telegram through Ocharo's WoW2 Identity, local → dev → prod, then every app; track: [identity-cutover.md](identity-cutover.md). |
 | Own-phone check | verification | Verify Maftuna adds her own phone through the bot's add-phone link, then signs in on her own phone, not through her trusted contact; deferred by the owner on 2026-11-03 (identity-cutover.md #46). |
@@ -60,8 +61,9 @@ and [owner review scenarios](version-track/v0.1/v0.1.md#iteration-6--catalogue-a
 
 ### Remaining integration
 
-- [ ] Add authenticated Catalogue sessions and server-enforced admin/manager write permissions.
-      Until then a deployed Catalogue accepts anonymous writes by the owner's decision of 2026-10-24; this closes it.
+- [x] Add authenticated Catalogue sessions and server-enforced admin/manager write permissions.
+      Ocharo's Identity since 2026-11-03: editors write with `catalogue:edit`, owners and admins also publish with
+      `catalogue:approve`; anonymous writes ended.
 - [x] Make the signed-in logo open the workspace/app launcher; keep public navigation role-aware.
 - [ ] Reconcile Catalogue and authenticated Desk product/edition ownership through an explicit migration.
       No automatic cross-store writes or synchronization were added.
