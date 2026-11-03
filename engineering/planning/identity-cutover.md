@@ -23,7 +23,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 |---|---|---|---|
 | G1 | local: Identity `https://localhost:8404`, Desk `https://localhost:8264` | `@ocharo_local_bot`, polling | platform lane |
 | G2 | dev | `@ocharo_dev_bot`, webhook | Wheelhouse |
-| G3 | prod | `@ocharo_bot`, webhook | the owner promotes; Wheelhouse runs the one-offs |
+| G3 | prod | `@ocharo_bot`, webhook | wheelhouse lane: settings, promotion, one-offs |
 | G4 | every environment, app by app | the environment's bot | platform lane, then Wheelhouse |
 
 G1–G3 are done when, on that environment:
@@ -78,7 +78,7 @@ Accounts:
    (#16, #17), the owner signs in to Desk by phone; G1 closes on #1's release with the bot-first invite.
 4. platform: the descriptor (#18) on #1's release.
 5. wheelhouse: deploys to dev, resets the `identity` set, runs `admin create` with the same ids; G2 sign-in.
-6. G3: the owner promotes prod; wheelhouse runs the prod one-offs; G3 sign-in.
+6. G3: wheelhouse removes prod's retired keys (#30), promotes prod and runs the prod one-offs; G3 sign-in.
 7. platform: G4, app by app (#19).
 
 - #1, #2 and #3 run at once; #4 waits for #1; #5 waits for #2 and #4.
@@ -318,6 +318,10 @@ Settled:
   roles, per-person app access, back-channel sign-out (I18), agent tokens (Desk MCP stays parked). One gap: Editorial's
   image worker calls Desk's `/api/integrations/media/background-removal` with an integration ticket, and Identity has
   no client-credentials grant yet (Identity backlog, G8/G10).
+- 48. The lanes drive Wheelhouse for every environment, prod included, through Claude in Chrome: settings, deploys,
+  promotions and one-offs (developer, 2026-11-03: "this is why claude extension exists - you have full access to all
+  products in wheelhouse, even for prod env"). The developer still enters secrets — bot tokens and passwords. Auto
+  mode refuses a prod Deploy click until the `WoW2 Wheelhouse Deploys` allow rule is in place.
 
 Open, cross-lane: Editorial's service call to Desk (#47) — a shared API key now, or Identity client credentials.
 
@@ -332,7 +336,7 @@ Open, lane-local — each lane asks in its own chat:
 |---|---|---|
 | 28 | Core `10.0.71 → 10.0.96` gates boot migrations to local runs, so hosted Desk may stop applying its schema at boot | Check a Production-mode boot, or add a `migrate:` item for `desk`; run Desk's e2e on PostgreSQL 18 |
 | 29 | Integration tickets die with Desk's cutover: Marketing/Editorial `connected` mode, Studio's ticket path, Editorial's image path, Desk MCP | Run those apps in `local` mode until their own cutover |
-| 30 | Wheelhouse values stored under retired identity keys make a 0.5.x deployed boot refuse | Delete them per environment before the deploy |
+| 30 | Wheelhouse values stored under retired identity keys make a 0.5.x deployed boot refuse | Before a promotion, wheelhouse reads the target's settings for the new release and removes its `extra` identity keys; the config check refuses a deploy still carrying one as an unknown key (proven on dev, 2026-11-02), so no Wheelhouse feature is needed |
 | 31 | Identity behind the ingress without forwarded headers answers `ID2083` | After the first deploy, check `/.well-known/openid-configuration` shows the site origin as issuer |
 | 42 | A safety net marked "not proven live" (#25) is trusted on a first deploy | Prove it on the canary first; Ocharo's first deploy assumed the config check would refuse, and it never ran |
 | 32 | Desk scripts sign in through `/api/auth/login` (`verify-platform.py`, `review-platform.py`) | Update or retire them with #16 |
