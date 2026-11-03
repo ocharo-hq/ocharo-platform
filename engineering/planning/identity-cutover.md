@@ -14,7 +14,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 
 - ✅ G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone, the edit check and Maftuna's invite through a trusted contact pass; her Desk session shows Ocharo, `owner`, `desk:edit` and `desk:approve` (2026-11-03). Her own phone moves to the backlog (#46)
 - 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) runs clean on dev, deployment `87f21066`, and `v0.1.18` (the bot's messages name Ocharo) runs clean, deployment `c7f6904c`; the owner signed in to Desk by phone through `@ocharo_dev_bot` and sees Ocharo as `owner` (2026-11-03); the invite remains
-- ⬜ G3 prod: the same on prod with `@ocharo_bot` — prod runs `v0.1.12` today (desk `0.1.9`, identity `0.3.7`, deployment `780cf7ec`, 2026-11-03), so retired identity keys (#30) apply to its promotion
+- ⬜ G3 prod: the same on prod with `@ocharo_bot` — prod runs `v0.1.12` today (desk `0.1.9`, identity `0.3.7`, deployment `780cf7ec`, 2026-11-03); prod stores no retired identity keys (#30, read over SSH the same day), and Ocharo's organization takes the preset id `b8c672a6-…` there too (#43), so v0.1.19's Brand and Catalogue `OrganizationId` can be set before the bootstrap creates it
 - ⬜ G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired
 
 ## Goals
