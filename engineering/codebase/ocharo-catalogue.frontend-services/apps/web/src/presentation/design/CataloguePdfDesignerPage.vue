@@ -237,12 +237,18 @@ function bind() {
     next.pages = refreshCatalogue(next, products.value).pages;
   });
 }
+/** Only catalogue copy can become independent text; product facts stay owned by Products. */
 function unlink() {
   editPage((page) => {
     const target = page.elements.find((item) => item.id === element.value?.id);
-    if (target) delete target.binding;
+    if (target?.binding?.kind === 'shared') delete target.binding;
   });
 }
+const productLink = computed(() => {
+  const binding = element.value?.binding;
+  const id = binding?.kind === 'product' ? (binding.productId ?? element.value?.productId) : undefined;
+  return id ? `/products/${encodeURIComponent(id)}` : '/';
+});
 async function original() {
   if (
     !editor.snapshot.value ||
@@ -522,7 +528,7 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                   </label>
                   <p v-if="element.binding" class="hint">
                     {{ t('This text is connected to catalogue or product fields.') }}
-                    <RouterLink to="/">{{ t('Edit products') }}</RouterLink>
+                    <RouterLink :to="productLink">{{ t('Edit products') }}</RouterLink>
                   </p>
                   <CatalogueSelect
                     :model-value="element.fontFamily ?? 'sans'"
@@ -575,17 +581,7 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                       :label="t('Price tier')"
                     /><button class="btn-outline" :disabled="!bindingProduct" @click="bind">
                       {{ t('Connect field') }}</button
-                    ><button
-                      v-if="
-                        element.binding &&
-                        !(
-                          element.binding.kind === 'product' &&
-                          ['price', 'price-label', 'currency'].includes(element.binding.field)
-                        )
-                      "
-                      class="btn-ghost"
-                      @click="unlink"
-                    >
+                    ><button v-if="element.binding?.kind === 'shared'" class="btn-ghost" @click="unlink">
                       {{ t('Use independent text') }}
                     </button>
                   </details></template
