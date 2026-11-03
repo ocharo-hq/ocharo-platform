@@ -257,22 +257,28 @@ SDK boot bundle's `/health`.
 
 ## Brand and Catalogue pilots
 
-The owner decided on 2026-10-24 to deploy both pilots as public sites without sign-in until the Ocharo identity server
-lands; their stores hold nothing valuable yet. Each is one service of `deploy.yml` with its own public site and volume:
+Both pilots sign in through Ocharo's Identity instance (G4, 2026-11-03), as Identity clients 1 `brand` and
+2 `catalogue` beside Desk's client 0; the public sites of 2026-10-24 ended with it. Each is one service of `deploy.yml`
+with its own site and volume:
 
 | Service | Site | Volume at `/data` | Holds |
 |---|---|---|---|
-| `brand` | `brand` | `brand-data` | `ocharo-brand.db` and blobs |
-| `catalogue` | `catalogue` | `catalogue-data` | `ocharo-catalogue.db` and blobs |
+| `brand` | `brand` | `brand-data` | `ocharo-brand.db`, blobs and the Data Protection key ring (`/data/keys`) |
+| `catalogue` | `catalogue` | `catalogue-data` | `ocharo-catalogue.db`, blobs and the Data Protection key ring (`/data/keys`) |
 
-- `{Brand,Catalogue}:PublicAccess` (boolean, `deploy.yml` default `true`) opens `LocalPilotBoundaryMiddleware` to every
-  caller. Unset, it is on for a deployed host (`DEPLOY_ENVIRONMENT`) and off for a local run, which keeps the loopback
-  boundary; `false` on a target restores loopback-only.
-- Cross-origin writes stay refused. Behind the ingress the same-origin check needs the forwarded scheme, so each host
-  trusts forwarded headers from loopback and `Deployment:TrustedProxies` only.
-- Desk SSO (`Identity:Sso:*`) still bypasses the boundary when enabled; nothing enables it by default.
-- Anyone who reaches a site can edit and publish that pilot's brand or products. Once the identity server lands, put
-  both behind sign-in before storing anything valuable.
+- Each host is a BFF (`WoW2.Sdk.Beta.Be.Identity.Client`, section `Identity:Client`, routes `/api/identity/*`): the
+  authority links to the identity site, the secret to its Identity client, and the cookies are `__Host-ocharo-brand` and
+  `__Host-ocharo-catalogue`.
+- `{Brand,Catalogue}:OrganizationId` binds each host to Ocharo's organization in that environment's Identity; the host
+  refuses to boot without it, and another organization's session gets 403.
+- Reads need membership; unsafe methods need `{brand,catalogue}:edit`; publish and withdraw need
+  `{brand,catalogue}:approve`. Every unsafe request echoes the session route's `csrfToken` in `X-Csrf-Token`.
+- Brand's `/api/public` feed and media and Catalogue's published reader stay anonymous, with
+  `Access-Control-Allow-Origin: *` where they had it.
+- Sign-in sessions live in memory (no SQLite `IDistributedCache`), so a restart or deploy signs everyone out once; the
+  key ring on the volume keeps cookies readable across restarts.
+- Identity client 1 and 2 each need `RedirectUris:0` `{site URL}/api/identity/callback` and
+  `PostSignOutRedirectUris:0` `{site URL}/`, typed per environment like Desk's.
 - A deployed host has no private mft seed folders (`Brand:SeedLogoRoot`, `Catalogue:SourceRoot`): Brand seeds its
   identity without logos, and Catalogue starts with no products.
 

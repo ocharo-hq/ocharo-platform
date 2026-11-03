@@ -4,20 +4,19 @@
 # environments live in Wheelhouse targets, never here. Paths are relative to engineering/.
 #
 # Ocharo Platform deploys Desk, its jobs worker, the private image worker, the adopted Brand and Catalogue pilots and
-# Ocharo's own Identity instance, through which Desk signs in, as the primary repository of the one `ocharo` product
-# (Wheelhouse decision 70): Studio, Marketing and Assets deploy beside it, so service, site and volume names stay unique
-# across them, and Desk's site is the product's front door.
-# Brand and Catalogue are public without sign-in by the owner's decision of 2026-10-24, until the Ocharo identity server
-# lands (deployment.md § Brand and Catalogue pilots); each keeps its SQLite store and blobs on its own volume. Desk and
-# jobs compile only the pilots' Domain projects.
+# Ocharo's own Identity instance, through which Desk, Brand and Catalogue sign in, as the primary repository of the one
+# `ocharo` product (Wheelhouse decision 70): Studio, Marketing and Assets deploy beside it, so service, site and volume
+# names stay unique across them, and Desk's site is the product's front door.
+# Brand and Catalogue each keep their SQLite store and blobs on their own volume (deployment.md § Brand and Catalogue
+# pilots). Desk and jobs compile only the pilots' Domain projects.
 # Both environments run as .NET Production (no dotnetEnvironment). Desk applies the schema as it starts and reports
 # ready only afterwards; jobs refuses to start on a missing schema, so it waits for Desk to be healthy.
 descriptor: 2
 product: ocharo
 sites:
   desk: {}                              # Desk, public: a domain, or Wheelhouse's sslip.io host until one is bound
-  brand: {}                             # Brand, public without sign-in until the identity server lands
-  catalogue: {}                         # Catalogue authoring, public without sign-in until the identity server lands
+  brand: {}                             # Brand, signed in through Ocharo's Identity; its public feed stays anonymous
+  catalogue: {}                         # Catalogue authoring, signed in; the published reader stays anonymous
   identity: {}                          # Ocharo's own Identity: sign-in and tokens for every Ocharo app
 # Ocharo's Identity applies its `identity` migration set to Ocharo's database before the service restarts
 # (pipelines v0.12.0); Wheelhouse fills Migrations:ConnectionString from the target's database.
@@ -187,8 +186,8 @@ services:
         Identity:Organizations:Roles:editor:3: { default: "marketing:edit" }
         Identity:Organizations:Roles:editor:4: { default: "editorial:edit" }
         Identity:Organizations:Roles:editor:5: { default: "studio:edit" }
-        # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk now; 1 brand,
-        # 2 catalogue, 3 marketing, 4 editorial and 5 studio stay reserved until each app's own cutover (G4). Each secret
+        # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand and
+        # 2 catalogue now; 3 marketing, 4 editorial and 5 studio stay reserved until each app's own cutover (G4). Each secret
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
         # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
         # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
@@ -202,6 +201,18 @@ services:
         Identity:Server:Clients:0:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:0:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:0:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:1:ClientId: { default: brand }
+        Identity:Server:Clients:1:DisplayName: { default: Ocharo Brand }
+        Identity:Server:Clients:1:PermissionNamespace: { default: brand }
+        Identity:Server:Clients:1:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:1:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:1:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:2:ClientId: { default: catalogue }
+        Identity:Server:Clients:2:DisplayName: { default: Ocharo Catalogue }
+        Identity:Server:Clients:2:PermissionNamespace: { default: catalogue }
+        Identity:Server:Clients:2:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:2:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:2:PostSignOutRedirectUris:0: { type: url, required: true }
     sites:
       identity: { paths: [/, /api] }
   brand:
@@ -209,15 +220,22 @@ services:
     paths:
       - codebase/ocharo-brand.backend-services/**
       - codebase/ocharo-brand.frontend-services/**
-      - codebase/ocharo-sso/**
     health: /health
+    # Brand's BFF keeps sign-in sessions in memory (no SQLite IDistributedCache), so a restart or deploy signs everyone
+    # out once; its Data Protection key ring sits on the brand-data volume (the image's DataProtection__KeysPath).
     settings:
       # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies (the ingress, whose forwarded scheme the
       # same-origin write check needs); nobody types them.
       required: [AllowedHosts, Deployment:TrustedProxies]
       keys:
-        # Public without sign-in until the identity server lands; false restores the loopback-only pilot.
-        Brand:PublicAccess: { type: boolean, default: true }
+        # Sign-in through Ocharo's Identity as client 1, linked like Desk's; reads need membership of the bound
+        # organization, writes brand:edit, publish and withdraw brand:approve.
+        Identity:Client:Authority: { from: Sites:identity:Url }
+        Identity:Client:ClientId: { default: brand }
+        Identity:Client:ClientSecret: { from: Identity:Server:Clients:1:ClientSecret }
+        Identity:Client:CookieName: { default: __Host-ocharo-brand }
+        Identity:Client:PostSignOutRedirectPath: { default: "/" }
+        Brand:OrganizationId: { required: true }             # Ocharo's organization id in that environment's Identity
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }
         OcharoApps:Catalogue: { type: url }
@@ -237,16 +255,24 @@ services:
     paths:
       - codebase/ocharo-catalogue.backend-services/**
       - codebase/ocharo-catalogue.frontend-services/**
-      - codebase/ocharo-sso/**
     health: /health
     memory: 1g
+    # Catalogue's BFF keeps sign-in sessions in memory (no SQLite IDistributedCache), so a restart or deploy signs
+    # everyone out once; its Data Protection key ring sits on the catalogue-data volume ({Catalogue:DataRoot}/keys).
     settings:
       # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies (the ingress, whose forwarded scheme the
       # same-origin write check needs); nobody types them.
       required: [AllowedHosts, Deployment:TrustedProxies]
       keys:
-        # Public without sign-in until the identity server lands; false restores the loopback-only pilot.
-        Catalogue:PublicAccess: { type: boolean, default: true }
+        # Sign-in through Ocharo's Identity as client 2, linked like Desk's; the published reader stays public, every
+        # other route needs membership of the bound organization, writes catalogue:edit, publish and withdraw
+        # catalogue:approve.
+        Identity:Client:Authority: { from: Sites:identity:Url }
+        Identity:Client:ClientId: { default: catalogue }
+        Identity:Client:ClientSecret: { from: Identity:Server:Clients:2:ClientSecret }
+        Identity:Client:CookieName: { default: __Host-ocharo-catalogue }
+        Identity:Client:PostSignOutRedirectPath: { default: "/" }
+        Catalogue:OrganizationId: { required: true }         # Ocharo's organization id in that environment's Identity
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }
         OcharoApps:Catalogue: { type: url }
