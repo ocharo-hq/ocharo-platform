@@ -150,6 +150,8 @@ services:
         Identity:Telegram:BotToken: { secret: true, required: true }
         Identity:Telegram:WebhookSecret: { secret: true, required: true, generate: { random: 32, encoding: hex } }
         Identity:Otp:HashKey: { secret: true, required: true, generate: { random: 32 } }
+        # The app the bot's code and sign-in messages name; the image's default is "Identity".
+        Identity:Otp:Messages:AppName: { default: Ocharo }
         # A trusted contact receives a person's codes, so an invitation can name one and the person adds their phone later.
         Identity:TrustedContacts:IsEnabled: { type: boolean, default: true }
         # The hosted pages' one look for this instance.
