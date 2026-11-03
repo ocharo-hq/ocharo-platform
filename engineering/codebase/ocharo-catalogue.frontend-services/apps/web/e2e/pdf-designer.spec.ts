@@ -269,4 +269,42 @@ test.describe('PDF designer', () => {
     expect(await frames(), 'every element keeps its frame').toEqual(before);
     await expect(designerStatus(page)).toContainText(t('Unsaved changes'));
   });
+
+  test('product fields stay read-only and link to the product; catalogue copy can still be unlinked', async ({
+    page,
+    request,
+    t,
+  }) => {
+    const token = runToken(),
+      title = `Read-only ${token}`;
+    const products = await seedGarments(request, token);
+    const { document } = await seedCatalogue(request, {
+      title,
+      slug: `read-only-${token}`,
+      locale: 'en',
+      outputs: { web: false, pdf: true },
+      pdf: [{ productId: products.a!.document.id }],
+    });
+    await openDesigner(page, document.id, 'pdf', t('PDF designer'));
+    const inspector = page.locator('.inspector');
+
+    await selectPdfPage(page, 2);
+    await page
+      .locator('.canvas-sheet .design-element.is-text')
+      .filter({ hasText: garmentName(0, token) })
+      .click();
+    await expect(inspector.getByRole('textbox', { name: t('Text'), exact: true })).toBeDisabled();
+    await expect(inspector.getByRole('link', { name: t('Edit products') })).toHaveAttribute(
+      'href',
+      `/products/${products.a!.document.id}`,
+    );
+    await inspector.getByText(t('Connect product field')).click();
+    await expect(inspector.getByRole('button', { name: t('Use independent text') })).toHaveCount(0);
+
+    await selectPdfPage(page, 1);
+    await page.locator('.canvas-sheet .design-element.is-text').filter({ hasText: title }).click();
+    await inspector.getByText(t('Connect product field')).click();
+    await inspector.getByRole('button', { name: t('Use independent text') }).click();
+    await expect(inspector.getByRole('textbox', { name: t('Text'), exact: true })).toBeEnabled();
+  });
 });
