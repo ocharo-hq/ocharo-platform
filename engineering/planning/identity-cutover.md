@@ -135,7 +135,12 @@ image `0.5.7`, amd64 only.
   admins, narrows `admin create` to the instance admin (#43) and guards recycled phone numbers (migration
   `008-telegram-link-changes`); `v0.5.14` (`10.0.23-beta`, `0.0.12`) adds the console shell with Sign out, live
   instance roles, session revocation on any role change, the signed-in pass-through on `/sign-in`, and equal
-  owner/admin member management with zero owners allowed. Trusted contacts (#36) are in design with the developer.
+  owner/admin member management with zero owners allowed.
+- Released 2026-11-03: `v0.5.15` (`6c08d12`; NuGet `10.0.24-beta`, npm `0.0.13`) ships trusted contacts slice 1
+  (#45): an invitation names a trusted contact, who receives the invitee's sign-up and sign-in codes; revoking a contact
+  ends its sessions. Ocharo sets `Identity:TrustedContacts:IsEnabled=true` (default off; needs the bot); migrations
+  `009-telegram-messages` and `010-trusted-contacts`. Claims, the BFF contract and Desk are unchanged, and a contact
+  sign-in still carries `amr` `otp`. Not yet checked in a browser; the 8404 run is its first real test.
 - fe sdk gaps found by the console, outside this goal: `SidebarMenu` types reject `aria-label` under
   `strictTemplates`, and the fe sdk exports no icons (Identity drew six app-local glyphs).
 - The sign-up slice pins SkiaSharp to core's `3.119.2` (`6b24984`): core's older native library shadowed 4.x on
@@ -297,8 +302,8 @@ Settled:
 - 45. Trusted contacts move into this goal (supersedes #36's "outside this goal" for contacts; trusted devices stay
   backlog): the invite check's second person, Maftuna, joins and signs in with codes sent to a trusted contact, and
   adds her own phone later by sharing her contact with the bot. The platform lane wrote the requirements; Identity
-  settled the flow and its slice 1 API in `9f224fe` and builds slice 1; the platform lane re-pins on its release
-  (2026-11-03). The flow's open choices are asked in the identity lane.
+  settled the flow and its slice 1 API in `9f224fe` and released slice 1 as `v0.5.15`; the platform lane re-pins on it
+  (2026-11-03). The PLAT push to dev waits until the local invite check passes on 8404. The flow's open choices are asked in the identity lane.
 
 Open, cross-lane: none.
 
