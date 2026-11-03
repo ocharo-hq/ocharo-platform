@@ -12,8 +12,8 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 
 ## Status
 
-- 🔄 G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone and the edit check pass (2026-11-03); the invite check waits on trusted contacts (#45)
-- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.16` (identity `0.5.14`) runs on dev, and the instance admin is verified live (2026-11-03); sign-in and the invite remain
+- ✅ G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone, the edit check and Maftuna's invite through a trusted contact pass; her Desk session shows Ocharo, `owner`, `desk:edit` and `desk:approve` (2026-11-03). Her own phone moves to the backlog (#46)
+- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) is released to dev, its deploy not yet verified (2026-11-03); sign-in and the invite remain
 - ⬜ G3 prod: the same on prod with `@ocharo_bot`
 - ⬜ G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired
 
@@ -21,7 +21,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 
 | Goal | Environment | Bot | Deployed by |
 |---|---|---|---|
-| G1 | local: Identity `https://localhost:8404`, Desk `https://localhost:8378` | `@ocharo_local_bot`, polling | platform lane |
+| G1 | local: Identity `https://localhost:8404`, Desk `https://localhost:8264` | `@ocharo_local_bot`, polling | platform lane |
 | G2 | dev | `@ocharo_dev_bot`, webhook | Wheelhouse |
 | G3 | prod | `@ocharo_bot`, webhook | the owner promotes; Wheelhouse runs the one-offs |
 | G4 | every environment, app by app | the environment's bot | platform lane, then Wheelhouse |
@@ -82,8 +82,7 @@ Accounts:
 7. platform: G4, app by app (#19).
 
 - #1, #2 and #3 run at once; #4 waits for #1; #5 waits for #2 and #4.
-- G1's and G2's invite checks wait on Identity's trusted-contacts slice 1 and its re-pin (#45), unless the invitee
-  joins on her own phone.
+- G1's invite check passed through a trusted contact on `0.5.15` (#45); G2's invite runs the same way on dev.
 - Each goal closes with a cross-lane check against its done-when before the next starts.
 
 ## Contracts
@@ -304,6 +303,10 @@ Settled:
   adds her own phone later by sharing her contact with the bot. The platform lane wrote the requirements; Identity
   settled the flow and its slice 1 API in `9f224fe` and released slice 1 as `v0.5.15`; the platform lane re-pins on it
   (2026-11-03). The PLAT push to dev waits until the local invite check passes on 8404. The flow's open choices are asked in the identity lane.
+  The check passed on 2026-11-03, and `v0.1.17` carries `0.5.15` with trusted contacts on to dev.
+- 46. Maftuna's own phone — adding it through the bot's add-phone link — and her own-phone sign-in move to the backlog
+  as a verification item (developer, 2026-11-03: "checking that can be backlog item ( verification )"). Nothing waits
+  on it; the push of `45c9d7b` (the bot's messages name Ocharo) goes ahead.
 
 Open, cross-lane: none.
 
