@@ -1,12 +1,15 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OcharoCatalogue.Api.Access;
 using OcharoCatalogue.Application.Catalogue;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Services;
 
 namespace OcharoCatalogue.Api.Catalogue.Controllers;
 
-/// <summary>Local catalogue authoring; the existing loopback and origin middleware remains authoritative.</summary>
+/// <summary>Catalogue authoring for members of the bound organization; publishing and withdrawing also need
+/// <see cref="CatalogueAccess.ApprovePermission"/>.</summary>
 [ApiController]
 [Route("api/catalogue/designs")]
 public sealed class DesignsController(CatalogueDesignService designs, CatalogueReleaseService releases) : ControllerBase
@@ -161,6 +164,7 @@ public sealed class DesignsController(CatalogueDesignService designs, CatalogueR
     }
 
     [HttpPost("{id:guid}/releases/{releaseId:guid}/publish")]
+    [Authorize(Policy = CatalogueAccess.ApprovePolicy)]
     public async Task<IActionResult> Publish(
         Guid id,
         Guid releaseId,
@@ -175,6 +179,7 @@ public sealed class DesignsController(CatalogueDesignService designs, CatalogueR
     }
 
     [HttpPost("{id:guid}/withdraw")]
+    [Authorize(Policy = CatalogueAccess.ApprovePolicy)]
     public async Task<IActionResult> Withdraw(
         Guid id,
         PublishInput input,

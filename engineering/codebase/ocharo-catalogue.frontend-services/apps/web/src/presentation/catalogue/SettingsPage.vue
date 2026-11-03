@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit: sessionCanEdit } = useIdentitySession();
 import { onMounted, ref, watch } from 'vue';
 import { Download, Plus, Trash2, UploadCloud } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
@@ -92,7 +92,7 @@ onMounted(() => store.loadSettings(true));
         </button>
         <button
           class="btn-primary ml-auto"
-          :disabled="!ssoCanEdit || admin.busy.value"
+          :disabled="!sessionCanEdit || admin.busy.value"
           @click="admin.saveSettings(form)"
         >
           {{ t(admin.busy.value ? 'Saving…' : 'Save') }}
@@ -122,7 +122,7 @@ onMounted(() => store.loadSettings(true));
           </label>
           <button
             class="btn-primary ml-auto"
-            :disabled="!ssoCanEdit || admin.busy.value"
+            :disabled="!sessionCanEdit || admin.busy.value"
             @click="admin.importWorkspace(updateExisting, includeReferences)"
           >
             <Icon :icon="UploadCloud" :size="15" />{{ t(admin.busy.value ? 'Importing…' : 'Start import') }}

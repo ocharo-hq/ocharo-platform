@@ -126,8 +126,9 @@ describe('Catalogue proxy error contract', () => {
 
 describe('Catalogue proxy wire responses', () => {
   async function request(
-    mode: 'connection' | 'empty' | 'html' | 'diagnostic' | 'success' | 'validation',
+    mode: 'connection' | 'empty' | 'html' | 'diagnostic' | 'success' | 'validation' | 'redirect',
     method = 'GET',
+    path = '/api/catalogue/designs',
   ) {
     const proxy = new EventEmitter();
     const options = developmentApiProxy({ target: 'https://api.example.test', development: false });
@@ -138,8 +139,14 @@ describe('Catalogue proxy wire responses', () => {
         return;
       }
       const upstream = Object.assign(new PassThrough(), {
-        statusCode: mode === 'success' ? 200 : mode === 'validation' ? 400 : 500,
-        headers: { 'content-type': 'application/json' },
+        statusCode: mode === 'success' ? 200 : mode === 'validation' ? 400 : mode === 'redirect' ? 302 : 500,
+        headers:
+          mode === 'redirect'
+            ? {
+                location: 'https://localhost:8404/connect/authorize?client_id=catalogue',
+                'set-cookie': ['.AspNetCore.Correlation.x=1; path=/api/identity/callback; secure; httponly'],
+              }
+            : { 'content-type': 'application/json' },
       });
       proxy.emit('proxyRes', upstream, incoming, response);
       upstream.end(
@@ -173,11 +180,13 @@ describe('Catalogue proxy wire responses', () => {
     try {
       const address = server.address();
       if (!address || typeof address === 'string') throw new Error('Fixture did not bind a port');
-      const response = await fetch(`http://127.0.0.1:${address.port}/api/catalogue/designs`, { method });
+      const response = await fetch(`http://127.0.0.1:${address.port}${path}`, { method, redirect: 'manual' });
       return {
         status: response.status,
         type: response.headers.get('content-type'),
         requestId: response.headers.get('x-request-id'),
+        location: response.headers.get('location'),
+        cookies: response.headers.getSetCookie(),
         body: await response.text(),
       };
     } finally {
@@ -231,6 +240,16 @@ describe('Catalogue proxy wire responses', () => {
     expect(problem.traceId).toMatch(/^[a-f0-9]{32}$/);
     expect(problem.code).toBeUndefined();
   });
+  it.each(['/api/identity/sign-in?returnUrl=%2F', '/api/identity/callback?code=c&state=s'])(
+    'passes the Identity sign-in redirect and its cookies through unchanged (%s)',
+    async (path) => {
+      expect(await request('redirect', 'GET', path)).toMatchObject({
+        status: 302,
+        location: 'https://localhost:8404/connect/authorize?client_id=catalogue',
+        cookies: ['.AspNetCore.Correlation.x=1; path=/api/identity/callback; secure; httponly'],
+      });
+    },
+  );
   it('streams the success projection unchanged', async () => {
     expect(await request('success')).toMatchObject({
       status: 200,

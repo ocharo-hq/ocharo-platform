@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OcharoCatalogue.Application.Catalogue.Services;
 
@@ -5,6 +6,7 @@ namespace OcharoCatalogue.Api.Catalogue.Controllers;
 
 /// <summary>Read-only, explicitly published local catalogue releases and frozen PDF artifacts.</summary>
 [ApiController]
+[AllowAnonymous]
 [Route("api/public/catalogue/editions")]
 public sealed class PublishedDesignsController(CatalogueReleaseService releases) : ControllerBase
 {

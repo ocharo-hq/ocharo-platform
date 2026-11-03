@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit: sessionCanEdit } = useIdentitySession();
 import { useRefresh } from '@wow-two-beta/fe/query';
 import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
@@ -71,7 +71,7 @@ onMounted(() => sheet.load());
         />
         <button
           class="btn-primary"
-          :disabled="!ssoCanEdit || sheet.dirtyCount.value === 0 || sheet.busy.value || resultBusy"
+          :disabled="!sessionCanEdit || sheet.dirtyCount.value === 0 || sheet.busy.value || resultBusy"
           :aria-busy="sheet.busy.value"
           @click="sheet.saveAll()"
         >
@@ -129,7 +129,7 @@ onMounted(() => sheet.load());
                       ><input
                         type="checkbox"
                         :checked="item.row.stock !== null"
-                        :disabled="!ssoCanEdit || item.saving || resultBusy"
+                        :disabled="!sessionCanEdit || item.saving || resultBusy"
                         @change="sheet.track(item, ($event.target as HTMLInputElement).checked)" /></SkeletonStateSlot
                     >{{ t('Track quantities') }}</label
                   >
@@ -137,7 +137,7 @@ onMounted(() => sheet.load());
                     ><SkeletonStateSlot class="catalogue-value"
                       ><input
                         v-model="item.row.madeToOrder"
-                        :disabled="!ssoCanEdit || item.saving || resultBusy"
+                        :disabled="!sessionCanEdit || item.saving || resultBusy"
                         type="checkbox" /></SkeletonStateSlot
                     >{{ t('Made to order') }}</label
                   >
@@ -150,7 +150,7 @@ onMounted(() => sheet.load());
                       type="number"
                       min="0"
                       class="field w-16 px-2 text-center"
-                      :disabled="!ssoCanEdit || item.row.stock === null || item.saving || resultBusy"
+                      :disabled="!sessionCanEdit || item.row.stock === null || item.saving || resultBusy"
                       :aria-label="t('Quantity for {product}, size {size}', { product: item.row.id, size })"
                       @input="sheet.setQuantity(item, size, Number(($event.target as HTMLInputElement).value))"
                     />
@@ -167,7 +167,7 @@ onMounted(() => sheet.load());
                 <td class="px-4 py-2 text-right">
                   <button
                     class="btn-outline"
-                    :disabled="!ssoCanEdit || !sheet.isDirty(item) || item.saving || resultBusy"
+                    :disabled="!sessionCanEdit || !sheet.isDirty(item) || item.saving || resultBusy"
                     @click="sheet.save(item)"
                   >
                     {{ item.saving ? t('Saving…') : t('Save') }}

@@ -1,4 +1,4 @@
-import { ssoClient } from '../common/OcharoSsoClient';
+import { identityClient } from '../common/IdentitySessionClient';
 import {
   ApiFailureFactory,
   createApiClient,
@@ -178,4 +178,4 @@ export function createDesignApi(fetchImplementation: typeof fetch = globalThis.f
       ),
   };
 }
-export const designApi = createDesignApi(ssoClient.fetch);
+export const designApi = createDesignApi(identityClient.fetch);

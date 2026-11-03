@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit: sessionCanEdit } = useIdentitySession();
 import { useRefresh } from '@wow-two-beta/fe/query';
 import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
@@ -77,7 +77,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <RefreshButton :busy="resultBusy" :disabled="!!list.pending.value" @refresh="refresh" />
-        <RouterLink v-if="ssoCanEdit" to="/products/new" class="btn-primary">
+        <RouterLink v-if="sessionCanEdit" to="/products/new" class="btn-primary">
           <Icon :icon="CirclePlus" :size="16" />{{ t('New product') }}</RouterLink
         >
       </div>
@@ -125,7 +125,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
       <span class="font-semibold">{{ list.selectedCount.value }} · {{ t('Products') }}:</span>
       <button
         class="btn-outline"
-        :disabled="!ssoCanEdit || !!list.pending.value"
+        :disabled="!sessionCanEdit || !!list.pending.value"
         :aria-busy="list.pending.value === 'status:active'"
         @click="list.setStatus('active')"
       >
@@ -133,7 +133,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
       </button>
       <button
         class="btn-outline"
-        :disabled="!ssoCanEdit || !!list.pending.value"
+        :disabled="!sessionCanEdit || !!list.pending.value"
         :aria-busy="list.pending.value === 'status:draft'"
         @click="list.setStatus('draft')"
       >
@@ -141,7 +141,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
       </button>
       <button
         class="btn-outline"
-        :disabled="!ssoCanEdit || !!list.pending.value"
+        :disabled="!sessionCanEdit || !!list.pending.value"
         :aria-busy="list.pending.value === 'status:archived'"
         @click="list.setStatus('archived')"
       >
@@ -164,7 +164,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
       />
       <button
         class="btn-primary"
-        :disabled="!ssoCanEdit || !!list.pending.value"
+        :disabled="!sessionCanEdit || !!list.pending.value"
         :aria-busy="list.pending.value === 'prices'"
         @click="list.adjustPrices('percent', percent, 1000, tier || null)"
       >
@@ -209,7 +209,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
               class="absolute right-3 top-3 z-10 rounded-md bg-card/90 p-1 text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 hover:text-primary focus:opacity-100"
               :aria-label="`${t('Duplicate')} ${product.id}`"
               :title="t('Duplicate as a new variant')"
-              :disabled="!ssoCanEdit || !!list.pending.value"
+              :disabled="!sessionCanEdit || !!list.pending.value"
               :aria-busy="list.pending.value === `duplicate:${product.id}`"
               @click="duplicate(product.id)"
             >

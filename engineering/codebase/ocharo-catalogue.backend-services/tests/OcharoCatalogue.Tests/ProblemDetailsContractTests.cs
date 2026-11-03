@@ -23,6 +23,7 @@ public sealed class ProblemDetailsContractTests
             await using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Testing");
+                builder.UseCatalogueSignIn();
                 builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(root, "api.db")};Pooling=False",
@@ -30,7 +31,7 @@ public sealed class ProblemDetailsContractTests
                     ["Catalogue:SourceRoot"] = Path.Combine(root, "no-source"),
                 }));
             });
-            using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+            using var client = CatalogueSignIn.CreateClient(factory, CatalogueSignIn.Owner);
             using var request = new HttpRequestMessage(new HttpMethod(method), path);
             request.Headers.Accept.ParseAdd("text/html");
             if (body is not null) request.Content = new StringContent(body, System.Text.Encoding.UTF8, contentType!);

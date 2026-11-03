@@ -11,18 +11,18 @@ using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
 namespace OcharoCatalogue.Tests;
 
-/// <summary>Local HTTPS host contract; each test creates its own database and image folder.</summary>
+/// <summary>HTTPS host contract signed in as an owner; each test creates its own database and image folder.</summary>
 public sealed class CatalogueDesignApiTests
 {
     [Fact] public async Task Native_routes_save_prepare_publish_and_archive_with_same_product_data()
     {
         var root=Path.Combine(Path.GetTempPath(),"catalogue-design-api",Guid.NewGuid().ToString("N"));
         await using var host=new WebApplicationFactory<Program>().WithWebHostBuilder(builder=>{
-            builder.UseEnvironment("Testing");builder.ConfigureAppConfiguration((_,config)=>config.AddInMemoryCollection(new Dictionary<string,string?>{
+            builder.UseEnvironment("Testing");builder.UseCatalogueSignIn();builder.ConfigureAppConfiguration((_,config)=>config.AddInMemoryCollection(new Dictionary<string,string?>{
                 ["ConnectionStrings:OcharoCatalogue"]=$"Data Source={Path.Combine(root,"api.db")};Pooling=False",["Catalogue:DataRoot"]=Path.Combine(root,"data"),["Catalogue:SeedOnEmpty"]="false"
             }));
         });
-        using var client=host.CreateClient(new WebApplicationFactoryClientOptions{BaseAddress=new Uri("https://localhost")});
+        using var client=CatalogueSignIn.CreateClient(host,CatalogueSignIn.Owner);
         using(var scope=host.Services.CreateScope())
         {
             var media=await scope.ServiceProvider.GetRequiredService<IMediaStore>().StoreAsync(CatalogueHarness.Png(121),default);

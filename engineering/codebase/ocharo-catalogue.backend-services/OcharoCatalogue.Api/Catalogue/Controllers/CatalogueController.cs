@@ -1,5 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Ocharo.Sso;
+using OcharoCatalogue.Api.Access;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
@@ -16,7 +17,7 @@ public sealed class CatalogueController(
     WorkspaceCatalogueImporter importer,
     IMediaStore media,
     CatalogueMediaAccessService mediaAccess,
-    SsoOptions sso,
+    Microsoft.Extensions.Options.IOptions<CatalogueAccessOptions> access,
     Microsoft.Extensions.Options.IOptions<CatalogueOptions> options) : ControllerBase
 {
     [HttpGet("settings")]
@@ -36,7 +37,9 @@ public sealed class CatalogueController(
         return Ok(new { settings = value, revision, sourceRoot = options.Value.SourceRoot });
     }
 
+    /// <summary>Serves public media to anyone and private media to members only, reading a session only when one is sent.</summary>
     [HttpGet("media/{sha256}")]
+    [AllowAnonymous]
     public Task<IActionResult> Media(string sha256, CancellationToken ct)
     {
         return ServeAsync(
@@ -46,6 +49,7 @@ public sealed class CatalogueController(
     }
 
     [HttpGet("media/{sha256}/preview")]
+    [AllowAnonymous]
     public Task<IActionResult> Preview(string sha256, CancellationToken ct)
     {
         return ServeAsync(
@@ -94,7 +98,8 @@ public sealed class CatalogueController(
     {
         var isPublic = await mediaAccess.IsPublicAsync(sha256, ct);
         Response.Headers.CacheControl = "no-store";
-        if (!isPublic && sso.Enabled && User.Identity?.AuthenticationType != SsoContext.AuthenticationType)
+        // Private bytes answer as missing outside the bound organization, so a caller cannot probe for them.
+        if (!isPublic && !CatalogueAccess.IsMember(User, access.Value.OrganizationId))
             return NotFound();
         var opened = await media.OpenAsync(
             sha256,

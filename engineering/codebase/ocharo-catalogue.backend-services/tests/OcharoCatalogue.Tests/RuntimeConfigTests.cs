@@ -49,22 +49,19 @@ public sealed class RuntimeConfigTests
     }
 
     [Fact]
-    public async Task RuntimeConfig_ShouldAnswerWithoutASession_WhenSsoGuardsTheRestOfTheApi()
+    public async Task RuntimeConfig_ShouldAnswerWithoutASession_WhileSignInGuardsTheRestOfTheApi()
     {
-        await using var host = CatalogueHost.Create(EveryApp, sso: true);
-        using var client = host.Factory.CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri(CatalogueHost.SsoOrigin), AllowAutoRedirect = false, HandleCookies = false
-        });
+        await using var host = CatalogueHost.Create(EveryApp);
+        using var client = CatalogueSignIn.CreateClient(host.Factory, person: null);
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/runtime-config");
-        request.Headers.Add("Cookie", "__Host-ocharo-catalogue=forged");
+        request.Headers.Add("Cookie", ".app.session=forged");
 
         using var response = await client.SendAsync(request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(response.Headers.CacheControl!.NoStore);
         Assert.Contains("OCHARO_DESK_URL", (await ReadAsync(response)).Keys);
-        // The SSO boundary still holds for the private API.
+        // Sign-in still guards the private API.
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/catalogue/products")).StatusCode);
     }
 
@@ -137,11 +134,10 @@ public sealed class RuntimeConfigTests
     }
 }
 
-/// <summary>An isolated Catalogue host with its own SQLite file and blob folder, optionally behind enabled SSO.</summary>
+/// <summary>An isolated Catalogue host with its own SQLite file and blob folder, behind the test sign-in
+/// (<see cref="CatalogueSignIn"/>).</summary>
 internal sealed class CatalogueHost : IAsyncDisposable
 {
-    public const string SsoOrigin = "https://catalogue.example";
-
     private readonly string root;
 
     private CatalogueHost(string root, WebApplicationFactory<Program> factory)
@@ -152,7 +148,7 @@ internal sealed class CatalogueHost : IAsyncDisposable
 
     public WebApplicationFactory<Program> Factory { get; }
 
-    public static CatalogueHost Create(IReadOnlyDictionary<string, string?> settings, bool sso = false)
+    public static CatalogueHost Create(IReadOnlyDictionary<string, string?> settings)
     {
         var root = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-host", Guid.NewGuid().ToString("N"));
         var configuration = new Dictionary<string, string?>(settings)
@@ -161,19 +157,11 @@ internal sealed class CatalogueHost : IAsyncDisposable
             ["Catalogue:DataRoot"] = Path.Combine(root, "data"),
             ["Catalogue:SeedOnEmpty"] = "false",
         };
-        if (sso)
-        {
-            configuration["Identity:Sso:Enabled"] = "true";
-            configuration["Identity:Sso:DeskOrigin"] = "https://desk.example";
-            configuration["Identity:Sso:ClientOrigin"] = SsoOrigin;
-            configuration["Identity:Sso:ClientId"] = "catalogue";
-            configuration["Identity:Sso:ClientSecret"] = new string('s', 48);
-            configuration["Identity:Sso:OrganizationId"] = Guid.NewGuid().ToString();
-        }
         Directory.CreateDirectory(root);
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
+            builder.UseCatalogueSignIn();
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(configuration));
         });
         return new CatalogueHost(root, factory);

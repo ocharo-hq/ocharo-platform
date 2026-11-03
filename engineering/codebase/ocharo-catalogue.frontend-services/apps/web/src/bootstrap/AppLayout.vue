@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
-import { ChevronRight, ExternalLink, X } from 'lucide-vue-next';
+import { ChevronRight, X } from 'lucide-vue-next';
 import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
@@ -16,7 +16,6 @@ import {
   AccountMenu,
   AppSwitcherKind,
   AppSwitcherMenu,
-  MenuItem,
   type AccountMenuLocale,
   type AccountMenuVersion,
   type AppSwitcherItem,
@@ -25,13 +24,13 @@ import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
 import { useCatalogueStore } from '../application/catalogue';
 import { useBuildIdentity } from '../application/common/UseBuildIdentity';
-import { useSsoSession } from '../application/common/UseSsoSession';
+import { useIdentitySession } from '../application/common/UseIdentitySession';
 import { useOcharoApps } from '../application/shared/UseOcharoApps';
 import { useUiLocale } from '../application/shared/UseUiLocale';
 import { CatalogueGroupLabels, catalogueSection, readCatalogueSection } from '../domain/shared/CatalogueSections';
 import { OcharoAppKind } from '../domain/shared/OcharoApps';
 import NotificationsMenu from '../presentation/common/NotificationsMenu.vue';
-import SsoConnection from '../presentation/common/SsoConnection.vue';
+import SessionConnection from '../presentation/common/SessionConnection.vue';
 import CatalogueNav from '../presentation/frame/CatalogueNav.vue';
 import PhoneNav from '../presentation/frame/PhoneNav.vue';
 import { AppIcons } from '../presentation/frame/ShellIcons';
@@ -57,7 +56,7 @@ defineOptions({ name: 'AppLayout' });
 const { t, uiLocale, setUiLocale } = useUiLocale();
 const route = useRoute();
 const store = useCatalogueStore();
-const { session: ssoSession, signingOut, signOut } = useSsoSession();
+const { session, signingOut, signOut } = useIdentitySession();
 const { backendVersion, refresh: refreshBackendVersion } = useBuildIdentity();
 const apps = useOcharoApps();
 const appVersion = __APP_VERSION__;
@@ -91,18 +90,20 @@ const crumbs = computed(() => {
   return labels.filter((label, index) => labels.indexOf(label) === index).map((label) => t(label));
 });
 
-/** Who is signed in, and sign-out, exist only with an Ocharo session; the local pilot has neither. */
-const signedIn = computed(() => ssoSession.value.enabled && ssoSession.value.authenticated);
+/** Who is signed in, and sign-out, exist only with an Ocharo session. */
 const accountOpen = ref(false);
-/** The Desk operator's name and email; a session from a Desk that sends neither still says where it came from. */
+/** The person Identity names, their contact and picture; a session that names neither still says it is signed in. */
 const accountIdentity = computed(() => {
-  if (!signedIn.value) return {};
-  const { name, email } = ssoSession.value;
-  if (!name && !email) return { description: t('Signed in through Ocharo Desk'), onSignOut: signOut };
+  const { isAuthenticated, person } = session.value;
+  if (!isAuthenticated || !person) return {};
+  const { name, email, phoneNumber, picture } = person;
+  const contact = email ?? phoneNumber;
+  if (!name && !contact) return { description: t('Signed in to Ocharo'), onSignOut: signOut };
   return {
     ...(name ? { name } : {}),
-    // Desk names a person without a display name by their email; it is not repeated under itself.
-    ...(email && email !== name ? { description: email } : {}),
+    // A person without a display name is named by their contact; it is not repeated under itself.
+    ...(contact && contact !== name ? { description: contact } : {}),
+    ...(picture ? { avatarSrc: picture } : {}),
     onSignOut: signOut,
   };
 });
@@ -171,14 +172,7 @@ onMounted(() => void store.loadSettings());
           :is-busy="signingOut"
           variant="glass-menu"
           @update:locale="setUiLocale"
-        >
-          <template v-if="ssoSession.enabled && ssoSession.accountUrl" #items>
-            <!-- Desk's account page opens in another tab, so unsaved edits here stay. -->
-            <MenuItem :href="ssoSession.accountUrl" target="_blank"
-              ><ExternalLink :size="15" class="shrink-0" aria-hidden="true" />{{ t('Account') }}</MenuItem
-            >
-          </template>
-        </AccountMenu>
+        />
       </div>
     </AppShellHeader>
     <AppShellSidebar variant="glass" class="no-print">
@@ -199,7 +193,7 @@ onMounted(() => void store.loadSettings());
           <p>{{ store.notice.value }}</p>
           <button :aria-label="t('Close')" @click="store.notice.value = null"><Icon :icon="X" :size="16" /></button>
         </div>
-        <SsoConnection />
+        <SessionConnection />
         <AppErrorBoundary>
           <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
           <template #fallback="{ reset }"

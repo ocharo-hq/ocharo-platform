@@ -8,6 +8,10 @@ export const catalogueAppUiMessages: UiMessageTable = {
     ru: 'Подключитесь к Ocharo снова. Несохранённые изменения останутся в этой вкладке.',
   },
   'Sign in to Ocharo': { uz: 'Ocharo hisobiga kirish', ru: 'Войти в Ocharo' },
+  'Sign-in did not complete. Try again.': {
+    uz: 'Hisobga kirish yakunlanmadi. Qayta urinib ko‘ring.',
+    ru: 'Вход не завершён. Попробуйте ещё раз.',
+  },
   'Check connection': { uz: 'Ulanishni tekshirish', ru: 'Проверить подключение' },
   'You have read-only access.': { uz: 'Sizda faqat ko‘rish ruxsati bor.', ru: 'У вас доступ только для чтения.' },
   Notifications: { uz: 'Bildirishnomalar', ru: 'Уведомления' },

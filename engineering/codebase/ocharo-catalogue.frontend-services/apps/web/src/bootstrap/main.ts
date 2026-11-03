@@ -2,9 +2,9 @@ import './index.css';
 
 import { createApp } from 'vue';
 
+import { startSession } from '../application/common/UseIdentitySession';
 import { loadOcharoApps, ocharoAppsPlugin, reportOcharoAppsStartup } from '../application/shared/UseOcharoApps';
 import { initializeUiLocale } from '../application/shared/UseUiLocale';
-import { ssoClient } from '../integration/common/OcharoSsoClient';
 import AppRoot from './AppRoot.vue';
 import { createCatalogueRouter } from './CatalogueRouter';
 
@@ -16,12 +16,13 @@ const router = createCatalogueRouter();
 const app = createApp(AppRoot);
 app.use(router);
 // The app menu's runtime settings load beside the first route and the session, within a bounded wait; a failure falls
-// back to the build-time addresses.
+// back to the build-time addresses. A browser without a session leaves for sign-in at Ocharo's Identity instead.
 void Promise.all([
   publicReader ? Promise.resolve(null) : loadOcharoApps(),
   router.isReady(),
-  publicReader ? Promise.resolve() : ssoClient.initialize(),
-]).then(([links]) => {
+  publicReader ? Promise.resolve(true) : startSession(),
+]).then(([links, , staying]) => {
+  if (!staying) return;
   if (links) app.use(ocharoAppsPlugin(links));
   app.mount('#root');
   // The feedback host subscribes as the app mounts, so startup problems are reported once it is up.

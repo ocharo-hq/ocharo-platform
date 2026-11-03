@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit: sessionCanEdit } = useIdentitySession();
 import { useRefresh } from '@wow-two-beta/fe/query';
 import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
@@ -87,7 +87,7 @@ onMounted(() => grid.load());
         />
         <button
           class="btn-primary"
-          :disabled="!ssoCanEdit || grid.dirtyCount.value === 0 || grid.busy.value || resultBusy"
+          :disabled="!sessionCanEdit || grid.dirtyCount.value === 0 || grid.busy.value || resultBusy"
           :aria-busy="grid.busy.value"
           @click="grid.saveAll()"
         >
@@ -166,7 +166,7 @@ onMounted(() => grid.load());
                       rows="3"
                       class="field"
                       :aria-label="`${item.row.id} ${languageNames[code]}`"
-                      :disabled="!ssoCanEdit || item.saving || resultBusy"
+                      :disabled="!sessionCanEdit || item.saving || resultBusy"
                       @input="setValue(code, item, ($event.target as HTMLTextAreaElement).value)"
                     ></textarea>
                     <input
@@ -174,7 +174,7 @@ onMounted(() => grid.load());
                       :value="item.row.locales[code][field] ?? ''"
                       class="field"
                       :aria-label="`${item.row.id} ${languageNames[code]}`"
-                      :disabled="!ssoCanEdit || item.saving || resultBusy"
+                      :disabled="!sessionCanEdit || item.saving || resultBusy"
                       @input="setValue(code, item, ($event.target as HTMLInputElement).value)"
                     /> </SkeletonStateSlot
                   ><button
@@ -185,7 +185,7 @@ onMounted(() => grid.load());
                         : 'bg-muted text-muted-foreground',
                     ]"
                     :aria-pressed="item.row.locales[code].status === 'approved'"
-                    :disabled="!ssoCanEdit || item.saving || resultBusy"
+                    :disabled="!sessionCanEdit || item.saving || resultBusy"
                     @click="toggleApproved(code, item)"
                   >
                     <Icon v-if="item.row.locales[code].status === 'approved'" :icon="Check" :size="11" />
@@ -195,7 +195,7 @@ onMounted(() => grid.load());
                 <td class="px-4 py-3 text-right">
                   <button
                     class="btn-outline"
-                    :disabled="!ssoCanEdit || !grid.isDirty(item) || item.saving || resultBusy"
+                    :disabled="!sessionCanEdit || !grid.isDirty(item) || item.saving || resultBusy"
                     @click="grid.save(item)"
                   >
                     {{ item.saving ? t('Saving…') : t('Save') }}

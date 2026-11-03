@@ -2,30 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DOMWrapper, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { catalogueApi } from '../src/integration/catalogue';
-import { ssoClient } from '../src/integration/common/OcharoSsoClient';
+import { identityClient } from '../src/integration/common/IdentitySessionClient';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
-import { mountCatalogue } from './helpers/CatalogueApp';
+import { EndSessionUrl, mountCatalogue } from './helpers/CatalogueApp';
+import { navigations, OwnerSessionData } from './helpers/IdentitySessions';
 
-// The app's session client reads the global fetch on every call, so each test serves its own Ocharo session.
-vi.mock('../src/integration/common/OcharoSsoClient', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../src/integration/common/OcharoSsoClient')>();
-  return { ...original, ssoClient: original.createSsoClient((input, init) => globalThis.fetch(input, init)) };
-});
-
-const SignedIn = {
-  enabled: true,
-  authenticated: true,
-  canEdit: true,
-  canApprove: false,
-  csrfToken: 'csrf-token',
-  accountUrl: 'https://desk.example.test/',
-};
+const SignedIn = { ...OwnerSessionData, permissions: ['catalogue:edit'] };
+type Person = Partial<(typeof OwnerSessionData)['person']> | Record<string, string | null>;
+const signedInAs = (person: Person) => ({ ...SignedIn, person: { ...SignedIn.person, ...person } });
 let wrapper: VueWrapper | undefined;
 
 /** Mounts the frame with an Ocharo session, as startup resolves it before mounting. */
 async function renderSignedIn(session: Record<string, unknown> = SignedIn) {
-  const mounted = await mountCatalogue('/stock', { ssoSession: session });
-  await ssoClient.initialize(true);
+  const mounted = await mountCatalogue('/stock', { session });
+  await identityClient.initialize(true);
   await flushPromises();
   wrapper = mounted.wrapper;
 }
@@ -67,58 +57,40 @@ afterEach(() => {
 });
 
 describe('Account menu with an Ocharo session', () => {
-  it('says where a session without a name came from, links the Desk account and ends with sign out', async () => {
+  it('says a session without a name or contact is signed in, and ends with sign out', async () => {
     await renderSignedIn();
-    const open = vi.fn();
-    vi.stubGlobal('open', open);
 
     const menu = await openAccountMenu();
 
-    expect(identityLines(menu)).toEqual(['Signed in through Ocharo Desk']);
+    expect(identityLines(menu)).toEqual(['Signed in to Ocharo']);
     expect(wrapper!.get('header button[aria-haspopup="menu"]').attributes('aria-label')).toBe('Account menu');
     const rows = menu.findAll('[role="menuitem"]');
-    expect(rows.map((item) => item.text().trim())).toEqual(['Account (opens in a new tab)', 'Sign out']);
+    expect(rows.map((item) => item.text().trim())).toEqual(['Sign out']);
     expect(menu.findAll('[role="menuitem"], [role="menuitemradio"]').at(-1)!.attributes()).toHaveProperty(
       'data-account-menu-sign-out',
     );
-    expect(wrapper!.get('header').find('a[href="https://desk.example.test/"]').exists()).toBe(false);
-
-    // A real link: the browser opens Desk's account page in a new tab, so unsaved edits here stay.
-    const account = rows[0]!;
-    expect(account.element.tagName).toBe('A');
-    expect(account.attributes()).toMatchObject({
-      href: 'https://desk.example.test/',
-      target: '_blank',
-      rel: 'noopener noreferrer',
-    });
-    const preventNavigation = (event: Event) => event.preventDefault();
-    document.addEventListener('click', preventNavigation);
-    await account.trigger('click');
-    await flushPromises();
-    document.removeEventListener('click', preventNavigation);
-    expect(open).not.toHaveBeenCalled();
-    expect(wrapper!.get('header button[aria-haspopup="menu"]').attributes('aria-expanded')).toBe('false');
   });
 
   it.each([
     [{ name: 'Malika Operator', email: 'operator@example.test' }, ['Malika Operator', 'operator@example.test']],
     [{ name: 'operator@example.test', email: 'operator@example.test' }, ['operator@example.test']],
     [{ name: 'Malika Operator', email: null }, ['Malika Operator']],
-  ])('names the Desk operator in the account menu (%o)', async (identity, lines) => {
-    await renderSignedIn({ ...SignedIn, ...identity });
+    [{ name: 'Malika Operator', email: null, phoneNumber: '+998901234567' }, ['Malika Operator', '+998901234567']],
+  ])('names the Identity person in the account menu (%o)', async (identity, lines) => {
+    await renderSignedIn(signedInAs(identity));
 
     const menu = await openAccountMenu();
 
     expect(identityLines(menu)).toEqual(lines);
-    expect(menu.text()).not.toContain('Signed in through Ocharo Desk');
+    expect(menu.text()).not.toContain('Signed in to Ocharo');
     expect(wrapper!.get('header button[aria-haspopup="menu"]').attributes('aria-label')).toBe(
       `Account menu for ${identity.name}`,
     );
     expect(menu.findAll('[role="menuitem"]').at(-1)!.attributes()).toHaveProperty('data-account-menu-sign-out');
   });
 
-  it('names an operator Desk knows only by email in the second line', async () => {
-    await renderSignedIn({ ...SignedIn, name: null, email: 'operator@example.test' });
+  it('names a person Identity knows only by email in the second line', async () => {
+    await renderSignedIn(signedInAs({ name: null, email: 'operator@example.test' }));
 
     const menu = await openAccountMenu();
 
@@ -126,7 +98,7 @@ describe('Account menu with an Ocharo session', () => {
     expect(wrapper!.get('header button[aria-haspopup="menu"]').attributes('aria-label')).toBe('Account menu');
   });
 
-  it('signs this app out of Ocharo with its CSRF token and keeps the tab, offering to reconnect', async () => {
+  it('signs out at the API with its CSRF token, then leaves for Identity to end the Ocharo sign-in', async () => {
     await renderSignedIn();
 
     const menu = await openAccountMenu();
@@ -134,14 +106,29 @@ describe('Account menu with an Ocharo session', () => {
     await flushPromises();
 
     expect(fetch).toHaveBeenCalledWith(
-      '/api/sso/logout',
-      expect.objectContaining({ method: 'POST', headers: { 'X-CSRF-Token': 'csrf-token' } }),
+      '/api/identity/sign-out',
+      expect.objectContaining({ method: 'POST', headers: { 'X-Csrf-Token': 'csrf-token' } }),
     );
-    expect(ssoClient.current.authenticated).toBe(false);
+    expect(identityClient.current.isAuthenticated).toBe(false);
+    expect(navigations).toEqual([EndSessionUrl]);
+  });
+
+  it('offers sign-in when the session ends, keeping the page and its unsaved changes', async () => {
+    await renderSignedIn({ isAuthenticated: false });
+
     expect(wrapper!.text()).toContain('Reconnect to Ocharo. Your unsaved changes stay in this tab.');
+    const signIn = wrapper!.get('a[target="_blank"]');
+    expect(signIn.text()).toBe('Sign in to Ocharo');
+    expect(signIn.attributes('href')).toMatch(/^\/api\/identity\/sign-in\?returnUrl=%2F/);
     expect(wrapper!.find('main h1').text()).toBe('Stock');
     await wrapper!.get('header button[aria-haspopup="menu"]').trigger('click');
     await flushPromises();
     expect(document.querySelector('[data-account-menu-sign-out]')).toBeNull();
+  });
+
+  it('says a signed-in person without catalogue:edit has read-only access', async () => {
+    await renderSignedIn({ ...SignedIn, permissions: [] });
+
+    expect(wrapper!.text()).toContain('You have read-only access.');
   });
 });

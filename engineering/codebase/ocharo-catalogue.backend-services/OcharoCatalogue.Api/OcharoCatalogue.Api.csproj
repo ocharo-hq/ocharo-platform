@@ -3,6 +3,8 @@
   <ItemGroup>
     <!-- Kit: mediator (ISender), Result/DomainError, web/problem-details. -->
     <PackageReference Include="WoW2.Sdk.Beta.Be" />
+    <!-- Sign-in through Ocharo's Identity instance (BFF, section Identity:Client). -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Identity.Client" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
   </ItemGroup>
 
@@ -13,7 +15,4 @@
     <ProjectReference Include="..\OcharoCatalogue.Domain\OcharoCatalogue.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="../../ocharo-sso/Ocharo.Sso/Ocharo.Sso.csproj" />
-  </ItemGroup>
 </Project>

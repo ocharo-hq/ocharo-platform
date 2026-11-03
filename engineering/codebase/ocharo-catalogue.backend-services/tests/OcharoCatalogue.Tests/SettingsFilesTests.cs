@@ -43,6 +43,7 @@ public sealed class SettingsFilesTests
         {
             builder.UseEnvironment("Development");
             builder.UseContentRoot(root);
+            builder.UseCatalogueSignIn();
             builder.UseSetting("LOCAL_SETTINGS", "true");
             if (deployEnvironment is not null) builder.UseSetting("DEPLOY_ENVIRONMENT", deployEnvironment);
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>

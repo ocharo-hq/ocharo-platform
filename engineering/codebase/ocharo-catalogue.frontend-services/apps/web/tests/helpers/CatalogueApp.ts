@@ -6,6 +6,10 @@ import { RouterHistoryMode } from '@wow-two-beta/fe/router';
 import { loadOcharoApps, ocharoAppsPlugin } from '../../src/application/shared/UseOcharoApps';
 import AppRoot from '../../src/bootstrap/AppRoot.vue';
 import { createCatalogueRouter } from '../../src/bootstrap/CatalogueRouter';
+import { OwnerSessionData } from './IdentitySessions';
+
+/** The Identity end-session address the stubbed `/api/identity/sign-out` answers. */
+export const EndSessionUrl = 'https://identity.example.test/connect/endsession?client_id=catalogue';
 
 /** The informational version the stubbed `/api/system/status` reports: a release and the commit it was built from. */
 export const ApiVersion = '0.1.4+8f2c1d9e4b7a';
@@ -37,8 +41,9 @@ export interface CatalogueAppOptions {
   readonly width?: number;
   /** When given, `/api/runtime-config` serves it and the app menu resolves it the way startup does. */
   readonly runtimeConfig?: Record<string, string>;
-  /** The session `/api/sso/session` serves; default SSO disabled. `/api/sso/logout` answers 204. */
-  readonly ssoSession?: Record<string, unknown>;
+  /** The session `/api/identity/session` serves; default an owner's. `/api/identity/sign-out` answers
+   * {@link EndSessionUrl}. The app reads it once a test initializes the session client again. */
+  readonly session?: Record<string, unknown>;
   readonly stubs?: Record<string, Component>;
 }
 
@@ -56,9 +61,10 @@ export async function mountCatalogue(
       if (pathname === '/api/runtime-config') return Promise.resolve(Response.json(options.runtimeConfig ?? {}));
       if (pathname === '/api/system/status')
         return Promise.resolve(Response.json({ service: 'OcharoCatalogue', status: 'live', version: ApiVersion }));
-      if (pathname === '/api/sso/session')
-        return Promise.resolve(Response.json({ data: options.ssoSession ?? { enabled: false, authenticated: false } }));
-      if (pathname === '/api/sso/logout') return Promise.resolve(new Response(null, { status: 204 }));
+      if (pathname === '/api/identity/session')
+        return Promise.resolve(Response.json({ data: options.session ?? OwnerSessionData }));
+      if (pathname === '/api/identity/sign-out')
+        return Promise.resolve(Response.json({ data: { endSessionUrl: EndSessionUrl } }));
       return Promise.resolve(Response.json({ title: 'Not found' }, { status: 404 }));
     }),
   );

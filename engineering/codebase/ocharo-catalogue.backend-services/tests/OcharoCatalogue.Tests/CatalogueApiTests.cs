@@ -9,13 +9,14 @@ using Microsoft.Extensions.Configuration;
 
 namespace OcharoCatalogue.Tests;
 
-/// <summary>Full HTTP pipeline (middleware, controllers, seeding) on an in-memory host.</summary>
+/// <summary>Full HTTP pipeline (middleware, sign-in, controllers, seeding) on an in-memory host, signed in as an owner.</summary>
 public sealed class CatalogueApiTests
 {
     private static WebApplicationFactory<Program> Host(string root, string? source) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
+            builder.UseCatalogueSignIn();
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(root, "api.db")};Pooling=False",
@@ -31,7 +32,7 @@ public sealed class CatalogueApiTests
         var source = Path.Combine(root, "source");
         CatalogueHarness.WriteWorkspaceProduct(source, "abaya-v01", "abaya", 150_000, 100_000, 120);
         await using var factory = Host(root, source);
-        var client = factory.CreateClient();
+        using var client = CatalogueSignIn.CreateClient(factory, CatalogueSignIn.Owner);
 
         var list = await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products");
         var detail = await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products/abaya-v01");
@@ -72,7 +73,7 @@ public sealed class CatalogueApiTests
     {
         var root = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-api", Guid.NewGuid().ToString("N"));
         await using var factory = Host(root, null);
-        var client = factory.CreateClient();
+        using var client = CatalogueSignIn.CreateClient(factory, CatalogueSignIn.Owner);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/catalogue/products")
         {
             Content = JsonContent.Create(new { garmentType = "nimcha" }),
@@ -89,7 +90,7 @@ public sealed class CatalogueApiTests
     {
         var root = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-api", Guid.NewGuid().ToString("N"));
         await using var factory = Host(root, null);
-        var client = factory.CreateClient();
+        using var client = CatalogueSignIn.CreateClient(factory, CatalogueSignIn.Owner);
         var created = await client.PostAsJsonAsync("/api/catalogue/products", new { garmentType = "korset" });
         var id = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("document").GetProperty("id").GetString();
         using var form = new MultipartFormDataContent();
@@ -115,7 +116,7 @@ public sealed class CatalogueApiTests
         if (string.IsNullOrWhiteSpace(source) || !Directory.Exists(source)) return;
         var root = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-api", Guid.NewGuid().ToString("N"));
         await using var factory = Host(root, source);
-        var client = factory.CreateClient();
+        using var client = CatalogueSignIn.CreateClient(factory, CatalogueSignIn.Owner);
 
         var products = await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products");
         var feed = await client.GetFromJsonAsync<JsonElement>("/api/public/catalogue");

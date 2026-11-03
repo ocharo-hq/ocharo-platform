@@ -1,4 +1,3 @@
-using Ocharo.Sso;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
@@ -13,11 +12,11 @@ public static partial class HostConfiguration
     public static WebApplicationBuilder Configure(this WebApplicationBuilder builder)
     {
         builder.AddSettingsFiles();
-        builder.Services.AddOcharoSso(builder.Configuration, "catalogue", "ocharo-catalogue", requireBoundOrganization: true);
         builder
             .AddSqliteDatabase()
             .AddClock()
             .AddCatalogue()
+            .AddAccess()
             .AddMediator()
             .AddRuntimeConfig()
             .AddControllers();
@@ -34,16 +33,19 @@ public static partial class HostConfiguration
         app.UseHttpProblemDetails();
 
         app.UseMiddleware<CatalogueExceptionMiddleware>();
-        app.UseOcharoSso(IsPublicSsoRequest, http => http.Request.Path.StartsWithSegments("/api/catalogue/media"));
-        app.UseMiddleware<LocalPilotBoundaryMiddleware>();
-        app.Use(RequirePublicationApproval);
+        app.UseMiddleware<CatalogueHttpBoundaryMiddleware>();
 
-        if (app.Environment.IsLocalRun(app.Configuration))
-            app.MapOpenApi();
-
-        // Serve the Vue SPA from wwwroot (single-deploy: API + UI in one host).
+        // Serve the Vue SPA from wwwroot (single-deploy: API + UI in one host), ahead of sign-in: the shell is public.
         app.UseDefaultFiles();
         app.UseStaticFiles();
+
+        // Every endpoint below needs a member of the bound organization unless it allows anonymous callers: the published
+        // reader and its API, the public feed, public media, runtime config, status, health and the SPA shell.
+        app.UseRouting();
+        app.UseAccess();
+
+        if (app.Environment.IsLocalRun(app.Configuration))
+            app.MapOpenApi().AllowAnonymous();
 
         app.WarnAboutRejectedRuntimeConfig();
         app.MapControllers();
@@ -53,9 +55,9 @@ public static partial class HostConfiguration
             context.Response.Headers.CacheControl = "no-store";
             return Results.Ok(new { service = "OcharoCatalogue", version = BuildIdentity.Version });
         }).AllowAnonymous();
-        app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "OcharoCatalogue", mode = "local-pilot" }));
-        app.MapFallback("/api/{**slug}", () => Results.Problem(statusCode: 404, title: "API route not found"));
-        app.MapFallbackToFile("index.html");
+        app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "OcharoCatalogue" })).AllowAnonymous();
+        app.MapFallback("/api/{**slug}", () => Results.Problem(statusCode: 404, title: "API route not found")).AllowAnonymous();
+        app.MapFallbackToFile("index.html").AllowAnonymous();
 
         return app;
     }

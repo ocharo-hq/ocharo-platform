@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DOMWrapper, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { catalogueApi } from '../src/integration/catalogue';
+import { identityClient } from '../src/integration/common/IdentitySessionClient';
 import { useCatalogueStore } from '../src/application/catalogue';
 import { confirmation, resolveConfirmation } from '../src/application/common/UseFeedback';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
@@ -78,7 +79,11 @@ describe('Ocharo frame in Catalogue', () => {
   });
 
   it('reports the app and API versions in the account menu, with no sign-out outside an Ocharo session', async () => {
-    await renderAt('/stock', 1440);
+    wrapper = (
+      await mountCatalogue('/stock', { session: { isAuthenticated: false }, stubs: { CatalogueSelect: SelectStub } })
+    ).wrapper;
+    await identityClient.initialize(true);
+    await flushPromises();
 
     await wrapper!.get('header button[aria-label="Account menu"]').trigger('click');
     await flushPromises();

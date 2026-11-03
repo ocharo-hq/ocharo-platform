@@ -36,7 +36,7 @@ export const catalogueFrameUiMessages: UiMessageTable = {
   'Account menu for {name}': { uz: '{name} hisob menyusi', ru: 'Меню учётной записи {name}' },
   'Account menu': { uz: 'Hisob menyusi', ru: 'Меню учётной записи' },
   Versions: { uz: 'Versiyalar', ru: 'Версии' },
-  'Signed in through Ocharo Desk': { uz: 'Ocharo Desk orqali kirilgan', ru: 'Вход выполнен через Ocharo Desk' },
+  'Signed in to Ocharo': { uz: 'Ocharo hisobiga kirilgan', ru: 'Вход в Ocharo выполнен' },
   'Could not sign out. Try again.': {
     uz: 'Hisobdan chiqib bo‘lmadi. Qayta urinib ko‘ring.',
     ru: 'Не удалось выйти. Попробуйте ещё раз.',

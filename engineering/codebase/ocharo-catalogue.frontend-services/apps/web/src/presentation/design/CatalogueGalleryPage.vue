@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit: sessionCanEdit } = useIdentitySession();
 import { useRefresh } from '@wow-two-beta/fe/query';
 import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
@@ -235,7 +235,7 @@ onScopeDispose(() => {
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <RefreshButton :busy="resultBusy" :disabled="locked" @refresh="refresh" /><button
-          :disabled="!ssoCanEdit || locked"
+          :disabled="!sessionCanEdit || locked"
           @click="edit()"
         >
           {{ t('New catalogue') }}
@@ -290,13 +290,13 @@ onScopeDispose(() => {
               <div class="card-actions">
                 <button :disabled="locked" @click="edit(item)">{{ t('Settings') }}</button
                 ><button
-                  :disabled="!ssoCanEdit || locked"
+                  :disabled="!sessionCanEdit || locked"
                   :aria-busy="pendingAction === `duplicate:${item.id}`"
                   @click="duplicate(item)"
                 >
                   {{ pendingAction === `duplicate:${item.id}` ? t('Working…') : t('Duplicate') }}</button
                 ><button
-                  :disabled="!ssoCanEdit || locked"
+                  :disabled="!sessionCanEdit || locked"
                   :aria-busy="pendingAction === `activate:${item.id}`"
                   @click="activate(item)"
                 >
@@ -308,7 +308,7 @@ onScopeDispose(() => {
                         : t('Activate')
                   }}</button
                 ><button
-                  :disabled="!ssoCanEdit || locked"
+                  :disabled="!sessionCanEdit || locked"
                   :aria-busy="pendingAction === `remove:${item.id}`"
                   @click="remove(item)"
                 >
@@ -342,7 +342,7 @@ onScopeDispose(() => {
             <ModalTitle>{{ selected ? t('Catalogue settings') : t('New catalogue') }}</ModalTitle
             ><button type="button" :disabled="busy" @click="close()">{{ t('Close') }}</button>
           </header>
-          <fieldset :disabled="!ssoCanEdit || busy">
+          <fieldset :disabled="!sessionCanEdit || busy">
             <label>{{ t('Name') }}<input v-model="name" maxlength="160" required @input="nameChanged" /></label
             ><label
               >{{ t('Slug')
@@ -369,7 +369,7 @@ onScopeDispose(() => {
               ><label><input v-model="metadata.isActive" type="checkbox" />{{ t('Active') }}</label>
             </div>
           </fieldset>
-          <button type="submit" :disabled="!ssoCanEdit || busy" :aria-busy="pendingAction === 'save'">
+          <button type="submit" :disabled="!sessionCanEdit || busy" :aria-busy="pendingAction === 'save'">
             {{ busy ? t('Saving…') : t('Save catalogue') }}
           </button>
         </form></ModalContent

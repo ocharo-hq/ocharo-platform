@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit: sessionCanEdit } = useIdentitySession();
 import { useRefresh } from '@wow-two-beta/fe/query';
 import { SkeletonStateGroup, SkeletonStateSlot } from '@wow-two-beta/fe/presentation/feedback';
 import RefreshButton from '../common/RefreshButton.vue';
@@ -98,7 +98,7 @@ onMounted(() => list.load());
                       step="1000"
                       class="field w-36"
                       :aria-label="t('Retail price for {product}', { product: p.id })"
-                      :disabled="!ssoCanEdit || sheet.saving.value !== null || resultBusy"
+                      :disabled="!sessionCanEdit || sheet.saving.value !== null || resultBusy"
                       @change="commit(p.id, 'retail', $event, p.retailPrice)"
                     />
                   </SkeletonStateSlot>
@@ -112,7 +112,7 @@ onMounted(() => list.load());
                       step="1000"
                       class="field w-36"
                       :aria-label="t('Wholesale price for {product}', { product: p.id })"
-                      :disabled="!ssoCanEdit || sheet.saving.value !== null || resultBusy"
+                      :disabled="!sessionCanEdit || sheet.saving.value !== null || resultBusy"
                       @change="commit(p.id, 'wholesale', $event, p.wholesalePrice)"
                     />
                   </SkeletonStateSlot>

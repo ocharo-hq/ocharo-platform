@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSsoSession } from '../../application/common/UseSsoSession';
-const { canEdit: ssoCanEdit, canApprove: ssoCanApprove } = useSsoSession();
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
+const { canEdit: sessionCanEdit, canApprove: sessionCanApprove } = useIdentitySession();
 import { computed } from 'vue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import type { CatalogueDocumentControls } from '../../application/design/UseCatalogueDocument';
@@ -58,7 +58,7 @@ function locale(value: string) {
         {{ t('Redo') }}</button
       ><button
         class="btn-primary"
-        :disabled="!ssoCanEdit || editor.busy.value || !editor.title.value.trim()"
+        :disabled="!sessionCanEdit || editor.busy.value || !editor.title.value.trim()"
         @click="editor.save"
       >
         {{ editor.busy.value ? t('Working…') : t('Save catalogue') }}
@@ -104,13 +104,13 @@ function locale(value: string) {
         {{ t('Prepare release') }}</button
       ><button
         class="btn-primary"
-        :disabled="!ssoCanApprove || editor.busy.value || editor.dirty.value || !editor.prepared.value"
+        :disabled="!sessionCanApprove || editor.busy.value || editor.dirty.value || !editor.prepared.value"
         @click="editor.publish"
       >
         {{ t('Publish catalogue') }}</button
       ><button
         class="btn-outline"
-        :disabled="!ssoCanApprove || editor.busy.value || editor.dirty.value"
+        :disabled="!sessionCanApprove || editor.busy.value || editor.dirty.value"
         @click="editor.withdraw"
       >
         {{ t('Withdraw catalogue') }}</button
@@ -124,7 +124,7 @@ function locale(value: string) {
         <span>{{ t('Revision') }} {{ revision.revision }} · {{ revision.title }}</span
         ><button
           class="btn-ghost"
-          :disabled="!ssoCanEdit || editor.busy.value"
+          :disabled="!sessionCanEdit || editor.busy.value"
           @click="editor.restore(revision.revision)"
         >
           {{ t('Restore revision') }}
