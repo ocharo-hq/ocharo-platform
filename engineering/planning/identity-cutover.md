@@ -13,7 +13,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 ## Status
 
 - ✅ G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone, the edit check and Maftuna's invite through a trusted contact pass; her Desk session shows Ocharo, `owner`, `desk:edit` and `desk:approve` (2026-11-03). Her own phone moves to the backlog (#46)
-- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) is released to dev, its deploy not yet verified (2026-11-03); sign-in and the invite remain
+- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) runs clean on dev, deployment `87f21066`, and `v0.1.18` (the bot's messages name Ocharo) follows (2026-11-03); sign-in and the invite remain
 - ⬜ G3 prod: the same on prod with `@ocharo_bot`
 - ⬜ G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired
 
@@ -83,6 +83,8 @@ Accounts:
 
 - #1, #2 and #3 run at once; #4 waits for #1; #5 waits for #2 and #4.
 - G1's invite check passed through a trusted contact on `0.5.15` (#45); G2's invite runs the same way on dev.
+- G4's local work (#19, #47) starts beside G2 and G3 to shorten the path; its PLAT pushes wait until G2 closes, and G3
+  promotes the release G2 passed on.
 - Each goal closes with a cross-lane check against its done-when before the next starts.
 
 ## Contracts
@@ -307,8 +309,17 @@ Settled:
 - 46. Maftuna's own phone — adding it through the bot's add-phone link — and her own-phone sign-in move to the backlog
   as a verification item (developer, 2026-11-03: "checking that can be backlog item ( verification )"). Nothing waits
   on it; the push of `45c9d7b` (the bot's messages name Ocharo) goes ahead.
+- 47. G4 needs no new Identity feature for sign-in or roles (analysis, 2026-11-03). Roles stay Identity's fixed
+  catalog (owner, admin, editor, viewer, billing); each app's permissions are namespaced on them in
+  `Identity:Organizations:Roles`, which the descriptor already sets: owner and admin get
+  `{desk,brand,catalogue,marketing,editorial}:{edit,approve}` and `studio:edit`, editor every `:edit`. Each app joins
+  as one `Identity:Server:Clients:N` entry with its `PermissionNamespace`, plus its own `Identity:Client`. Against
+  `Ocharo.Sso`, admin now approves and Studio has no `approve`. Not needed for G4, and absent from Identity: custom
+  roles, per-person app access, back-channel sign-out (I18), agent tokens (Desk MCP stays parked). One gap: Editorial's
+  image worker calls Desk's `/api/integrations/media/background-removal` with an integration ticket, and Identity has
+  no client-credentials grant yet (Identity backlog, G8/G10).
 
-Open, cross-lane: none.
+Open, cross-lane: Editorial's service call to Desk (#47) — a shared API key now, or Identity client credentials.
 
 Open, lane-local — each lane asks in its own chat:
 
