@@ -186,8 +186,8 @@ services:
         Identity:Organizations:Roles:editor:3: { default: "marketing:edit" }
         Identity:Organizations:Roles:editor:4: { default: "editorial:edit" }
         Identity:Organizations:Roles:editor:5: { default: "studio:edit" }
-        # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand and
-        # 2 catalogue now; 3 marketing, 4 editorial and 5 studio stay reserved until each app's own cutover (G4). Each secret
+        # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
+        # 2 catalogue, 3 marketing and 4 editorial now; 5 studio stays reserved until its own cutover (G4). Each secret
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
         # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
         # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
@@ -213,6 +213,18 @@ services:
         Identity:Server:Clients:2:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:2:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:2:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:3:ClientId: { default: marketing }
+        Identity:Server:Clients:3:DisplayName: { default: Ocharo Marketing }
+        Identity:Server:Clients:3:PermissionNamespace: { default: marketing }
+        Identity:Server:Clients:3:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:3:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:3:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:4:ClientId: { default: editorial }
+        Identity:Server:Clients:4:DisplayName: { default: Ocharo Editorial }
+        Identity:Server:Clients:4:PermissionNamespace: { default: editorial }
+        Identity:Server:Clients:4:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:4:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:4:PostSignOutRedirectUris:0: { type: url, required: true }
     sites:
       identity: { paths: [/, /api] }
   brand:
