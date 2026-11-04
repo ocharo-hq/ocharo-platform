@@ -327,8 +327,17 @@ Settled:
 - 49. G2 closes on the owner's Desk sign-in through `@ocharo_dev_bot` alone (owner, 2026-11-04: "yes we can verify this
   and fix if needed later"). Dev's invite and the read of its Desk session move to the backlog. G2 passed on `v0.1.18`,
   so G3 promotes `v0.1.18`, and `ocharo-platform`'s G4 push may start; v0.1.19 reaches dev only once wheelhouse sets its six keys.
+- 50. Marketing, Editorial and Studio link settings across repositories: `Identity:Client:ClientSecret` from
+  `Identity:Server:Clients:N:ClientSecret`, and `Sites:identity:Url`, both in `ocharo-platform`'s descriptor. Pipelines'
+  `link_sources` refuses a source its own descriptor doesn't declare, so their CI would fail; the runner's `linked_value`
+  looks ready, not run end to end. Typing the secret per environment fails too, since a generated secret can't be read
+  back. Their pushes, and `ocharo-platform`'s clients 3 and 4, wait for a pipelines release; the wheelhouse lane is the
+  proposed builder (2026-11-04).
 
-Open, cross-lane: Editorial's service call to Desk (#47) — a shared API key now, or Identity client credentials.
+Open, cross-lane:
+
+- Editorial's service call to Desk (#47) — a shared API key now, or Identity client credentials.
+- Who builds the pipelines release (#50).
 
 Open, lane-local — each lane asks in its own chat:
 
