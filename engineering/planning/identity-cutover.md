@@ -84,7 +84,7 @@ Accounts:
 - #1, #2 and #3 run at once; #4 waits for #1; #5 waits for #2 and #4.
 - G1's invite check passed through a trusted contact on `0.5.15` (#45); G3's invite runs the same way on prod, and G2
   skipped its own (#49).
-- G4's local work (#19, #47) starts beside G2 and G3 to shorten the path; its PLAT pushes wait until G2 closes, and G3
+- G4's local work (#19, #47) starts beside G2 and G3 to shorten the path; its `ocharo-platform` pushes wait until G2 closes, and G3
   promotes the release G2 passed on, `v0.1.18`.
 - Each goal closes with a cross-lane check against its done-when before the next starts.
 
@@ -222,7 +222,7 @@ for an unopened v0.13.
   Wheelhouse dev; Ocharo's server sits in Wheelhouse prod's console, so G2's `admin create` waits for its prod
   promotion. A `sign-in-link` result needs a reveal-once read (backlog).
 - Ocharo dev prepared 2026-11-02 except the dev bot token: the owner keys are typed and saved, not applied, and no
-  stale identity value is stored there; until the PLAT push nobody applies Ocharo dev settings, since undeclared
+  stale identity value is stored there; until the `ocharo-platform` push nobody applies Ocharo dev settings, since undeclared
   keys would reach every old service. Wheelhouse `v0.13.2` adds a show-once read for `admin invite` links.
 - 24. Missing, wanted: a value-level settings record (renders keep fingerprints and changed keys, no values) and a
   warning for stale stored keys. Not proven live: the rollback gate's config check, and refusing a missing required
@@ -232,16 +232,16 @@ for an unopened v0.13.
   no config check ran, since release-set composition drops each repo's `configCheck:` items. The rollback to
   `v0.1.14` left identity `0.3.7` crash-looping on the new `Clients:0:*` values, which reach every service while
   undeclared; Desk, Brand and Catalogue run healthy. Wheelhouse fixes both as `v0.13.3`; after its dev proof and the
-  developer's prod promotion, it reconciles Ocharo dev and redeploys `v0.1.15` with no PLAT change.
+  developer's prod promotion, it reconciles Ocharo dev and redeploys `v0.1.15` with no `ocharo-platform` change.
 - Second dev deploy, 2026-11-03, after Wheelhouse prod moved to `v0.13.3`: Ocharo dev runs `v0.1.15` healthy
   (deployment `7e0c4289`, 10 services, 61 descriptor defaults rendered); identity sits at migration 7, its issuer is
   the site origin and its Telegram webhook is registered. The config check still did not run, since the set bundle
   for `v0.1.15` was composed by `0.12.0` and cached; the next Ocharo release composes it fresh.
 - Dev bootstrap, 2026-11-03: the developer ran `admin create` (identity `0.5.12` verb) from the Wheelhouse run dialog;
   it exited 0 with status `created`, both preset ids echoed and the instance role `admin` granted. An earlier try
-  exited 2 on a placeholder phone and wrote nothing. The PLAT push to identity `0.5.14` follows, and its fresh set
+  exited 2 on a placeholder phone and wrote nothing. The `ocharo-platform` push to identity `0.5.14` follows, and its fresh set
   compose is the config check's live proof.
-- Third dev deploy, 2026-11-03: PLAT `555011d` released `v0.1.16`, and Ocharo dev took it automatically (deployment
+- Third dev deploy, 2026-11-03: `ocharo-platform` `555011d` released `v0.1.16`, and Ocharo dev took it automatically (deployment
   `2e998f6e`, 1m 11s): identity `0.5.12` → `0.5.14`, desk and jobs `0.1.16`, all 10 services healthy. Identity
   migrated 7 → 8 (`008-telegram-link-changes`, expand) and kept its webhook. The freshly composed set ran the config
   check live for the first time: "Config check identity: Consistent". Once the developer allowed read-only product
@@ -280,7 +280,7 @@ Settled:
 - 37. Wheelhouse provisions no Valkey yet (it parses `needs: [valkey]` but fills only PostgreSQL keys), so hosted
   Desk's shared session cache (#27) is a PostgreSQL `IDistributedCache` in the core be sdk, written by the platform
   lane after #18; dev may run on the BFF's memory default until then, prod may not (orchestrator, 2026-11-02).
-- 38. The platform lane pushes PLAT once: the descriptor plus the Desk cutover, after the wheelhouse lane reports
+- 38. The platform lane pushes `ocharo-platform` once: the descriptor plus the Desk cutover, after the wheelhouse lane reports
   Ocharo dev prepared — the one-off shipped, stale identity keys deleted, owner keys and the dev bot token set —
   since a `main` push releases and auto-deploys to dev.
 
@@ -305,7 +305,7 @@ Settled:
   backlog): the invite check's second person, Maftuna, joins and signs in with codes sent to a trusted contact, and
   adds her own phone later by sharing her contact with the bot. The platform lane wrote the requirements; Identity
   settled the flow and its slice 1 API in `9f224fe` and released slice 1 as `v0.5.15`; the platform lane re-pins on it
-  (2026-11-03). The PLAT push to dev waits until the local invite check passes on 8404. The flow's open choices are asked in the identity lane.
+  (2026-11-03). The `ocharo-platform` push to dev waits until the local invite check passes on 8404. The flow's open choices are asked in the identity lane.
   The check passed on 2026-11-03, and `v0.1.17` carries `0.5.15` with trusted contacts on to dev.
 - 46. Maftuna's own phone — adding it through the bot's add-phone link — and her own-phone sign-in move to the backlog
   as a verification item (developer, 2026-11-03: "checking that can be backlog item ( verification )"). Nothing waits
@@ -326,7 +326,7 @@ Settled:
   2026-11-04).
 - 49. G2 closes on the owner's Desk sign-in through `@ocharo_dev_bot` alone (owner, 2026-11-04: "yes we can verify this
   and fix if needed later"). Dev's invite and the read of its Desk session move to the backlog. G2 passed on `v0.1.18`,
-  so G3 promotes `v0.1.18`, and PLAT's G4 push may start; v0.1.19 reaches dev only once wheelhouse sets its six keys.
+  so G3 promotes `v0.1.18`, and `ocharo-platform`'s G4 push may start; v0.1.19 reaches dev only once wheelhouse sets its six keys.
 
 Open, cross-lane: Editorial's service call to Desk (#47) — a shared API key now, or Identity client credentials.
 
