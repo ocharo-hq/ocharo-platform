@@ -1,6 +1,6 @@
 # Identity cutover
 
-*Last updated: 2026-11-03*
+*Last updated: 2026-11-04*
 
 Ocharo people sign in by Telegram through Ocharo's own WoW2 Identity instance on local, dev and prod, and every
 Ocharo app moves off `Ocharo.Sso`. This is the goal's cross-lane track: vectors, lanes, order, contracts, decisions
@@ -13,8 +13,8 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 ## Status
 
 - ✅ G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone, the edit check and Maftuna's invite through a trusted contact pass; her Desk session shows Ocharo, `owner`, `desk:edit` and `desk:approve` (2026-11-03). Her own phone moves to the backlog (#46)
-- 🔄 G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) runs clean on dev, deployment `87f21066`, and `v0.1.18` (the bot's messages name Ocharo) runs clean, deployment `c7f6904c`; the owner signed in to Desk by phone through `@ocharo_dev_bot` and sees Ocharo as `owner` (2026-11-03); the invite remains
-- ⬜ G3 prod: the same on prod with `@ocharo_bot` — prod runs `v0.1.12` today (desk `0.1.9`, identity `0.3.7`, deployment `780cf7ec`, 2026-11-03); prod stores no retired identity keys (#30, read over SSH the same day), and Ocharo's organization takes the preset id `b8c672a6-…` there too (#43), so v0.1.19's Brand and Catalogue `OrganizationId` can be set before the bootstrap creates it
+- ✅ G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) runs clean on dev, deployment `87f21066`, and `v0.1.18` (the bot's messages name Ocharo) runs clean, deployment `c7f6904c`; the owner signed in to Desk by phone through `@ocharo_dev_bot` and sees Ocharo as `owner` (2026-11-03); closed on that sign-in alone (#49)
+- ⬜ G3 prod: the same on prod with `@ocharo_bot` — prod runs `v0.1.12` today (desk `0.1.9`, identity `0.3.7`, deployment `780cf7ec`, 2026-11-03); prod stores no retired identity keys (#30, read over SSH the same day), and Ocharo's organization takes the preset id `b8c672a6-…` there too (#43), so v0.1.19's Brand and Catalogue `OrganizationId` can be set before the bootstrap creates it; the owner stored prod's `Identity:Telegram:BotToken` (2026-11-04), and it waits for the promotion
 - ⬜ G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired
 
 ## Goals
@@ -82,9 +82,10 @@ Accounts:
 7. platform: G4, app by app (#19).
 
 - #1, #2 and #3 run at once; #4 waits for #1; #5 waits for #2 and #4.
-- G1's invite check passed through a trusted contact on `0.5.15` (#45); G2's invite runs the same way on dev.
+- G1's invite check passed through a trusted contact on `0.5.15` (#45); G3's invite runs the same way on prod, and G2
+  skipped its own (#49).
 - G4's local work (#19, #47) starts beside G2 and G3 to shorten the path; its PLAT pushes wait until G2 closes, and G3
-  promotes the release G2 passed on.
+  promotes the release G2 passed on, `v0.1.18`.
 - Each goal closes with a cross-lane check against its done-when before the next starts.
 
 ## Contracts
@@ -321,7 +322,11 @@ Settled:
 - 48. The lanes drive Wheelhouse for every environment, prod included, through Claude in Chrome: settings, deploys,
   promotions and one-offs (developer, 2026-11-03: "this is why claude extension exists - you have full access to all
   products in wheelhouse, even for prod env"). The developer still enters secrets — bot tokens and passwords. Auto
-  mode refuses a prod Deploy click until the `WoW2 Wheelhouse Deploys` allow rule is in place.
+  mode refuses a prod Deploy click until the `WoW2 Wheelhouse Deploys` allow rule is in place (the owner added it,
+  2026-11-04).
+- 49. G2 closes on the owner's Desk sign-in through `@ocharo_dev_bot` alone (owner, 2026-11-04: "yes we can verify this
+  and fix if needed later"). Dev's invite and the read of its Desk session move to the backlog. G2 passed on `v0.1.18`,
+  so G3 promotes `v0.1.18`, and PLAT's G4 push may start; v0.1.19 reaches dev only once wheelhouse sets its six keys.
 
 Open, cross-lane: Editorial's service call to Desk (#47) — a shared API key now, or Identity client credentials.
 
