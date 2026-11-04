@@ -1,6 +1,6 @@
 # Identity cutover
 
-*Last updated: 2026-11-04*
+*Last updated: 2026-11-05*
 
 Ocharo people sign in by Telegram through Ocharo's own WoW2 Identity instance on local, dev and prod, and every
 Ocharo app moves off `Ocharo.Sso`. This is the goal's cross-lane track: vectors, lanes, order, contracts, decisions
@@ -15,7 +15,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 - ✅ G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone, the edit check and Maftuna's invite through a trusted contact pass; her Desk session shows Ocharo, `owner`, `desk:edit` and `desk:approve` (2026-11-03). Her own phone moves to the backlog (#46)
 - ✅ G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) runs clean on dev, deployment `87f21066`, and `v0.1.18` (the bot's messages name Ocharo) runs clean, deployment `c7f6904c`; the owner signed in to Desk by phone through `@ocharo_dev_bot` and sees Ocharo as `owner` (2026-11-03); closed on that sign-in alone (#49)
 - 🔄 G3 prod: the same on prod with `@ocharo_bot` — prod runs `v0.1.18` (identity `0.5.15`, deployment `e9421fb3`, 2026-11-04): services healthy, issuer right (#31), and Identity's boot log shows the webhook registered; prod stored no retired identity keys (#30), and Ocharo's organization takes the preset id `b8c672a6-…` there too (#43), so v0.1.19's Brand and Catalogue `OrganizationId` can be set before the bootstrap creates it; `admin create` ran (job `b874412e`) and the owner signed in to the prod console by phone through `@ocharo_bot` (2026-11-04), so Ocharo's creation and the invite remain
-- 🔄 G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired — `v0.1.19` (Brand and Catalogue on Identity) runs clean on dev, deployment `40f44d37` (2026-11-04), and both redirect to Identity; the owner's sign-in there remains. Marketing and Editorial sign in locally through 8404 (`ocharo-marketing` `307a6cc`, `ocharo-platform` `a1148da`, 2026-11-04), unpushed until the pipelines release (#50); Studio follows
+- 🔄 G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired — `v0.1.19` (Brand and Catalogue on Identity) runs clean on dev, deployment `40f44d37` (2026-11-04), and both dev sessions read back Ocharo, `owner` and each app's `edit` and `approve` (2026-11-05), so prod's six keys and the `v0.1.19` promotion are next. Marketing and Editorial sign in locally through 8404 (`ocharo-marketing` `307a6cc`, `ocharo-platform` `a1148da`, 2026-11-04), unpushed until the pipelines release (#50); Studio follows
 
 ## Goals
 
@@ -331,14 +331,14 @@ Settled:
   `Identity:Server:Clients:N:ClientSecret`, and `Sites:identity:Url`, both in `ocharo-platform`'s descriptor. Pipelines'
   `link_sources` refuses a source its own descriptor doesn't declare, so their CI would fail; the runner's `linked_value`
   looks ready, not run end to end. Typing the secret per environment fails too, since a generated secret can't be read
-  back. Their pushes, and `ocharo-platform`'s clients 3 and 4, wait for a pipelines release; the wheelhouse lane is the
-  proposed builder (2026-11-04).
+  back. Their pushes, and `ocharo-platform`'s clients 3 and 4, wait for a pipelines release. The wheelhouse lane builds
+  the change locally (2026-11-05); the owner gives the lane the tag itself, since auto mode refuses a relayed one.
 
 Open, cross-lane:
 
 - Editorial's service call to Desk (#47) — a shared API key now, or Identity client credentials. It also blocks live
   public builds: `scripts/build-public.py` lost its ticket path and takes only `OCHARO_EXPORT_ARCHIVE`.
-- Who builds the pipelines release (#50).
+- The pipelines tag (#50): the owner gives it in the wheelhouse lane once the local build reports.
 
 Open, lane-local — each lane asks in its own chat:
 
