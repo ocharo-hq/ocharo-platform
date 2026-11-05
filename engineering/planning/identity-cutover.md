@@ -338,12 +338,16 @@ Settled:
   G3 sign-in and every prod promotion wait; prod stays on `v0.1.18`. Identity closes on dev.
 - 52. Editorial's Desk call (#47), live public builds and every product server's call to Files use one mechanism: Identity
   issues client-credentials tokens, audience-bound per service and verified offline (owner, 2026-11-05). It closes with
-  Identity, since Files is next and already accepts these tokens. The design is still being settled in the orchestrator
-  chat; API keys stay only for callers outside Identity.
+  Identity, since Files is next and already accepts these tokens. API keys stay only for callers outside Identity. Scope,
+  confirmed by the owner the same day: the grant, a resource registry with one audience per service and `{service}.{action}`
+  scopes, apps' clients gaining the grant, audience and scope policies, several trusted issuers, the token cache on the
+  caller, a principal for person, service or key, token exchange for acting for a person (the token keeps the person and
+  adds `act`; jobs with no person use plain client credentials), a fake issuer for tests, and the `api-communication`
+  convention. Shapes: Files' `t8-identity-contracts.md`. The identity lane builds it.
 
 Open, cross-lane:
 
-- How a service acts for a person (#52): delegation headers or token exchange.
+- How a service proves itself to Identity (#52): the client's secret or a private key.
 
 Open, lane-local — each lane asks in its own chat:
 
