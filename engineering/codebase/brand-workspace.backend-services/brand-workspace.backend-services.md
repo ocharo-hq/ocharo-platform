@@ -1,6 +1,6 @@
 # Backend foundation
 
-*Last updated: 2026-10-21*
+*Last updated: 2026-11-05*
 
 .NET 10 API and independent worker, with PostgreSQL-owned technical diagnostics.
 The API exposes no business mutation and starts no job processor. Authentication,
@@ -138,9 +138,9 @@ values and local `localhost` defaults.
 Desk signs in through Identity's BFF (`UseIdentityBff`) and issues no delegated tickets: every Ocharo app signs in
 through Ocharo's Identity on its own.
 
-- Background removal (`/api/integrations/media/background-removal` and `/capabilities`) stays shut
-  behind the `MediaProcessing` policy, which denies everyone: anonymous callers get `401`, a signed-in Desk member `403`.
-  It opens when Identity's service tokens release, with the service-token requirement replacing the assertion.
+- Background removal (`/api/integrations/media/background-removal` and `/capabilities`) takes only an Identity service token,
+  verified offline against the JWKS of `Identity:Client:Authority`: audience `Identity:Resource:Uri` (required at boot), scope
+  `desk.remove-background`. Bad token or none `401`, missing scope `403`; the BFF cookie stays the default scheme and never opens it.
 
 ## SDK adoption boundary
 

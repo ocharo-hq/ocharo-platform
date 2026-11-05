@@ -74,10 +74,10 @@ public sealed class ApiContractTests(ApiDatabaseFixture database) : IClassFixtur
     {
         var factory = new WebApiTestHost<BrandWorkspace.Api.ApiAssemblyMarker>
         {
-            ConfigureHostHook = builder => builder.UseEnvironment(Environments.Development),
+            ConfigureHostHook = builder => builder.UseEnvironment(Environments.Development).UseIdentitySettings(),
             ConfigureServicesHook = DeskTestHost.Use,
             ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(
-                new Dictionary<string, string?>(DeskTestHost.IdentityClientSettings)
+                new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:Database"] = connection,
                     ["AllowedHosts"] = "localhost;127.0.0.1"

@@ -2,44 +2,242 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using AwesomeAssertions;
-using BrandWorkspace.Api.MediaProcessing;
-using System.Security.Claims;
-using System.Text.Encodings.Web;
+using BrandWorkspace.Api.Access;
+using BrandWorkspace.Api.Configurations;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
+using Microsoft.IdentityModel.Tokens;
 using SkiaSharp;
+using WoW.Two.Sdk.Beta.Be.Identity.Bff;
+using WoW.Two.Sdk.Beta.Be.Identity.Testing;
 using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Exercises the image HTTP boundaries with a test caller standing in for the closed policy, and the closed policy itself on the Desk host.</summary>
+/// <summary>Exercises the image HTTP boundaries on Desk's own composition with no database: the policy, the bearer scheme and the
+/// audience are Desk's, a <see cref="FakeTokenIssuer"/> signs the tokens, and a stand-in worker takes the images.</summary>
 public sealed class MediaProcessingEndpointTests
 {
     private const string Route = "/api/integrations/media/background-removal";
     private const int MaximumBytes = 20 * 1024 * 1024;
+    private const string Caller = "ocharo-editorial";
+    private const string Audience = "https://desk.test/";
+    private const string Scope = "desk.remove-background";
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task ImageEndpoint_ShouldReturn401_WhenCallerIsAnonymous(bool process)
+    public async Task ImageEndpoint_ShouldReturn401_WhenCallerHasNoToken(bool process)
     {
         await using var host = await EndpointHost.CreateAsync();
-        using var request = new HttpRequestMessage(process ? HttpMethod.Post : HttpMethod.Get, Route + (process ? "" : "/capabilities"));
-        if (process) request.Content = ImageContent(Png());
 
-        using var response = await host.Client.SendAsync(request);
+        using var response = await host.SendAsync(process, token: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.Headers.WwwAuthenticate.Should().ContainSingle(challenge => challenge.Scheme == "Bearer");
+        host.Worker.StatusCalls.Should().Be(0);
+        host.Worker.RemoveCalls.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("wrong-audience", "audience")]
+    [InlineData("expired", "expired")]
+    [InlineData("another-issuer", "Bearer")]
+    public async Task ImageEndpoint_ShouldReturn401_WhenTokenIsRefused(string scenario, string reason)
+    {
+        await using var host = await EndpointHost.CreateAsync();
+        using var stranger = new FakeTokenIssuer("https://another-issuer.test/");
+        var token = scenario switch
+        {
+            "wrong-audience" => host.Tokens.IssueServiceToken(Caller, "https://elsewhere.test/", Scope),
+            "expired" => host.ExpiredToken,
+            _ => stranger.IssueServiceToken(Caller, Audience, Scope)
+        };
+
+        foreach (var process in new[] { false, true })
+        {
+            using var response = await host.SendAsync(process, token);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+            response.Headers.WwwAuthenticate.ToString().Should().Contain(reason);
+        }
+        host.Worker.StatusCalls.Should().Be(0);
+        host.Worker.RemoveCalls.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData]
+    [InlineData("desk.read")]
+    [InlineData("files.write", "desk.remove-background-all")]
+    public async Task ImageEndpoint_ShouldReturn403_WhenTokenLacksTheScope(params string[] scopes)
+    {
+        await using var host = await EndpointHost.CreateAsync();
+        var token = host.Tokens.IssueServiceToken(Caller, Audience, scopes);
+
+        foreach (var process in new[] { false, true })
+        {
+            using var response = await host.SendAsync(process, token);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+        host.Worker.StatusCalls.Should().Be(0);
+        host.Worker.RemoveCalls.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ImageEndpoint_ShouldReturn401_WhenSignedInOwnerHasNoToken(bool process)
+    {
+        await using var host = await EndpointHost.CreateAsync();
+        var subject = Guid.NewGuid().ToString("D");
+        DeskTestHost.Register(new DeskTestHost.Person(subject, Guid.NewGuid(), "owner", "Media owner", $"media-{Guid.NewGuid():N}@example.test"));
+        host.Client.DefaultRequestHeaders.Add(DeskTestHost.PersonHeader, subject);
+
+        using var response = await host.SendAsync(process, token: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         host.Worker.StatusCalls.Should().Be(0);
         host.Worker.RemoveCalls.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("https://desk.test")]
+    [InlineData("https://desk.test/")]
+    public async Task ImageEndpoint_ShouldAcceptTheTokenAudience_HoweverTheResourceUriIsWritten(string resourceUri)
+    {
+        await using var host = await EndpointHost.CreateAsync(resourceUri);
+        var bearer = host.Services.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+
+        using var capabilities = await host.GetCapabilitiesAsync();
+        using var processed = await host.PostAsync(ImageContent(Png()));
+
+        bearer.TokenValidationParameters.ValidAudiences.Should().Equal(Audience);
+        capabilities.StatusCode.Should().Be(HttpStatusCode.OK);
+        processed.StatusCode.Should().Be(HttpStatusCode.OK);
+        host.Worker.RemoveCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Processing_ShouldNeedNoCsrfToken_WhenAServiceCallCarriesNoCookie()
+    {
+        await using var host = await EndpointHost.CreateAsync(standInSignIn: false);
+
+        using var response = await host.SendAsync(process: true, host.ServiceToken());
+
+        response.RequestMessage!.Headers.Contains("X-Csrf-Token").Should().BeFalse();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        host.Worker.RemoveCalls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ImageEndpoint_ShouldCheckTheIssuersOwnKeys_WhenTheAuthorityIsABareOrigin()
+    {
+        await using var identity = await LoopbackIdentity.StartAsync();
+        await using var host = await EndpointHost.CreateAsync(loopbackAuthority: identity.Origin);
+        using var impostor = new FakeTokenIssuer(identity.Tokens.Issuer);
+        using var stranger = new FakeTokenIssuer("https://another-issuer.test/");
+        var token = identity.Tokens.IssueServiceToken(Caller, Audience, Scope);
+
+        using var first = await host.SendAsync(process: false, token);
+        using var second = await host.SendAsync(process: true, token);
+        var keyReads = identity.KeySetReads;
+        using var foreign = await host.SendAsync(process: false, stranger.IssueServiceToken(Caller, Audience, Scope));
+        using var forged = await host.SendAsync(process: false, impostor.IssueServiceToken(Caller, Audience, Scope));
+        using var elsewhere = await host.SendAsync(process: false, identity.Tokens.IssueServiceToken(Caller, "https://elsewhere.test/", Scope));
+
+        first.StatusCode.Should().Be(HttpStatusCode.OK);
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        keyReads.Should().Be(1, "tokens are verified offline against the keys read once");
+        foreign.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        forged.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        elsewhere.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task BffCookie_ShouldStayEveryDefaultScheme_WithTheBearerSchemeRegistered()
+    {
+        await using var host = await EndpointHost.CreateAsync(standInSignIn: false);
+        var schemes = host.Services.GetRequiredService<IAuthenticationSchemeProvider>();
+
+        (await schemes.GetSchemeAsync(JwtBearerDefaults.AuthenticationScheme)).Should().NotBeNull();
+        (await schemes.GetDefaultAuthenticateSchemeAsync())!.Name.Should().Be(BffAuthenticationSchemeConstants.Cookie);
+        (await schemes.GetDefaultChallengeSchemeAsync())!.Name.Should().Be(BffAuthenticationSchemeConstants.Cookie);
+        (await schemes.GetDefaultForbidSchemeAsync())!.Name.Should().Be(BffAuthenticationSchemeConstants.Cookie);
+        (await schemes.GetDefaultSignInSchemeAsync())!.Name.Should().Be(BffAuthenticationSchemeConstants.Cookie);
+        (await schemes.GetDefaultSignOutSchemeAsync())!.Name.Should().Be(BffAuthenticationSchemeConstants.Cookie);
+    }
+
+    [Theory]
+    [InlineData("/api/organizations")]
+    [InlineData("/api/organizations/00000000-0000-0000-0000-000000000001/events")]
+    public async Task BrowserRoute_ShouldReturn401_WhenCallerHoldsOnlyAServiceToken(string route)
+    {
+        await using var host = await EndpointHost.CreateAsync(standInSignIn: false);
+        using var request = new HttpRequestMessage(HttpMethod.Get, route);
+        request.Headers.Authorization = new("Bearer", host.ServiceToken());
+
+        using var response = await host.Client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task SessionRoute_ShouldReportSignedOut_WhenCallerHoldsOnlyAServiceToken()
+    {
+        await using var host = await EndpointHost.CreateAsync(standInSignIn: false);
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/identity/session");
+        request.Headers.Authorization = new("Bearer", host.ServiceToken());
+
+        using var response = await host.Client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync());
+        body.GetProperty("data").GetProperty("isAuthenticated").GetBoolean().Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("desk.test")]
+    [InlineData("/desk")]
+    [InlineData("ftp://desk.test/")]
+    [InlineData("http://desk.test/")]
+    [InlineData("https://desk.test/#fragment")]
+    public async Task Boot_ShouldRefuse_WhenResourceUriIsMissingOrMalformed(string? resourceUri)
+    {
+        var start = () => EndpointHost.CreateAsync(resourceUri);
+
+        (await start.Should().ThrowAsync<OptionsValidationException>()).Which.Message.Should().Contain("Identity:Resource:Uri");
+    }
+
+    [Fact]
+    public async Task ResourceUri_ShouldComeFromTheDeploymentEnvironment()
+    {
+        const string variable = "Identity__Resource__Uri";
+        Environment.SetEnvironmentVariable(variable, "https://from-environment.test");
+        try
+        {
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development, ContentRootPath = AppContext.BaseDirectory
+            });
+            builder.Configure();
+            await using var app = builder.Build();
+
+            app.Services.GetRequiredService<IdentityResourceSettings>().Uri.Should().Be("https://from-environment.test");
+        }
+        finally { Environment.SetEnvironmentVariable(variable, null); }
     }
 
     [Fact]
@@ -167,48 +365,73 @@ public sealed class MediaProcessingEndpointTests
 
     private sealed class EndpointHost : IAsyncDisposable
     {
-        private const string Scheme = "MediaTest";
-        private const string CallerHeader = "X-Test-Caller";
         private readonly WebApplication app;
         public Worker Worker { get; }
         public HttpClient Client { get; }
+        public FakeTokenIssuer Tokens { get; }
 
-        private EndpointHost(WebApplication application, Worker worker)
+        /// <summary>A token of <see cref="Tokens"/> that expired an hour ago, so only its lifetime refuses it.</summary>
+        public string ExpiredToken { get; }
+
+        public IServiceProvider Services => app.Services;
+
+        private EndpointHost(WebApplication application, Worker worker, FakeTokenIssuer tokens, string expiredToken)
         {
-            app = application; Worker = worker;
+            app = application; Worker = worker; Tokens = tokens; ExpiredToken = expiredToken;
             Client = app.GetTestClient(); Client.BaseAddress = new Uri("https://localhost");
         }
 
-        public static async Task<EndpointHost> CreateAsync()
+        /// <summary>Starts Desk with no database. <paramref name="standInSignIn"/> swaps the BFF cookie for <see cref="DeskTestHost"/>'s
+        /// handler; <paramref name="loopbackAuthority"/> leaves the real verification on, reading that instance's keys.</summary>
+        public static async Task<EndpointHost> CreateAsync(string? resourceUri = "https://desk.test", bool standInSignIn = true, string? loopbackAuthority = null)
         {
             var worker = new Worker();
-            var builder = WebApplication.CreateBuilder(new WebApplicationOptions { ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development });
+            var clock = new FakeTimeProvider(DateTimeOffset.UtcNow.AddHours(-1));
+            var tokens = new FakeTokenIssuer(clock: clock);
+            var expiredToken = tokens.IssueServiceToken(Caller, Audience, Scope);
+            clock.SetUtcNow(DateTimeOffset.UtcNow);
+            string[] args =
+            [
+                "--AllowedHosts=localhost",
+                "--ConnectionStrings:Database=Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1",
+                $"--Identity:Client:Authority={loopbackAuthority ?? DeskTestHost.IdentityClientSettings["Identity:Client:Authority"]}",
+                "--Identity:Client:ClientId=desk",
+                $"--Identity:Client:IsHttpsMetadataRequired={loopbackAuthority is null}",
+                .. resourceUri is null ? Array.Empty<string>() : [$"--Identity:Resource:Uri={resourceUri}"]
+            ];
+            var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+            {
+                ApplicationName = DeskTestHost.ApplicationName, Args = args, EnvironmentName = Environments.Development, ContentRootPath = AppContext.BaseDirectory
+            });
             builder.WebHost.UseTestServer();
             builder.Logging.ClearProviders();
+            builder.Configure();
             builder.Services.AddSingleton<IBackgroundRemovalService>(worker);
-            // The test host replaces the closed policy with one that admits the authenticated test caller.
-            builder.Services.AddAuthentication(Scheme).AddScheme<AuthenticationSchemeOptions, CallerHandler>(Scheme, null);
-            builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingEndpoints.Policy, policy => policy
-                .AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser());
+            if (standInSignIn) DeskTestHost.Use(builder.Services);
+            if (loopbackAuthority is null) builder.Services.AddFakeTokenIssuer(tokens);
             var application = builder.Build();
-            application.UseAuthentication();
-            application.UseAuthorization();
-            application.MapMediaProcessingEndpoints();
-            await application.StartAsync();
-            return new(application, worker);
+            application.Configure();
+            try { await application.StartAsync(); }
+            catch { await application.DisposeAsync(); tokens.Dispose(); throw; }
+            return new(application, worker, tokens, expiredToken);
         }
 
-        public async Task<HttpResponseMessage> GetCapabilitiesAsync()
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, Route + "/capabilities");
-            request.Headers.Add(CallerHeader, "caller");
-            return await Client.SendAsync(request);
-        }
+        public string ServiceToken() => Tokens.IssueServiceToken(Caller, Audience, Scope);
+
+        public Task<HttpResponseMessage> GetCapabilitiesAsync() => SendAsync(process: false, ServiceToken());
 
         public async Task<HttpResponseMessage> PostAsync(HttpContent content)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, Route) { Content = content };
-            request.Headers.Add(CallerHeader, "caller");
+            request.Headers.Authorization = new("Bearer", ServiceToken());
+            return await Client.SendAsync(request);
+        }
+
+        public async Task<HttpResponseMessage> SendAsync(bool process, string? token)
+        {
+            using var request = new HttpRequestMessage(process ? HttpMethod.Post : HttpMethod.Get, Route + (process ? "" : "/capabilities"));
+            if (process) request.Content = ImageContent(Png());
+            if (token is not null) request.Headers.Authorization = new("Bearer", token);
             return await Client.SendAsync(request);
         }
 
@@ -217,16 +440,44 @@ public sealed class MediaProcessingEndpointTests
             Worker.Release.TrySetResult();
             Client.Dispose();
             await app.DisposeAsync();
+            Tokens.Dispose();
+        }
+    }
+
+    /// <summary>The documents a real Identity instance serves for its issuer, over loopback HTTP, signing through a <see cref="FakeTokenIssuer"/>.</summary>
+    private sealed class LoopbackIdentity : IAsyncDisposable
+    {
+        private readonly WebApplication app;
+        private int keySetReads;
+        public string Origin { get; private set; } = "";
+        public FakeTokenIssuer Tokens { get; private set; } = null!;
+        public int KeySetReads => Volatile.Read(ref keySetReads);
+
+        private LoopbackIdentity(WebApplication application) => app = application;
+
+        public static async Task<LoopbackIdentity> StartAsync()
+        {
+            var builder = WebApplication.CreateBuilder();
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+            builder.Logging.ClearProviders();
+            var identity = new LoopbackIdentity(builder.Build());
+            identity.app.MapGet("/.well-known/openid-configuration", () => Results.Json(new { issuer = identity.Tokens.Issuer, jwks_uri = identity.Origin + "/keys" }));
+            identity.app.MapGet("/keys", () =>
+            {
+                Interlocked.Increment(ref identity.keySetReads);
+                var key = JsonWebKeyConverter.ConvertFromRSASecurityKey((RsaSecurityKey)identity.Tokens.AsTrustedIssuer().SigningKeys![0]);
+                return Results.Json(new { keys = new[] { new { kty = key.Kty, use = "sig", alg = SecurityAlgorithms.RsaSha256, kid = key.Kid, n = key.N, e = key.E } } });
+            });
+            await identity.app.StartAsync();
+            identity.Origin = identity.app.Urls.Single().TrimEnd('/');
+            identity.Tokens = new FakeTokenIssuer(identity.Origin + "/");
+            return identity;
         }
 
-        private sealed class CallerHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
-            : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+        public async ValueTask DisposeAsync()
         {
-            protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
-                Task.FromResult(Request.Headers.ContainsKey(CallerHeader)
-                    ? AuthenticateResult.Success(new AuthenticationTicket(
-                        new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "caller")], Scheme.Name)), Scheme.Name))
-                    : AuthenticateResult.NoResult());
+            await app.DisposeAsync();
+            Tokens.Dispose();
         }
     }
 
@@ -261,46 +512,5 @@ public sealed class MediaProcessingEndpointTests
         public UnknownLengthContent(byte[] bytes) { this.bytes = bytes; Headers.ContentType = new("image/png"); }
         protected override bool TryComputeLength(out long length) { length = 0; return false; }
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => stream.WriteAsync(bytes).AsTask();
-    }
-}
-
-/// <summary>The registered policy keeps both routes shut to every caller, whatever the Desk membership.</summary>
-public sealed class MediaProcessingPolicyTests(PreparationDatabaseFixture fixture) : IClassFixture<PreparationDatabaseFixture>
-{
-    private const string Route = "/api/integrations/media/background-removal";
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task ImageEndpoint_ShouldReturn401_WhenAnonymous(bool process)
-    {
-        using var client = DeskTestHost.CreateClient(fixture.Factory);
-
-        using var response = await Send(client, process);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task ImageEndpoint_ShouldReturn403_WhenSignedInMemberCalls(bool process)
-    {
-        var organization = Guid.NewGuid();
-        var subject = Guid.NewGuid().ToString("D");
-        DeskTestHost.Register(new DeskTestHost.Person(subject, organization, "owner", "Media owner", $"media-{Guid.NewGuid():N}@example.test"));
-        using var client = DeskTestHost.CreateClient(fixture.Factory, subject);
-
-        using var response = await Send(client, process);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    private static Task<HttpResponseMessage> Send(HttpClient client, bool process)
-    {
-        if (!process) return client.GetAsync(Route + "/capabilities");
-        var content = new ByteArrayContent([1, 2, 3]);
-        content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
-        return client.PostAsync(Route, content);
     }
 }

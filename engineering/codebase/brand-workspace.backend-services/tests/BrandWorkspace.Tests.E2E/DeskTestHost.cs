@@ -5,7 +5,9 @@ using System.Text.Encodings.Web;
 using BrandWorkspace.Api;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
@@ -27,12 +29,18 @@ public static class DeskTestHost
     /// <summary>Names the registered person a request signs in as.</summary>
     public const string PersonHeader = "X-Test-Person";
 
-    /// <summary>Settings that satisfy <c>Identity:Client</c> validation without any network call to the authority.</summary>
+    /// <summary>Settings that satisfy <c>Identity:Client</c> and <c>Identity:Resource</c> validation without any network call to the authority.</summary>
     public static IReadOnlyDictionary<string, string?> IdentityClientSettings { get; } = new Dictionary<string, string?>
     {
         ["Identity:Client:Authority"] = "https://identity.example.test/",
-        ["Identity:Client:ClientId"] = "desk"
+        ["Identity:Client:ClientId"] = "desk",
+        ["Identity:Resource:Uri"] = "https://desk.test"
     };
+
+    /// <summary>Passes <see cref="IdentityClientSettings"/> as host configuration: the bearer registration reads issuer and audience
+    /// while Desk composes, before the configuration hook of a <see cref="WebApiTestHost{TEntryPoint}"/> runs.</summary>
+    public static IHostBuilder UseIdentitySettings(this IHostBuilder host) =>
+        host.ConfigureHostConfiguration(settings => settings.AddInMemoryCollection(IdentityClientSettings));
 
     private static readonly ConcurrentDictionary<string, Person> People = new(StringComparer.Ordinal);
 

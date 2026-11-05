@@ -2360,13 +2360,13 @@
       },
       "WoW2.Sdk.Beta.Be.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.98-beta",
-        "contentHash": "4hfk5To1+7LJsJGGP9FuWGy2+rVHr0JG/p83j6B7rad8sjMvNpsCcmWnRGNqNweCPKj44zJ2rKVE+wrRf7bCuQ=="
+        "resolved": "10.0.101-beta",
+        "contentHash": "QbfnMYbzlWcdw7mtpeddAwbkEa844o8yzetWJPssVZq76mqPC+ir4foE4taUpu2Ky5vb+aeFitBZiYXYVuW3fQ=="
       },
       "WoW2.Sdk.Beta.Be.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.98-beta",
-        "contentHash": "Xhnfhm4zRmBNKUFyLRNXeGMvMTCamq3JwE7Lx7Qwd9WAbLhn9/pr3eerIg7z4IfznB+XprzsdsVFq1/4dNLueQ==",
+        "resolved": "10.0.101-beta",
+        "contentHash": "epIc7hQyR4OnrPnQZ41f3+mqATTnkYt6/Fynd+8yRZEPqjFrUVHqXy69uVvNpZVbpUZ6AmFyczr+UtU7N412Rw==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.3"
         }
@@ -2447,7 +2447,7 @@
           "Microsoft.Data.Sqlite": "[10.0.14, )",
           "SkiaSharp": "[4.152.1, )",
           "SkiaSharp.NativeAssets.Linux": "[4.152.1, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.98-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.101-beta, )"
         }
       },
       "ocharobrand.domain": {
@@ -2496,9 +2496,9 @@
       },
       "WoW2.Sdk.Beta.Be": {
         "type": "CentralTransitive",
-        "requested": "[10.0.98-beta, )",
-        "resolved": "10.0.98-beta",
-        "contentHash": "uxjPfavU8tNcJB4udSeZ0fkaJXiGUCymb5zy0W1luxgC2d+bxcZ15IC0rUH7kz+P/WC91j8TWXBpb6sCivb3ZQ==",
+        "requested": "[10.0.101-beta, )",
+        "resolved": "10.0.101-beta",
+        "contentHash": "C/rpL7IBc54fthMAxTuEXKddX11vCyinCBqYjK8cZBYSEHKy7ptehRAsjlarE5yRv1Zk16n1R9+R2eFtiGTVJQ==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -2632,8 +2632,8 @@
           "System.Security.Cryptography.Pkcs": "10.0.13",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.98-beta",
-          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.98-beta",
+          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.101-beta",
+          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.101-beta",
           "YamlDotNet": "16.3.0",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",

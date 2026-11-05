@@ -9,10 +9,13 @@ public static class MediaProcessingEndpoints
     private const int MaximumBytes = 20 * 1024 * 1024;
     private static readonly SemaphoreSlim Processing = new(1, 1);
 
-    /// <summary>The authorization policy of both routes; it denies everyone until Identity's service tokens release.</summary>
+    /// <summary>The authorization policy of both routes: an Identity service token holding <see cref="Scope"/>.</summary>
     public const string Policy = "MediaProcessing";
 
-    /// <summary>Maps the routes behind <see cref="Policy"/>, which answers 401 to an anonymous caller and 403 to a signed-in one.</summary>
+    /// <summary>The scope a caller's token must hold; Identity's registry lists it on Desk's resource.</summary>
+    public const string Scope = "desk.remove-background";
+
+    /// <summary>Maps the routes behind <see cref="Policy"/>, which answers 401 without a valid token and 403 without the scope.</summary>
     public static WebApplication MapMediaProcessingEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api/integrations/media/background-removal").RequireAuthorization(Policy);

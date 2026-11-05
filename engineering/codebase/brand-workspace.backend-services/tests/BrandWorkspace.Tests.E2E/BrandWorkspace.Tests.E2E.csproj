@@ -6,6 +6,7 @@
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="WoW2.Sdk.Beta.Be.Testing" />
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Identity.Testing" />
     <ProjectReference Include="../../BrandWorkspace.Api/BrandWorkspace.Api.csproj" />
     <ProjectReference Include="../../BrandWorkspace.Worker/BrandWorkspace.Worker.csproj" />
   </ItemGroup>

@@ -105,12 +105,12 @@ public sealed class DeploymentHostTests
     {
         var factory = new WebApiTestHost<ApiAssemblyMarker>
         {
-            ConfigureHostHook = host => host.UseEnvironment(Environments.Production)
+            ConfigureHostHook = host => host.UseEnvironment(Environments.Production).UseIdentitySettings()
                 .ConfigureHostConfiguration(settings => settings.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["DEPLOY_ENVIRONMENT"] = "prod", ["Deployment:TrustedProxies:0"] = Ingress
                 })),
-            ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(new Dictionary<string, string?>(DeskTestHost.IdentityClientSettings)
+            ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:Database"] = connection,
                 ["AllowedHosts"] = "desk.example.test;localhost",

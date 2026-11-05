@@ -32,11 +32,13 @@ using BrandWorkspace.Api.Preparation;
 using BrandWorkspace.Application.Access;
 using BrandWorkspace.Persistence.Access;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WoW.Two.Sdk.Beta.Be.Identity.Authorization;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
+using WoW.Two.Sdk.Beta.Be.Identity.Jwt;
 using WoW.Two.Sdk.Beta.Be.Caching.Postgres;
 using System.Data.Common;
 using BrandWorkspace.Application.Foundation.Repositories;
@@ -67,7 +69,7 @@ public static partial class HostConfiguration
         foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
                      "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password",
                      "Identity__Client__Authority", "Identity__Client__ClientId", "Identity__Client__ClientSecret", "Identity__Client__CookieName",
-                     "Identity__Client__PostSignOutRedirectPath", "Identity__Client__Environment" })
+                     "Identity__Client__PostSignOutRedirectPath", "Identity__Client__Environment", "Identity__Resource__Uri" })
             if (Environment.GetEnvironmentVariable(key) is { } value) values[key.Replace("__", ":")] = value;
         builder.Configuration.AddInMemoryCollection(values);
         return builder;
@@ -100,7 +102,7 @@ public static partial class HostConfiguration
     }
 
     /// <summary>Registers sign-in through Ocharo's Identity instance (BFF, section <c>Identity:Client</c>), the Desk projection of
-    /// its people, and default deny.</summary>
+    /// its people, default deny, and the verification of its service tokens.</summary>
     /// <remarks>The framework identity store stays for the import commands, which resolve <c>--actor</c> by email, until
     /// migration 011 retires Desk's own accounts.</remarks>
     private static WebApplicationBuilder AddAccess(this WebApplicationBuilder builder)
@@ -118,6 +120,7 @@ public static partial class HostConfiguration
         builder.Services.AddOptions<PostgresDistributedCacheOptions>().Configure<IConfiguration>((options, configuration) =>
             options.ConnectionString = configuration.GetConnectionString("Database") ?? string.Empty);
         builder.Services.AddDefaultDenyAuthorization(BffAuthenticationSchemeConstants.Cookie);
+        builder.AddServiceTokens();
         // Resolve final configuration after test/deployment overrides have been applied.
         builder.Services.AddDataProtection();
         builder.Services.AddOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>()
@@ -135,6 +138,33 @@ public static partial class HostConfiguration
         builder.Services.AddOptions<DataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
             options.ApplicationDiscriminator = configuration["DataProtection:ApplicationName"] ?? $"brand-workspace:{environment.EnvironmentName}");
         return builder;
+    }
+
+    /// <summary>Verifies service tokens offline against the JWKS of Ocharo's Identity instance: the one trusted issuer is
+    /// <c>Identity:Client:Authority</c> and the one audience <c>Identity:Resource:Uri</c>, each as <see cref="Uri.AbsoluteUri"/>.</summary>
+    /// <remarks>The bearer registration takes both values now, so a test host passes them as host configuration. A missing or
+    /// malformed value registers no scheme and refuses the boot; a command that never boots, such as the media probe of the
+    /// image build, runs without them.</remarks>
+    private static void AddServiceTokens(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddValidatedSettings<IdentityResourceSettings>(builder.Configuration, IdentityResourceSettings.SectionName, rules => rules
+            .ValidateSetting(nameof(IdentityResourceSettings.Uri), "absolute-uri", settings => IdentityResourceSettings.Normalize(settings.Uri) is not null,
+                $"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.Uri)} must be an absolute HTTPS URI (HTTP only on a loopback host) without a fragment."));
+        var isHttpsRequired = builder.Configuration.GetValue("Identity:Client:IsHttpsMetadataRequired", true);
+        if (!Uri.TryCreate(builder.Configuration["Identity:Client:Authority"], UriKind.Absolute, out var authority)
+            || (isHttpsRequired && authority.Scheme != Uri.UriSchemeHttps)
+            || IdentityResourceSettings.Normalize(builder.Configuration["Identity:Resource:Uri"]) is not { } audience)
+            return;
+        var issuer = authority.AbsoluteUri;
+        builder.Services.AddJwtBearerAuthentication(options =>
+        {
+            options.Audience = audience;
+            options.TrustedIssuers.Add(new TrustedIssuer { Issuer = issuer });
+            options.IsInsecureMetadataAllowedInDevelopment = !isHttpsRequired;
+        });
+        // The call above names its bearer scheme the default, which would sign people out of every plain
+        // RequireAuthorization() route and open those routes to any service token; the BFF cookie stays Desk's default.
+        builder.Services.AddAuthentication(BffAuthenticationSchemeConstants.Cookie);
     }
 
     /// <summary>Registers the organization-scoped content preparation workflow.</summary>
@@ -198,8 +228,9 @@ public static partial class HostConfiguration
             options.BaseUrl = builder.Configuration["ImageProcessing:WorkerBaseUrl"];
             options.ApiKey = builder.Configuration["ImageProcessing:WorkerKey"];
         });
-        // Shut to everyone until Identity's service tokens release; the service-token requirement then replaces the assertion.
-        builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingEndpoints.Policy, policy => policy.RequireAssertion(_ => false));
+        // The bearer scheme alone, so Desk's BFF cookie never opens these routes.
+        builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingEndpoints.Policy, policy => policy
+            .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme).RequireScope(MediaProcessingEndpoints.Scope));
         return builder;
     }
 
