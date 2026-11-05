@@ -217,6 +217,12 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   (scope `editorial.export`). Each `Uri` is an owner key typed per environment as `{site URL}/`, since the boot refuses one
   without its slash. Client 4 `editorial` reaches `desk` as itself; client 6 `public-build` reaches `editorial`. Desk's
   `Identity:Resource:Uri` links to its own site, and background removal takes only such a token, never Desk's cookie.
+- Revocation signals: on `identity`, each client's `SignalUrl` (`{site}/api/identity/signal`, clients 0 to 5) and each
+  resource's (`{site}/signals/identity`, resources 0 and 1) is an owner key typed per environment, for the same reason as
+  redirect URIs. Each app links its `Identity:Client:SignalUrl`, and Desk and Editorial their `Identity:Resource:SignalUrl`,
+  with `from:`, so both ends name one value. Sign-out ends every app's session, and a role change reaches an app's next
+  request with no sign-in. A public HTTPS site needs no `Identity:Server:Signals:*`; a private or plain-HTTP one needs
+  `AllowPrivateNetworkTargets`, and `RequireHttps` off. Desk's token deny list lives in `cache.distributed_cache`.
 - Redirect URIs are owner keys: the descriptor has no URL template, and `Sites:<site>:Url` is the bare origin, which
   Identity registers verbatim and matches exactly against `{origin}/api/identity/callback` and `{origin}/`.
 - Marketing, Editorial and Studio register with their own cutover: their sites live in other repositories, and a `from:`

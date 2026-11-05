@@ -65,6 +65,9 @@ services:
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         # Desk's audience for service tokens: background removal verifies them offline against this issuer's keys.
         Identity:Resource:Uri: { from: Sites:desk:Url }
+        # Revocation signals: each URL is typed once per environment on `identity`, so both ends always name the same value.
+        Identity:Client:SignalUrl: { from: Identity:Server:Clients:0:SignalUrl }
+        Identity:Resource:SignalUrl: { from: Identity:Server:Resources:0:SignalUrl }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }
         OcharoApps:Catalogue: { type: url }
@@ -115,7 +118,7 @@ services:
   # config check refuses an unbound one, such as a stored value of the retired Identity:SignUp:IsEnabled, which the
   # first 0.5.x deploy needs deleted from each environment.
   identity:
-    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.16
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.17
     health: /health
     memory: 256m
     needs: [postgres]
@@ -203,36 +206,42 @@ services:
         Identity:Server:Clients:0:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:0:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:0:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:0:SignalUrl: { type: url, required: true }
         Identity:Server:Clients:1:ClientId: { default: brand }
         Identity:Server:Clients:1:DisplayName: { default: Ocharo Brand }
         Identity:Server:Clients:1:PermissionNamespace: { default: brand }
         Identity:Server:Clients:1:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:1:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:1:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:1:SignalUrl: { type: url, required: true }
         Identity:Server:Clients:2:ClientId: { default: catalogue }
         Identity:Server:Clients:2:DisplayName: { default: Ocharo Catalogue }
         Identity:Server:Clients:2:PermissionNamespace: { default: catalogue }
         Identity:Server:Clients:2:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:2:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:2:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:2:SignalUrl: { type: url, required: true }
         Identity:Server:Clients:3:ClientId: { default: marketing }
         Identity:Server:Clients:3:DisplayName: { default: Ocharo Marketing }
         Identity:Server:Clients:3:PermissionNamespace: { default: marketing }
         Identity:Server:Clients:3:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:3:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:3:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:3:SignalUrl: { type: url, required: true }
         Identity:Server:Clients:4:ClientId: { default: editorial }
         Identity:Server:Clients:4:DisplayName: { default: Ocharo Editorial }
         Identity:Server:Clients:4:PermissionNamespace: { default: editorial }
         Identity:Server:Clients:4:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:4:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:4:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:4:SignalUrl: { type: url, required: true }
         Identity:Server:Clients:5:ClientId: { default: studio }
         Identity:Server:Clients:5:DisplayName: { default: Ocharo Studio }
         Identity:Server:Clients:5:PermissionNamespace: { default: studio }
         Identity:Server:Clients:5:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:5:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:5:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:5:SignalUrl: { type: url, required: true }
         # Service tokens. Editorial (client 4) calls Desk as itself. Client 6 is the live public build, which reads
         # Editorial's export and signs nobody in, so it has no redirect URIs. A resource's URI is an owner key typed
         # per environment as `{site URL}/`: the boot refuses one without its slash, and `from: Sites:<site>:Url` renders
@@ -250,9 +259,11 @@ services:
         Identity:Server:Resources:0:Name: { default: desk }
         Identity:Server:Resources:0:Uri: { type: url, required: true }
         Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }
+        Identity:Server:Resources:0:SignalUrl: { type: url, required: true }
         Identity:Server:Resources:1:Name: { default: editorial }
         Identity:Server:Resources:1:Uri: { type: url, required: true }
         Identity:Server:Resources:1:Scopes:0: { default: editorial.export }
+        Identity:Server:Resources:1:SignalUrl: { type: url, required: true }
     sites:
       identity: { paths: [/, /api] }
   brand:
@@ -274,6 +285,7 @@ services:
         Identity:Client:ClientId: { default: brand }
         Identity:Client:ClientSecret: { from: Identity:Server:Clients:1:ClientSecret }
         Identity:Client:CookieName: { default: __Host-ocharo-brand }
+        Identity:Client:SignalUrl: { from: Identity:Server:Clients:1:SignalUrl }
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         Brand:OrganizationId: { required: true }             # Ocharo's organization id in that environment's Identity
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
@@ -311,6 +323,7 @@ services:
         Identity:Client:ClientId: { default: catalogue }
         Identity:Client:ClientSecret: { from: Identity:Server:Clients:2:ClientSecret }
         Identity:Client:CookieName: { default: __Host-ocharo-catalogue }
+        Identity:Client:SignalUrl: { from: Identity:Server:Clients:2:SignalUrl }
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         Catalogue:OrganizationId: { required: true }         # Ocharo's organization id in that environment's Identity
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.

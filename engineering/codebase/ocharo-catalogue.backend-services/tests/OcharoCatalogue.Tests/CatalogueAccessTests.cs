@@ -52,6 +52,17 @@ public sealed class CatalogueAccessTests
         Assert.False(body.GetProperty("data").GetProperty("isAuthenticated").GetBoolean());
     }
 
+    [Fact]
+    public async Task SignalRoute_ShouldAnswer401_ForAnUnsignedPostWithoutASession()
+    {
+        await using var host = CatalogueHost.Create(new Dictionary<string, string?> { ["Identity:Client:SignalUrl"] = "https://app.test/api/identity/signal" });
+        using var client = CreateClient(host.Factory, person: null);
+
+        var response = await client.PostAsJsonAsync("/api/identity/signal", new { });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     [Theory]
     [InlineData(Outsider)]
     [InlineData(Unaffiliated)]

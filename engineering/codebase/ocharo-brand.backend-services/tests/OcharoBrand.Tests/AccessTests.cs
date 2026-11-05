@@ -50,6 +50,17 @@ public sealed class AccessTests
     }
 
     [Fact]
+    public async Task SignalRoute_ShouldAnswer401_ForAnUnsignedPostWithoutASession()
+    {
+        await using var host = BrandHost.Create(new Dictionary<string, string?> { ["Identity:Client:SignalUrl"] = "https://app.test/api/identity/signal" });
+        using var client = BrandTestIdentity.Anonymous(host.Factory);
+
+        var response = await client.PostAsJsonAsync("/api/identity/signal", new { });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Session_ShouldNameThePersonOrganizationPermissionsAndCsrfToken()
     {
         await using var host = BrandHost.Create(new Dictionary<string, string?>());
