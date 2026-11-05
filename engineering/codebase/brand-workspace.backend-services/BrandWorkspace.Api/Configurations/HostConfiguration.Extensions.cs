@@ -173,9 +173,6 @@ public static partial class HostConfiguration
                 options.IsInsecureMetadataAllowedInDevelopment = !isHttpsRequired;
             });
         }
-        // The call above names its bearer scheme the default, which would sign people out of every plain
-        // RequireAuthorization() route and open those routes to any service token; the BFF cookie stays Desk's default.
-        builder.Services.AddAuthentication(BffAuthenticationSchemeConstants.Cookie);
     }
 
     /// <summary>Registers the organization-scoped content preparation workflow.</summary>
