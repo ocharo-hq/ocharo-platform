@@ -123,7 +123,7 @@ services:
   # config check refuses an unbound one, such as a stored value of the retired Identity:SignUp:IsEnabled, which the
   # first 0.5.x deploy needs deleted from each environment.
   identity:
-    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.17
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.18
     health: /health
     memory: 256m
     needs: [postgres]
