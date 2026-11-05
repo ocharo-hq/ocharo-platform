@@ -345,11 +345,14 @@ Settled:
   scopes, apps' clients gaining the grant, audience and scope policies, several trusted issuers, the token cache on the
   caller, a principal for person, service or key, token exchange for acting for a person (the token keeps the person and
   adds `act`; jobs with no person use plain client credentials), a fake issuer for tests, and the `api-communication`
-  convention. Shapes: Files' `t8-identity-contracts.md`. The identity lane builds it.
+  convention. Shapes: Files' `t8-identity-contracts.md`. The identity lane builds it. Clients prove themselves with their
+  secret by default and may name a key set instead; Wheelhouse key generation waits, since one vault holds both here. A
+  token's `scope` says what the app may ask of that service, its role and permissions what the person may do; the service
+  requires both and keeps record-level rules in its own data.
 
 Open, cross-lane:
 
-- How a service proves itself to Identity (#52): the client's secret or a private key.
+- Revocation (#52): whether a signal to apps and services, and each long job's reaction to it, join this vector.
 
 Open, lane-local — each lane asks in its own chat:
 
