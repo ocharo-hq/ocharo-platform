@@ -52,7 +52,7 @@ Public catalogue readers and published journal/media remain anonymous. Private E
 
 ## Distribution and verification
 
-`Ocharo.Sso` is the authoritative local component. Catalogue/Brand reference it within their platform repository. Studio contains a byte-identical generated source snapshot with a SHA-256 manifest, so standalone CI needs neither another checkout nor an unpublished package. Its `shared/sync-sso.py --check` rejects drift; `--source <authoritative Ocharo.Sso directory>` also verifies source equality; `--update --source ...` refreshes a snapshot. A separately reviewed SDK release should replace this snapshot.
+`Ocharo.Sso` is the authoritative local component. Catalogue/Brand reference it within their platform repository. Every other app left it for Ocharo's Identity by 2026-11-05, with its source snapshot and `shared/sync-sso.py`; this component waits only for its own retirement.
 
 Verified locally: shared HTTP security tests; Desk actual HTTP/PostgreSQL code binding, replay/concurrency, session/membership revocation, disabled mode and configuration/request limits; Studio workspace isolation; Marketing/Editorial role/org boundaries; public journal and draft-media protection. Tests use isolated credentials and temporary stores. This evidence does not claim live browser sign-in or production activation.
 

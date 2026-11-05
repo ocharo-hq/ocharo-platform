@@ -187,7 +187,7 @@ services:
         Identity:Organizations:Roles:editor:4: { default: "editorial:edit" }
         Identity:Organizations:Roles:editor:5: { default: "studio:edit" }
         # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
-        # 2 catalogue, 3 marketing and 4 editorial now; 5 studio stays reserved until its own cutover (G4). Each secret
+        # 2 catalogue, 3 marketing, 4 editorial and 5 studio. Each secret
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
         # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
         # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
@@ -225,6 +225,12 @@ services:
         Identity:Server:Clients:4:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:4:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:4:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:5:ClientId: { default: studio }
+        Identity:Server:Clients:5:DisplayName: { default: Ocharo Studio }
+        Identity:Server:Clients:5:PermissionNamespace: { default: studio }
+        Identity:Server:Clients:5:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:5:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:5:PostSignOutRedirectUris:0: { type: url, required: true }
     sites:
       identity: { paths: [/, /api] }
   brand:

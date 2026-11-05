@@ -4,7 +4,7 @@
 
 Desk remains the account authority. Each application redirects through Desk using a fixed registered callback and S256 PKCE, then keeps its own host-only, Secure, HttpOnly cookie. Signing in once to Desk lets another application complete that redirect without asking for credentials again.
 
-The authoritative local component is `engineering/codebase/ocharo-sso/Ocharo.Sso`. Catalogue and Brand left it for Ocharo's Identity on 2026-11-03 (G4, `deployment.md` § Brand and Catalogue pilots), Marketing and Editorial on 2026-11-04. Studio uses a generated exact source snapshot with SHA-256 provenance until a reviewed SDK/package release replaces them. No unpublished NuGet dependency or cross-repository project reference is required by standalone CI.
+The authoritative local component is `engineering/codebase/ocharo-sso/Ocharo.Sso`. Catalogue and Brand left it for Ocharo's Identity on 2026-11-03 (G4, `deployment.md` § Brand and Catalogue pilots), Marketing and Editorial on 2026-11-04, Studio on 2026-11-05. Only Desk's retirement of the broker remains.
 
 Enablement is explicit; default `Identity:Sso:Enabled` is false. The existing local pilot remains the disabled path. Once enabled, private APIs deny anonymous callers and use live Desk introspection on every request. Catalogue and Brand require a single configured organization because their current data stores are not partitioned by organization.
 

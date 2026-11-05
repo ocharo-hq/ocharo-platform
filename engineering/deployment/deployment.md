@@ -211,7 +211,7 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   organization and its owner in step 2's verb, with the same end state. Desk needs no seed: it projects the organization
   and each person on their first sign-in.
 - Clients sit at fixed indexes, since Identity's seeder deletes a client that leaves its settings: 0 `desk` now; 1 `brand`,
-  2 `catalogue`, 3 `marketing`, 4 `editorial`; 5 `studio` stays reserved until its cutover (G4). Each secret is generated, and the app links
+  2 `catalogue`, 3 `marketing`, 4 `editorial`, 5 `studio`. Each secret is generated, and the app links
   its own `Identity:Client:ClientSecret` to it with `from:`, so no secret is typed.
 - Redirect URIs are owner keys: the descriptor has no URL template, and `Sites:<site>:Url` is the bare origin, which
   Identity registers verbatim and matches exactly against `{origin}/api/identity/callback` and `{origin}/`.
