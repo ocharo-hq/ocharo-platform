@@ -38,7 +38,7 @@ jobs:
     uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/delivery.yml@v0.15.0
     with:
       commit: ${{ inputs.commit }}
-      # Desk compiles the Brand and Catalogue Domain projects and builds its own SPA; the pilots share ocharo-sso.
+      # Desk compiles the Brand and Catalogue Domain projects and builds its own SPA.
       backends: |
         [{"name": "Backend (brand-workspace)", "dir": "engineering/codebase/brand-workspace.backend-services",
           "dotnet": "10.0.300", "node": ".nvmrc",
@@ -56,13 +56,13 @@ jobs:
           "run": ["dotnet restore OcharoBrand.BackendServices.slnx --locked-mode",
                   "dotnet build OcharoBrand.BackendServices.slnx -c Release --no-restore",
                   "dotnet test OcharoBrand.BackendServices.slnx -c Release --no-build"],
-          "paths": ["engineering/codebase/ocharo-brand.backend-services/**", "engineering/codebase/ocharo-sso/**"]},
+          "paths": ["engineering/codebase/ocharo-brand.backend-services/**"]},
          {"name": "Backend (ocharo-catalogue)", "dir": "engineering/codebase/ocharo-catalogue.backend-services",
           "dotnet": "10.0.300", "lfs": "engineering/codebase/**", "timeout": 25,
           "run": ["dotnet restore OcharoCatalogue.BackendServices.slnx --locked-mode",
                   "dotnet build OcharoCatalogue.BackendServices.slnx -c Release --no-restore",
                   "dotnet test OcharoCatalogue.BackendServices.slnx -c Release --no-build"],
-          "paths": ["engineering/codebase/ocharo-catalogue.backend-services/**", "engineering/codebase/ocharo-sso/**"]},
+          "paths": ["engineering/codebase/ocharo-catalogue.backend-services/**"]},
          {"name": "Image worker tests", "dir": "engineering/codebase/ocharo-image.backend-services",
           "python": "3.12", "pip": "-r requirements-test.txt",
           "pip-cache": "engineering/codebase/ocharo-image.backend-services/requirements*.txt", "timeout": 20,

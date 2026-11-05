@@ -21,8 +21,7 @@ Defer to `wow-two-ws/conventions/development/frontend/`.
   `OCHARO_MARKETING_URL`, `OCHARO_EDITORIAL_URL`, `OCHARO_BRAND_URL`, `OCHARO_ATLAS_URL`, `OCHARO_WEAR_URL`,
   `OCHARO_BLOG_URL` (served at runtime) and `OCHARO_BRAND_API_URL` (build-time only, the print sheet's Brand API).
 - The account menu holds appearance, interface language and the Catalogue and API versions; with an Ocharo session it
-  also names the operator by their Desk name and email from `/api/sso/session` (else "Signed in through Ocharo Desk"),
-  links the Desk account in a new tab and offers sign-out.
+  also names the person by their name and email from `/api/identity/session`, and offers sign-out.
 - The frame glass comes from the SDK `ocharo` theme: `variant="glass"` on the top bars, sidebar and phone bar, and
   `variant="glass-menu"` on the menus, notifications and phone sheet. The phone bar's `BottomNavMenu` supplies its top
   edge, upward `--glass-bottom-shadow` and safe-area padding. `index.css` keeps no glass copy.

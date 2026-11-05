@@ -32,7 +32,7 @@ Owner focus from 2026-10-24: **Events and Sourcing only**, then WoW2 File Storag
 | Own-phone check | verification | Verify Maftuna adds her own phone through the bot's add-phone link, then signs in on her own phone, not through her trusted contact; deferred by the owner on 2026-11-03 (identity-cutover.md #46). |
 | Dev sign-in checks | verification | Deferred by the owner on 2026-11-04 (identity-cutover.md #49): read Desk's `GET /api/identity/session` on dev for Ocharo and `desk:*`, run an invite on dev, and complete a sign-in on Marketing, Editorial and Studio, which needs the owner's phone. |
 | Dev and prod follow-ups | engineering | Deferred by the owner on 2026-10-24: Marketing's card preview answers 500 on dev; Motion's private site gets no route; dev Desk has no operator yet; prod has never been deployed. |
-| Ocharo Identity adoption | engineering | Move Desk's accounts, organizations, memberships and Telegram links into the Ocharo instance of WoW2 Identity; make every app an OIDC client; retire integration tickets, the SSO broker and the `Ocharo.Sso` snapshots. Waits on SDK identity slices I14–I21. |
+| Desk's retired tables | engineering | Every app signs in through Ocharo's Identity and tickets are gone (2026-11-05), but Desk's `access.sessions`, `sso_*`, `telegram_*`, the six EF `identity_*` tables and `memberships` remain. Dropping them is the unwritten forward-only migration `011-identity-cutover`, which also needs `FoundationRepository`'s `access.sessions` check and the import CLIs' `UserManager` actor lookup changed first. |
 | Ocharo File Storage adoption | engineering | Move Catalogue, Brand, Blog and Marketing media, then Desk's `bytea` files, onto the Ocharo instance of WoW2 File Storage. Waits on the SDK files module. |
 | Migration version adoption | engineering | Adopt a published SDK migration field supporting full prerelease versions beyond 20 characters; never truncate identity. |
 | SDK startup migration seam | engineering | `MigrateBespokeOnStartupAsync` needs `AddPostgresPersistence` and creates the database; Desk owns its `NpgsqlDataSource`, so its host calls `IMigrationRunnerService` directly and installs the Hangfire schema itself. Adopt a published helper over a caller's own data source when the SDK offers one. |
@@ -87,7 +87,7 @@ Design and sources: [analysis](../research/desk/2026-10-09-sourcing-events-integ
 - [ ] Revoke and replace `@ocharo_dev_bot`'s token in BotFather, then update it in Wheelhouse's dev vault: it was briefly
   pasted into a Wheelhouse secret note, since cleared (owner, 2026-11-02).
 - [ ] [parked] Desk MCP on Identity agent tokens: an MCP client gets its own Identity OAuth token, not Desk's browser
-  session. Integration tickets bound to Desk's sessions answer 503 since the 2026-11-02 Identity cutover, so MCP stays
-  off until then (owner, 2026-11-02).
+  session, and MCP stays off until then (owner, 2026-11-02). The ticket-authenticated surface left with the tickets on
+  2026-11-05; its read tools, UI panel and tests are in commit `ce3ad7b` to restore from.
 - [ ] Add calendar OAuth only after calendar selection and outbound synchronization rules are agreed.
 - [ ] Adopt SDK refresh timing in Desk; the current 0.0.6 package lacks the required orchestration exports.
