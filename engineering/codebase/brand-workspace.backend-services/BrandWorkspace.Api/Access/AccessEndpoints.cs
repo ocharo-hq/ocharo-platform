@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BrandWorkspace.Application.Access;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 using WoW.Two.Sdk.Beta.Be.Identity.Core.Organizations;
+using WoW.Two.Sdk.Beta.Be.Identity.Signals;
 
 namespace BrandWorkspace.Api.Access;
 
@@ -11,6 +12,8 @@ public static class AccessEndpoints
     public static WebApplication MapAccessEndpoints(this WebApplication app)
     {
         app.MapIdentityBffEndpoints();
+        if (!string.IsNullOrEmpty(app.Configuration[$"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.SignalUrl)}"]))
+            app.MapIdentitySignals(IdentityResourceSettings.SignalPath);
         app.MapGet("/api/organizations", async (HttpContext http, IAccessRepository repository) =>
         {
             var organizations = new List<Organization>();

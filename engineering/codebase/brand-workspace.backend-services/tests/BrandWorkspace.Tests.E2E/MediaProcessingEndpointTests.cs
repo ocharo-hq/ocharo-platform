@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -18,6 +20,7 @@ using Microsoft.Extensions.Time.Testing;
 using Microsoft.IdentityModel.Tokens;
 using SkiaSharp;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
+using WoW.Two.Sdk.Beta.Be.Identity.Signals;
 using WoW.Two.Sdk.Beta.Be.Identity.Testing;
 using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using Xunit;
@@ -33,6 +36,8 @@ public sealed class MediaProcessingEndpointTests
     private const string Caller = "ocharo-editorial";
     private const string Audience = "https://desk.test/";
     private const string Scope = "desk.remove-background";
+    private const string ResourceSignalUrl = "https://desk.test/signals/identity";
+    private const string BffSignalUrl = "https://desk.test/api/identity/signal";
 
     [Theory]
     [InlineData(false)]
@@ -48,6 +53,64 @@ public sealed class MediaProcessingEndpointTests
         host.Worker.StatusCalls.Should().Be(0);
         host.Worker.RemoveCalls.Should().Be(0);
     }
+
+    [Fact]
+    public async Task SignedSignal_ShouldEndTheSessionsTokens_AtTheResourceRoute()
+    {
+        await using var host = await EndpointHost.CreateAsync();
+        var person = Person();
+        var token = host.Tokens.IssuePersonToken(person, Audience, "ocharo-editorial", Scope);
+        (await host.SendAsync(process: false, token)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var signal = await host.Client.SendAsync(host.Signals.SessionEnded(ResourceSignalUrl, person.SessionId!.Value.ToString("D"), person.Id.ToString("D")));
+
+        signal.StatusCode.Should().Be(HttpStatusCode.Accepted);
+        (await host.WaitUntilRefusedAsync(token)).Should().BeTrue("the handler runs off the request");
+    }
+
+    [Theory]
+    [InlineData(ResourceSignalUrl)]
+    [InlineData(BffSignalUrl)]
+    public async Task SignalRoutes_ShouldAnswer401_ForAnUnsignedPostWithoutASession(string url)
+    {
+        await using var host = await EndpointHost.CreateAsync();
+
+        using var response = await host.Client.PostAsync(new Uri(url).AbsolutePath, new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task SignedSignal_ShouldBeRefused_WhenItNamesAnotherServicesUrl()
+    {
+        await using var host = await EndpointHost.CreateAsync();
+        var person = Person();
+        using var captured = host.Signals.SessionEnded("https://elsewhere.test/signals/identity", person.SessionId!.Value.ToString("D"), person.Id.ToString("D"));
+        captured.RequestUri = new Uri(new Uri(ResourceSignalUrl).AbsolutePath, UriKind.Relative);
+
+        using var response = await host.Client.SendAsync(captured);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task AccessChange_ShouldRefuseOnlyTokensIssuedBeforeIt()
+    {
+        await using var host = await EndpointHost.CreateAsync();
+        var person = Person();
+        var before = host.Tokens.IssuePersonToken(person, Audience, "ocharo-editorial", Scope);
+        var change = host.Clock.GetUtcNow().AddSeconds(5);
+        var denyList = host.Services.GetRequiredService<ITokenDenyList>();
+
+        await denyList.AddAccessAsync(host.Tokens.Issuer, person.Id.ToString("D"), person.OrganizationId!.Value.ToString("D"), change, change.AddHours(1));
+        host.Clock.SetUtcNow(change.AddSeconds(5));
+        var after = host.Tokens.IssuePersonToken(person, Audience, "ocharo-editorial", Scope);
+
+        (await host.SendAsync(process: false, before)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await host.SendAsync(process: false, after)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    private static FakePerson Person() => new() { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid(), SessionId = Guid.NewGuid() };
 
     [Theory]
     [InlineData("wrong-audience", "audience")]
@@ -369,15 +432,17 @@ public sealed class MediaProcessingEndpointTests
         public Worker Worker { get; }
         public HttpClient Client { get; }
         public FakeTokenIssuer Tokens { get; }
+        public FakeTimeProvider Clock { get; }
+        public IdentitySignalSender Signals { get; }
 
         /// <summary>A token of <see cref="Tokens"/> that expired an hour ago, so only its lifetime refuses it.</summary>
         public string ExpiredToken { get; }
 
         public IServiceProvider Services => app.Services;
 
-        private EndpointHost(WebApplication application, Worker worker, FakeTokenIssuer tokens, string expiredToken)
+        private EndpointHost(WebApplication application, Worker worker, FakeTokenIssuer tokens, string expiredToken, FakeTimeProvider clock, IdentitySignalSender signals)
         {
-            app = application; Worker = worker; Tokens = tokens; ExpiredToken = expiredToken;
+            app = application; Worker = worker; Tokens = tokens; ExpiredToken = expiredToken; Clock = clock; Signals = signals;
             Client = app.GetTestClient(); Client.BaseAddress = new Uri("https://localhost");
         }
 
@@ -397,6 +462,8 @@ public sealed class MediaProcessingEndpointTests
                 $"--Identity:Client:Authority={loopbackAuthority ?? DeskTestHost.IdentityClientSettings["Identity:Client:Authority"]}",
                 "--Identity:Client:ClientId=desk",
                 $"--Identity:Client:IsHttpsMetadataRequired={loopbackAuthority is null}",
+                $"--Identity:Client:SignalUrl={BffSignalUrl}",
+                $"--Identity:Resource:SignalUrl={ResourceSignalUrl}",
                 .. resourceUri is null ? Array.Empty<string>() : [$"--Identity:Resource:Uri={resourceUri}"]
             ];
             var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -409,14 +476,30 @@ public sealed class MediaProcessingEndpointTests
             builder.Services.AddSingleton<IBackgroundRemovalService>(worker);
             if (standInSignIn) DeskTestHost.Use(builder.Services);
             if (loopbackAuthority is null) builder.Services.AddFakeTokenIssuer(tokens);
+            // Desk's own cache is a table, and this host has no database; only a person's token reads the deny list.
+            builder.Services.AddSingleton<IDistributedCache>(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())));
+            var signals = new IdentitySignalSender(tokens.Issuer);
+            builder.Services.PostConfigure<IdentitySignalReceiverOptions>(options => options.TrustedIssuers.Add(signals.TrustedIssuer));
             var application = builder.Build();
             application.Configure();
             try { await application.StartAsync(); }
-            catch { await application.DisposeAsync(); tokens.Dispose(); throw; }
-            return new(application, worker, tokens, expiredToken);
+            catch { await application.DisposeAsync(); tokens.Dispose(); signals.Dispose(); throw; }
+            return new(application, worker, tokens, expiredToken, clock, signals);
         }
 
         public string ServiceToken() => Tokens.IssueServiceToken(Caller, Audience, Scope);
+
+        /// <summary>Asks until the token is refused, for up to 5 seconds.</summary>
+        public async Task<bool> WaitUntilRefusedAsync(string token)
+        {
+            for (var attempt = 0; attempt < 100; attempt++)
+            {
+                using var response = await SendAsync(process: false, token);
+                if (response.StatusCode == HttpStatusCode.Unauthorized) return true;
+                await Task.Delay(50);
+            }
+            return false;
+        }
 
         public Task<HttpResponseMessage> GetCapabilitiesAsync() => SendAsync(process: false, ServiceToken());
 

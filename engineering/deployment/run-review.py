@@ -269,7 +269,7 @@ def run_review(children: Children) -> int:
     runtime_env.update({
         "ConnectionStrings__Database": "Host=127.0.0.1;Port=8270;Database=brand_workspace;Username=brand_workspace;Password=" + password,
         "DOTNET_ENVIRONMENT": "Development", "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": ORIGIN + ";http://localhost:8265", "AllowedHosts": "localhost;127.0.0.1",
+        "ASPNETCORE_URLS": ORIGIN + ";http://localhost:8265", "AllowedHosts": "localhost;127.0.0.1;host.docker.internal",
         "DataProtection__KeysPath": str(VERIFICATION / "host-keys"),
         "DataProtection__ApplicationName": "brand-workspace:Development",
         # Reads the ignored appsettings.Local.json: the Identity:Client authority, client and secret.

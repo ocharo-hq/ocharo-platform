@@ -39,6 +39,7 @@ using Microsoft.EntityFrameworkCore;
 using WoW.Two.Sdk.Beta.Be.Identity.Authorization;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 using WoW.Two.Sdk.Beta.Be.Identity.Jwt;
+using WoW.Two.Sdk.Beta.Be.Identity.Signals;
 using WoW.Two.Sdk.Beta.Be.Caching.Postgres;
 using System.Data.Common;
 using BrandWorkspace.Application.Foundation.Repositories;
@@ -162,6 +163,16 @@ public static partial class HostConfiguration
             options.TrustedIssuers.Add(new TrustedIssuer { Issuer = issuer });
             options.IsInsecureMetadataAllowedInDevelopment = !isHttpsRequired;
         });
+        builder.Services.AddTokenDenyList();
+        if (builder.Configuration[$"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.SignalUrl)}"] is { Length: > 0 } signalUrl)
+        {
+            builder.Services.AddIdentitySignalReceiver(options =>
+            {
+                options.Audience = signalUrl;
+                options.TrustedIssuers.Add(new TrustedIssuer { Issuer = issuer });
+                options.IsInsecureMetadataAllowedInDevelopment = !isHttpsRequired;
+            });
+        }
         // The call above names its bearer scheme the default, which would sign people out of every plain
         // RequireAuthorization() route and open those routes to any service token; the BFF cookie stays Desk's default.
         builder.Services.AddAuthentication(BffAuthenticationSchemeConstants.Cookie);
