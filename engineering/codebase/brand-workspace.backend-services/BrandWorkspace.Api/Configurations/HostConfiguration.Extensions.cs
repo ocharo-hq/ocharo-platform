@@ -238,6 +238,8 @@ public static partial class HostConfiguration
         {
             options.BaseUrl = builder.Configuration["ImageProcessing:WorkerBaseUrl"];
             options.ApiKey = builder.Configuration["ImageProcessing:WorkerKey"];
+            // The worker is a sibling container on the platform's private network, which carries the ingress's own plain HTTP.
+            options.AllowPrivateNetworkHttp = true;
         });
         // The bearer scheme alone, so Desk's BFF cookie never opens these routes.
         builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingEndpoints.Policy, policy => policy

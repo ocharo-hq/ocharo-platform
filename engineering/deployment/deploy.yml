@@ -68,6 +68,12 @@ services:
         # Revocation signals: each URL is typed once per environment on `identity`, so both ends always name the same value.
         Identity:Client:SignalUrl: { from: Identity:Server:Clients:0:SignalUrl }
         Identity:Resource:SignalUrl: { from: Identity:Server:Resources:0:SignalUrl }
+        # Background removal: the private image worker, a sibling on the platform network. Its address is an owner key
+        # typed per environment as `http://ocharo-<environment>-image-worker:8080`, its platform name: the bare service
+        # name is an alias every environment's worker would share on that one network, and the descriptor has no template
+        # for the environment. Required, because an unset address reads unavailable with no error.
+        ImageProcessing:WorkerBaseUrl: { type: url, required: true }
+        ImageProcessing:WorkerKey: { from: ImageWorker:Key }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }
         OcharoApps:Catalogue: { type: url }

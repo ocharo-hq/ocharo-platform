@@ -304,6 +304,27 @@ public sealed class MediaProcessingEndpointTests
     }
 
     [Fact]
+    public async Task Worker_ShouldBeAskedAtItsPlatformName_WithTheDeployedSettings()
+    {
+        const string key = "a-private-worker-key-for-this-test-only";
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development, ContentRootPath = AppContext.BaseDirectory,
+            Args = ["--Identity:Resource:Uri=https://desk.test", "--ImageProcessing:WorkerBaseUrl=http://ocharo-dev-image-worker:8080", $"--ImageProcessing:WorkerKey={key}"]
+        });
+        builder.Configure();
+        var worker = new WorkerStandIn();
+        builder.Services.AddHttpClient<IBackgroundRemovalService, HttpBackgroundRemovalService>().ConfigurePrimaryHttpMessageHandler(() => worker);
+        await using var app = builder.Build();
+
+        var status = await app.Services.GetRequiredService<IBackgroundRemovalService>().GetStatusAsync();
+
+        status.Should().Be(new BackgroundRemovalStatus(true, "u2net"));
+        worker.Asked.Should().Be("http://ocharo-dev-image-worker:8080/health/ready");
+        worker.Key.Should().Be(key);
+    }
+
+    [Fact]
     public async Task Capabilities_ShouldReportWorkerReadiness_WhenCallerIsAuthorized()
     {
         await using var host = await EndpointHost.CreateAsync();
@@ -586,6 +607,20 @@ public sealed class MediaProcessingEndpointTests
             if (Block) await Release.Task.WaitAsync(cancellationToken);
             if (Failure is { } failure) throw failure;
             return new(Output, 3, 2, "fixture-u2net");
+        }
+    }
+
+    /// <summary>Answers as a ready worker and records what Desk's real client sent.</summary>
+    private sealed class WorkerStandIn : HttpMessageHandler
+    {
+        public string? Asked { get; private set; }
+        public string? Key { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Asked = request.RequestUri!.AbsoluteUri;
+            Key = request.Headers.GetValues("X-Image-Worker-Key").Single();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"ready":true,"model":"u2net"}""") });
         }
     }
 

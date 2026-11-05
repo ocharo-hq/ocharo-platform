@@ -34,9 +34,9 @@
       },
       "WoW2.Sdk.Beta.Be.Testing": {
         "type": "Direct",
-        "requested": "[10.0.103-beta, )",
-        "resolved": "10.0.103-beta",
-        "contentHash": "3cQmKG0id3zv83cYlWikX4hY5l1s4horIuIZNam8sLruy1vRUtKuvZjsF95YMJeuFjTgKBesGdd07c8MVWNFbw==",
+        "requested": "[10.0.104-beta, )",
+        "resolved": "10.0.104-beta",
+        "contentHash": "/DYE0OZZHiJUv8aLW+KTICEzN5vtg9uWYo6CxQ7HtzJUj7WJ/n8riLIR13344jHYdhSfXo1ToRidUPk8duKTbA==",
         "dependencies": {
           "AwesomeAssertions": "9.0.0",
           "Azure.Identity": "1.21.0",
@@ -3636,13 +3636,13 @@
       },
       "WoW2.Sdk.Beta.Be.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.103-beta",
-        "contentHash": "dtO8zcsNeJRKbNymMPT8LHEcNvP9DC7VTjl67W0CMTL8/SP+gLw6i7ay9fPJ4CcrVqVf3o0XfkKuCskkFx/XDA=="
+        "resolved": "10.0.104-beta",
+        "contentHash": "hZK70qkJy/r+ueKBLLpSEylEnOPKi7xUNxi+rzGuBTZkJmNDtCqwvolR95qUaroeSnmn1KUd/tX6firrH24eyA=="
       },
       "WoW2.Sdk.Beta.Be.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.103-beta",
-        "contentHash": "Hv8qCtb5sm+MQDxfqorgzj2mp8KmZ27dxgEEFDNFMzdPT6vniwFvB9yqbMzY+g1iKN2FbEsEP/u5nZROoYjWPA==",
+        "resolved": "10.0.104-beta",
+        "contentHash": "eJygPoqUMCOF+WtT+HtjxImoqGnLu3fvG7foCfacl7d8cgUwnx4M/2tCO+BZ+mYCEVTvZ2GiZVnuEWTCwejAfg==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.3"
         }
@@ -3743,7 +3743,7 @@
           "BrandWorkspace.Domain": "[0.0.0, )",
           "BrandWorkspace.Infrastructure": "[0.0.0, )",
           "BrandWorkspace.Persistence": "[0.0.0, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.103-beta, )",
+          "WoW2.Sdk.Beta.Be": "[10.0.104-beta, )",
           "WoW2.Sdk.Beta.Be.Identity.Client": "[10.0.26-beta, )"
         }
       },
@@ -3768,7 +3768,7 @@
           "Microsoft.Data.Sqlite": "[10.0.14, )",
           "SkiaSharp": "[4.152.1, )",
           "SkiaSharp.NativeAssets.Linux": "[4.152.1, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.103-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.104-beta, )"
         }
       },
       "brandworkspace.persistence": {
@@ -3778,7 +3778,7 @@
           "BrandWorkspace.Domain": "[0.0.0, )",
           "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.3, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.0, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.103-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.104-beta, )"
         }
       },
       "brandworkspace.worker": {
@@ -3789,7 +3789,7 @@
           "BrandWorkspace.Infrastructure": "[0.0.0, )",
           "BrandWorkspace.Persistence": "[0.0.0, )",
           "Microsoft.Extensions.Hosting": "[10.0.3, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.103-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.104-beta, )"
         }
       },
       "ocharobrand.domain": {
@@ -3878,9 +3878,9 @@
       },
       "WoW2.Sdk.Beta.Be": {
         "type": "CentralTransitive",
-        "requested": "[10.0.103-beta, )",
-        "resolved": "10.0.103-beta",
-        "contentHash": "NEhZWXiHJiop89uHgwZMfePzbM7imr0CEvOMtTVCKVArqA71HKdkEHr5+Ug6X0qmd+1UCXCtaVzmPP7aEWMJGg==",
+        "requested": "[10.0.104-beta, )",
+        "resolved": "10.0.104-beta",
+        "contentHash": "8s3+D8z5ZYYFb3H39X2oOK5pv54c2yZGSzC2s1QnPslRdgDrN/RTX/YKVwT1j0QfjYvnB6suYnef2loXT73xXQ==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -4014,8 +4014,8 @@
           "System.Security.Cryptography.Pkcs": "10.0.13",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.103-beta",
-          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.103-beta",
+          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.104-beta",
+          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.104-beta",
           "YamlDotNet": "16.3.0",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",

@@ -171,6 +171,8 @@ a required key, and Wheelhouse checks each saved value against its type and keep
 | | | `Identity:Client:Authority` | linked to `Sites:identity:Url`, the value identity's issuer takes |
 | | | `Identity:Client:ClientSecret` | linked to identity's `Identity:Server:Clients:0:ClientSecret` |
 | | | `Identity:Client:{ClientId,CookieName,PostSignOutRedirectPath}` | `deploy.yml` defaults: `desk`, `__Host-ocharo-desk`, `/` |
+| | | `ImageProcessing:WorkerBaseUrl` | the owner, per environment: `http://ocharo-<environment>-image-worker:8080` |
+| | | `ImageProcessing:WorkerKey` | linked to the image worker's `ImageWorker:Key` |
 | `jobs` | none | `ConnectionStrings:Database` | the target's PostgreSQL |
 | `image-worker` | none | `ImageWorker:Key` (secret; 2 GB memory) | the owner, on the first deploy |
 | `brand` | `brand`, public | `AllowedHosts`, `Deployment:TrustedProxies` | derived by Wheelhouse |
@@ -182,6 +184,9 @@ a required key, and Wheelhouse checks each saved value against its type and keep
 | | | `Identity:Server:Clients:0:{RedirectUris:0,PostSignOutRedirectUris:0}` | the owner, on the first deploy: `{site URL}/api/identity/callback` and `{site URL}/` of `desk` |
 
 - `AllowedHosts` holds the site's hosts, the service's platform name and `localhost` for health probes.
+- Desk reaches the image worker over plain HTTP at its platform name (`AllowPrivateNetworkHttp`), the way the ingress
+  reaches every service. The bare name `image-worker` isn't used: one `platform` network holds every environment's
+  services, so that alias would answer with any of their workers.
 - `DataProtection:KeysPath` is the `keys` volume, `/var/lib/brand-workspace/keys`.
 - `Deployment:TrustedProxies` names the ingress's address on the server's `platform` network. Forwarded headers
   from any other sender are ignored, so without it sign-in fails behind the TLS-terminating ingress.
