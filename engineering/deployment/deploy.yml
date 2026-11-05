@@ -63,6 +63,8 @@ services:
         Identity:Client:ClientSecret: { from: Identity:Server:Clients:0:ClientSecret }
         Identity:Client:CookieName: { default: __Host-ocharo-desk }
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
+        # Desk's audience for service tokens: background removal verifies them offline against this issuer's keys.
+        Identity:Resource:Uri: { from: Sites:desk:Url }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }
         OcharoApps:Catalogue: { type: url }
@@ -113,7 +115,7 @@ services:
   # config check refuses an unbound one, such as a stored value of the retired Identity:SignUp:IsEnabled, which the
   # first 0.5.x deploy needs deleted from each environment.
   identity:
-    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.15
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.16
     health: /health
     memory: 256m
     needs: [postgres]
@@ -231,6 +233,26 @@ services:
         Identity:Server:Clients:5:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
         Identity:Server:Clients:5:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:5:PostSignOutRedirectUris:0: { type: url, required: true }
+        # Service tokens. Editorial (client 4) calls Desk as itself. Client 6 is the live public build, which reads
+        # Editorial's export and signs nobody in, so it has no redirect URIs. A resource's URI is an owner key typed
+        # per environment as `{site URL}/`: the boot refuses one without its slash, and `from: Sites:<site>:Url` renders
+        # the bare origin. A scope is {service}.{action} with two segments, as the boot requires.
+        Identity:Server:Clients:4:Grants:0: { default: authorization_code }
+        Identity:Server:Clients:4:Grants:1: { default: client_credentials }
+        Identity:Server:Clients:4:Resources:0: { default: desk }
+        Identity:Server:Clients:4:Scopes:0: { default: desk.remove-background }
+        Identity:Server:Clients:6:ClientId: { default: public-build }
+        Identity:Server:Clients:6:DisplayName: { default: Ocharo public build }
+        Identity:Server:Clients:6:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:6:Grants:0: { default: client_credentials }
+        Identity:Server:Clients:6:Resources:0: { default: editorial }
+        Identity:Server:Clients:6:Scopes:0: { default: editorial.export }
+        Identity:Server:Resources:0:Name: { default: desk }
+        Identity:Server:Resources:0:Uri: { type: url, required: true }
+        Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }
+        Identity:Server:Resources:1:Name: { default: editorial }
+        Identity:Server:Resources:1:Uri: { type: url, required: true }
+        Identity:Server:Resources:1:Scopes:0: { default: editorial.export }
     sites:
       identity: { paths: [/, /api] }
   brand:
