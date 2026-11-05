@@ -336,11 +336,14 @@ Settled:
 - 51. Prod parks until last (owner, 2026-11-05: "we need to close identity feature, then files, then events, we are so
   behind in schedule that checking this is literally the last thing now"). Ocharo's creation on prod, the invite, the
   G3 sign-in and every prod promotion wait; prod stays on `v0.1.18`. Identity closes on dev.
+- 52. Editorial's Desk call (#47), live public builds and every product server's call to Files use one mechanism: Identity
+  issues client-credentials tokens, audience-bound per service and verified offline (owner, 2026-11-05). It closes with
+  Identity, since Files is next and already accepts these tokens. The design is still being settled in the orchestrator
+  chat; API keys stay only for callers outside Identity.
 
 Open, cross-lane:
 
-- Editorial's service call to Desk (#47) — a shared API key now, or Identity client credentials. It also blocks live
-  public builds: `scripts/build-public.py` lost its ticket path and takes only `OCHARO_EXPORT_ARCHIVE`.
+- How a service acts for a person (#52): delegation headers or token exchange.
 
 Open, lane-local — each lane asks in its own chat:
 
