@@ -348,11 +348,10 @@ Settled:
   convention. Shapes: Files' `t8-identity-contracts.md`. The identity lane builds it. Clients prove themselves with their
   secret by default and may name a key set instead; Wheelhouse key generation waits, since one vault holds both here. A
   token's `scope` says what the app may ask of that service, its role and permissions what the person may do; the service
-  requires both and keeps record-level rules in its own data.
-
-Open, cross-lane:
-
-- Revocation (#52): whether a signal to apps and services, and each long job's reaction to it, join this vector.
+  requires both and keeps record-level rules in its own data; one token per person and target lists every allowed scope,
+  never one per action. Revocation joins it (owner, same day): session-ended and access-changed events, signed by Identity,
+  delivered through the be sdk's `Messaging/Webhooks`, feeding sessions, a deny list and long jobs' declared reactions.
+  Rules: wow-two-ws `core/hla/api-communication.md`.
 
 Open, lane-local — each lane asks in its own chat:
 
