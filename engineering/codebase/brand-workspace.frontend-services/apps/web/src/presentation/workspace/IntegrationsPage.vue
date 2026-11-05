@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import DeskSelect from '@/presentation/shared/DeskSelect.vue';
-import McpAccessPanel from './McpAccessPanel.vue';
 import SourceDirectoryPanel from './SourceDirectoryPanel.vue';
-import { requestConfirmation, useErrorToast } from '@/application/shared/UseFeedback';
+import { useErrorToast } from '@/application/shared/UseFeedback';
 import ContentSkeleton from '@/presentation/shared/ContentSkeleton.vue';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { failureMessage, type AccessControls } from '@/application/workspace/UseAccess';
 import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
-import { connectedApps, connectionUrl, type ConnectedApp } from '@/domain/workspace/ConnectedApps';
+import { useOcharoApps } from '@/application/shared/UseOcharoApps';
 import type { CreativeImport, Product } from '@/domain/workspace/Commerce';
 import { useCommerce } from '@/application/workspace/UseCommerce';
 
@@ -19,11 +18,11 @@ defineOptions({ name: 'IntegrationsPage' });
 const props = defineProps<{ access: AccessControls; workspace: WorkspaceControls }>();
 const api = useCommerce(props.access);
 const controller = new AbortController();
-const apps = connectedApps(window.location.origin);
+const connectedKeys = ['studio', 'marketing', 'editorial'];
+const apps = useOcharoApps().filter(app => connectedKeys.includes(app.key));
 const error = ref('');
 useErrorToast(error);
 let loadedBrand = '';
-const connecting = ref('');
 const brandId = ref('');
 const imports = ref<CreativeImport[]>([]);
 const loading = ref(false);
@@ -36,28 +35,13 @@ const importing = ref(false);
 const message = ref('');
 const fileSelection = ref(0);
 let loadSequence = 0;
-const blocked = computed(() => props.access.busy.value || connecting.value !== '' || importing.value);
+const blocked = computed(() => props.access.busy.value || importing.value);
 watch(() => manifestFile.value !== null || imageFile.value !== null, dirty => props.access.setDirty(dirty), { flush: 'sync' });
 onScopeDispose(() => { controller.abort(); props.access.setDirty(false); });
 watch(() => props.workspace.brands.value, brands => {
   if (!brandId.value && brands?.length) brandId.value = brands[0]!.id;
 }, { immediate: true });
 watch(brandId, () => void loadImports(), { immediate: true });
-async function connect(app: ConnectedApp): Promise<void> {
-  if ((manifestFile.value || imageFile.value) && !await requestConfirmation(t('Discard the selected import files and open this app?'), {confirmLabel:t('Discard changes')})) return;
-  const organization = props.workspace.organization.value?.id;
-  if (!organization || blocked.value || controller.signal.aborted) return;
-  error.value = '';
-
-  connecting.value = app.id;
-  try {
-    const result = await props.access.write(signal => api.ticket(organization, app.audience, signal), controller.signal);
-    if (controller.signal.aborted) return;
-    if (!result.ok) { error.value = failureMessage(result.failure); return; }
-    if (props.workspace.organization.value?.id !== organization) return;
-    window.location.assign(connectionUrl(app.id, window.location.origin, result.value.token));
-  } finally { connecting.value = ''; }
-}
 async function loadImports(): Promise<void> {
   const organization = props.workspace.organization.value?.id;
   if (!organization || !brandId.value) return;
@@ -102,17 +86,16 @@ async function importFiles(): Promise<void> {
 
 <template>
   <section class="space-y-7">
-    <header class="space-y-2"><p class="eyebrow">{{ t("Your creative workspace") }}</p><h1 class="page-title">{{ t("Integrations") }}</h1><p class="max-w-2xl text-muted-foreground">{{ t("Open an app with your current organization. Access lasts five minutes; reconnect here when it expires.") }}</p></header>
+    <header class="space-y-2"><p class="eyebrow">{{ t("Your creative workspace") }}</p><h1 class="page-title">{{ t("Integrations") }}</h1><p class="max-w-2xl text-muted-foreground">{{ t("Open an Ocharo app. Each app signs you in through Ocharo's Identity.") }}</p></header>
 
     <SourceDirectoryPanel />
-    <McpAccessPanel :access="access" :workspace="workspace" />
 
     <p v-if="message" role="status" class="rounded-lg bg-muted p-4 text-sm">{{ t(message) }}</p>
     <div class="grid gap-5 lg:grid-cols-3">
-      <article v-for="app in apps" :key="app.id" class="workspace-card flex flex-col gap-4 p-6">
-        <h2 class="text-xl font-semibold">{{ app.name }}</h2><p class="flex-1 text-sm text-muted-foreground">{{ t(app.description) }}</p>
+      <article v-for="app in apps" :key="app.key" class="workspace-card flex flex-col gap-4 p-6">
+        <h2 class="text-xl font-semibold">{{ t(app.label) }}</h2><p class="flex-1 text-sm text-muted-foreground">{{ t(app.summary) }}</p>
         <p class="text-xs text-muted-foreground">{{ workspace.organization.value?.name }} · {{ t(workspace.organization.value?.role ?? '') }}</p>
-        <Button :is-disabled="blocked" @click="connect(app)">{{ connecting === app.id ? t('Connecting…') : t('Connect to {name}', {name:app.name}) }}</Button>
+        <Button as-child><a :href="app.url">{{ t('Open {name}', { name: t(app.label) }) }}</a></Button>
       </article>
     </div>
     <p v-if="!apps.length" role="status" class="workspace-card p-5">{{ t("Connected apps are available from the configured local Ocharo workspace.") }}</p>

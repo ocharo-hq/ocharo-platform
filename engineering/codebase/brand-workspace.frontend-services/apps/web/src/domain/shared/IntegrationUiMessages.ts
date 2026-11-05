@@ -21,33 +21,4 @@ export const integrationUiMessages: UiMessageTable = {
   'Supplier catalogue': { uz: 'Ta’minotchi katalogi', ru: 'Каталог поставщика' },
   'Opens in a new tab': { uz: 'Yangi oynada ochiladi', ru: 'Открывается в новой вкладке' },
   'Sources and assistants': { uz: 'Manbalar va yordamchilar', ru: 'Источники и ассистенты' },
-  'Assistant access · MCP': { uz: 'Yordamchi uchun kirish · MCP', ru: 'Доступ ассистента · MCP' },
-  'Read suppliers, shared media metadata, events and deadlines from this organization.': {
-    uz: 'Ushbu tashkilotning ta’minotchilari, media metama’lumotlari, tadbirlari va muddatlarini o‘qish.',
-    ru: 'Чтение поставщиков, метаданных файлов, мероприятий и сроков этой организации.',
-  },
-  'Assistant access is not enabled on this server. Ask your operator to configure MCP.': {
-    uz: 'Bu serverda yordamchi kirishi yoqilmagan. Operatordan MCP sozlashni so‘rang.',
-    ru: 'Доступ ассистента на сервере отключён. Попросите оператора настроить MCP.',
-  },
-  'MCP endpoint': { uz: 'MCP manzili', ru: 'Адрес MCP' },
-  'Use a trusted client that supports Streamable HTTP and a bearer token. Access expires after five minutes.': {
-    uz: 'Streamable HTTP va bearer tokenni qo‘llovchi ishonchli mijozdan foydalaning. Kirish besh daqiqadan so‘ng tugaydi.',
-    ru: 'Используйте доверенный клиент с поддержкой Streamable HTTP и bearer-токена. Доступ действует пять минут.',
-  },
-  'Create access token': { uz: 'Kirish tokenini yaratish', ru: 'Создать токен доступа' },
-  'Create another access token': { uz: 'Yana kirish tokeni yaratish', ru: 'Создать ещё один токен' },
-  'Bearer token': { uz: 'Bearer token', ru: 'Bearer-токен' },
-  'Copy access token': { uz: 'Kirish tokenini nusxalash', ru: 'Копировать токен доступа' },
-  'Copied': { uz: 'Nusxalandi', ru: 'Скопировано' },
-  'Hide token': { uz: 'Tokenni yashirish', ru: 'Скрыть токен' },
-  'Expires at {time}': { uz: '{time} da tugaydi', ru: 'Истекает в {time}' },
-  'Hiding clears this display. Copied access remains valid until expiry or sign-out.': {
-    uz: 'Yashirish tokenni ekrandan o‘chiradi. Nusxalangan token muddati tugaguncha yoki hisobdan chiqilguncha amal qiladi.',
-    ru: 'Скрытие убирает токен с экрана. Скопированный токен действует до истечения срока или выхода.',
-  },
-  'Copy failed. Select and copy the value manually.': {
-    uz: 'Nusxalash amalga oshmadi. Qiymatni belgilang va qo‘lda nusxalang.',
-    ru: 'Не удалось скопировать. Выделите значение и скопируйте вручную.',
-  },
 };

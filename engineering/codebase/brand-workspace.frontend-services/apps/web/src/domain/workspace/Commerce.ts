@@ -9,7 +9,6 @@ export interface CatalogueEdition {slug?:string|null;description?:string;isActiv
 export interface CommerceSnapshot {catalogueEditions?:CatalogueEdition[];slug:string;identity:{name:string;tagline:Words;descriptor:Words;palette:{key:string;name:string;hex:string;role:string}[];links:{key:string;label:string;handle:string|null;url:string}[];[key:string]:unknown};logos:Record<string,CommerceImage & {slot:string;status:string;uploadedAt:string}>;products:Product[];collections:Collection[];mediaApprovals:Record<string,Provenance>;verifiedLinkKeys:string[];sources:unknown[]}
 export interface CommerceDraft {brandId:string;revision:number;snapshot:CommerceSnapshot;updatedAt:string}
 export interface CommerceRelease {id:string;brandId:string;revision:number;sourceRevision:number;publishedAt:string;note:string;withdrawnAt:string|null;snapshot:CommerceSnapshot}
-export interface IntegrationTicket {token:string;expiresAt:string}
 export interface CreativeInput {brandId:string;productId:string|null;source:{application:string;workspaceId:string;lookId:string;revision:number};assetReleases:{id:string;sha256:string}[];materials:{slot:string;source:string;materialId?:string;sha256?:string}[];derivative:{mediaId:string;sha256:string;mediaType:string};sourceApproval?:{status:string;note?:string}}
 export interface CreativeImport {id:string;createdAt:string;status:string;input:CreativeInput}
 export const words = ():Words => ({uz:null,ru:null,en:null});

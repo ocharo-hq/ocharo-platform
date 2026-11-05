@@ -1,4 +1,3 @@
-import { signInDestination } from '@/domain/workspace/SignInDestination';
 import { requestConfirmation, resolveConfirmation, notifyError } from '@/application/shared/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { computed, inject, onScopeDispose, ref, shallowRef } from 'vue';
@@ -131,7 +130,7 @@ export function useAccess(navigation: DocumentNavigation = documentNavigation())
   function authenticated(destination = '/'): void {
     dirty.value = false;
     channel.post('changed');
-    navigation.assign(signInDestination(new URL(destination, window.location.origin).search, safeWorkspaceDestination(destination)));
+    navigation.assign(safeWorkspaceDestination(destination));
   }
   /** Sends the browser to sign in at Ocharo's Identity instance, returning to the current address. */
   function signIn(): void {

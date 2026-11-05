@@ -61,7 +61,6 @@ export default defineConfig(({ command }) => ({
     strictPort: true,
     proxy: {
       '/api': deskProxy(command),
-      '/mcp': deskProxy(command),
     },
   },
   build: {

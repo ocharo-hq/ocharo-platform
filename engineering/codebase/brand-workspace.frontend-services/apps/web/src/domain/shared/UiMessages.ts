@@ -644,9 +644,9 @@ export const operatorUiMessages: UiMessageTable = {
     "uz": "Ijodiy ish maydoningiz",
     "ru": "Ваше творческое пространство"
   },
-  "Open an app with your current organization. Access lasts five minutes; reconnect here when it expires.": {
-    "uz": "Ilovani joriy tashkilot bilan oching. Kirish besh daqiqa amal qiladi; muddati tugaganda shu yerdan qayta ulaning.",
-    "ru": "Откройте приложение с текущей организацией. Доступ действует пять минут; по истечении подключитесь здесь повторно."
+  "Open an Ocharo app. Each app signs you in through Ocharo's Identity.": {
+    "uz": "Ocharo ilovasini oching. Har bir ilova sizni Ocharo Identity orqali kiritadi.",
+    "ru": "Откройте приложение Ocharo. Каждое приложение выполняет вход через Identity Ocharo."
   },
   "Connected apps are available from the configured local Ocharo workspace.": {
     "uz": "Ulangan ilovalar sozlangan mahalliy Ocharo ish maydonidan ochiladi.",
@@ -1316,18 +1316,6 @@ export const operatorUiMessages: UiMessageTable = {
     "uz": "Har bir tashkilot o‘z brendlari, media va kontentini saqlaydi.",
     "ru": "Каждая организация хранит собственные бренды, медиа и контент."
   },
-  "Connecting…": {
-    "uz": "Ulanmoqda…",
-    "ru": "Подключение…"
-  },
-  "Connect to {name}": {
-    "uz": "{name} bilan ulanish",
-    "ru": "Подключиться к {name}"
-  },
-  "Discard the selected import files and open this app?": {
-    "uz": "Tanlangan import fayllaridan voz kechib, ilovani ochasizmi?",
-    "ru": "Отменить выбранные файлы импорта и открыть приложение?"
-  },
   "Discard unsaved changes and leave this page?": {
     "uz": "Saqlanmagan o‘zgarishlardan voz kechib, sahifadan chiqasizmi?",
     "ru": "Отменить несохранённые изменения и покинуть страницу?"
@@ -1335,18 +1323,6 @@ export const operatorUiMessages: UiMessageTable = {
   "Discard unsaved changes and sign out?": {
     "uz": "Saqlanmagan o‘zgarishlardan voz kechib, hisobdan chiqasizmi?",
     "ru": "Отменить несохранённые изменения и выйти?"
-  },
-  "Create garment looks and bring reviewed renders into your product library.": {
-    "uz": "Kiyim obrazlarini yarating va tekshirilgan renderlarni mahsulot kutubxonasiga olib kiring.",
-    "ru": "Создавайте образы и добавляйте проверенные рендеры в библиотеку товаров."
-  },
-  "Prepare campaigns using your organization and approved brand releases.": {
-    "uz": "Tashkilotingiz va tasdiqlangan brend nashrlari asosida kampaniyalar tayyorlang.",
-    "ru": "Готовьте кампании с данными организации и одобренными публикациями бренда."
-  },
-  "Write and review stories in the editorial workspace.": {
-    "uz": "Tahririyat ish maydonida hikoyalar yozing va tekshiring.",
-    "ru": "Пишите и проверяйте истории в редакционном пространстве."
   },
   "Sign-in requires HTTPS. Open the secure application URL, then retry.": {
     "uz": "Kirish uchun HTTPS kerak. Ilovaning xavfsiz manzilini ochib qayta urinib ko‘ring.",
