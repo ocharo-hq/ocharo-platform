@@ -110,11 +110,10 @@ services:
     health:
       command: [python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health/live',timeout=2)"]
     memory: 2g
+    # The pinned U-2-Net model ships in the image, so the worker has no volume and downloads nothing at run time.
     settings:
       keys:
         ImageWorker:Key: { secret: true, required: true }
-    volumes:
-      models: /models
   # Ocharo's own Identity instance: WoW2's public platform image, pinned by tag (Renovate moves it), its schema in
   # Ocharo's database. Wheelhouse makes every secret but the bot token on the first deploy of each environment, so no
   # key passes through a person (pipelines v0.14.0, Wheelhouse v0.11; descriptor § Generated and linked keys), and the

@@ -149,9 +149,9 @@ def create_app(settings: Settings, loader: Callable = load_processor) -> FastAPI
         app.state.processor = None
         try:
             app.state.processor = await run_in_threadpool(loader, settings)
-        except (ValueError, OSError, RuntimeError, ImportError):
+        except (ValueError, OSError, RuntimeError, ImportError) as error:
             # Missing/corrupt weights leave the private readiness check unavailable, never a fake success.
-            pass
+            logging.getLogger(__name__).error("Background removal is unavailable: %s", error)
         yield
         app.state.processor = None
 

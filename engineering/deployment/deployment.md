@@ -184,6 +184,8 @@ a required key, and Wheelhouse checks each saved value against its type and keep
 | | | `Identity:Server:Clients:0:{RedirectUris:0,PostSignOutRedirectUris:0}` | the owner, on the first deploy: `{site URL}/api/identity/callback` and `{site URL}/` of `desk` |
 
 - `AllowedHosts` holds the site's hosts, the service's platform name and `localhost` for health probes.
+- The image worker's pinned U-2-Net model ships in its image, about 176 MB, checksum-checked at build, so no environment
+  provisions a volume. The model loads as the worker starts; a failed load logs an error and `/health/ready` answers 503.
 - Desk reaches the image worker over plain HTTP at its platform name (`AllowPrivateNetworkHttp`), the way the ingress
   reaches every service. The bare name `image-worker` isn't used: one `platform` network holds every environment's
   services, so that alias would answer with any of their workers.

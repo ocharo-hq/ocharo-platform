@@ -35,13 +35,14 @@ def test_private_operations_require_key_and_no_store():
         assert app.get('/docs', headers=HEADERS).status_code == 404
 
 
-def test_capability_is_truthful_when_model_is_missing():
+def test_capability_is_truthful_when_model_is_missing(caplog):
     def missing(_):
         raise ValueError('missing weights')
     with TestClient(create_app(Settings(KEY, Path('/unused')), missing)) as app:
         response = app.get('/health/ready', headers=HEADERS)
         assert response.status_code == 503 and not response.json()['ready']
         assert app.post('/v1/remove-background', headers=HEADERS, content=picture()).status_code == 503
+    assert 'Background removal is unavailable: missing weights' in caplog.text
 
 
 def test_png_preserves_size_alpha_and_discards_metadata():
