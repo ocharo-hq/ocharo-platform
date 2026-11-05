@@ -352,7 +352,12 @@ Settled:
   never one per action. Revocation joins it (owner, same day): session-ended and access-changed events, signed by Identity,
   delivered through the be sdk's `Messaging/Webhooks`, feeding sessions, a deny list and long jobs' declared reactions.
   Rules: wow-two-ws `core/hla/api-communication.md`. Service tokens shipped: Identity `e30fe4a`, core `v10.0.101-beta`
-  (2026-11-05); the signal is in progress, and Editorial's two calls adopt them next.
+  (2026-11-05). Editorial's two calls adopted them in platform `v0.1.22` and marketing `v0.1.3`, passing locally with real
+  tokens, scopes `desk.remove-background` and `editorial.export`, since Identity's boot refuses three segments. Signals
+  shipped: image `v0.5.17`, NuGet `10.0.26-beta`, be sdk `10.0.103-beta`, Identity `55b6ccc` (2026-11-05), and no role change
+  signs anyone out on upgrade, instance roles included. Each app's adoption and dev's rollout remain before Identity closes.
+  Known gaps: jobs hear signals in their own process only, replicas need a shared cache to share a deny list, and the
+  public build's generated secret has no holder outside the vault, so a live build against dev can't run yet; no CI job needs it.
 
 Open, lane-local — each lane asks in its own chat:
 
