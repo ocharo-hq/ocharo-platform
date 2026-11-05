@@ -15,7 +15,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 - ✅ G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone, the edit check and Maftuna's invite through a trusted contact pass; her Desk session shows Ocharo, `owner`, `desk:edit` and `desk:approve` (2026-11-03). Her own phone moves to the backlog (#46)
 - ✅ G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) runs clean on dev, deployment `87f21066`, and `v0.1.18` (the bot's messages name Ocharo) runs clean, deployment `c7f6904c`; the owner signed in to Desk by phone through `@ocharo_dev_bot` and sees Ocharo as `owner` (2026-11-03); closed on that sign-in alone (#49)
 - ⬜ [parked] G3 prod (#51): the same on prod with `@ocharo_bot` — prod runs `v0.1.18` (identity `0.5.15`, deployment `e9421fb3`, 2026-11-04): services healthy, issuer right (#31), and Identity's boot log shows the webhook registered; prod stored no retired identity keys (#30), and Ocharo's organization takes the preset id `b8c672a6-…` there too (#43), so v0.1.19's Brand and Catalogue `OrganizationId` can be set before the bootstrap creates it; `admin create` ran (job `b874412e`) and the owner signed in to the prod console by phone through `@ocharo_bot` (2026-11-04), so Ocharo's creation and the invite remain
-- 🔄 G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired — `v0.1.19` (Brand and Catalogue on Identity) runs clean on dev, deployment `40f44d37` (2026-11-04), and both dev sessions read back Ocharo, `owner` and each app's `edit` and `approve` (2026-11-05), and prod waits with G3 (#51). Marketing and Editorial sign in locally through 8404 (`ocharo-marketing` `307a6cc`, `ocharo-platform` `a1148da`, 2026-11-04), unpushed until the pipelines release (#50); Studio follows
+- 🔄 G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired — `v0.1.19` (Brand and Catalogue on Identity) runs clean on dev, deployment `40f44d37` (2026-11-04), and both dev sessions read back Ocharo, `owner` and each app's `edit` and `approve` (2026-11-05), and prod waits with G3 (#51). Marketing, Editorial and Studio sign in locally through 8404 (2026-11-05), unpushed until Wheelhouse's prod console takes the new links (#50); whether old Desk ids equal Identity `sub` for Studio's saved designs isn't verified
 
 ## Goals
 
@@ -332,7 +332,9 @@ Settled:
   `link_sources` refuses a source its own descriptor doesn't declare, so their CI would fail; the runner's `linked_value`
   looks ready, not run end to end. Typing the secret per environment fails too, since a generated secret can't be read
   back. Their pushes, and `ocharo-platform`'s clients 3 and 4, wait for the pipelines change, which the wheelhouse lane
-  builds. It needs no tag (owner, 2026-11-05): consumers pin the pushed commit's SHA.
+  builds. It needs no tag (owner, 2026-11-05): consumers pin the pushed commit's SHA, `e134a47`, and link with
+  `{ repository, key }`. Canary: delivery at that SHA passed and a foreign link was refused live; a successful render
+  across repositories first runs on Ocharo dev. Ocharo deploys through Wheelhouse's prod console, so `0.13.6` goes there first.
 - 51. Prod parks until last (owner, 2026-11-05: "we need to close identity feature, then files, then events, we are so
   behind in schedule that checking this is literally the last thing now"). Ocharo's creation on prod, the invite, the
   G3 sign-in and every prod promotion wait; prod stays on `v0.1.18`. Identity closes on dev.
