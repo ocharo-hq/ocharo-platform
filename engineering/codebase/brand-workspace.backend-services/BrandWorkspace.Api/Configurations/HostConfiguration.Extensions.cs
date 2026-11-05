@@ -4,7 +4,6 @@ using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using BrandWorkspace.Api.MediaProcessing;
 using BrandWorkspace.Api.Commerce;
-using BrandWorkspace.Api.Integrations;
 using BrandWorkspace.Api.DesignDocuments;
 using BrandWorkspace.Api.Access;
 using BrandWorkspace.Api.Foundation;
@@ -23,9 +22,7 @@ using BrandWorkspace.Application.Sourcing.Repositories;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
 using BrandWorkspace.Persistence.Sourcing.Repositories;
 using BrandWorkspace.Api.Events;
-using BrandWorkspace.Api.Mcp;
 using BrandWorkspace.Api.RuntimeConfig.Settings;
-using WoW.Two.Sdk.Beta.Be.Ai.Mcp;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Infrastructure.Events.Services;
 using BrandWorkspace.Persistence.Events.Repositories;
@@ -67,12 +64,11 @@ public static partial class HostConfiguration
             values["ConnectionStrings:Database"] = connection;
         if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is { } urls) values["urls"] = urls;
         if (Environment.GetEnvironmentVariable("AllowedHosts") is { } allowedHosts) values["AllowedHosts"] = allowedHosts;
-        foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Integrations__SigningKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
+        foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
                      "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password",
                      "Identity__Client__Authority", "Identity__Client__ClientId", "Identity__Client__ClientSecret", "Identity__Client__CookieName",
                      "Identity__Client__PostSignOutRedirectPath", "Identity__Client__Environment" })
             if (Environment.GetEnvironmentVariable(key) is { } value) values[key.Replace("__", ":")] = value;
-        if (Environment.GetEnvironmentVariable("MCP_ENABLED") is { } mcpEnabled) values["Mcp:Enabled"] = mcpEnabled;
         builder.Configuration.AddInMemoryCollection(values);
         return builder;
     }
@@ -160,13 +156,6 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers scoped integration ticket verification.</summary>
-    private static WebApplicationBuilder AddIntegrations(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddSingleton<IntegrationTickets>();
-        return builder;
-    }
-
     /// <summary>Registers commerce persistence and preserved source adoption.</summary>
     private static WebApplicationBuilder AddCommerce(this WebApplicationBuilder builder)
     {
@@ -209,25 +198,8 @@ public static partial class HostConfiguration
             options.BaseUrl = builder.Configuration["ImageProcessing:WorkerBaseUrl"];
             options.ApiKey = builder.Configuration["ImageProcessing:WorkerKey"];
         });
-        return builder;
-    }
-
-    /// <summary>Registers opt-in read-only MCP with audience-bound delegated tickets.</summary>
-    private static WebApplicationBuilder AddDeskMcp(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddSingleton(services => new DeskMcpSettings(
-            services.GetRequiredService<IConfiguration>().GetValue<bool>("Mcp:Enabled")));
-        builder.Services.AddHttpContextAccessor();
-        builder.Services.AddAuthentication().AddScheme<AuthenticationSchemeOptions, DeskMcpAuthenticationHandler>(
-            DeskMcpAuthenticationHandler.SchemeName, null);
-        builder.Services.AddAuthorizationBuilder().AddPolicy(DeskMcpEndpoints.Policy, policy => policy
-            .AddAuthenticationSchemes(DeskMcpAuthenticationHandler.SchemeName)
-            .RequireAuthenticatedUser());
-        var json = new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)
-        {
-            TypeInfoResolver = new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver()
-        };
-        builder.Services.AddStatelessMcpServer().WithTools<DeskReadTools>(json);
+        // Shut to everyone until Identity's service tokens release; the service-token requirement then replaces the assertion.
+        builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingEndpoints.Policy, policy => policy.RequireAssertion(_ => false));
         return builder;
     }
 
@@ -272,7 +244,6 @@ public static partial class HostConfiguration
         app.UseDefaultFiles();
         app.UseStaticFiles();
         app.UseRouting();
-        app.UseDeskMcpBoundary();
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.StartsWithSegments("/api/identity") || context.Request.Path.StartsWithSegments("/api/organizations"))

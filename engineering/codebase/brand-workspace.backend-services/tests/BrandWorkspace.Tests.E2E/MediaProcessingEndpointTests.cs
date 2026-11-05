@@ -2,88 +2,53 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using AwesomeAssertions;
-using BrandWorkspace.Api.Integrations;
 using BrandWorkspace.Api.MediaProcessing;
-using BrandWorkspace.Application.Access;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Time.Testing;
+using Microsoft.Extensions.Options;
 using SkiaSharp;
 using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Exercises delegated image HTTP boundaries with isolated authority and worker dependencies.</summary>
+/// <summary>Exercises the image HTTP boundaries with a test caller standing in for the closed policy, and the closed policy itself on the Desk host.</summary>
 public sealed class MediaProcessingEndpointTests
 {
     private const string Route = "/api/integrations/media/background-removal";
     private const int MaximumBytes = 20 * 1024 * 1024;
 
     [Theory]
-    [InlineData("missing", false)]
-    [InlineData("missing", true)]
-    [InlineData("malformed", false)]
-    [InlineData("malformed", true)]
-    [InlineData("audience", false)]
-    [InlineData("audience", true)]
-    [InlineData("http", false)]
-    [InlineData("http", true)]
-    [InlineData("duplicate", false)]
-    [InlineData("duplicate", true)]
-    public async Task ImageEndpoint_ShouldReturn401_WhenTicketOrTransportIsInvalid(string scenario, bool process)
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ImageEndpoint_ShouldReturn401_WhenCallerIsAnonymous(bool process)
     {
         await using var host = await EndpointHost.CreateAsync();
-        var ticket = scenario switch
-        {
-            "missing" => null,
-            "malformed" => "not-a-ticket",
-            "audience" => host.Issue("ocharo-studio"),
-            _ => host.Issue()
-        };
-        var scheme = scenario == "http" ? "http" : "https";
-        using var request = new HttpRequestMessage(process ? HttpMethod.Post : HttpMethod.Get,
-            $"{scheme}://localhost{Route}{(process ? "" : "/capabilities")}");
-        if (ticket is not null)
-            request.Headers.TryAddWithoutValidation("X-Ocharo-Integration-Ticket",
-                scenario == "duplicate" ? new[] { ticket, ticket } : new[] { ticket });
+        using var request = new HttpRequestMessage(process ? HttpMethod.Post : HttpMethod.Get, Route + (process ? "" : "/capabilities"));
         if (process) request.Content = ImageContent(Png());
 
         using var response = await host.Client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        response.Headers.CacheControl!.NoStore.Should().BeTrue();
         host.Worker.StatusCalls.Should().Be(0);
         host.Worker.RemoveCalls.Should().Be(0);
     }
 
     [Fact]
-    public async Task Processing_ShouldReturn403_WhenCurrentMembershipIsViewer()
+    public async Task Capabilities_ShouldReportWorkerReadiness_WhenCallerIsAuthorized()
     {
         await using var host = await EndpointHost.CreateAsync();
-        var ticket = host.Issue();
-        host.Access.Member = host.Access.Member! with { Role = "viewer", CanEdit = false, CanApprove = false };
-
-        using var response = await host.PostAsync(ImageContent(Png()), ticket);
-
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        host.Worker.RemoveCalls.Should().Be(0);
-    }
-
-    [Fact]
-    public async Task Capabilities_ShouldReportWorkerReadiness_WhenTicketHasReadAccess()
-    {
-        await using var host = await EndpointHost.CreateAsync();
-        host.Access.Member = host.Access.Member! with { Role = "viewer", CanEdit = false, CanApprove = false };
         host.Worker.Status = new(false);
-        using var request = new HttpRequestMessage(HttpMethod.Get, Route + "/capabilities");
-        request.Headers.Add("X-Ocharo-Integration-Ticket", host.Issue());
 
-        using var response = await host.Client.SendAsync(request);
+        using var response = await host.GetCapabilitiesAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Headers.CacheControl!.NoStore.Should().BeTrue();
@@ -94,15 +59,13 @@ public sealed class MediaProcessingEndpointTests
         host.Worker.RemoveCalls.Should().Be(0);
     }
 
-    [Theory]
-    [InlineData("ocharo-marketing")]
-    [InlineData("ocharo-editorial")]
-    public async Task Processing_ShouldReturnPngAndShapeHeaders_WhenCurrentEditorSendsValidImage(string audience)
+    [Fact]
+    public async Task Processing_ShouldReturnPngAndShapeHeaders_WhenCallerSendsValidImage()
     {
         await using var host = await EndpointHost.CreateAsync();
         var original = Png();
 
-        using var response = await host.PostAsync(ImageContent(original), host.Issue(audience));
+        using var response = await host.PostAsync(ImageContent(original));
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         response.Content.Headers.ContentType!.MediaType.Should().Be("image/png");
@@ -113,38 +76,6 @@ public sealed class MediaProcessingEndpointTests
         response.Headers.GetValues("X-Image-Height").Should().Equal("2");
         host.Worker.LastSource.Should().Equal(original);
         (await response.Content.ReadAsByteArrayAsync()).Should().Equal(host.Worker.Output);
-        host.Worker.RemoveCalls.Should().Be(1);
-        host.Access.MembershipChecks.Should().Be(2);
-        host.Access.SessionChecks.Should().Be(2);
-    }
-
-    [Theory]
-    [InlineData("session", HttpStatusCode.Unauthorized)]
-    [InlineData("membership", HttpStatusCode.Unauthorized)]
-    [InlineData("role", HttpStatusCode.Forbidden)]
-    [InlineData("expiry", HttpStatusCode.Unauthorized)]
-    public async Task Processing_ShouldRejectCompletedWork_WhenAuthorityChangesDuringProcessing(string revocation, HttpStatusCode expected)
-    {
-        await using var host = await EndpointHost.CreateAsync();
-        host.Worker.Block = true;
-        var pending = host.PostAsync(ImageContent(Png()));
-        try
-        {
-            await host.Worker.Entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
-            switch (revocation)
-            {
-                case "session": host.Access.Active = false; break;
-                case "membership": host.Access.Member = null; break;
-                case "role": host.Access.Member = host.Access.Member! with { CanEdit = false, CanApprove = false, Role = "viewer" }; break;
-                case "expiry": host.Clock.Advance(TimeSpan.FromMinutes(5)); break;
-            }
-        }
-        finally { host.Worker.Release.TrySetResult(); }
-        using var response = await pending;
-
-        response.StatusCode.Should().Be(expected);
-        response.Content.Headers.ContentType?.MediaType.Should().NotBe("image/png");
-        response.Headers.Contains("X-Image-Model").Should().BeFalse();
         host.Worker.RemoveCalls.Should().Be(1);
     }
 
@@ -236,46 +167,48 @@ public sealed class MediaProcessingEndpointTests
 
     private sealed class EndpointHost : IAsyncDisposable
     {
-        private const string Key = "isolated-media-endpoint-test-key-2026";
+        private const string Scheme = "MediaTest";
+        private const string CallerHeader = "X-Test-Caller";
         private readonly WebApplication app;
-        public FakeTimeProvider Clock { get; }
-        public Access Access { get; }
         public Worker Worker { get; }
         public HttpClient Client { get; }
-        private IntegrationTickets Tickets { get; }
 
-        private EndpointHost(WebApplication application, FakeTimeProvider clock, Access access, Worker worker)
+        private EndpointHost(WebApplication application, Worker worker)
         {
-            app = application; Clock = clock; Access = access; Worker = worker;
+            app = application; Worker = worker;
             Client = app.GetTestClient(); Client.BaseAddress = new Uri("https://localhost");
-            Tickets = app.Services.GetRequiredService<IntegrationTickets>();
         }
 
         public static async Task<EndpointHost> CreateAsync()
         {
-            var clock = new FakeTimeProvider(new DateTimeOffset(2026, 9, 30, 0, 0, 0, TimeSpan.Zero));
-            var access = new Access(); var worker = new Worker();
+            var worker = new Worker();
             var builder = WebApplication.CreateBuilder(new WebApplicationOptions { ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development });
             builder.WebHost.UseTestServer();
             builder.Logging.ClearProviders();
-            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["Integrations:SigningKey"] = Key });
-            builder.Services.AddSingleton<TimeProvider>(clock);
-            builder.Services.AddSingleton<IAccessRepository>(access);
             builder.Services.AddSingleton<IBackgroundRemovalService>(worker);
-            builder.Services.AddSingleton<IntegrationTickets>();
+            // The test host replaces the closed policy with one that admits the authenticated test caller.
+            builder.Services.AddAuthentication(Scheme).AddScheme<AuthenticationSchemeOptions, CallerHandler>(Scheme, null);
+            builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingEndpoints.Policy, policy => policy
+                .AddAuthenticationSchemes(Scheme).RequireAuthenticatedUser());
             var application = builder.Build();
+            application.UseAuthentication();
+            application.UseAuthorization();
             application.MapMediaProcessingEndpoints();
             await application.StartAsync();
-            return new(application, clock, access, worker);
+            return new(application, worker);
         }
 
-        public string Issue(string audience = "ocharo-marketing") =>
-            JsonSerializer.SerializeToElement(Tickets.Issue(audience, Access.Member!, Access.Session)).GetProperty("token").GetString()!;
+        public async Task<HttpResponseMessage> GetCapabilitiesAsync()
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, Route + "/capabilities");
+            request.Headers.Add(CallerHeader, "caller");
+            return await Client.SendAsync(request);
+        }
 
-        public async Task<HttpResponseMessage> PostAsync(HttpContent content, string? ticket = null)
+        public async Task<HttpResponseMessage> PostAsync(HttpContent content)
         {
             using var request = new HttpRequestMessage(HttpMethod.Post, Route) { Content = content };
-            request.Headers.Add("X-Ocharo-Integration-Ticket", ticket ?? Issue());
+            request.Headers.Add(CallerHeader, "caller");
             return await Client.SendAsync(request);
         }
 
@@ -284,6 +217,16 @@ public sealed class MediaProcessingEndpointTests
             Worker.Release.TrySetResult();
             Client.Dispose();
             await app.DisposeAsync();
+        }
+
+        private sealed class CallerHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)
+            : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+        {
+            protected override Task<AuthenticateResult> HandleAuthenticateAsync() =>
+                Task.FromResult(Request.Headers.ContainsKey(CallerHeader)
+                    ? AuthenticateResult.Success(new AuthenticationTicket(
+                        new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "caller")], Scheme.Name)), Scheme.Name))
+                    : AuthenticateResult.NoResult());
         }
     }
 
@@ -312,36 +255,52 @@ public sealed class MediaProcessingEndpointTests
         }
     }
 
-    private sealed class Access : IAccessRepository
-    {
-        public Guid Organization { get; } = Guid.NewGuid();
-        public Guid Session { get; } = Guid.NewGuid();
-        public bool Active { get; set; } = true;
-        public OrganizationAccess? Member { get; set; }
-        public int SessionChecks { get; private set; }
-        public int MembershipChecks { get; private set; }
-        public Access() => Member = new(Organization, "media-test-operator", "owner", true, true);
-        public Task<bool> IsSessionActiveAsync(Guid sessionId, string userId, DateTimeOffset now, CancellationToken token)
-        {
-            SessionChecks++;
-            return Task.FromResult(Active && sessionId == Session && userId == "media-test-operator");
-        }
-        public Task<OrganizationAccess?> FindMembershipAsync(Guid organizationId, string userId, CancellationToken token)
-        {
-            MembershipChecks++;
-            return Task.FromResult(organizationId == Organization && userId == "media-test-operator" ? Member : null);
-        }
-        public Task<OperatorProfile?> FindProfileAsync(string userId, CancellationToken token) => Task.FromResult<OperatorProfile?>(null);
-        public Task<Organization?> FindOrganizationAsync(Guid organizationId, string role, CancellationToken token) => throw new NotSupportedException();
-        public Task ProjectUserAsync(string userId, string? displayName, string? email, CancellationToken token) => throw new NotSupportedException();
-        public Task ProjectOrganizationAsync(Guid organizationId, string? name, string? slug, CancellationToken token) => throw new NotSupportedException();
-    }
-
     private sealed class UnknownLengthContent : HttpContent
     {
         private readonly byte[] bytes;
         public UnknownLengthContent(byte[] bytes) { this.bytes = bytes; Headers.ContentType = new("image/png"); }
         protected override bool TryComputeLength(out long length) { length = 0; return false; }
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => stream.WriteAsync(bytes).AsTask();
+    }
+}
+
+/// <summary>The registered policy keeps both routes shut to every caller, whatever the Desk membership.</summary>
+public sealed class MediaProcessingPolicyTests(PreparationDatabaseFixture fixture) : IClassFixture<PreparationDatabaseFixture>
+{
+    private const string Route = "/api/integrations/media/background-removal";
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ImageEndpoint_ShouldReturn401_WhenAnonymous(bool process)
+    {
+        using var client = DeskTestHost.CreateClient(fixture.Factory);
+
+        using var response = await Send(client, process);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ImageEndpoint_ShouldReturn403_WhenSignedInMemberCalls(bool process)
+    {
+        var organization = Guid.NewGuid();
+        var subject = Guid.NewGuid().ToString("D");
+        DeskTestHost.Register(new DeskTestHost.Person(subject, organization, "owner", "Media owner", $"media-{Guid.NewGuid():N}@example.test"));
+        using var client = DeskTestHost.CreateClient(fixture.Factory, subject);
+
+        using var response = await Send(client, process);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    private static Task<HttpResponseMessage> Send(HttpClient client, bool process)
+    {
+        if (!process) return client.GetAsync(Route + "/capabilities");
+        var content = new ByteArrayContent([1, 2, 3]);
+        content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        return client.PostAsync(Route, content);
     }
 }

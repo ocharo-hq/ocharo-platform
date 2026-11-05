@@ -84,28 +84,6 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
-    /// <summary>Opens a live Desk session row for the person, which integration tickets are still checked against.</summary>
-    public async Task<Guid> OpenSessionAsync(OrganizationAccess access)
-    {
-        var id = Guid.NewGuid();
-        await using var command = DataSource.CreateCommand("""
-            INSERT INTO access.sessions(id,user_id,security_stamp,expires_at)
-            SELECT @id,id,"SecurityStamp",now()+interval '1 day' FROM access.users WHERE id=@user
-            """);
-        command.Parameters.AddWithValue("id", id);
-        command.Parameters.AddWithValue("user", access.UserId);
-        (await command.ExecuteNonQueryAsync()).Should().Be(1);
-        return id;
-    }
-
-    /// <summary>Revokes a session row opened by <see cref="OpenSessionAsync"/>.</summary>
-    public async Task RevokeSessionAsync(Guid sessionId)
-    {
-        await using var command = DataSource.CreateCommand("UPDATE access.sessions SET revoked_at=now() WHERE id=@id");
-        command.Parameters.AddWithValue("id", sessionId);
-        await command.ExecuteNonQueryAsync();
-    }
-
     public async Task DisposeAsync()
     {
         if (Factory is not null) await Factory.DisposeAsync();

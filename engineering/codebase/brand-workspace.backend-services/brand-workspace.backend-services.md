@@ -133,19 +133,14 @@ A value is served only as an absolute HTTPS address without credentials, query o
 warning naming each setting it leaves out. The SPA layers these values ahead of its build-time `VITE_OCHARO_*_URL`
 values and local `localhost` defaults.
 
-### App sign-in (SSO)
+### App sign-in
 
-Desk issues delegated access to Ocharo apps through `/api/sso/{authorize,exchange,refresh,revoke}`; the protocol,
-trust configuration and limits are in the [Ocharo SSO doc](../ocharo-sso/README.md).
+Desk signs in through Identity's BFF (`UseIdentityBff`) and issues no delegated tickets: every Ocharo app signs in
+through Ocharo's Identity on its own.
 
-- `POST /api/integrations/introspect` (`IntegrationTickets`): anonymous backchannel over HTTPS, `no-store`. For an
-  audience-bound ticket whose Desk session and organization membership are still live it answers
-  `{ data: { active: true, userId, organizationId, role, canEdit, canApprove, expiresAt, displayName, email } }`;
-  anything else answers `{ data: { active: false } }` with no profile.
-- `displayName` and `email` are read from `access.users` on each introspection (`IAccessRepository.FindProfileAsync`),
-  so they are the ticket holder's own current profile. A blank name falls back to the email; a missing user or value
-  is `null`. The exchange and refresh bodies stay credential-only; apps receive identity only through introspection.
-- No schema change: `DisplayName` and `Email` already exist on `access.users` (migration `002-access`).
+- Background removal (`/api/integrations/media/background-removal` and `/capabilities`) stays shut
+  behind the `MediaProcessing` policy, which denies everyone: anonymous callers get `401`, a signed-in Desk member `403`.
+  It opens when Identity's service tokens release, with the service-token requirement replacing the assertion.
 
 ## SDK adoption boundary
 

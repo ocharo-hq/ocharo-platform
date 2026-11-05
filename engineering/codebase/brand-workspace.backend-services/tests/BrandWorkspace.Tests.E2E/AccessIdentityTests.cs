@@ -103,19 +103,6 @@ public sealed class AccessIdentityTests(PreparationDatabaseFixture fixture) : IC
     }
 
     [Fact]
-    public async Task IntegrationTickets_ShouldAnswer503_UntilIdentityIssuesAgentTokens()
-    {
-        var owner = await fixture.CreateOwnerAsync();
-        using var client = await fixture.LoginAsync(owner);
-
-        using var response = await client.PostAsJsonAsync(
-            $"/api/organizations/{owner.OrganizationId}/integration-tickets", new { audience = "ocharo-desk-mcp" });
-
-        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("integration_tickets_unavailable");
-    }
-
-    [Fact]
     public async Task FirstSignIn_ShouldProjectTheTokensOrganization_WhenDeskHasNoRowForIt()
     {
         var organization = Guid.NewGuid();

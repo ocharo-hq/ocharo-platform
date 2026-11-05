@@ -10,19 +10,6 @@ public sealed class AccessRepository(NpgsqlDataSource dataSource) : IAccessRepos
     private readonly ConcurrentDictionary<string, string> projected = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<Guid, string> projectedOrganizations = new();
 
-    public async Task<bool> IsSessionActiveAsync(Guid sessionId, string userId, DateTimeOffset now, CancellationToken token)
-    {
-        await using var command = dataSource.CreateCommand("""
-            SELECT EXISTS(SELECT 1 FROM access.sessions s JOIN access.users u ON u.id=s.user_id
-            WHERE s.id=@id AND s.user_id=@user AND s.revoked_at IS NULL AND s.expires_at>@now
-              AND u."IsActive" AND u."SecurityStamp"=s.security_stamp)
-            """);
-        command.Parameters.AddWithValue("id", sessionId);
-        command.Parameters.AddWithValue("user", userId);
-        command.Parameters.AddWithValue("now", now);
-        return (bool)(await command.ExecuteScalarAsync(token))!;
-    }
-
     public async Task<OrganizationAccess?> FindMembershipAsync(Guid organizationId, string userId, CancellationToken token)
     {
         await using var command = dataSource.CreateCommand(
@@ -31,15 +18,6 @@ public sealed class AccessRepository(NpgsqlDataSource dataSource) : IAccessRepos
         command.Parameters.AddWithValue("user", userId);
         return await command.ExecuteScalarAsync(token) is string role
             ? new OrganizationAccess(organizationId, userId, role, role is "owner" or "editor", role == "owner") : null;
-    }
-
-    public async Task<OperatorProfile?> FindProfileAsync(string userId, CancellationToken token)
-    {
-        await using var command = dataSource.CreateCommand("""SELECT "DisplayName","Email" FROM access.users WHERE id=@user""");
-        command.Parameters.AddWithValue("user", userId);
-        await using var reader = await command.ExecuteReaderAsync(token);
-        if (!await reader.ReadAsync(token)) return null;
-        return new OperatorProfile(reader.IsDBNull(0) ? null : reader.GetString(0), reader.IsDBNull(1) ? null : reader.GetString(1));
     }
 
     public async Task<Organization?> FindOrganizationAsync(Guid organizationId, string role, CancellationToken token)

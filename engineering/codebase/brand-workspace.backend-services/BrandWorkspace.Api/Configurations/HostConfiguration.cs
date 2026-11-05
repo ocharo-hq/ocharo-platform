@@ -1,12 +1,10 @@
 using BrandWorkspace.Api.MediaProcessing;
 using BrandWorkspace.Api.Commerce;
-using BrandWorkspace.Api.Integrations;
 using BrandWorkspace.Api.DesignDocuments;
 using BrandWorkspace.Api.Access;
 using BrandWorkspace.Api.Preparation;
 using BrandWorkspace.Api.Sourcing;
 using BrandWorkspace.Api.Events;
-using BrandWorkspace.Api.Mcp;
 
 namespace BrandWorkspace.Api.Configurations;
 
@@ -16,9 +14,9 @@ public static partial class HostConfiguration
     /// <summary>Configures the application builder (services).</summary>
     public static WebApplicationBuilder Configure(this WebApplicationBuilder builder, bool migrate = false) =>
         builder.AddExplicitEnvironment().AddPostgresDatabase().AddFoundation(migrate).AddAccess()
-            .AddPreparation().AddDesignDocuments().AddIntegrations().AddCommerce().AddSourcing().AddEvents().AddMediaProcessing().AddDeskMcp().AddRuntimeConfig().AddHttpSurface();
+            .AddPreparation().AddDesignDocuments().AddCommerce().AddSourcing().AddEvents().AddMediaProcessing().AddRuntimeConfig().AddHttpSurface();
 
     /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>
     public static WebApplication Configure(this WebApplication app, bool serveHttp = true) =>
-        serveHttp ? app.AddFoundationEndpoints().MapDeskMcpEndpoints().MapAccessEndpoints().MapPreparationEndpoints().MapDesignDocumentEndpoints().MapIntegrationEndpoints().MapCommerceEndpoints().MapSourcingEndpoints().MapEventEndpoints().MapMediaProcessingEndpoints().MapRuntimeConfig() : app;
+        serveHttp ? app.AddFoundationEndpoints().MapAccessEndpoints().MapPreparationEndpoints().MapDesignDocumentEndpoints().MapCommerceEndpoints().MapSourcingEndpoints().MapEventEndpoints().MapMediaProcessingEndpoints().MapRuntimeConfig() : app;
 }
