@@ -15,7 +15,7 @@ and its `Identity:SignUp:IsEnabled` are stale; where it disagrees with this doc,
 - ✅ G1 local: Desk signs in through Ocharo's local Identity — sign-in by phone, the edit check and Maftuna's invite through a trusted contact pass; her Desk session shows Ocharo, `owner`, `desk:edit` and `desk:approve` (2026-11-03). Her own phone moves to the backlog (#46)
 - ✅ G2 dev: the same on hosted dev with `@ocharo_dev_bot` — `v0.1.17` (identity `0.5.15`, trusted contacts on) runs clean on dev, deployment `87f21066`, and `v0.1.18` (the bot's messages name Ocharo) runs clean, deployment `c7f6904c`; the owner signed in to Desk by phone through `@ocharo_dev_bot` and sees Ocharo as `owner` (2026-11-03); closed on that sign-in alone (#49)
 - ⬜ [parked] G3 prod (#51): the same on prod with `@ocharo_bot` — prod runs `v0.1.18` (identity `0.5.15`, deployment `e9421fb3`, 2026-11-04): services healthy, issuer right (#31), and Identity's boot log shows the webhook registered; prod stored no retired identity keys (#30), and Ocharo's organization takes the preset id `b8c672a6-…` there too (#43), so v0.1.19's Brand and Catalogue `OrganizationId` can be set before the bootstrap creates it; `admin create` ran (job `b874412e`) and the owner signed in to the prod console by phone through `@ocharo_bot` (2026-11-04), so Ocharo's creation and the invite remain
-- 🔄 G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired — `v0.1.19` (Brand and Catalogue on Identity) runs clean on dev, deployment `40f44d37` (2026-11-04), and both dev sessions read back Ocharo, `owner` and each app's `edit` and `approve` (2026-11-05), and prod waits with G3 (#51). Marketing, Editorial and Studio run on dev: platform `v0.1.20`, marketing `v0.1.1`, studio `v0.1.8`, deployment `6772eff7` (2026-11-05), the first live cross-repository render, with each app's secret matching Identity's client and each sign-in redirecting with its own client id; a completed sign-in there waits with the other deferred checks, and whether old Desk ids equal Identity `sub` for Studio's saved designs isn't verified. The old sign-in is gone from code and deploy files across the repos (2026-11-05, `ocharo-platform` `5042058`); Desk's old tables stay until prod's cutover, and migration `011` was never written
+- 🔄 G4 apps: Brand, Catalogue, Marketing, Editorial and Studio sign in through Identity; `Ocharo.Sso` retired — `v0.1.19` (Brand and Catalogue on Identity) runs clean on dev, deployment `40f44d37` (2026-11-04), and both dev sessions read back Ocharo, `owner` and each app's `edit` and `approve` (2026-11-05), and prod waits with G3 (#51). Marketing, Editorial and Studio run on dev: platform `v0.1.20`, marketing `v0.1.1`, studio `v0.1.8`, deployment `6772eff7` (2026-11-05), the first live cross-repository render, with each app's secret matching Identity's client and each sign-in redirecting with its own client id; a completed sign-in there waits with the other deferred checks, and whether old Desk ids equal Identity `sub` for Studio's saved designs isn't verified. The old sign-in is gone from code and deploy files across the repos (2026-11-05, `ocharo-platform` `5042058`); Desk's old tables stay until prod's cutover, and migration `011` was never written. Identity closes on dev with service tokens and signals running in all six apps: platform `v0.1.25`, marketing `v0.1.6`, studio `v0.1.11`, identity `0.5.18`, deployment `49d63424` (2026-11-05, #52); prod and the deferred sign-in reads keep G4 open
 
 ## Goals
 
@@ -355,8 +355,17 @@ Settled:
   (2026-11-05). Editorial's two calls adopted them in platform `v0.1.22` and marketing `v0.1.3`, passing locally with real
   tokens, scopes `desk.remove-background` and `editorial.export`, since Identity's boot refuses three segments. Signals
   shipped: image `v0.5.17`, NuGet `10.0.26-beta`, be sdk `10.0.103-beta`, Identity `55b6ccc` (2026-11-05), and no role change
-  signs anyone out on upgrade, instance roles included. Each app's adoption and dev's rollout remain before Identity closes.
-  Known gaps: jobs hear signals in their own process only, replicas need a shared cache to share a deny list, and the
+  signs anyone out on upgrade, instance roles included. A fresh reviewer found seven gaps. Six are fixed in image `v0.5.18`,
+  NuGet `10.0.27-beta`, each with a test failing first: stamp rotation and account deletion now signal, exchange refuses a
+  person who left the token's organization, an unlisted key during a JWKS failure answers `503`, and two BFF refresh races
+  closed. The seventh, a removed person's scheduled publication, is in Marketing's backlog for a later decision. All six
+  apps adopted both: platform `v0.1.25`, marketing `v0.1.6`, studio `v0.1.11`, on dev in deployment `49d63424` (2026-11-05).
+  Identity closes on dev here, proven by: the owner's sign-out at Desk delivered 8 `202`s in one wave with no retry or
+  warning, and Editorial's session ended unvisited; Desk's capability route answers `401` with no token, and Editorial's
+  token reads it as available with `u2net`. Not run: a real removal, since dev's Editorial holds no media, so the worker's
+  peak memory is unmeasured; a completed sign-in read back on Marketing and Studio (#49); a review of the six fixes.
+  Known gaps: jobs hear signals in their own process only, replicas need a shared cache to share a deny list, a key rotated
+  inside the 5-minute minimum can still lose a signal (token lifetime bounds it), the BFF gate is per process, and the
   public build's generated secret has no holder outside the vault, so a live build against dev can't run yet; no CI job needs it.
 
 Open, lane-local — each lane asks in its own chat:
