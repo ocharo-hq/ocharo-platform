@@ -374,6 +374,15 @@ Settled:
   the one it uses today; one with no reachable contact signs straight in, unprotected; a SIM holder can still press
   "Revoke trust" on a notice under a day old. Not run: the wait in a browser, which needs the owner's phone. GitHub lost the
   `ef495c2` push event (no check suites, `pushed_at` unchanged), so the image's release rode the next real commit, `5a171b4`.
+- 54. The closing review (2026-11-06: a fresh reviewer on `5af35de` and `ef495c2`, reading code only) found five gaps, all
+  fixed in Identity `006b4a0`, `af16411` and `c0d8c3b`: a press took effect only through a later poll; a changed own phone
+  ended no session and sent no signal; the poll token wasn't bound to its browser; a fast browser clock ended the wait; a
+  signal during a BFF's sign-in was ignored. Released as image `v0.5.20`, NuGet `10.0.29-beta` and npm `0.0.15`, conformance
+  passed; platform `v0.1.27` (`1c283db`) pins the image, and dev serves its new page bundle. Migration
+  `012-device-confirmation-request` applies on deploy. The apps stay on `Identity.Client` `10.0.27-beta`, so the BFF fix
+  reaches them at their next re-pin. Limits, from the lane's code reading: a browser refusing the `Secure` device cookie
+  can't finish a wait; an end signal during a code exchange finds no session until the first refused refresh; a contact's
+  old Telegram can still press a sent notice after their number changes. Not run: the wait and a phone change in a browser.
 
 Open, lane-local — each lane asks in its own chat:
 
