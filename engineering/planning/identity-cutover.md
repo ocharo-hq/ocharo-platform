@@ -1,6 +1,6 @@
 # Identity cutover
 
-*Last updated: 2026-11-05*
+*Last updated: 2026-11-06*
 
 Ocharo people sign in by Telegram through Ocharo's own WoW2 Identity instance on local, dev and prod, and every
 Ocharo app moves off `Ocharo.Sso`. This is the goal's cross-lane track: vectors, lanes, order, contracts, decisions
@@ -367,6 +367,13 @@ Settled:
   Known gaps: jobs hear signals in their own process only, replicas need a shared cache to share a deny list, a key rotated
   inside the 5-minute minimum can still lose a signal (token lifetime bounds it), the BFF gate is per process, and the
   public build's generated secret has no holder outside the vault, so a live build against dev can't run yet; no CI job needs it.
+- 53. A trusted contact's press guards a new browser (owner, 2026-11-05): an account's own code on a browser it hasn't used
+  waits for Approve in Telegram. Identity `ef495c2`, released 2026-11-06 as image `v0.5.19`, NuGet `10.0.28-beta` and npm
+  `0.0.14`; conformance passed. Platform `v0.1.26` (`0d7a911`) pins the image, and dev answers the new route (`400` to an
+  empty request, `404` on a control path). An account with its own phone and a contact waits once per browser, including
+  the one it uses today; one with no reachable contact signs straight in, unprotected; a SIM holder can still press
+  "Revoke trust" on a notice under a day old. Not run: the wait in a browser, which needs the owner's phone. GitHub lost the
+  `ef495c2` push event (no check suites, `pushed_at` unchanged), so the image's release rode the next real commit, `5a171b4`.
 
 Open, lane-local — each lane asks in its own chat:
 
