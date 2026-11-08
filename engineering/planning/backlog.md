@@ -1,6 +1,6 @@
 # Ocharo Platform — Backlog
 
-*Last updated: 2026-11-04*
+*Last updated: 2026-11-08*
 
 ## Features
 
@@ -30,7 +30,7 @@ Owner focus from 2026-10-24: **Events and Sourcing only**, then WoW2 File Storag
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
 | Identity cutover | engineering | Ocharo people sign in by Telegram through Ocharo's WoW2 Identity, local → dev → prod, then every app; track: [identity-cutover.md](identity-cutover.md). |
 | Own-phone check | verification | Verify Maftuna adds her own phone through the bot's add-phone link, then signs in on her own phone, not through her trusted contact; deferred by the owner on 2026-11-03 (identity-cutover.md #46). |
-| Dev sign-in checks | verification | Deferred by the owner on 2026-11-04 (identity-cutover.md #49): read Desk's `GET /api/identity/session` on dev for Ocharo and `desk:*`, run an invite on dev, and complete a sign-in on Marketing, Editorial and Studio, which needs the owner's phone. |
+| Dev sign-in checks | verification | Deferred by the owner on 2026-11-04 (identity-cutover.md #49): read Desk's `GET /api/identity/session` on dev for Ocharo and `desk:*`, run an invite on dev, and complete a sign-in on Marketing, Editorial and Studio, which needs the owner's phone. Also parked by the owner on 2026-11-08 (identity-cutover.md #53, #54): a new browser's wait for a trusted contact's press in Telegram, which needs the owner's phone and a contact, and an own-phone change in a browser, which needs a second number. |
 | Dev and prod follow-ups | engineering | Deferred by the owner on 2026-10-24: Marketing's card preview answers 500 on dev; Motion's private site gets no route; dev Desk has no operator yet; prod has never been deployed. |
 | Desk's retired tables | engineering | Every app signs in through Ocharo's Identity and tickets are gone (2026-11-05), but Desk's `access.sessions`, `sso_*`, `telegram_*`, the six EF `identity_*` tables and `memberships` remain. Dropping them is the unwritten forward-only migration `011-identity-cutover`, which also needs `FoundationRepository`'s `access.sessions` check and the import CLIs' `UserManager` actor lookup changed first. |
 | Ocharo File Storage adoption | engineering | Move Catalogue, Brand, Blog and Marketing media, then Desk's `bytea` files, onto the Ocharo instance of WoW2 File Storage. Waits on the SDK files module. |
