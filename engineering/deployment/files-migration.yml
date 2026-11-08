@@ -1,0 +1,69 @@
+# Where this repo's legacy files live, for the Wheelhouse migration module that moves them into WoW2 Files: tenant
+# `ocharo` on the shared files host B (Files t9 #4; planning/files-adoption.md #20). Each source names the reference its
+# files get, so the cutover build finds each file id in Files' id map. Waves run dev first, prod parked: Brand, then
+# Catalogue (wave 1), then Desk (wave 3); Blog and Marketing list theirs in ocharo-marketing. The shape follows t9's
+# draft while the module is unbuilt; where it adds to the draft (a composite `key`, a `wave`), it says so.
+tenant: ocharo
+sources:
+  # Wave 1. Each pilot keeps content-addressed originals under {DataRoot}/blobs/media/{sha[..2]}/{sha} on its /data
+  # volume; previews under blobs/previews are not copied, since Files makes them as variants (files-adoption #10).
+  - id: brand-media
+    wave: 1                            # added to t9's draft: the order the job runs sources in
+    kind: volume-folder
+    volume: brand-data
+    path: blobs/media
+    reference: "brand.media:{sha256}"  # the file name is the SHA-256 of its bytes
+  - id: catalogue-media
+    wave: 1
+    kind: volume-folder
+    volume: catalogue-data
+    path: blobs/media
+    reference: "catalogue.media:{sha256}"
+  # Catalogue's release PDFs and page PNGs sit in SQLite, a kind t9 lists after P1; they wait for it (files-adoption #20).
+  - id: catalogue-release-assets
+    wave: 1
+    kind: sqlite-column
+    volume: catalogue-data
+    database: ocharo-catalogue.db
+    table: catalogue_release_assets
+    key: Sha256
+    content: Bytes
+    type: ContentType
+    reference: "catalogue.release:{Sha256}"
+  # Wave 3. Desk's bytes sit in the target's PostgreSQL; every row also keeps its SHA-256, which the mover checks.
+  - id: desk-preparation-media
+    wave: 3
+    kind: postgres-column
+    database: desk                     # Desk's ConnectionStrings:Database on the target
+    table: preparation.media
+    key: [organization_id, id]         # added to t9's draft: a composite key
+    content: bytes
+    name: file_name
+    type: content_type
+    reference: "desk.preparation-media:{organization_id}/{id}"
+  - id: desk-preparation-exports
+    wave: 3
+    kind: postgres-column
+    database: desk
+    table: preparation.exports
+    key: [organization_id, id]
+    content: bytes                     # ZIP packages: caption, manifest and the selected media
+    reference: "desk.preparation-export:{organization_id}/{id}"
+  - id: desk-commerce-media
+    wave: 3
+    kind: postgres-column
+    database: desk
+    table: commerce.media
+    key: [brand_id, sha256]
+    content: bytes
+    type: content_type
+    reference: "desk.commerce-media:{brand_id}/{sha256}"
+  # Sourcing thumbnails are not copied: Files makes the 480 px WebP as a variant.
+  - id: desk-sourcing-media
+    wave: 3
+    kind: postgres-column
+    database: desk
+    table: sourcing.media_contents
+    key: [organization_id, sha256]
+    content: bytes                     # the type sits on sourcing.media; Files detects it from the bytes
+    reference: "desk.sourcing-media:{organization_id}/{sha256}"

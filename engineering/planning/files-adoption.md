@@ -15,8 +15,9 @@ code limits and local dev data; nothing read prod.
 
 - M1 picks written 2026-11-08 (`files-integration` #27, #30, #32). The developer reviews the built result at the end
   instead of confirming M1 (developer, 2026-11-08), so derivable picks below carry their reason and stand until then.
-- M2 started 2026-11-08: the registry entries (#18) and roles (#19) are in `engineering/deployment/deploy.yml`. App code
-  waits on the rest of #17: Files' `Client` package and B's dev deployment first.
+- M2 started 2026-11-08: the registry entries (#18) and roles (#19) are in `engineering/deployment/deploy.yml`, and the
+  migration manifest (#20) is written. App code waits on the rest of #17: Files' `Client` package and B's dev
+  deployment first.
 
 ## Instance
 
@@ -155,8 +156,9 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
 
 ## Migration
 
-- #20 manifests (t9 #4) list each wave's sources; this repo's `engineering/deployment/files-migration.yml` holds Brand,
-  Catalogue and Desk, `ocharo-marketing`'s holds Blog and Marketing:
+- #20 manifests (t9 #4) list each wave's sources; this repo's
+  [`files-migration.yml`](../deployment/files-migration.yml) holds Brand, Catalogue and Desk (written 2026-11-08, adding
+  a composite `key` and a `wave` to t9's draft), `ocharo-marketing`'s holds Blog and Marketing:
   - Brand: `volume-folder`, `brand-data`, `blobs/media`, reference `brand.media:{sha256}`.
   - Catalogue: `volume-folder`, `catalogue-data`, `blobs/media`; `catalogue_release_assets` needs `sqlite-column`,
     which t9 lists after P1, so it is asked of the files lane, and those assets stay in SQLite until it lands.
