@@ -17,6 +17,7 @@ using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
 using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
+using WoW.Two.Sdk.Beta.Be.Files.Client;
 
 namespace OcharoCatalogue.Api.Configurations;
 
@@ -62,7 +63,7 @@ public static partial class HostConfiguration
         });
         builder.Services.AddScoped<ICatalogueRepository, CatalogueRepository>();
         builder.Services.AddScoped<IDesignRepository, CatalogueDesignRepository>();
-        builder.Services.AddScoped<IMediaStore, MediaStore>();
+        builder.AddCatalogueFiles();
         builder.Services.AddScoped<WorkspaceCatalogueImporter>();
         builder.Services.AddSingleton<IDesignArtifactValidator, DesignArtifactValidator>();
         builder.Services.AddScoped<SettingsService>();
@@ -116,12 +117,64 @@ public static partial class HostConfiguration
         return builder;
     }
 
+    /// <summary>Holds the root URL of the WoW2 Files instance Catalogue stores its product images in; unset, they stay in
+    /// the local blob folder.</summary>
+    private const string FilesBaseUrlKey = "Files:BaseUrl";
+
+    /// <summary>Registers the media store: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is set, by tokens of
+    /// Catalogue's own Identity client (a person's exchanged within their session, Catalogue's own otherwise), else the
+    /// local blob folder. Both read at resolve time, so a test host's settings decide (planning/files-adoption.md #24).</summary>
+    private static WebApplicationBuilder AddCatalogueFiles(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddFilesClient(_ => { });
+        builder.Services.AddOptions<FilesClientOptions>().Configure<IConfiguration>((files, configuration) =>
+        {
+            if (configuration[FilesBaseUrlKey] is not { Length: > 0 } url)
+                return;
+            files.BaseAddress = new Uri(url);
+            if (!Uri.TryCreate(configuration["Identity:Client:Authority"], UriKind.Absolute, out var authority))
+                return;
+            files.Identity = new FilesClientIdentityOptions
+            {
+                TokenEndpoint = new Uri(authority, "connect/token"),
+                ClientId = configuration["Identity:Client:ClientId"] ?? string.Empty,
+                ClientSecret = configuration["Identity:Client:ClientSecret"] ?? string.Empty,
+            };
+        });
+        builder.Services.AddScoped<MediaStore>();
+        builder.Services.AddScoped<FilesMediaStore>();
+        builder.Services.AddScoped<FilesMediaBackfill>();
+        builder.Services.AddScoped<IMediaStore>(provider => UsesFiles(provider)
+            ? provider.GetRequiredService<FilesMediaStore>()
+            : provider.GetRequiredService<MediaStore>());
+        return builder;
+    }
+
+    /// <summary>Tells whether this run stores product images in WoW2 Files.</summary>
+    private static bool UsesFiles(IServiceProvider provider) =>
+        provider.GetRequiredService<IConfiguration>()[FilesBaseUrlKey] is { Length: > 0 };
+
+    /// <summary>Fills the file ids the migration made; an unreachable Files leaves those files on local bytes, never the boot.</summary>
+    private static async Task BackfillFileIdsAsync(this IServiceProvider services, ILogger logger)
+    {
+        try
+        {
+            await services.GetRequiredService<FilesMediaBackfill>().RunAsync(CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException)
+        {
+            logger.LogWarning(exception, "Catalogue's file ids stay unfilled: WoW2 Files could not be reached at boot.");
+        }
+    }
+
     /// <summary>Configures catalogue storage and imports configured records into an empty catalogue.</summary>
     private static async Task InitializeCatalogueAsync(this WebApplication app)
     {
         await app.Services.InitializeDatabaseAsync();
 
         using var scope = app.Services.CreateScope();
+        if (UsesFiles(scope.ServiceProvider))
+            await scope.ServiceProvider.BackfillFileIdsAsync(app.Logger);
         var options = scope.ServiceProvider.GetRequiredService<IOptions<CatalogueOptions>>().Value;
         if (!options.SeedOnEmpty || string.IsNullOrWhiteSpace(options.SourceRoot)
             || !Directory.Exists(options.SourceRoot)) return;

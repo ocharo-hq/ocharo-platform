@@ -107,11 +107,13 @@ public sealed class CatalogueController(
             ct);
         if (opened is null)
             return NotFound();
-        var (record, content) = opened.Value;
-        // Visibility can change after withdrawal or review; public bytes must be revalidated.
+        // Visibility can change after withdrawal or review; public bytes must be revalidated, and a redirect to a Files
+        // link is asked again each time, so this route keeps deciding.
         Response.Headers.CacheControl = isPublic ? "public, no-cache" : "private, no-store";
-        Response.Headers.ETag = $"\"{record.Sha256}{(preview ? "-p" : "")}\"";
-        return File(content, preview && record.PreviewPath is not null ? "image/webp" : record.ContentType);
+        if (opened.Location is { } location)
+            return Redirect(location.AbsoluteUri);
+        Response.Headers.ETag = $"\"{opened.Record.Sha256}{(preview ? "-p" : "")}\"";
+        return File(opened.Content!, opened.ContentType);
     }
 
     public sealed record SettingsInput(CatalogueSettings Settings, int ExpectedRevision);

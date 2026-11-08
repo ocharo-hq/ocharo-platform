@@ -5,6 +5,8 @@
     <PackageReference Include="WoW2.Sdk.Beta.Be" />
     <!-- Sign-in through Ocharo's Identity instance (BFF, section Identity:Client). -->
     <PackageReference Include="WoW2.Sdk.Beta.Be.Identity.Client" />
+    <!-- Media: WoW2 Files over HTTP, by Identity tokens of the same `catalogue` client. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Files.Client" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
   </ItemGroup>
 

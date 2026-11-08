@@ -18,7 +18,10 @@ code limits and local dev data; nothing read prod.
 - M2 started 2026-11-08: the registry entries (#18) and roles (#19) are in `engineering/deployment/deploy.yml`, and the
   migration manifest (#20) is written.
 - Wave 1, Brand built 2026-11-09 (#23): it stores in Files and redirects to Files links, with 49 tests passing on an
-  in-memory broker set. Not yet run against a real Files: dev waits on B's `files-dev` deployment and the 3 logos' move.
+  in-memory broker set; platform `v0.1.29` carries it. Not yet run against a real Files: dev waits on B's `files-dev`
+  deployment and the 3 logos' move.
+- Wave 1, Catalogue's product images built 2026-11-09 (#24), the same way, 91 tests passing; its released PDFs and page
+  PNGs stay in SQLite until a second Catalogue step.
 
 ## Instance
 
@@ -195,3 +198,14 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
   - an unreachable Files at boot leaves ids unfilled and the boot running; an upload then answers `503`.
   - hosted settings: `Files:BaseUrl` is a required owner key on `brand`, typed as that same Uri.
   - not run: a real Files round trip, the move of the 3 dev logos, Brand on dev.
+  - unverified: a consumer that `fetch()`es a Brand logo across origins now follows a redirect to the Files host, whose
+    `/f` answer may carry no `Access-Control-Allow-Origin`; every caller seen uses `<img>` or a server-side download.
+- #24 Catalogue's product images, wave 1 (2026-11-09):
+  - the same packages, store, backfill, local fallback and settings as #23, as app `catalogue` with reference
+    `catalogue.media:{sha}` and previews at width 900; the media route keeps `public, no-cache` and `private, no-store`,
+    so a redirect is asked again each time and the route keeps deciding visibility.
+  - the release check (`CatalogueReleaseService.VerifyMediaAsync`) asks the store: a Files image must be there, `Ready`
+    and of the same SHA-256, since Files hashed it on upload; a local one is hashed as before.
+  - released PDFs and page PNGs keep `catalogue_release_assets` in SQLite: a second step moves them as app `catalogue`
+    with reference `catalogue.release:{sha}`, behind the public asset route; the manifest already lists them (#20).
+  - not run: a real Files round trip, the move of the 160 dev images, Catalogue on dev.

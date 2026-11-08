@@ -80,15 +80,12 @@ public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogue
     {
         foreach(var hash in hashes.Distinct(StringComparer.Ordinal))
         {
-            try
+            switch(await media.CheckAsync(hash,ct))
             {
-                var opened=await media.OpenAsync(hash,false,ct);
-                if(opened is null)throw new CatalogueException("A selected catalogue image is missing. Upload it again before publishing.");
-                await using var stream=opened.Value.Content;
-                var actual=Convert.ToHexStringLower(await SHA256.HashDataAsync(stream,ct));
-                CatalogueDesignValidation.Require(actual==hash,"A selected catalogue image failed its integrity check. Upload it again.");
+                case MediaCheck.Missing:throw new CatalogueException("A selected catalogue image is missing. Upload it again before publishing.");
+                case MediaCheck.Corrupt:throw new CatalogueException("A selected catalogue image failed its integrity check. Upload it again.");
+                case MediaCheck.Unavailable:throw new CatalogueException("A selected catalogue image is unavailable. Upload it again before publishing.");
             }
-            catch(IOException){throw new CatalogueException("A selected catalogue image is unavailable. Upload it again before publishing.");}
         }
     }
     public async Task<IReadOnlyList<CatalogueReleaseSummary>> ReleasesAsync(Guid id,CancellationToken ct)=>(await designs.ReleasesAsync(id,ct)).Select(Summary).ToArray();

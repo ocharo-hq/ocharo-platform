@@ -115,7 +115,7 @@ public sealed partial class WorkspaceCatalogueImporter(
                 if (mediaList.Any(x => x.Sha256 == record.Sha256)) continue;
                 stored++;
                 mediaList.Add(new ProductMedia(record.Sha256[..12], role, Path.GetFileName(full), record.ContentType, record.ByteLength,
-                    record.Sha256, record.Width, record.Height, record.PreviewPath is not null, null, path));
+                    record.Sha256, record.Width, record.Height, MediaPreview.Exists(record), null, path));
             }
         }
 

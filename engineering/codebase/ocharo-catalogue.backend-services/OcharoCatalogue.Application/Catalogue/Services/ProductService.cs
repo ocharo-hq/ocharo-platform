@@ -112,7 +112,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         if (document.Media.Any(m => m.Sha256 == stored.Sha256))
             throw CatalogueException.Conflict("This exact image is already attached to the product.");
         var item = new ProductMedia(Guid.NewGuid().ToString("N")[..12], role, SafeFileName(fileName), stored.ContentType,
-            stored.ByteLength, stored.Sha256, stored.Width, stored.Height, stored.PreviewPath is not null, null, null);
+            stored.ByteLength, stored.Sha256, stored.Width, stored.Height, MediaPreview.Exists(stored), null, null);
         var updated = document with { Media = [.. document.Media, item] };
         var saved = await repository.UpdateProductAsync(ToRecord(updated, record.Revision + 1, record.CreatedAt, clock.UtcNow),
             record.Revision, $"Added {role} image {item.FileName}", ct);
