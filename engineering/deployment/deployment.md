@@ -224,8 +224,15 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   (scope `editorial.export`). Each `Uri` is an owner key typed per environment as `{site URL}/`, since the boot refuses one
   without its slash. Client 4 `editorial` reaches `desk` as itself; client 6 `public-build` reaches `editorial`. Desk's
   `Identity:Resource:Uri` links to its own site, and background removal takes only such a token, never Desk's cookie.
+- Files: `:2` is `files` (scopes `files.read`, `files.write`, `files.share`, `files.admin`; `PermissionNamespace` `files`),
+  WoW2 Files serving tenant `ocharo` on the shared files host B. Its `Uri` is Ocharo's own Files hostname, typed per
+  environment as `https://files.{domain}/`, so the later move to Ocharo's own instance changes no entry; its `SignalUrl`
+  is `{Uri}signals/identity`. Clients 0 to 5 reach it for a person by token exchange, and 0 to 4 also as themselves by
+  client credentials, each with `files.read` and `files.write`. Owner and admin hold `files:read`, `files:write`,
+  `files:share` and `files:admin`, editors `files:read` and `files:write`, since Files reads only `org_permission`. Each
+  app's Files base URL is an owner key too: B is no site of this descriptor. Plan: `planning/files-adoption.md`.
 - Revocation signals: on `identity`, each client's `SignalUrl` (`{site}/api/identity/signal`, clients 0 to 5) and each
-  resource's (`{site}/signals/identity`, resources 0 and 1) is an owner key typed per environment, for the same reason as
+  resource's (`{site}/signals/identity`, resources 0 to 2) is an owner key typed per environment, for the same reason as
   redirect URIs. Each app links its `Identity:Client:SignalUrl`, and Desk and Editorial their `Identity:Resource:SignalUrl`,
   with `from:`, so both ends name one value. Sign-out ends every app's session, and a role change reaches an app's next
   request with no sign-in. A public HTTPS site needs no `Identity:Server:Signals:*`; a private or plain-HTTP one needs

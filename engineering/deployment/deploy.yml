@@ -179,6 +179,12 @@ services:
         Identity:Organizations:Roles:owner:8: { default: "editorial:edit" }
         Identity:Organizations:Roles:owner:9: { default: "editorial:approve" }
         Identity:Organizations:Roles:owner:10: { default: "studio:edit" }
+        # Files reads only org_permission, through the `files` resource's namespace: owner and admin hold every Files
+        # right, editors read and write; shares and admin stay with owner and admin.
+        Identity:Organizations:Roles:owner:11: { default: "files:read" }
+        Identity:Organizations:Roles:owner:12: { default: "files:write" }
+        Identity:Organizations:Roles:owner:13: { default: "files:share" }
+        Identity:Organizations:Roles:owner:14: { default: "files:admin" }
         Identity:Organizations:Roles:admin:0: { default: "desk:edit" }
         Identity:Organizations:Roles:admin:1: { default: "desk:approve" }
         Identity:Organizations:Roles:admin:2: { default: "brand:edit" }
@@ -190,12 +196,18 @@ services:
         Identity:Organizations:Roles:admin:8: { default: "editorial:edit" }
         Identity:Organizations:Roles:admin:9: { default: "editorial:approve" }
         Identity:Organizations:Roles:admin:10: { default: "studio:edit" }
+        Identity:Organizations:Roles:admin:11: { default: "files:read" }
+        Identity:Organizations:Roles:admin:12: { default: "files:write" }
+        Identity:Organizations:Roles:admin:13: { default: "files:share" }
+        Identity:Organizations:Roles:admin:14: { default: "files:admin" }
         Identity:Organizations:Roles:editor:0: { default: "desk:edit" }
         Identity:Organizations:Roles:editor:1: { default: "brand:edit" }
         Identity:Organizations:Roles:editor:2: { default: "catalogue:edit" }
         Identity:Organizations:Roles:editor:3: { default: "marketing:edit" }
         Identity:Organizations:Roles:editor:4: { default: "editorial:edit" }
         Identity:Organizations:Roles:editor:5: { default: "studio:edit" }
+        Identity:Organizations:Roles:editor:6: { default: "files:read" }
+        Identity:Organizations:Roles:editor:7: { default: "files:write" }
         # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
         # 2 catalogue, 3 marketing, 4 editorial and 5 studio. Each secret
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
@@ -261,6 +273,48 @@ services:
         Identity:Server:Clients:6:Grants:0: { default: client_credentials }
         Identity:Server:Clients:6:Resources:0: { default: editorial }
         Identity:Server:Clients:6:Scopes:0: { default: editorial.export }
+        # Files (planning/files-adoption.md #15–#18): each app reaches `files` for a person by token exchange, and as
+        # itself by client credentials for its seeds, jobs and public-media redirects; Studio only for a person. A Grants
+        # list replaces "empty means the code flow alone", so authorization_code comes first. Clients 0–5 reuse their
+        # secrets; public-build reads no file, since published media is public.
+        Identity:Server:Clients:0:Grants:0: { default: authorization_code }
+        Identity:Server:Clients:0:Grants:1: { default: client_credentials }
+        Identity:Server:Clients:0:Grants:2: { default: token_exchange }
+        Identity:Server:Clients:0:Resources:0: { default: files }
+        Identity:Server:Clients:0:ExchangeResources:0: { default: files }
+        Identity:Server:Clients:0:Scopes:0: { default: files.read }
+        Identity:Server:Clients:0:Scopes:1: { default: files.write }
+        Identity:Server:Clients:1:Grants:0: { default: authorization_code }
+        Identity:Server:Clients:1:Grants:1: { default: client_credentials }
+        Identity:Server:Clients:1:Grants:2: { default: token_exchange }
+        Identity:Server:Clients:1:Resources:0: { default: files }
+        Identity:Server:Clients:1:ExchangeResources:0: { default: files }
+        Identity:Server:Clients:1:Scopes:0: { default: files.read }
+        Identity:Server:Clients:1:Scopes:1: { default: files.write }
+        Identity:Server:Clients:2:Grants:0: { default: authorization_code }
+        Identity:Server:Clients:2:Grants:1: { default: client_credentials }
+        Identity:Server:Clients:2:Grants:2: { default: token_exchange }
+        Identity:Server:Clients:2:Resources:0: { default: files }
+        Identity:Server:Clients:2:ExchangeResources:0: { default: files }
+        Identity:Server:Clients:2:Scopes:0: { default: files.read }
+        Identity:Server:Clients:2:Scopes:1: { default: files.write }
+        Identity:Server:Clients:3:Grants:0: { default: authorization_code }
+        Identity:Server:Clients:3:Grants:1: { default: client_credentials }
+        Identity:Server:Clients:3:Grants:2: { default: token_exchange }
+        Identity:Server:Clients:3:Resources:0: { default: files }
+        Identity:Server:Clients:3:ExchangeResources:0: { default: files }
+        Identity:Server:Clients:3:Scopes:0: { default: files.read }
+        Identity:Server:Clients:3:Scopes:1: { default: files.write }
+        Identity:Server:Clients:4:Grants:2: { default: token_exchange }
+        Identity:Server:Clients:4:Resources:1: { default: files }
+        Identity:Server:Clients:4:ExchangeResources:0: { default: files }
+        Identity:Server:Clients:4:Scopes:1: { default: files.read }
+        Identity:Server:Clients:4:Scopes:2: { default: files.write }
+        Identity:Server:Clients:5:Grants:0: { default: authorization_code }
+        Identity:Server:Clients:5:Grants:1: { default: token_exchange }
+        Identity:Server:Clients:5:ExchangeResources:0: { default: files }
+        Identity:Server:Clients:5:Scopes:0: { default: files.read }
+        Identity:Server:Clients:5:Scopes:1: { default: files.write }
         Identity:Server:Resources:0:Name: { default: desk }
         Identity:Server:Resources:0:Uri: { type: url, required: true }
         Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }
@@ -269,6 +323,17 @@ services:
         Identity:Server:Resources:1:Uri: { type: url, required: true }
         Identity:Server:Resources:1:Scopes:0: { default: editorial.export }
         Identity:Server:Resources:1:SignalUrl: { type: url, required: true }
+        # Files' audience is Ocharo's own Files hostname on the shared files host B, typed per environment as
+        # `https://files.{domain}/`, so the later move to Ocharo's own instance changes no entry; its signals go to
+        # `{Uri}signals/identity`. `files.tenants` is B's operator scope and never registers here.
+        Identity:Server:Resources:2:Name: { default: files }
+        Identity:Server:Resources:2:Uri: { type: url, required: true }
+        Identity:Server:Resources:2:Scopes:0: { default: files.read }
+        Identity:Server:Resources:2:Scopes:1: { default: files.write }
+        Identity:Server:Resources:2:Scopes:2: { default: files.share }
+        Identity:Server:Resources:2:Scopes:3: { default: files.admin }
+        Identity:Server:Resources:2:PermissionNamespace: { default: files }
+        Identity:Server:Resources:2:SignalUrl: { type: url, required: true }
     sites:
       identity: { paths: [/, /api] }
   brand:

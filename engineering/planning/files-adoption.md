@@ -15,7 +15,8 @@ code limits and local dev data; nothing read prod.
 
 - M1 picks written 2026-11-08 (`files-integration` #27, #30, #32). The developer reviews the built result at the end
   instead of confirming M1 (developer, 2026-11-08), so derivable picks below carry their reason and stand until then.
-- M2 waits on the inputs in #17; nothing in this repo changes before Files' `Client` package and B's dev deployment exist.
+- M2 started 2026-11-08: the registry entries (#18) and roles (#19) are in `engineering/deployment/deploy.yml`. App code
+  waits on the rest of #17: Files' `Client` package and B's dev deployment first.
 
 ## Instance
 
@@ -99,9 +100,11 @@ code limits and local dev data; nothing read prod.
 | `public-build` | 6 | none | none: published media is public (#9) |
 | `assets-release` | 7, new | none | release uploads from `ocharo-assets` CI (#14) |
 
-- #16 scopes: every app client gets `files.read` and `files.write`; `assets-release` gets `files.write`. Not registered:
-  `files.share` (no Ocharo share in P1), `files.admin` (the mover uses Files-minted import tokens, t9 W6) and
-  `files.delegate` (`files-integration` #12 drops it).
+- #16 scopes: the `files` resource lists Files' P1 scopes `files.read`, `files.write`, `files.share` and `files.admin`
+  (files lane, 2026-11-08); `files.tenants` stays B's operator scope and never registers here. Every app client gets
+  `files.read` and `files.write`, and `assets-release` `files.write`. No client gets `files.share` (no Ocharo share in
+  P1) or `files.admin` (the mover uses Files-minted import tokens, t9 W6); `files.delegate` is gone
+  (`files-integration` #12).
 
 ## Registrations
 
@@ -109,22 +112,25 @@ code limits and local dev data; nothing read prod.
 `identity`; Marketing and Studio register nothing and link with `from: { repository: platform, key: … }`.
 
 - #17 inputs M2 waits on:
-  - files lane: the resource name, audience URI form and P1 scopes (`files-integration` #10); variants (#10 here);
-    public `/m` delivery on a tenant hostname (#9); references across one tenant's apps (#11); a `sqlite-column`
-    source kind for Catalogue's release assets (#20); the person rule (#19).
+  - files lane: Files' `Client` package; variants (#10 here); public `/m` delivery on a tenant hostname (#9);
+    references across one tenant's apps (#11); a `sqlite-column` source kind for Catalogue's release assets (#20).
+    The resource contract (`files-integration` #10) and the person rule (#19) are answered.
   - wheelhouse lane: B's dev deployment with tenant `ocharo`, Ocharo's dev hostname and the owner keys of #18; the
     migration module.
   - a writer for `ocharo-marketing`, `ocharo-studio` and `ocharo-assets`, which no lane owns, before waves 2 and 4.
-- #18 this repo writes the entries; the wheelhouse lane types the per-environment owner keys, `Resources:2:Uri` and
-  `Resources:2:SignalUrl`, and each caller's `Files:BaseUrl` (B is no Ocharo site, so no `from:` reaches it):
+- #18 this repo writes the entries, in `deploy.yml` since 2026-11-08; the wheelhouse lane types the per-environment
+  owner keys, `Resources:2:Uri` as `https://files.{domain}/` and `Resources:2:SignalUrl` as `{Uri}signals/identity`,
+  and each caller's Files base URL (B is no Ocharo site, so no `from:` reaches it). The shape, as written:
 
 ```yaml
 Identity:Server:Resources:2:Name: { default: files }
 Identity:Server:Resources:2:Uri: { type: url, required: true }        # `{Ocharo's Files hostname}/`, with its slash
 Identity:Server:Resources:2:Scopes:0: { default: files.read }
 Identity:Server:Resources:2:Scopes:1: { default: files.write }
-Identity:Server:Resources:2:SignalUrl: { type: url, required: true }
+Identity:Server:Resources:2:Scopes:2: { default: files.share }
+Identity:Server:Resources:2:Scopes:3: { default: files.admin }
 Identity:Server:Resources:2:PermissionNamespace: { default: files }
+Identity:Server:Resources:2:SignalUrl: { type: url, required: true }  # `{Uri}signals/identity`
 # per caller client N; `authorization_code` goes first on a client that signs people in, since a Grants list replaces
 # "empty means the code flow alone"
 Identity:Server:Clients:N:Grants:0: { default: authorization_code }
@@ -136,13 +142,16 @@ Identity:Server:Clients:N:Scopes:0: { default: files.read }
 Identity:Server:Clients:N:Scopes:1: { default: files.write }
 ```
 
-  - the entries land together with B's dev hostname: `Uri` and `SignalUrl` are required, so an untyped key refuses
-    every Identity deploy from this repo.
-  - clients 0–5 reuse their existing generated secrets; client 4 appends to its `desk` entries.
+  - `Uri` and `SignalUrl` are required, so the first dev deploy of a release carrying them needs both typed; their
+    values follow from Ocharo's dev domain, so B need not run yet. A missing or malformed one fails Identity's
+    `config check` and stops the deploy while the running release keeps serving.
+  - clients 0–5 reuse their existing generated secrets; client 4 appends to its `desk` entries; Studio (5) has token
+    exchange only.
   - `assets-release` gets a generated secret that `ocharo-assets` CI must hold; `public-build`'s secret has the same
     gap today (`deployment.md`), so its holder is settled with wave 4.
-- #19 roles: when Files' person rule (`files-integration` #23) reads `org_permission`, owner, admin and editor gain
-  `files:read` and `files:write` in `Identity:Organizations:Roles`; when it reads roles, nothing changes.
+- #19 roles: Files reads only `org_permission` (`files-integration` #23, files lane D2 (a), 2026-11-08). Owner and admin
+  hold `files:read`, `files:write`, `files:share` and `files:admin`; editors `files:read` and `files:write`, since
+  shares and Files admin sit with the roles that approve elsewhere. Viewer and billing grant none, as in every app.
 
 ## Migration
 
