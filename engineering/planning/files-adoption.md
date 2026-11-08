@@ -118,10 +118,15 @@ code limits and local dev data; nothing read prod.
     The resource contract (`files-integration` #10) and the person rule (#19) are answered.
   - wheelhouse lane: B's dev deployment with tenant `ocharo`, Ocharo's dev hostname and the owner keys of #18; the
     migration module.
-  - a writer for `ocharo-marketing`, `ocharo-studio` and `ocharo-assets`, which no lane owns, before waves 2 and 4.
+  - a writer for `ocharo-marketing`, `ocharo-studio` and `ocharo-assets`: once wave 1 reads back on dev, the
+    orchestrator proposes one lane per repo, which the developer starts (`files-integration` #42); this lane keeps
+    writing only `ocharo-platform`.
+- #22 B trusts only Ocharo's Identity in P1: no WoW2 Identity joins this goal (developer, 2026-11-08,
+  `files-integration` #29).
 - #18 this repo writes the entries, in `deploy.yml` since 2026-11-08; the wheelhouse lane types the per-environment
   owner keys, `Resources:2:Uri` as `https://files.{domain}/` and `Resources:2:SignalUrl` as `{Uri}signals/identity`,
-  and each caller's Files base URL (B is no Ocharo site, so no `from:` reaches it). The shape, as written:
+  and each caller's Files base URL (B is no Ocharo site, so no `from:` reaches it), on target `ocharo-dev`, plus the
+  same Uri as tenant `ocharo`'s audience on `files-dev` (wheelhouse lane, 2026-11-08). The shape, as written:
 
 ```yaml
 Identity:Server:Resources:2:Name: { default: files }
