@@ -43,7 +43,8 @@ public sealed partial class BrandService(IBrandRepository repository, IMediaStor
             .FirstOrDefault(v => v.Slot == slot && v.Sha256 == stored.Sha256);
         if (existing is not null) return existing;
         var version = new LogoVersion(Guid.NewGuid().ToString("N")[..12], slot, stored.Sha256, SafeName(fileName), stored.ContentType, stored.ByteLength,
-            stored.Width, stored.Height, stored.PreviewPath is not null, status, Clean(note, 500), sourcePath, clock.UtcNow);
+            // A file in WoW2 Files always has its preview: Files makes it as a variant.
+            stored.Width, stored.Height, stored.PreviewPath is not null || stored.FileId is not null, status, Clean(note, 500), sourcePath, clock.UtcNow);
         await repository.SaveLogoVersionAsync(new LogoVersionRecord { Id = version.Id, Slot = slot, Sha256 = version.Sha256, UploadedAt = version.UploadedAt,
             Json = BrandJson.Write(version) }, ct);
         return version;

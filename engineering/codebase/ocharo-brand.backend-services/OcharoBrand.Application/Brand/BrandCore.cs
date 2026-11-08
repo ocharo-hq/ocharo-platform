@@ -46,6 +46,10 @@ public interface IBrandRepository
 
     Task<MediaBlobRecord?> FindMediaAsync(string sha256, CancellationToken ct);
     Task SaveMediaAsync(MediaBlobRecord record, CancellationToken ct);
+    /// <summary>The files stored before Files, which still have no file id.</summary>
+    Task<IReadOnlyList<MediaBlobRecord>> GetMediaWithoutFileAsync(CancellationToken ct);
+    /// <summary>Records the Files file that holds a stored file's bytes.</summary>
+    Task SetMediaFileAsync(string sha256, string fileId, CancellationToken ct);
 
     Task<IReadOnlyList<ConsumerRecord>> GetConsumersAsync(CancellationToken ct);
     Task TouchConsumerAsync(ConsumerRecord record, CancellationToken ct);
@@ -55,7 +59,22 @@ public interface IBrandRepository
 public interface IMediaStore
 {
     Task<MediaBlobRecord> StoreAsync(byte[] bytes, CancellationToken ct);
-    Task<(MediaBlobRecord Record, Stream Content)?> OpenAsync(string sha256, bool preview, CancellationToken ct);
+    Task<MediaContent?> OpenAsync(string sha256, bool preview, CancellationToken ct);
+}
+
+/// <summary>Where one stored file's bytes come from: a short-lived WoW2 Files link to redirect to
+/// (<paramref name="Location"/>), or a stream from the local blob folder (<paramref name="Content"/>).</summary>
+/// <param name="Record">The stored file.</param>
+/// <param name="ContentType">The type the bytes carry: the original's, or WebP for a preview.</param>
+/// <param name="Location">The Files link, valid for <see cref="MediaContent.LinkLifetime"/>; none for local bytes.</param>
+/// <param name="Content">The local bytes; none for a Files link.</param>
+public sealed record MediaContent(MediaBlobRecord Record, string ContentType, Uri? Location, Stream? Content)
+{
+    /// <summary>How long a Files link stays valid; a cached redirect must expire before it.</summary>
+    public static readonly TimeSpan LinkLifetime = TimeSpan.FromMinutes(15);
+
+    /// <summary>The longest a response that redirects to a Files link may be cached, in seconds.</summary>
+    public const int RedirectMaxAgeSeconds = 300;
 }
 
 /// <summary>Stable and immutable media routes.</summary>

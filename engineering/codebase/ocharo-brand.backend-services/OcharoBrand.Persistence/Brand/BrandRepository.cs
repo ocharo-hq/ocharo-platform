@@ -92,6 +92,15 @@ public sealed class BrandRepository(OcharoBrandDbContext db) : IBrandRepository
         db.ChangeTracker.Clear();
     }
 
+    public async Task<IReadOnlyList<MediaBlobRecord>> GetMediaWithoutFileAsync(CancellationToken ct) =>
+        await db.MediaBlobs.AsNoTracking().Where(m => m.FileId == null).ToListAsync(ct);
+
+    public async Task SetMediaFileAsync(string sha256, string fileId, CancellationToken ct)
+    {
+        await db.MediaBlobs.Where(m => m.Sha256 == sha256).ExecuteUpdateAsync(set => set.SetProperty(m => m.FileId, fileId), ct);
+        db.ChangeTracker.Clear();
+    }
+
     public async Task<IReadOnlyList<ConsumerRecord>> GetConsumersAsync(CancellationToken ct) => await db.Consumers.AsNoTracking().ToListAsync(ct);
 
     public async Task TouchConsumerAsync(ConsumerRecord record, CancellationToken ct)

@@ -65,10 +65,12 @@ public sealed class PublicBrandController(PublicBrandService brand, IMediaStore 
             $"/api/public/brand/logo/{slot}",
             release,
             ct);
-        await CacheAsync(300, ct);
+        // At most 5 minutes either way, so a cached redirect never outlives its Files link.
+        await CacheAsync(MediaContent.RedirectMaxAgeSeconds, ct);
+        if (opened.Location is { } location)
+            return Redirect(location.AbsoluteUri);
         Response.Headers.ETag = $"\"{logo.Sha256}{(preview ? "-p" : "")}\"";
-        var (record, content) = opened.Value;
-        return File(content, preview && record.PreviewPath is not null ? "image/webp" : record.ContentType);
+        return File(opened.Content!, opened.ContentType);
     }
 
     [HttpGet("media/{sha256}")]
@@ -117,8 +119,13 @@ public sealed class PublicBrandController(PublicBrandService brand, IMediaStore 
             ct);
         if (opened is null)
             return NotFound();
-        var (record, content) = opened.Value;
+        // A Files link expires, so only local bytes keep the immutable year; a redirect lives 5 minutes.
+        if (opened.Location is { } location)
+        {
+            Response.Headers.CacheControl = $"public, max-age={MediaContent.RedirectMaxAgeSeconds}";
+            return Redirect(location.AbsoluteUri);
+        }
         Response.Headers.CacheControl = "public, max-age=31536000, immutable";
-        return File(content, preview && record.PreviewPath is not null ? "image/webp" : record.ContentType);
+        return File(opened.Content!, opened.ContentType);
     }
 }

@@ -18,6 +18,7 @@ using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
 using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
+using WoW.Two.Sdk.Beta.Be.Files.Client;
 
 namespace OcharoBrand.Api.Configurations;
 
@@ -53,13 +54,50 @@ public static partial class HostConfiguration
             var root = Path.IsPathRooted(dataRoot) ? dataRoot : Path.Combine(contentRoot, dataRoot);
             return new LocalFileBlobRepository(Path.Combine(root, "blobs"));
         });
-        builder.Services.AddScoped<IMediaStore, MediaStore>();
+        builder.AddBrandFiles();
         builder.Services.AddScoped<BrandSeeder>();
         builder.Services.AddMediator(typeof(ApplicationAssemblyMarker).Assembly);
         builder.Services.AddScoped<BrandService>();
         builder.Services.AddScoped<PublicBrandService>();
         return builder;
     }
+
+    /// <summary>Holds the root URL of the WoW2 Files instance Brand stores its media in; unset, media stay in the local
+    /// blob folder.</summary>
+    private const string FilesBaseUrlKey = "Files:BaseUrl";
+
+    /// <summary>Registers the media store: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is set, by tokens of
+    /// Brand's own Identity client (a person's exchanged within their session, Brand's own otherwise), else the local blob
+    /// folder. Both read at resolve time, so a test host's settings decide (planning/files-adoption.md #23).</summary>
+    private static WebApplicationBuilder AddBrandFiles(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddFilesClient(_ => { });
+        builder.Services.AddOptions<FilesClientOptions>().Configure<IConfiguration>((files, configuration) =>
+        {
+            if (configuration[FilesBaseUrlKey] is not { Length: > 0 } url)
+                return;
+            files.BaseAddress = new Uri(url);
+            if (!Uri.TryCreate(configuration["Identity:Client:Authority"], UriKind.Absolute, out var authority))
+                return;
+            files.Identity = new FilesClientIdentityOptions
+            {
+                TokenEndpoint = new Uri(authority, "connect/token"),
+                ClientId = configuration["Identity:Client:ClientId"] ?? string.Empty,
+                ClientSecret = configuration["Identity:Client:ClientSecret"] ?? string.Empty,
+            };
+        });
+        builder.Services.AddScoped<MediaStore>();
+        builder.Services.AddScoped<FilesMediaStore>();
+        builder.Services.AddScoped<FilesMediaBackfill>();
+        builder.Services.AddScoped<IMediaStore>(provider => UsesFiles(provider)
+            ? provider.GetRequiredService<FilesMediaStore>()
+            : provider.GetRequiredService<MediaStore>());
+        return builder;
+    }
+
+    /// <summary>Tells whether this run stores media in WoW2 Files.</summary>
+    private static bool UsesFiles(IServiceProvider provider) =>
+        provider.GetRequiredService<IConfiguration>()[FilesBaseUrlKey] is { Length: > 0 };
 
     /// <summary>Registers the public runtime settings the SPA reads at startup: the Ocharo app and site addresses.</summary>
     private static WebApplicationBuilder AddRuntimeConfig(this WebApplicationBuilder builder)
@@ -130,8 +168,23 @@ public static partial class HostConfiguration
     {
         await app.Services.InitializeBrandDatabaseAsync();
         using var scope = app.Services.CreateScope();
+        if (UsesFiles(scope.ServiceProvider))
+            await scope.ServiceProvider.BackfillFileIdsAsync(app.Logger);
         await scope.ServiceProvider.GetRequiredService<BrandSeeder>().SeedIfEmptyAsync(CancellationToken.None);
         return app;
+    }
+
+    /// <summary>Fills the file ids the migration made; an unreachable Files leaves those files on local bytes, never the boot.</summary>
+    private static async Task BackfillFileIdsAsync(this IServiceProvider services, ILogger logger)
+    {
+        try
+        {
+            await services.GetRequiredService<FilesMediaBackfill>().RunAsync(CancellationToken.None);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException)
+        {
+            logger.LogWarning(exception, "Brand's file ids stay unfilled: WoW2 Files could not be reached at boot.");
+        }
     }
 
     /// <summary>Configures the SQLite schema and write-ahead log before brand seeding.</summary>
@@ -144,5 +197,11 @@ public static partial class HostConfiguration
             Directory.CreateDirectory(folder);
         await db.Database.EnsureCreatedAsync();
         await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
+        // A store made before WoW2 Files lacks the file-id column; EnsureCreated never alters an existing table.
+        var hasFileId = await db.Database
+            .SqlQueryRaw<int>("SELECT COUNT(*) AS Value FROM pragma_table_info('media_blobs') WHERE name = 'FileId'")
+            .SingleAsync();
+        if (hasFileId == 0)
+            await db.Database.ExecuteSqlRawAsync("ALTER TABLE media_blobs ADD COLUMN FileId TEXT NULL;");
     }
 }

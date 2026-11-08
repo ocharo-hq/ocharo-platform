@@ -141,8 +141,12 @@ public sealed class BrandAdminController(
             ct);
         if (opened is null)
             return NotFound();
-        var (record, content) = opened.Value;
+        if (opened.Location is { } location)
+        {
+            Response.Headers.CacheControl = $"private, max-age={MediaContent.RedirectMaxAgeSeconds}";
+            return Redirect(location.AbsoluteUri);
+        }
         Response.Headers.CacheControl = "private, max-age=31536000, immutable";
-        return File(content, preview && record.PreviewPath is not null ? "image/webp" : record.ContentType);
+        return File(opened.Content!, opened.ContentType);
     }
 }

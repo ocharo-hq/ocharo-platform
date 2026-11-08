@@ -167,7 +167,8 @@ services:
         Identity:Pages:Theme: { default: ocharo }
         Identity:Pages:BrandName: { default: Ocharo }
         # What each catalog role grants in Ocharo's apps (owner, admin, editor, viewer, billing; never a role of its
-        # own); apps read them as org_permission, each client only its own namespace. viewer and billing grant none.
+        # own); apps read them as org_permission, each client only its own namespace. In the apps' namespaces viewer and
+        # billing grant none; in Files', viewer reads (below).
         Identity:Organizations:Roles:owner:0: { default: "desk:edit" }
         Identity:Organizations:Roles:owner:1: { default: "desk:approve" }
         Identity:Organizations:Roles:owner:2: { default: "brand:edit" }
@@ -208,6 +209,8 @@ services:
         Identity:Organizations:Roles:editor:5: { default: "studio:edit" }
         Identity:Organizations:Roles:editor:6: { default: "files:read" }
         Identity:Organizations:Roles:editor:7: { default: "files:write" }
+        # A viewer reads every app's media as a member, and that read reaches Files with the viewer's own token.
+        Identity:Organizations:Roles:viewer:0: { default: "files:read" }
         # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
         # 2 catalogue, 3 marketing, 4 editorial and 5 studio. Each secret
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
@@ -358,6 +361,11 @@ services:
         Identity:Client:SignalUrl: { from: Identity:Server:Clients:1:SignalUrl }
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         Brand:OrganizationId: { required: true }             # Ocharo's organization id in that environment's Identity
+        # Media live in WoW2 Files, tenant `ocharo` on the shared files host, reached with the same Identity client: a
+        # person's exchanged token within their session, Brand's own otherwise. Typed per environment as
+        # `https://files.{domain}/`, the Uri of Identity:Server:Resources:2; the shared host is no site of this
+        # descriptor, so no `from:` reaches it. Files stored before it read from the blobs below until the migration.
+        Files:BaseUrl: { type: url, required: true }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }
         OcharoApps:Catalogue: { type: url }
@@ -369,7 +377,7 @@ services:
         OcharoApps:Wear: { type: url }
         OcharoApps:Blog: { type: url }
     volumes:
-      brand-data: /data                # SQLite store (ocharo-brand.db) and blobs
+      brand-data: /data                # SQLite store (ocharo-brand.db) and blobs stored before WoW2 Files
     sites:
       brand: {}
   catalogue:

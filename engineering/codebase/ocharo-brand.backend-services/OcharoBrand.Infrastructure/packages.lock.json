@@ -14,9 +14,9 @@
       },
       "WoW2.Sdk.Beta.Be": {
         "type": "Direct",
-        "requested": "[10.0.103-beta, )",
-        "resolved": "10.0.103-beta",
-        "contentHash": "NEhZWXiHJiop89uHgwZMfePzbM7imr0CEvOMtTVCKVArqA71HKdkEHr5+Ug6X0qmd+1UCXCtaVzmPP7aEWMJGg==",
+        "requested": "[10.0.105-beta, )",
+        "resolved": "10.0.105-beta",
+        "contentHash": "6itcLb2lt5HBchTJuoLxrhKVN6raxSOwoRDtyAoldLIUDyNa21tPf0AHe4Z/jNpelFS5RIY7XOTGJa0M7savTg==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -150,8 +150,8 @@
           "System.Security.Cryptography.Pkcs": "10.0.13",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.103-beta",
-          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.103-beta",
+          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.105-beta",
+          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.105-beta",
           "YamlDotNet": "16.3.0",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",
@@ -159,6 +159,15 @@
           "dbup-postgresql": "6.0.3",
           "dbup-sqlite": "6.0.4",
           "dbup-sqlserver": "6.0.16"
+        }
+      },
+      "WoW2.Sdk.Beta.Be.Files.Abstractions": {
+        "type": "Direct",
+        "requested": "[10.0.5-beta, )",
+        "resolved": "10.0.5-beta",
+        "contentHash": "iIajQs6g+UfeoVD7c6JIIUeJHnfXoQGMtj5ZW4hBV1UTMFa9xYViKb5xjILv5ircQZ/dGxLqfw/Do2iybm8Isw==",
+        "dependencies": {
+          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.105-beta"
         }
       },
       "Ardalis.GuardClauses": {
@@ -2095,13 +2104,13 @@
       },
       "WoW2.Sdk.Beta.Be.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.103-beta",
-        "contentHash": "dtO8zcsNeJRKbNymMPT8LHEcNvP9DC7VTjl67W0CMTL8/SP+gLw6i7ay9fPJ4CcrVqVf3o0XfkKuCskkFx/XDA=="
+        "resolved": "10.0.105-beta",
+        "contentHash": "wMmwbyV5UR1FjllGLEzUkZ4aW1N3APe0kKauZPhAlBW79wqZm5fUpspgsNCyxflVnzn/rdRxKdnQQW4Flkv33g=="
       },
       "WoW2.Sdk.Beta.Be.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.103-beta",
-        "contentHash": "Hv8qCtb5sm+MQDxfqorgzj2mp8KmZ27dxgEEFDNFMzdPT6vniwFvB9yqbMzY+g1iKN2FbEsEP/u5nZROoYjWPA=="
+        "resolved": "10.0.105-beta",
+        "contentHash": "P+zQCPwqKSv4yL2r5/hM5+rOlKr+Id4ddXzFrCUcDDIwj6TvgIQwlBRK0/In8k12oInYZnC8eTHGNj88McebMw=="
       },
       "YamlDotNet": {
         "type": "Transitive",
@@ -2122,7 +2131,7 @@
         "type": "Project",
         "dependencies": {
           "OcharoBrand.Domain": "[0.0.0, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.103-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.105-beta, )"
         }
       },
       "ocharobrand.domain": {

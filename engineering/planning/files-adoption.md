@@ -16,8 +16,9 @@ code limits and local dev data; nothing read prod.
 - M1 picks written 2026-11-08 (`files-integration` #27, #30, #32). The developer reviews the built result at the end
   instead of confirming M1 (developer, 2026-11-08), so derivable picks below carry their reason and stand until then.
 - M2 started 2026-11-08: the registry entries (#18) and roles (#19) are in `engineering/deployment/deploy.yml`, and the
-  migration manifest (#20) is written. App code waits on the rest of #17: Files' `Client` package and B's dev
-  deployment first.
+  migration manifest (#20) is written.
+- Wave 1, Brand built 2026-11-09 (#23): it stores in Files and redirects to Files links, with 49 tests passing on an
+  in-memory broker set. Not yet run against a real Files: dev waits on B's `files-dev` deployment and the 3 logos' move.
 
 ## Instance
 
@@ -61,13 +62,18 @@ code limits and local dev data; nothing read prod.
 - #9 every app keeps its media URLs and its own public-or-private decision (`CatalogueMediaAccessService`,
   `PublicBrandService.IsDisclosedAsync`, `EditorialAccessMiddleware`, Desk's release checks); the route answers with a
   redirect to Files. Reason: hashes inside product, release and article JSON stay valid, and no snapshot is rewritten.
-  - private media redirects to a short-lived signed `/f` URL.
-  - disclosed media redirects to Files' public `/m` URL on Ocharo's hostname, cacheable; Marketing's social delivery
-    reads the same URL.
+  - private and disclosed media alike redirect to a signed `/f` link, valid 15 minutes, with the redirect cached at
+    most 5. Reason: disclosure changes with appearances and withdrawals, and a link keeps that decision in the app
+    with no visibility to keep in step (refined 2026-11-09, building Brand).
+  - Files' public `/m/{sha}` and `/m/{sha}.webp` (files lane, 2026-11-08) wait for a consumer that needs a stable
+    public URL: Marketing's social delivery, in wave 2.
 - #10 previews and thumbnails become Files image variants at each app's current width (Catalogue 900, Brand 1200,
   Blog 1400, Desk sourcing 480 px, all WebP); the migration copies originals only. Reason: Files `product.md` says the
-  apps drop their `MediaStore` copies, and the 3 preview pipelines are those copies.
-- #11 references replace copies (Files `product.md` § Instances per owner):
+  apps drop their `MediaStore` copies, and the 3 preview pipelines are those copies. Built in Files `6310647`:
+  `Files:DefaultPolicy:Variants` gives every app those widths, and a link's `Width` picks the narrowest variant at least
+  that wide, else the widest.
+- #11 references replace copies (Files `product.md` § Instances per owner), checked per tenant only (files lane,
+  2026-11-08):
   - Blog references Brand's published logo file instead of copying it on a public page render
     ([`SiteService.BrandedAsync`](https://github.com/ocharo-hq/ocharo-marketing/blob/15377b74efbc2ad4ec12d6bec78a745731746ad2/engineering/codebase/ocharo-blog.backend-services/OcharoBlog.Application/Blog/Site/SiteService.cs#L53-L63)),
     which ends an anonymous GET writing a file.
@@ -113,9 +119,9 @@ code limits and local dev data; nothing read prod.
 `identity`; Marketing and Studio register nothing and link with `from: { repository: platform, key: … }`.
 
 - #17 inputs M2 waits on:
-  - files lane: Files' `Client` package; variants (#10 here); public `/m` delivery on a tenant hostname (#9);
-    references across one tenant's apps (#11); a `sqlite-column` source kind for Catalogue's release assets (#20).
-    The resource contract (`files-integration` #10) and the person rule (#19) are answered.
+  - files lane: all answered by 2026-11-08: the resource contract (`files-integration` #10), the person rule (#19),
+    variants (#10), public `/m` delivery (#9), references across one tenant's apps (#11), `sqlite-column` (#20), and
+    `Client` `10.0.5-beta` with image `v0.1.11` published.
   - wheelhouse lane: B's dev deployment with tenant `ocharo`, Ocharo's dev hostname and the owner keys of #18; the
     migration module.
   - a writer for `ocharo-marketing`, `ocharo-studio` and `ocharo-assets`: once wave 1 reads back on dev, the
@@ -157,7 +163,8 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
     gap today (`deployment.md`), so its holder is settled with wave 4.
 - #19 roles: Files reads only `org_permission` (`files-integration` #23, files lane D2 (a), 2026-11-08). Owner and admin
   hold `files:read`, `files:write`, `files:share` and `files:admin`; editors `files:read` and `files:write`, since
-  shares and Files admin sit with the roles that approve elsewhere. Viewer and billing grant none, as in every app.
+  shares and Files admin sit with the roles that approve elsewhere. Viewer holds `files:read` (2026-11-09): a viewer
+  reads every app's media as a member, and that read reaches Files with the viewer's exchanged token. Billing holds none.
 
 ## Migration
 
@@ -165,9 +172,26 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
   [`files-migration.yml`](../deployment/files-migration.yml) holds Brand, Catalogue and Desk (written 2026-11-08, adding
   a composite `key` and a `wave` to t9's draft), `ocharo-marketing`'s holds Blog and Marketing:
   - Brand: `volume-folder`, `brand-data`, `blobs/media`, reference `brand.media:{sha256}`.
-  - Catalogue: `volume-folder`, `catalogue-data`, `blobs/media`; `catalogue_release_assets` needs `sqlite-column`,
-    which t9 lists after P1, so it is asked of the files lane, and those assets stay in SQLite until it lands.
+  - Catalogue: `volume-folder`, `catalogue-data`, `blobs/media`; `catalogue_release_assets` uses `sqlite-column`, which
+    the mover reads in P1, opening `{root}/{database}` read-only (files lane, 2026-11-08).
   - Desk: 4 `postgres-column` sources (`preparation.media`, `preparation.exports`, `commerce.media`,
     `sourcing.media_contents`); thumbnails regenerate as variants (#10).
 - #21 each app's cutover build fills its file ids from Files' id map (t9 #5 step 6); source bytes stay until t9's
-  separate retire job.
+  separate retire job. An imported file's app is its reference prefix (`brand`, `catalogue`, `desk`), the same as
+  Ocharo's client ids, so imports and new uploads share one policy (files lane, 2026-11-08).
+
+## Build
+
+- #23 Brand, wave 1 (2026-11-09):
+  - packages: core `10.0.105-beta`, `Identity.Client` `10.0.30-beta` (the BFF fix of `identity-cutover` #54), Files'
+    `Abstractions` and `Client` `10.0.5-beta`.
+  - `Files:BaseUrl` set: `FilesMediaStore` uploads each original once by SHA-256 as app `brand`, with idempotency key and
+    reference `brand.media:{sha}`; each media route redirects to a Files link, the preview at width 1200. The Files
+    client takes Brand's own Identity client: a person's token exchanged within their session, Brand's own otherwise.
+  - `media_blobs` gains `FileId`; boot fills it for files stored before Files by matching SHA-256 against Brand's files
+    in Files. That is the cutover's id-map step, read with Brand's own token instead of the import's.
+  - a file with no id yet reads its local bytes, so a deploy before the move keeps every logo; the local `MediaStore`
+    also serves a run with `Files:BaseUrl` unset, and both leave at t9's retire step, once local runs use a Files too.
+  - an unreachable Files at boot leaves ids unfilled and the boot running; an upload then answers `503`.
+  - hosted settings: `Files:BaseUrl` is a required owner key on `brand`, typed as `https://files.{domain}/`.
+  - not run: a real Files round trip, the move of the 3 dev logos, Brand on dev.

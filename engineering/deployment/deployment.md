@@ -229,8 +229,11 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   environment as `https://files.{domain}/`, so the later move to Ocharo's own instance changes no entry; its `SignalUrl`
   is `{Uri}signals/identity`. Clients 0 to 5 reach it for a person by token exchange, and 0 to 4 also as themselves by
   client credentials, each with `files.read` and `files.write`. Owner and admin hold `files:read`, `files:write`,
-  `files:share` and `files:admin`, editors `files:read` and `files:write`, since Files reads only `org_permission`. Each
-  app's Files base URL is an owner key too: B is no site of this descriptor. Plan: `planning/files-adoption.md`.
+  `files:share` and `files:admin`, editors `files:read` and `files:write`, viewers `files:read`, since Files reads only
+  `org_permission`. Each app's `Files:BaseUrl` is an owner key too, typed as that same Uri: B is no site of this
+  descriptor. Brand reads it first (wave 1): with it Brand stores in Files and redirects its media routes to Files
+  links; logos stored before Files read from `brand-data` until the migration moves them. Plan:
+  `planning/files-adoption.md`.
 - Revocation signals: on `identity`, each client's `SignalUrl` (`{site}/api/identity/signal`, clients 0 to 5) and each
   resource's (`{site}/signals/identity`, resources 0 to 2) is an owner key typed per environment, for the same reason as
   redirect URIs. Each app links its `Identity:Client:SignalUrl`, and Desk and Editorial their `Identity:Resource:SignalUrl`,
