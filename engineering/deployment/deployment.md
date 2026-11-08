@@ -226,7 +226,7 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   `Identity:Resource:Uri` links to its own site, and background removal takes only such a token, never Desk's cookie.
 - Files: `:2` is `files` (scopes `files.read`, `files.write`, `files.share`, `files.admin`; `PermissionNamespace` `files`),
   WoW2 Files serving tenant `ocharo` on the shared files host B. Its `Uri` is Ocharo's own Files hostname, typed per
-  environment as `https://files.{domain}/`, so the later move to Ocharo's own instance changes no entry; its `SignalUrl`
+  environment with its slash (dev, with no domain: `https://ocharo-files-dev.{products host}.sslip.io/`), so the later move to Ocharo's own instance changes no entry; its `SignalUrl`
   is `{Uri}signals/identity`. Clients 0 to 5 reach it for a person by token exchange, and 0 to 4 also as themselves by
   client credentials, each with `files.read` and `files.write`. Owner and admin hold `files:read`, `files:write`,
   `files:share` and `files:admin`, editors `files:read` and `files:write`, viewers `files:read`, since Files reads only

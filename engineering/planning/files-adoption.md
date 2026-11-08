@@ -130,7 +130,7 @@ code limits and local dev data; nothing read prod.
 - #22 B trusts only Ocharo's Identity in P1: no WoW2 Identity joins this goal (developer, 2026-11-08,
   `files-integration` #29).
 - #18 this repo writes the entries, in `deploy.yml` since 2026-11-08; the wheelhouse lane types the per-environment
-  owner keys, `Resources:2:Uri` as `https://files.{domain}/` and `Resources:2:SignalUrl` as `{Uri}signals/identity`,
+  owner keys, `Resources:2:Uri` as Ocharo's Files host (dev: `https://ocharo-files-dev.{products host}.sslip.io/`, since dev has no domain) and `Resources:2:SignalUrl` as `{Uri}signals/identity`,
   and each caller's Files base URL (B is no Ocharo site, so no `from:` reaches it), on target `ocharo-dev`, plus the
   same Uri as tenant `ocharo`'s audience on `files-dev` (wheelhouse lane, 2026-11-08). The shape, as written:
 
@@ -193,5 +193,5 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
   - a file with no id yet reads its local bytes, so a deploy before the move keeps every logo; the local `MediaStore`
     also serves a run with `Files:BaseUrl` unset, and both leave at t9's retire step, once local runs use a Files too.
   - an unreachable Files at boot leaves ids unfilled and the boot running; an upload then answers `503`.
-  - hosted settings: `Files:BaseUrl` is a required owner key on `brand`, typed as `https://files.{domain}/`.
+  - hosted settings: `Files:BaseUrl` is a required owner key on `brand`, typed as that same Uri.
   - not run: a real Files round trip, the move of the 3 dev logos, Brand on dev.

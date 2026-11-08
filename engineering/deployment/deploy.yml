@@ -326,9 +326,9 @@ services:
         Identity:Server:Resources:1:Uri: { type: url, required: true }
         Identity:Server:Resources:1:Scopes:0: { default: editorial.export }
         Identity:Server:Resources:1:SignalUrl: { type: url, required: true }
-        # Files' audience is Ocharo's own Files hostname on the shared files host B, typed per environment as
-        # `https://files.{domain}/`, so the later move to Ocharo's own instance changes no entry; its signals go to
-        # `{Uri}signals/identity`. `files.tenants` is B's operator scope and never registers here.
+        # Files' audience is Ocharo's own Files hostname on the shared files host B, typed per environment with its
+        # slash: on dev, which has no domain, `https://ocharo-files-dev.{products host}.sslip.io/`. The later move to
+        # Ocharo's own instance changes no entry; its signals go to `{Uri}signals/identity`. `files.tenants` is B's operator scope and never registers here.
         Identity:Server:Resources:2:Name: { default: files }
         Identity:Server:Resources:2:Uri: { type: url, required: true }
         Identity:Server:Resources:2:Scopes:0: { default: files.read }
@@ -362,8 +362,8 @@ services:
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         Brand:OrganizationId: { required: true }             # Ocharo's organization id in that environment's Identity
         # Media live in WoW2 Files, tenant `ocharo` on the shared files host, reached with the same Identity client: a
-        # person's exchanged token within their session, Brand's own otherwise. Typed per environment as
-        # `https://files.{domain}/`, the Uri of Identity:Server:Resources:2; the shared host is no site of this
+        # person's exchanged token within their session, Brand's own otherwise. Typed per environment as the Uri of
+        # Identity:Server:Resources:2; the shared host is no site of this
         # descriptor, so no `from:` reaches it. Files stored before it read from the blobs below until the migration.
         Files:BaseUrl: { type: url, required: true }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
