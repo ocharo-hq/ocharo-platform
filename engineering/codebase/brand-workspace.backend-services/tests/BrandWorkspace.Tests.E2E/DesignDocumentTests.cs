@@ -12,6 +12,7 @@ using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.DesignDocuments.Models;
 using BrandWorkspace.Infrastructure.DesignDocuments.Services;
 using BrandWorkspace.Persistence.DesignDocuments.Repositories;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
@@ -69,14 +70,16 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         saved.StatusCode.Should().Be(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
         (await DataAsync(saved)).GetProperty("revision").GetInt32().Should().Be(2);
         // A new repository instance reconstructs its result from PostgreSQL rather than a service cache.
-        DesignDocument reloaded = await Service().GetDocumentAsync(owner, id, Token);
+        DesignDocument reloaded = (await Service().GetDocumentAsync(owner, id, Token)).ValueOrThrow();
         reloaded.Snapshot.GetProperty("text").GetString().Should().Be("O‘zbekcha\nNext line");
-        DesignDocument previous = await Service().GetRevisionAsync(owner, id, 1, Token);
+        DesignDocument previous = (await Service().GetRevisionAsync(owner, id, 1, Token)).ValueOrThrow();
         previous.Title.Should().Be("First");
         previous.Snapshot.GetProperty("text").GetString().Should().Be("Original text");
         previous.Archived.Should().BeFalse();
 
-        using HttpResponseMessage archived = await client.PostAsJsonAsync($"{path}/{id}/archive", new { expectedRevision = 2 });
+        using HttpResponseMessage archived = await client.PostAsJsonAsync(
+            $"{path}/{id}/archive",
+            new { expectedRevision = 2 });
         archived.StatusCode.Should().Be(HttpStatusCode.OK);
         JsonElement archivedDocument = await DataAsync(archived);
         archivedDocument.GetProperty("archived").GetBoolean().Should().BeTrue();
@@ -89,7 +92,8 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         (await DataAsync(history)).EnumerateArray().Select(item => item.GetProperty("revision").GetInt32())
             .Should().Equal(3, 2, 1);
         using HttpResponseMessage historical = await client.GetAsync($"{path}/{id}/revisions/1");
-        (await DataAsync(historical)).GetProperty("snapshot").GetProperty("text").GetString().Should().Be("Original text");
+        (await DataAsync(historical)).GetProperty("snapshot").GetProperty("text").GetString()
+            .Should().Be("Original text");
         using HttpResponseMessage editArchived = await client.PutAsJsonAsync($"{path}/{id}", new
         {
             title = "Should fail", snapshot, expectedRevision = 3
@@ -102,7 +106,8 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         OrganizationAccess other = await fixture.CreateOwnerAsync();
-        DesignDocument document = await Service().CreateDocumentAsync(owner, "catalogue", Input("Own"), Token);
+        DesignDocument document = (await Service().CreateDocumentAsync(owner, "catalogue", Input("Own"), Token))
+            .ValueOrThrow();
         using HttpClient client = await fixture.LoginAsync(other);
         string ownPath = Path(other);
         string foreignIdPath = $"{ownPath}/{document.Id}";
@@ -137,14 +142,15 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         Func<Task> invalidAssociation = async () => await association.ExecuteNonQueryAsync();
         (await invalidAssociation.Should().ThrowAsync<PostgresException>()).Which.SqlState
             .Should().Be(PostgresErrorCodes.ForeignKeyViolation);
-        (await Service().GetDocumentAsync(owner, document.Id, Token)).Revision.Should().Be(1);
+        (await Service().GetDocumentAsync(owner, document.Id, Token)).ValueOrThrow().Revision.Should().Be(1);
     }
 
     [Fact]
     public async Task Roles_ShouldRecheckMembershipAndSessionForEveryRequest()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
-        DesignDocument document = await Service().CreateDocumentAsync(owner, "business-card", Input("Owner"), Token);
+        DesignDocument document = (await Service().CreateDocumentAsync(owner, "business-card", Input("Owner"), Token))
+            .ValueOrThrow();
         using HttpClient client = await fixture.LoginAsync(owner);
         string path = $"{Path(owner)}/{document.Id}";
         await fixture.SetRoleAsync(owner, "viewer");
@@ -172,18 +178,19 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         DesignDocumentService service = Service();
-        DesignDocument original = await service.CreateDocumentAsync(owner, "catalogue", Input("Original"), Token);
-        Task<(DesignDocument? Value, AppException? Error)> first = CaptureAsync(() =>
+        DesignDocument original = (await service.CreateDocumentAsync(owner, "catalogue", Input("Original"), Token))
+            .ValueOrThrow();
+        Task<(DesignDocument? Value, AppError? Error)> first = CaptureAsync(() =>
             service.SaveDocumentAsync(owner, original.Id, 1, Input("First"), Token));
-        Task<(DesignDocument? Value, AppException? Error)> second = CaptureAsync(() =>
+        Task<(DesignDocument? Value, AppError? Error)> second = CaptureAsync(() =>
             service.SaveDocumentAsync(owner, original.Id, 1, Input("Second"), Token));
-        (DesignDocument? Value, AppException? Error)[] outcomes = await Task.WhenAll(first, second);
+        (DesignDocument? Value, AppError? Error)[] outcomes = await Task.WhenAll(first, second);
         outcomes.Count(item => item.Error is null).Should().Be(1);
-        outcomes.Single(item => item.Error is not null).Error!.Error.Type.Should().Be(AppErrorType.Conflict);
-        DesignDocument current = await service.GetDocumentAsync(owner, original.Id, Token);
+        outcomes.Single(item => item.Error is not null).Error!.Type.Should().Be(AppErrorType.Conflict);
+        DesignDocument current = (await service.GetDocumentAsync(owner, original.Id, Token)).ValueOrThrow();
         current.Revision.Should().Be(2);
-        (await service.GetRevisionAsync(owner, original.Id, 1, Token)).Title.Should().Be("Original");
-        (await service.GetRevisionsAsync(owner, original.Id, 50, 0, Token)).Should().HaveCount(2);
+        (await service.GetRevisionAsync(owner, original.Id, 1, Token)).ValueOrThrow().Title.Should().Be("Original");
+        (await service.GetRevisionsAsync(owner, original.Id, 50, 0, Token)).ValueOrThrow().Should().HaveCount(2);
         foreach (string sql in new[]
         {
             "UPDATE design_documents.revisions SET title='Mutated' WHERE organization_id=$1 AND document_id=$2",
@@ -202,8 +209,9 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
             title = "Stale", snapshot = Snapshot("Stale"), expectedRevision = 1
         });
         conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await conflict.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("Conflict");
-        (await service.GetDocumentAsync(owner, original.Id, Token)).Title.Should().Be(current.Title);
+        (await conflict.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString()
+            .Should().Be("Conflict");
+        (await service.GetDocumentAsync(owner, original.Id, Token)).ValueOrThrow().Title.Should().Be(current.Title);
     }
 
     [Fact]
@@ -243,8 +251,11 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     private DesignDocumentService Service()
     {
         return new DesignDocumentService(
-            new DesignDocumentRepository(fixture.DataSource, TimeProvider.System),
-            new DesignDocumentValidationService(), new BrandWorkspace.Persistence.Commerce.Repositories.CommerceRepository(fixture.DataSource, TimeProvider.System,
+            new DesignDocumentRepository(fixture.Connections, TimeProvider.System),
+            new DesignDocumentValidationService(),
+            new BrandWorkspace.Persistence.Commerce.Repositories.CommerceRepository(
+                fixture.Connections,
+                TimeProvider.System,
                 new BrandWorkspace.Infrastructure.Commerce.Services.CommerceRuleSet()));
     }
 
@@ -260,7 +271,8 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
 
     private static JsonElement Snapshot(string text)
     {
-        return JsonSerializer.SerializeToElement(new { schemaVersion = 1, text, pages = new[] { new { width = 210 } } });
+        return JsonSerializer.SerializeToElement(
+            new { schemaVersion = 1, text, pages = new[] { new { width = 210 } } });
     }
 
     private static async Task<JsonElement> DataAsync(HttpResponseMessage response)
@@ -268,10 +280,10 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
     }
 
-    private static async Task<(DesignDocument? Value, AppException? Error)> CaptureAsync(
-        Func<Task<DesignDocument>> action)
+    private static async Task<(DesignDocument? Value, AppError? Error)> CaptureAsync(
+        Func<Task<Result<DesignDocument>>> action)
     {
-        try { return (await action(), null); }
-        catch (AppException exception) { return (null, exception); }
+        Result<DesignDocument> result = await action();
+        return result.Match<(DesignDocument?, AppError?)>(value => (value, null), error => (null, error));
     }
 }

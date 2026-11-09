@@ -1,8 +1,8 @@
 using BrandWorkspace.Application.Commerce.Models;
 using BrandWorkspace.Application.Commerce.Queries;
 using BrandWorkspace.Application.Commerce.Repositories;
-using BrandWorkspace.Application.Foundation.Errors;
-using BrandWorkspace.Infrastructure.Commerce.Services;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -13,9 +13,14 @@ public sealed class CommerceGetQueryHandler(ICommerceRepository repository)
     : IQueryHandler<CommerceGetQuery, AppResult<CommerceDraftLookup>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<CommerceDraftLookup>> HandleAsync(CommerceGetQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<CommerceDraftLookup>> HandleAsync(
+        CommerceGetQuery request,
+        CancellationToken cancellationToken)
     {
-        var draft = await repository.GetAsync(request.Access.OrganizationId, request.BrandId, cancellationToken);
-        return AppResult<CommerceDraftLookup>.Ok(new CommerceDraftLookup(draft));
+        Result<CommerceDraftLookup> lookup = await repository.GetAsync(
+            request.Access.OrganizationId,
+            request.BrandId,
+            cancellationToken);
+        return lookup.ToAppResult();
     }
 }

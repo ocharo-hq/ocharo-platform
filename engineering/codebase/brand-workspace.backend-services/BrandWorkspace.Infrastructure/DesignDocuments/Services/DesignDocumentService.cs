@@ -9,6 +9,8 @@ using BrandWorkspace.Application.DesignDocuments.Models;
 using BrandWorkspace.Application.DesignDocuments.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.DesignDocuments.Models;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Infrastructure.DesignDocuments.Services;
 
@@ -31,7 +33,7 @@ public sealed class DesignDocumentService(
         return repository.GetDocumentsAsync(access.OrganizationId, kind, includeArchived, limit, offset, token);
     }
 
-    public Task<DesignDocument> GetDocumentAsync(
+    public Task<Result<DesignDocument>> GetDocumentAsync(
         OrganizationAccess access,
         Guid documentId,
         CancellationToken token)
@@ -39,7 +41,7 @@ public sealed class DesignDocumentService(
         return repository.GetDocumentAsync(access.OrganizationId, documentId, null, token);
     }
 
-    public Task<DesignDocument> GetRevisionAsync(
+    public Task<Result<DesignDocument>> GetRevisionAsync(
         OrganizationAccess access,
         Guid documentId,
         int revision,
@@ -49,7 +51,7 @@ public sealed class DesignDocumentService(
         return repository.GetDocumentAsync(access.OrganizationId, documentId, revision, token);
     }
 
-    public Task<IReadOnlyList<DesignDocumentRevision>> GetRevisionsAsync(
+    public Task<Result<IReadOnlyList<DesignDocumentRevision>>> GetRevisionsAsync(
         OrganizationAccess access,
         Guid documentId,
         int limit,
@@ -60,7 +62,7 @@ public sealed class DesignDocumentService(
         return repository.GetRevisionsAsync(access.OrganizationId, documentId, limit, offset, token);
     }
 
-    public async Task<DesignDocument> CreateDocumentAsync(
+    public async Task<Result<DesignDocument>> CreateDocumentAsync(
         OrganizationAccess access,
         string? kind,
         DesignDocumentInput input,
@@ -69,12 +71,21 @@ public sealed class DesignDocumentService(
         RequireEditor(access);
         string validatedKind = validation.ValidateKind(kind);
         DesignDocumentInput validated = validation.ValidateInput(input);
-        CommerceRules.Require(!validated.Snapshot.TryGetProperty("catalogue", out _) || validatedKind=="catalogue", "Catalogue metadata belongs to catalogue documents.");
-        await ValidateCatalogueBrand(access, validated.Snapshot, token);
-        return await repository.CreateDocumentAsync(access.OrganizationId, access.UserId, validatedKind, validated, token);
+        CommerceRules.Require(
+            !validated.Snapshot.TryGetProperty("catalogue", out _) || validatedKind == "catalogue",
+            "Catalogue metadata belongs to catalogue documents.");
+        if (await ValidateCatalogueBrand(access, validated.Snapshot, token) is { } unavailable)
+            return Result<DesignDocument>.Fail(unavailable);
+        DesignDocument created = await repository.CreateDocumentAsync(
+            access.OrganizationId,
+            access.UserId,
+            validatedKind,
+            validated,
+            token);
+        return Result<DesignDocument>.Ok(created);
     }
 
-    public async Task<DesignDocument> SaveDocumentAsync(
+    public async Task<Result<DesignDocument>> SaveDocumentAsync(
         OrganizationAccess access,
         Guid documentId,
         int expectedRevision,
@@ -84,12 +95,18 @@ public sealed class DesignDocumentService(
         RequireEditor(access);
         validation.ValidateRevision(expectedRevision);
         DesignDocumentInput validated = validation.ValidateInput(input);
-        if(validated.Snapshot.TryGetProperty("catalogue", out _))
+        if (validated.Snapshot.TryGetProperty("catalogue", out _))
         {
-            var current=await repository.GetDocumentAsync(access.OrganizationId,documentId,null,token);
-            CommerceRules.Require(current.Kind=="catalogue","Catalogue metadata belongs to catalogue documents.");
+            Result<DesignDocument> current = await repository.GetDocumentAsync(
+                access.OrganizationId,
+                documentId,
+                null,
+                token);
+            if (current.IsFailure(out AppError? error, out var document)) return Result<DesignDocument>.Fail(error);
+            CommerceRules.Require(document.Kind == "catalogue", "Catalogue metadata belongs to catalogue documents.");
         }
-        await ValidateCatalogueBrand(access, validated.Snapshot, token);
+        if (await ValidateCatalogueBrand(access, validated.Snapshot, token) is { } unavailable)
+            return Result<DesignDocument>.Fail(unavailable);
         return await repository.SaveDocumentAsync(
             access.OrganizationId,
             access.UserId,
@@ -99,7 +116,7 @@ public sealed class DesignDocumentService(
             token);
     }
 
-    public Task<DesignDocument> ArchiveDocumentAsync(
+    public Task<Result<DesignDocument>> ArchiveDocumentAsync(
         OrganizationAccess access,
         Guid documentId,
         int expectedRevision,
@@ -115,18 +132,42 @@ public sealed class DesignDocumentService(
             token);
     }
 
-    private async Task ValidateCatalogueBrand(OrganizationAccess access, JsonElement snapshot, CancellationToken token)
+    /// <summary>
+    /// Checks a catalogue's products and pages against its connected brand; the error when that brand is unavailable.
+    /// </summary>
+    private async Task<AppError?> ValidateCatalogueBrand(
+        OrganizationAccess access,
+        JsonElement snapshot,
+        CancellationToken token)
     {
-        if (CatalogueDefinition.Read(snapshot) is null) return;
+        if (CatalogueDefinition.Read(snapshot) is null) return null;
         var ids = CatalogueDefinition.ProductIdsForSnapshot(snapshot);
-        if (!snapshot.TryGetProperty("catalogueSettings", out var settings) || !settings.TryGetProperty("brandId", out var brand))
-        { CommerceRules.Require(ids.Count == 0, "Connect a brand before adding catalogue products."); return; }
+        if (!snapshot.TryGetProperty("catalogueSettings", out var settings)
+            || !settings.TryGetProperty("brandId", out var brand))
+        {
+            CommerceRules.Require(ids.Count == 0, "Connect a brand before adding catalogue products.");
+            return null;
+        }
         var brandId = brand.GetGuid();
-        var draft = await commerce.GetAsync(access.OrganizationId, brandId, token);
-        CommerceRules.Require(draft is not null && ids.All(id => draft.Snapshot.Products.Any(product => product.Document.Id == id)), "Catalogue products must belong to its connected brand.");
-        if (snapshot.TryGetProperty("pages", out var pages)) foreach (var page in pages.EnumerateArray())
+        Result<CommerceDraftLookup> lookup = await commerce.GetAsync(access.OrganizationId, brandId, token);
+        if (lookup.IsFailure(out AppError? unavailable, out var found)) return unavailable;
+        var draft = found.Draft;
+        CommerceRules.Require(
+            draft is not null && ids.All(id => draft.Snapshot.Products.Any(product => product.Document.Id == id)),
+            "Catalogue products must belong to its connected brand.");
+        if (!snapshot.TryGetProperty("pages", out var pages)) return null;
+        foreach (var page in pages.EnumerateArray())
+        {
             if (page.TryGetProperty("catalogueSource", out var source) && source.ValueKind == JsonValueKind.Object)
-                CommerceRules.Require(source.TryGetProperty("brandId", out var origin) && origin.TryGetGuid(out var originId) && originId == brandId, "Catalogue pages must belong to its connected brand.");
+            {
+                CommerceRules.Require(
+                    source.TryGetProperty("brandId", out var origin)
+                    && origin.TryGetGuid(out var originId)
+                    && originId == brandId,
+                    "Catalogue pages must belong to its connected brand.");
+            }
+        }
+        return null;
     }
 
     private static void RequireEditor(OrganizationAccess access)

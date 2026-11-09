@@ -10,7 +10,10 @@ using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Data.Common;
 using Npgsql;
+using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
+using WoW.Two.Sdk.Beta.Be.Data.Dapper;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Jobs.Hangfire;
 
@@ -18,23 +21,34 @@ namespace BrandWorkspace.Worker.Configurations;
 
 public static partial class HostConfiguration
 {
-    /// <summary>Registers the optional target and local settings files, then the permitted database deployment input.</summary>
+    /// <summary>
+    /// Registers the optional target and local settings files, then the permitted database deployment input.
+    /// </summary>
     private static HostApplicationBuilder AddExplicitEnvironment(this HostApplicationBuilder builder)
     {
         builder.AddSettingsFiles();
-        foreach (var source in builder.Configuration.Sources.OfType<EnvironmentVariablesConfigurationSource>().ToArray())
+        EnvironmentVariablesConfigurationSource[] environmentSources = builder.Configuration.Sources
+            .OfType<EnvironmentVariablesConfigurationSource>()
+            .ToArray();
+        foreach (var source in environmentSources)
             builder.Configuration.Sources.Remove(source);
         if (Environment.GetEnvironmentVariable("ConnectionStrings__Database") is { } connection)
-            builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = connection });
+        {
+            builder.Configuration.AddInMemoryCollection(
+                new Dictionary<string, string?> { ["ConnectionStrings:Database"] = connection });
+        }
         return builder;
     }
 
-    /// <summary>Registers the PostgreSQL connection pool.</summary>
+    /// <summary>Registers the PostgreSQL pool, the SDK connection factory and Dapper's conventions.</summary>
     private static HostApplicationBuilder AddPostgresDatabase(this HostApplicationBuilder builder)
     {
         var connection = builder.Configuration.GetConnectionString("Database")
             ?? throw new InvalidOperationException("ConnectionStrings:Database is required.");
         builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(connection));
+        builder.Services.AddSingleton<DbDataSource>(services => services.GetRequiredService<NpgsqlDataSource>());
+        builder.Services.AddDataSourceConnectionFactory();
+        builder.Services.AddDapperConventions();
         return builder;
     }
 
@@ -43,11 +57,18 @@ public static partial class HostConfiguration
     {
         builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
         var connection = builder.Configuration.GetConnectionString("Database")!;
-        // The executing worker owns the queue's schema: Hangfire's own idempotent installer creates or upgrades it as the
-        // storage is built. A client-only CLI run never changes the schema.
-        void ConfigureStorage(IGlobalConfiguration configuration) => configuration.UsePostgreSqlStorage(
-            storage => storage.UseNpgsqlConnection(connection),
-            new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = executeJobs, QueuePollInterval = TimeSpan.FromSeconds(1) });
+        // The executing worker owns the queue's schema: Hangfire's own idempotent installer creates or upgrades it as
+        // the storage is built. A client-only CLI run never changes the schema.
+        void ConfigureStorage(IGlobalConfiguration configuration)
+        {
+            configuration.UsePostgreSqlStorage(
+                storage => storage.UseNpgsqlConnection(connection),
+                new PostgreSqlStorageOptions
+                {
+                    PrepareSchemaIfNecessary = executeJobs,
+                    QueuePollInterval = TimeSpan.FromSeconds(1),
+                });
+        }
         if (executeJobs)
         {
             builder.Services.AddHangfireJobs(ConfigureStorage, options =>
@@ -72,13 +93,19 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Configures mandatory foundation readiness (Desk's schema, which the API applies) before worker execution or CLI
-    /// commands; the executing worker then installs the queue's own schema as its storage is built.</summary>
+    /// <summary>
+    /// Configures mandatory foundation readiness (Desk's schema, which the API applies) before worker execution or CLI
+    /// commands; the executing worker then installs the queue's own schema as its storage is built.
+    /// </summary>
     private static async Task<IHost> ConfigureFoundationAsync(this IHost host)
     {
         var repository = host.Services.GetRequiredService<IFoundationRepository>();
         if (!await repository.IsReadyAsync(CancellationToken.None))
-            throw new InvalidOperationException("Database schema is not ready; start the API, which applies it as it boots, or run its migrate verb first.");
+        {
+            throw new InvalidOperationException(
+                "Database schema is not ready; start the API, which applies it as it boots, "
+                + "or run its migrate verb first.");
+        }
         return host;
     }
 
@@ -91,7 +118,8 @@ public static partial class HostConfiguration
         {
             var probeId = Guid.NewGuid();
             var client = host.Services.GetRequiredService<IBackgroundJobClient>();
-            var enqueuedJobId = client.Enqueue<DiagnosticProbeJob>(job => job.ExecuteAsync(probeId, CancellationToken.None));
+            var enqueuedJobId = client.Enqueue<DiagnosticProbeJob>(
+                job => job.ExecuteAsync(probeId, CancellationToken.None));
             Console.WriteLine(JsonSerializer.Serialize(new { jobId = enqueuedJobId, probeId }));
             return 0;
         }
@@ -100,8 +128,13 @@ public static partial class HostConfiguration
             var storage = host.Services.GetRequiredService<JobStorage>();
             using var connection = storage.GetConnection();
             var data = connection.GetJobData(jobId);
-            if (data is null) { Console.WriteLine(JsonSerializer.Serialize(new { jobId, state = "missing" })); return 2; }
-            if (data.Job.Type != typeof(DiagnosticProbeJob)) throw new ArgumentException("Job is not a foundation diagnostic probe.");
+            if (data is null)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(new { jobId, state = "missing" }));
+                return 2;
+            }
+            if (data.Job.Type != typeof(DiagnosticProbeJob))
+                throw new ArgumentException("Job is not a foundation diagnostic probe.");
             var probeId = (Guid)data.Job.Args[0];
             var completedAtUtc = await repository.GetProbeAsync(probeId, CancellationToken.None);
             Console.WriteLine(JsonSerializer.Serialize(new { jobId, probeId, state = data.State, completedAtUtc }));

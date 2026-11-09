@@ -1,221 +1,347 @@
-using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
-using BrandWorkspace.Application.Foundation.Errors;
-using Npgsql;
-using NpgsqlTypes;
+using System.Data.Common;
 using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Application.Events.Repositories;
-using BrandWorkspace.Application.Preparation.Models;
+using BrandWorkspace.Application.Foundation.Errors;
 using BrandWorkspace.Domain.Events.Models;
+using Dapper;
+using Npgsql;
+using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Persistence.Events.Repositories;
 
-/// <summary>Persists showcase events inside one organization in PostgreSQL.</summary>
-public sealed class EventRepository(NpgsqlDataSource dataSource, TimeProvider time) : IEventRepository
+/// <summary>Accesses the showcase events inside one organization.</summary>
+public sealed class EventRepository(IDbConnectionFactory connectionFactory, TimeProvider time) : IEventRepository
 {
     private const string EventColumns =
-        "id, import_key, title, organizer, scope, format, country, city, venue, starts_on, ends_on, date_precision, " +
-        "application_deadline, participation, cost, website, source_url, status, priority, notes, revision, created_at, updated_at";
+        "id, import_key, title, organizer, scope, format, country, city, venue, starts_on, ends_on, date_precision, "
+        + "application_deadline, participation, cost, website, source_url, status, priority, notes, revision, "
+        + "created_at, updated_at";
+
     private const string DuplicateKey = "An event with this import key already exists.";
 
     public async Task<IReadOnlyList<ShowcaseEvent>> GetEventsAsync(
-        Guid organizationId, ShowcaseEventFilter filter, int limit, int offset, CancellationToken token)
+        Guid organizationId,
+        ShowcaseEventFilter filter,
+        int limit,
+        int offset,
+        CancellationToken token)
     {
-        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
         // An undated event has no start date; it matches a date range only when undated events are included.
-        await using NpgsqlCommand command = Command(connection, null, $"""
-            SELECT {EventColumns}
-            FROM events.showcase_events
-            WHERE organization_id=$1
-                AND ($2::text IS NULL
-                    OR title ILIKE $2 ESCAPE '\' OR organizer ILIKE $2 ESCAPE '\' OR city ILIKE $2 ESCAPE '\'
-                    OR venue ILIKE $2 ESCAPE '\' OR country ILIKE $2 ESCAPE '\' OR import_key ILIKE $2 ESCAPE '\')
-                AND ($3::text IS NULL OR scope=$3::text)
-                AND ($4::text IS NULL OR format=$4::text)
-                AND ($5::text IS NULL OR status=$5::text)
-                AND (starts_on IS NULL AND $8
-                    OR starts_on IS NOT NULL
-                        AND ($6::date IS NULL OR coalesce(ends_on, CASE WHEN date_precision IN ('month', 'estimated')
-                            THEN (date_trunc('month', starts_on) + interval '1 month - 1 day')::date ELSE starts_on END) >= $6::date)
-                        AND ($7::date IS NULL OR starts_on <= $7::date))
-            ORDER BY starts_on ASC NULLS LAST, lower(title), id
-            LIMIT $9 OFFSET $10
-            """, organizationId, filter.Query is null ? null : "%" + EscapeLike(filter.Query) + "%", filter.Scope, filter.Format,
-            filter.Status, filter.From, filter.To, filter.IncludeUndated, limit, offset);
-        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
-        var events = new List<ShowcaseEvent>();
-        while (await reader.ReadAsync(token)) events.Add(ReadEvent(reader));
-        return events;
+        const string sql =
+            $"""
+             SELECT {EventColumns}
+             FROM events.showcase_events
+             WHERE organization_id=@organizationId
+                 AND (@query::text IS NULL
+                     OR title ILIKE @query ESCAPE '\' OR organizer ILIKE @query ESCAPE '\'
+                     OR city ILIKE @query ESCAPE '\' OR venue ILIKE @query ESCAPE '\'
+                     OR country ILIKE @query ESCAPE '\' OR import_key ILIKE @query ESCAPE '\')
+                 AND (@scope::text IS NULL OR scope=@scope::text)
+                 AND (@format::text IS NULL OR format=@format::text)
+                 AND (@status::text IS NULL OR status=@status::text)
+                 AND (starts_on IS NULL AND @includeUndated
+                     OR starts_on IS NOT NULL
+                         AND (@from::date IS NULL
+                             OR coalesce(ends_on, CASE WHEN date_precision IN ('month', 'estimated')
+                                 THEN (date_trunc('month', starts_on) + interval '1 month - 1 day')::date
+                                 ELSE starts_on END) >= @from::date)
+                         AND (@to::date IS NULL OR starts_on <= @to::date))
+             ORDER BY starts_on ASC NULLS LAST, lower(title), id
+             LIMIT @limit OFFSET @offset
+             """;
+        var parameters = new
+        {
+            organizationId,
+            query = filter.Query is null ? null : "%" + EscapeLike(filter.Query) + "%",
+            scope = filter.Scope,
+            format = filter.Format,
+            status = filter.Status,
+            from = filter.From,
+            to = filter.To,
+            includeUndated = filter.IncludeUndated,
+            limit,
+            offset,
+        };
+        await using var connection = await connectionFactory.CreateOpenAsync(token);
+        IEnumerable<EventRow> rows = await connection.QueryAsync<EventRow>(Command(sql, parameters, token));
+        return rows.Select(row => row.ToEvent()).ToList();
     }
 
     public async Task<ShowcaseEventSummary> GetSummaryAsync(
-        Guid organizationId, DateOnly today, int upcomingLimit, CancellationToken token)
+        Guid organizationId,
+        DateOnly today,
+        int upcomingLimit,
+        CancellationToken token)
     {
-        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
-        var byStatus = new Dictionary<string, int>(StringComparer.Ordinal);
-        await using (NpgsqlCommand counts = Command(connection, null,
-            "SELECT status, count(*)::int FROM events.showcase_events WHERE organization_id=$1 GROUP BY status", organizationId))
-        await using (NpgsqlDataReader reader = await counts.ExecuteReaderAsync(token))
-        {
-            while (await reader.ReadAsync(token)) byStatus[reader.GetString(0)] = reader.GetInt32(1);
-        }
-        var upcoming = new List<ShowcaseEvent>();
-        await using (NpgsqlCommand deadlines = Command(connection, null, $"""
-            SELECT {EventColumns}
+        const string countsSql =
+            """
+            SELECT status, count(*)::int AS count
             FROM events.showcase_events
-            WHERE organization_id=$1 AND application_deadline >= $2::date AND status NOT IN ('skipped', 'rejected')
-            ORDER BY application_deadline, starts_on NULLS LAST, lower(title), id
-            LIMIT $3
-            """, organizationId, today, upcomingLimit))
-        await using (NpgsqlDataReader reader = await deadlines.ExecuteReaderAsync(token))
-        {
-            while (await reader.ReadAsync(token)) upcoming.Add(ReadEvent(reader));
-        }
-        return new ShowcaseEventSummary(byStatus, upcoming);
+            WHERE organization_id=@organizationId
+            GROUP BY status
+            """;
+        const string deadlinesSql =
+            $"""
+             SELECT {EventColumns}
+             FROM events.showcase_events
+             WHERE organization_id=@organizationId
+                 AND application_deadline >= @today::date
+                 AND status NOT IN ('skipped', 'rejected')
+             ORDER BY application_deadline, starts_on NULLS LAST, lower(title), id
+             LIMIT @upcomingLimit
+             """;
+        await using var connection = await connectionFactory.CreateOpenAsync(token);
+        IEnumerable<StatusCountRow> counts = await connection.QueryAsync<StatusCountRow>(
+            Command(countsSql, new { organizationId }, token));
+        var byStatus = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (StatusCountRow count in counts) byStatus[count.Status] = count.Count;
+        IEnumerable<EventRow> upcoming = await connection.QueryAsync<EventRow>(
+            Command(deadlinesSql, new { organizationId, today, upcomingLimit }, token));
+        return new ShowcaseEventSummary(byStatus, upcoming.Select(row => row.ToEvent()).ToList());
     }
 
-    public async Task<ShowcaseEvent> GetEventAsync(Guid organizationId, Guid eventId, CancellationToken token)
+    public async Task<Result<ShowcaseEvent>> GetEventAsync(Guid organizationId, Guid eventId, CancellationToken token)
     {
-        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
-        await using NpgsqlCommand command = Command(connection, null,
-            $"SELECT {EventColumns} FROM events.showcase_events WHERE organization_id=$1 AND id=$2", organizationId, eventId);
-        return await ReadOptionalAsync(command, ReadEvent, token) ?? throw NotFound("event");
+        const string sql =
+            $"SELECT {EventColumns} FROM events.showcase_events WHERE organization_id=@organizationId AND id=@eventId";
+        await using var connection = await connectionFactory.CreateOpenAsync(token);
+        EventRow? row = await connection.QueryFirstOrDefaultAsync<EventRow>(
+            Command(sql, new { organizationId, eventId }, token));
+        return row is null ? Result<ShowcaseEvent>.Fail(NotFound("event")) : Result<ShowcaseEvent>.Ok(row.ToEvent());
     }
 
     public async Task<ShowcaseEvent?> FindEventByKeyAsync(Guid organizationId, string key, CancellationToken token)
     {
-        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
-        await using NpgsqlCommand command = Command(connection, null,
-            $"SELECT {EventColumns} FROM events.showcase_events WHERE organization_id=$1 AND import_key=$2", organizationId, key);
-        return await ReadOptionalAsync(command, ReadEvent, token);
+        const string sql =
+            $"""
+             SELECT {EventColumns} FROM events.showcase_events
+             WHERE organization_id=@organizationId AND import_key=@key
+             """;
+        await using var connection = await connectionFactory.CreateOpenAsync(token);
+        EventRow? row = await connection.QueryFirstOrDefaultAsync<EventRow>(
+            Command(sql, new { organizationId, key }, token));
+        return row?.ToEvent();
     }
 
-    public async Task<ShowcaseEvent> CreateEventAsync(
-        Guid organizationId, string actor, string? key, ShowcaseEventInput input, CancellationToken token)
-    {
-        DateTimeOffset now = time.GetUtcNow();
-        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
-        await using NpgsqlCommand insert = Command(connection, null, $"""
-            INSERT INTO events.showcase_events(organization_id, id, import_key, title, organizer, scope, format, country, city,
-                venue, starts_on, ends_on, date_precision, application_deadline, participation, cost, website, source_url, status,
-                priority, notes, revision, created_by, created_at, updated_at)
-            VALUES ($1, $2, $3::text, $4, $5::text, $6, $7, $8::text, $9::text, $10::text, $11::date, $12::date, $13, $14::date,
-                $15, $16::text, $17::text, $18::text, $19, $20, $21, 1, $22, $23, $23)
-            RETURNING {EventColumns}
-            """, organizationId, Guid.NewGuid(), key, input.Title, input.Organizer, input.Scope, input.Format, input.Country,
-            input.City, input.Venue, input.StartsOn, input.EndsOn, input.DatePrecision, input.ApplicationDeadline,
-            input.Participation, input.Cost, input.Website, input.SourceUrl, input.Status, input.Priority, input.Notes, actor, now);
-        return await ReadSingleAsync(insert, ReadEvent, token, DuplicateKey);
-    }
-
-    public async Task<ShowcaseEvent> UpdateEventAsync(
-        Guid organizationId, Guid eventId, int expectedRevision, ShowcaseEventInput input, CancellationToken token)
-    {
-        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
-        await using NpgsqlCommand update = Command(connection, null, $"""
-            UPDATE events.showcase_events
-            SET title=$4, organizer=$5::text, scope=$6, format=$7, country=$8::text, city=$9::text, venue=$10::text,
-                starts_on=$11::date, ends_on=$12::date, date_precision=$13, application_deadline=$14::date, participation=$15,
-                cost=$16::text, website=$17::text, source_url=$18::text, status=$19, priority=$20, notes=$21,
-                revision=revision+1, updated_at=$22
-            WHERE organization_id=$1 AND id=$2 AND revision=$3
-            RETURNING {EventColumns}
-            """, organizationId, eventId, expectedRevision, input.Title, input.Organizer, input.Scope, input.Format, input.Country,
-            input.City, input.Venue, input.StartsOn, input.EndsOn, input.DatePrecision, input.ApplicationDeadline,
-            input.Participation, input.Cost, input.Website, input.SourceUrl, input.Status, input.Priority, input.Notes,
-            time.GetUtcNow());
-        return await ReadOptionalAsync(update, ReadEvent, token)
-            ?? throw await MissingOrConflictAsync(connection, null, "showcase_events", organizationId, eventId, "event", token);
-    }
-
-    public async Task DeleteEventAsync(Guid organizationId, Guid eventId, int expectedRevision, CancellationToken token)
-    {
-        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
-        await using NpgsqlCommand delete = Command(connection, null,
-            "DELETE FROM events.showcase_events WHERE organization_id=$1 AND id=$2 AND revision=$3",
-            organizationId, eventId, expectedRevision);
-        if (await delete.ExecuteNonQueryAsync(token) == 0)
-            throw await MissingOrConflictAsync(connection, null, "showcase_events", organizationId, eventId, "event", token);
-    }
-
-    private static ShowcaseEvent ReadEvent(NpgsqlDataReader reader) => new(
-        reader.GetGuid(0),
-        NullableString(reader, 1),
-        reader.GetString(2),
-        NullableString(reader, 3),
-        reader.GetString(4),
-        reader.GetString(5),
-        NullableString(reader, 6),
-        NullableString(reader, 7),
-        NullableString(reader, 8),
-        NullableDate(reader, 9),
-        NullableDate(reader, 10),
-        reader.GetString(11),
-        NullableDate(reader, 12),
-        reader.GetString(13),
-        NullableString(reader, 14),
-        NullableString(reader, 15),
-        NullableString(reader, 16),
-        reader.GetString(17),
-        reader.GetString(18),
-        reader.GetString(19),
-        reader.GetInt32(20),
-        reader.GetFieldValue<DateTimeOffset>(21),
-        reader.GetFieldValue<DateTimeOffset>(22));
-
-    private static async Task<AppException> MissingOrConflictAsync(
-        NpgsqlConnection connection, NpgsqlTransaction? transaction, string table, Guid organizationId, Guid id, string noun,
+    public async Task<Result<ShowcaseEvent>> CreateEventAsync(
+        Guid organizationId,
+        string actor,
+        string? key,
+        ShowcaseEventInput input,
         CancellationToken token)
     {
-        await using NpgsqlCommand command = Command(connection, transaction,
-            $"SELECT 1 FROM events.{table} WHERE organization_id=$1 AND id=$2", organizationId, id);
-        return await command.ExecuteScalarAsync(token) is null ? NotFound(noun) : Conflict(noun);
-    }
-
-    private static async Task<T> ReadSingleAsync<T>(
-        NpgsqlCommand command, Func<NpgsqlDataReader, T> read, CancellationToken token, string? duplicateMessage = null)
-        where T : class
-    {
-        return await ReadOptionalAsync(command, read, token, duplicateMessage)
-            ?? throw new InvalidOperationException("The statement returned no row.");
-    }
-
-    private static async Task<T?> ReadOptionalAsync<T>(
-        NpgsqlCommand command, Func<NpgsqlDataReader, T> read, CancellationToken token, string? duplicateMessage = null)
-        where T : class
-    {
+        const string sql =
+            $"""
+             INSERT INTO events.showcase_events(organization_id, id, import_key, title, organizer, scope, format,
+                 country, city, venue, starts_on, ends_on, date_precision, application_deadline, participation, cost,
+                 website, source_url, status, priority, notes, revision, created_by, created_at, updated_at)
+             VALUES (@organizationId, @id, @key::text, @title, @organizer::text, @scope, @format, @country::text,
+                 @city::text, @venue::text, @startsOn::date, @endsOn::date, @datePrecision, @applicationDeadline::date,
+                 @participation, @cost::text, @website::text, @sourceUrl::text, @status, @priority, @notes, 1, @actor,
+                 @now, @now)
+             RETURNING {EventColumns}
+             """;
+        var parameters = new
+        {
+            organizationId,
+            id = Guid.NewGuid(),
+            key,
+            title = input.Title,
+            organizer = input.Organizer,
+            scope = input.Scope,
+            format = input.Format,
+            country = input.Country,
+            city = input.City,
+            venue = input.Venue,
+            startsOn = input.StartsOn,
+            endsOn = input.EndsOn,
+            datePrecision = input.DatePrecision,
+            applicationDeadline = input.ApplicationDeadline,
+            participation = input.Participation,
+            cost = input.Cost,
+            website = input.Website,
+            sourceUrl = input.SourceUrl,
+            status = input.Status,
+            priority = input.Priority,
+            notes = input.Notes,
+            actor,
+            now = time.GetUtcNow(),
+        };
+        await using var connection = await connectionFactory.CreateOpenAsync(token);
         try
         {
-            await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
-            return await reader.ReadAsync(token) ? read(reader) : null;
+            EventRow row = await connection.QueryFirstAsync<EventRow>(Command(sql, parameters, token));
+            return Result<ShowcaseEvent>.Ok(row.ToEvent());
         }
-        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation && duplicateMessage is not null)
+        catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
         {
-            throw DeskErrors.Conflict(duplicateMessage).ToException();
+            return Result<ShowcaseEvent>.Fail(DeskErrors.Conflict(DuplicateKey));
         }
     }
 
-    private static string? NullableString(NpgsqlDataReader reader, int ordinal) => reader.IsDBNull(ordinal) ? null : reader.GetString(ordinal);
-
-    private static DateOnly? NullableDate(NpgsqlDataReader reader, int ordinal) =>
-        reader.IsDBNull(ordinal) ? null : reader.GetFieldValue<DateOnly>(ordinal);
-
-    private static string EscapeLike(string value) => value.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
-
-    private static AppException NotFound(string noun) => DeskErrors.NotFound($"The {noun} was not found.").ToException();
-
-    private static AppException Conflict(string noun) =>
-        DeskErrors.Conflict($"The {noun} changed since it was loaded. Reload it before saving again.").ToException();
-
-    private static NpgsqlCommand Command(
-        NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, params object?[] values)
+    public async Task<Result<ShowcaseEvent>> UpdateEventAsync(
+        Guid organizationId,
+        Guid eventId,
+        int expectedRevision,
+        ShowcaseEventInput input,
+        CancellationToken token)
     {
-        var command = new NpgsqlCommand(sql, connection, transaction);
-        foreach (object? value in values)
+        const string sql =
+            $"""
+             UPDATE events.showcase_events
+             SET title=@title, organizer=@organizer::text, scope=@scope, format=@format, country=@country::text,
+                 city=@city::text, venue=@venue::text, starts_on=@startsOn::date, ends_on=@endsOn::date,
+                 date_precision=@datePrecision, application_deadline=@applicationDeadline::date,
+                 participation=@participation, cost=@cost::text, website=@website::text, source_url=@sourceUrl::text,
+                 status=@status, priority=@priority, notes=@notes, revision=revision+1, updated_at=@now
+             WHERE organization_id=@organizationId AND id=@eventId AND revision=@expectedRevision
+             RETURNING {EventColumns}
+             """;
+        var parameters = new
         {
-            if (value is null)
-                command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Unknown, Value = DBNull.Value });
-            else command.Parameters.AddWithValue(value);
+            organizationId,
+            eventId,
+            expectedRevision,
+            title = input.Title,
+            organizer = input.Organizer,
+            scope = input.Scope,
+            format = input.Format,
+            country = input.Country,
+            city = input.City,
+            venue = input.Venue,
+            startsOn = input.StartsOn,
+            endsOn = input.EndsOn,
+            datePrecision = input.DatePrecision,
+            applicationDeadline = input.ApplicationDeadline,
+            participation = input.Participation,
+            cost = input.Cost,
+            website = input.Website,
+            sourceUrl = input.SourceUrl,
+            status = input.Status,
+            priority = input.Priority,
+            notes = input.Notes,
+            now = time.GetUtcNow(),
+        };
+        await using var connection = await connectionFactory.CreateOpenAsync(token);
+        EventRow? row = await connection.QueryFirstOrDefaultAsync<EventRow>(Command(sql, parameters, token));
+        if (row is not null) return Result<ShowcaseEvent>.Ok(row.ToEvent());
+        AppError error = await MissingOrConflictAsync(connection, organizationId, eventId, "event", token);
+        return Result<ShowcaseEvent>.Fail(error);
+    }
+
+    public async Task<Result> DeleteEventAsync(
+        Guid organizationId,
+        Guid eventId,
+        int expectedRevision,
+        CancellationToken token)
+    {
+        const string sql =
+            """
+            DELETE FROM events.showcase_events
+            WHERE organization_id=@organizationId AND id=@eventId AND revision=@expectedRevision
+            """;
+        await using var connection = await connectionFactory.CreateOpenAsync(token);
+        int deleted = await connection.ExecuteAsync(
+            Command(sql, new { organizationId, eventId, expectedRevision }, token));
+        if (deleted != 0) return Result.Ok();
+        return Result.Fail(await MissingOrConflictAsync(connection, organizationId, eventId, "event", token));
+    }
+
+    /// <summary>Tells a missing event from one that changed since it was loaded.</summary>
+    private static async Task<AppError> MissingOrConflictAsync(
+        DbConnection connection,
+        Guid organizationId,
+        Guid id,
+        string noun,
+        CancellationToken token)
+    {
+        const string sql = "SELECT 1 FROM events.showcase_events WHERE organization_id=@organizationId AND id=@id";
+        int? found = await connection.ExecuteScalarAsync<int?>(Command(sql, new { organizationId, id }, token));
+        return found is null ? NotFound(noun) : Conflict(noun);
+    }
+
+    private static string EscapeLike(string value)
+    {
+        return value.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
+    }
+
+    private static AppError NotFound(string noun)
+    {
+        return DeskErrors.NotFound($"The {noun} was not found.");
+    }
+
+    private static AppError Conflict(string noun)
+    {
+        return DeskErrors.Conflict($"The {noun} changed since it was loaded. Reload it before saving again.");
+    }
+
+    private static CommandDefinition Command(string sql, object parameters, CancellationToken token)
+    {
+        return new CommandDefinition(sql, parameters, cancellationToken: token);
+    }
+
+    /// <summary>One stored event, as its columns read.</summary>
+    private sealed class EventRow
+    {
+        public Guid Id { get; init; }
+        public string? ImportKey { get; init; }
+        public string Title { get; init; } = string.Empty;
+        public string? Organizer { get; init; }
+        public string Scope { get; init; } = string.Empty;
+        public string Format { get; init; } = string.Empty;
+        public string? Country { get; init; }
+        public string? City { get; init; }
+        public string? Venue { get; init; }
+        public DateOnly? StartsOn { get; init; }
+        public DateOnly? EndsOn { get; init; }
+        public string DatePrecision { get; init; } = string.Empty;
+        public DateOnly? ApplicationDeadline { get; init; }
+        public string Participation { get; init; } = string.Empty;
+        public string? Cost { get; init; }
+        public string? Website { get; init; }
+        public string? SourceUrl { get; init; }
+        public string Status { get; init; } = string.Empty;
+        public string Priority { get; init; } = string.Empty;
+        public string Notes { get; init; } = string.Empty;
+        public int Revision { get; init; }
+        public DateTimeOffset CreatedAt { get; init; }
+        public DateTimeOffset UpdatedAt { get; init; }
+
+        public ShowcaseEvent ToEvent()
+        {
+            return new ShowcaseEvent(
+                Id,
+                ImportKey,
+                Title,
+                Organizer,
+                Scope,
+                Format,
+                Country,
+                City,
+                Venue,
+                StartsOn,
+                EndsOn,
+                DatePrecision,
+                ApplicationDeadline,
+                Participation,
+                Cost,
+                Website,
+                SourceUrl,
+                Status,
+                Priority,
+                Notes,
+                Revision,
+                CreatedAt,
+                UpdatedAt);
         }
-        return command;
+    }
+
+    /// <summary>How many events hold one status.</summary>
+    private sealed class StatusCountRow
+    {
+        public string Status { get; init; } = string.Empty;
+        public int Count { get; init; }
     }
 }

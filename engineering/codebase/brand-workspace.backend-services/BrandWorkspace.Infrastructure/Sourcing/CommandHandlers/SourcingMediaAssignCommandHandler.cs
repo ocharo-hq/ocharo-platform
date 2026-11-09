@@ -1,5 +1,7 @@
 using BrandWorkspace.Application.Sourcing.Commands;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -10,8 +12,15 @@ public sealed class SourcingMediaAssignCommandHandler(SourcingService service)
     : ICommandHandler<SourcingMediaAssignCommand, AppResult<int>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<int>> HandleAsync(SourcingMediaAssignCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<int>> HandleAsync(
+        SourcingMediaAssignCommand request,
+        CancellationToken cancellationToken)
     {
-        return AppResult<int>.Ok(await service.AssignMediaAsync(request.Access, request.MediaIds, request.SupplierId, cancellationToken));
+        Result<int> assigned = await service.AssignMediaAsync(
+            request.Access,
+            request.MediaIds,
+            request.SupplierId,
+            cancellationToken);
+        return assigned.ToAppResult();
     }
 }

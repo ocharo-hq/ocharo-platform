@@ -1,6 +1,8 @@
 using BrandWorkspace.Application.Sourcing.Commands;
 using BrandWorkspace.Domain.Sourcing.Models;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -11,9 +13,18 @@ public sealed class SupplierCreateCommandHandler(SourcingService service, Sourci
     : ICommandHandler<SupplierCreateCommand, AppResult<Supplier>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<Supplier>> HandleAsync(SupplierCreateCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<Supplier>> HandleAsync(
+        SupplierCreateCommand request,
+        CancellationToken cancellationToken)
     {
-        var input = validation.Supplier(request.Name, request.Stage, request.Country, request.City, request.Website, request.Notes);
-        return AppResult<Supplier>.Ok(await service.CreateSupplierAsync(request.Access, input, cancellationToken));
+        var input = validation.Supplier(
+            request.Name,
+            request.Stage,
+            request.Country,
+            request.City,
+            request.Website,
+            request.Notes);
+        Result<Supplier> created = await service.CreateSupplierAsync(request.Access, input, cancellationToken);
+        return created.ToAppResult();
     }
 }

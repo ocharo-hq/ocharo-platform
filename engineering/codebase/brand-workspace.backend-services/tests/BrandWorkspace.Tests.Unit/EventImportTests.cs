@@ -7,6 +7,7 @@ using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.Events.Models;
 using BrandWorkspace.Infrastructure.Events.Services;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using Xunit;
 
 namespace BrandWorkspace.Tests.Unit;
@@ -18,7 +19,9 @@ public sealed class EventImportTests
     [InlineData("{\"format\":\"ocharo.events-import.v1\"}")]
     [InlineData("{\"format\":\"ocharo.events-import.v1\",\"events\":null}")]
     [InlineData("{\"format\":\"ocharo.events-import.v1\",\"events\":[null]}")]
-    [InlineData("{\"format\":\"ocharo.events-import.v1\",\"events\":[{\"key\":\"first\",\"title\":\"Event\",\"scope\":\"local\",\"format\":\"market\"},null]}")]
+    [InlineData(
+        "{\"format\":\"ocharo.events-import.v1\",\"events\":"
+        + "[{\"key\":\"first\",\"title\":\"Event\",\"scope\":\"local\",\"format\":\"market\"},null]}")]
     public async Task Import_ShouldRejectMalformedEventsBeforeRepositoryAccess(string json)
     {
         string file = Path.GetTempFileName();
@@ -37,17 +40,67 @@ public sealed class EventImportTests
 
     private sealed class UnusedRepository : IEventRepository
     {
-        private static Exception Unexpected() => new InvalidOperationException("Invalid bundles must not reach persistence.");
-        public Task<IReadOnlyList<ShowcaseEvent>> GetEventsAsync(Guid organizationId, ShowcaseEventFilter filter,
-            int limit, int offset, CancellationToken token) => throw Unexpected();
-        public Task<ShowcaseEventSummary> GetSummaryAsync(Guid organizationId, DateOnly today,
-            int upcomingLimit, CancellationToken token) => throw Unexpected();
-        public Task<ShowcaseEvent> GetEventAsync(Guid organizationId, Guid eventId, CancellationToken token) => throw Unexpected();
-        public Task<ShowcaseEvent?> FindEventByKeyAsync(Guid organizationId, string key, CancellationToken token) => throw Unexpected();
-        public Task<ShowcaseEvent> CreateEventAsync(Guid organizationId, string actor, string? key,
-            ShowcaseEventInput input, CancellationToken token) => throw Unexpected();
-        public Task<ShowcaseEvent> UpdateEventAsync(Guid organizationId, Guid eventId, int expectedRevision,
-            ShowcaseEventInput input, CancellationToken token) => throw Unexpected();
-        public Task DeleteEventAsync(Guid organizationId, Guid eventId, int expectedRevision, CancellationToken token) => throw Unexpected();
+        public Task<IReadOnlyList<ShowcaseEvent>> GetEventsAsync(
+            Guid organizationId,
+            ShowcaseEventFilter filter,
+            int limit,
+            int offset,
+            CancellationToken token)
+        {
+            throw Unexpected();
+        }
+
+        public Task<ShowcaseEventSummary> GetSummaryAsync(
+            Guid organizationId,
+            DateOnly today,
+            int upcomingLimit,
+            CancellationToken token)
+        {
+            throw Unexpected();
+        }
+
+        public Task<Result<ShowcaseEvent>> GetEventAsync(Guid organizationId, Guid eventId, CancellationToken token)
+        {
+            throw Unexpected();
+        }
+
+        public Task<ShowcaseEvent?> FindEventByKeyAsync(Guid organizationId, string key, CancellationToken token)
+        {
+            throw Unexpected();
+        }
+
+        public Task<Result<ShowcaseEvent>> CreateEventAsync(
+            Guid organizationId,
+            string actor,
+            string? key,
+            ShowcaseEventInput input,
+            CancellationToken token)
+        {
+            throw Unexpected();
+        }
+
+        public Task<Result<ShowcaseEvent>> UpdateEventAsync(
+            Guid organizationId,
+            Guid eventId,
+            int expectedRevision,
+            ShowcaseEventInput input,
+            CancellationToken token)
+        {
+            throw Unexpected();
+        }
+
+        public Task<Result> DeleteEventAsync(
+            Guid organizationId,
+            Guid eventId,
+            int expectedRevision,
+            CancellationToken token)
+        {
+            throw Unexpected();
+        }
+
+        private static InvalidOperationException Unexpected()
+        {
+            return new InvalidOperationException("Invalid bundles must not reach persistence.");
+        }
     }
 }

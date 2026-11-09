@@ -7,6 +7,8 @@ using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
+using BrandWorkspace.Domain.Events.Models;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Infrastructure.Events.Services;
 
@@ -29,22 +31,27 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
         var report = new EventImportReport(dryRun, plan.Source);
         foreach (PlannedEvent planned in plan.Events)
         {
-            try
+            // An existing key is never touched, so statuses and notes edited in Desk survive every re-import.
+            if (await repository.FindEventByKeyAsync(access.OrganizationId, planned.Key, token) is not null)
             {
-                // An existing key is never touched, so statuses and notes edited in Desk survive every re-import.
-                if (await repository.FindEventByKeyAsync(access.OrganizationId, planned.Key, token) is not null)
+                report.Existing++;
+                continue;
+            }
+            if (!dryRun)
+            {
+                Result<ShowcaseEvent> created = await repository.CreateEventAsync(
+                    access.OrganizationId,
+                    access.UserId,
+                    planned.Key,
+                    planned.Input,
+                    token);
+                if (created is Result<ShowcaseEvent>.Failure failure)
                 {
-                    report.Existing++;
+                    report.Failures.Add(new EventImportFailure(planned.Reference, failure.Error.Message));
                     continue;
                 }
-                if (!dryRun)
-                    await repository.CreateEventAsync(access.OrganizationId, access.UserId, planned.Key, planned.Input, token);
-                report.Created++;
             }
-            catch (AppException exception)
-            {
-                report.Failures.Add(new EventImportFailure(planned.Reference, exception.Message));
-            }
+            report.Created++;
         }
         return report;
     }
@@ -79,12 +86,14 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
             try
             {
                 if (item is null) throw DeskErrors.Invalid("Each event must be an object.").ToException();
-                string key = validation.Key(item.Key) ?? throw DeskErrors.Invalid("An event key is required.").ToException();
+                string key = validation.Key(item.Key)
+                    ?? throw DeskErrors.Invalid("An event key is required.").ToException();
                 if (!keys.Add(key)) throw DeskErrors.Invalid($"Event key '{key}' is repeated.").ToException();
                 ShowcaseEventInput input = validation.Event(new EventFields(
-                    item.Title, item.Organizer, item.Scope, item.Format, item.Country, item.City, item.Venue, item.StartsOn,
-                    item.EndsOn, item.DatePrecision, item.ApplicationDeadline, item.Participation, item.Cost, item.Website,
-                    item.SourceUrl, item.Status, item.Priority, item.Notes), EventValidationService.ImportedStatus);
+                    item.Title, item.Organizer, item.Scope, item.Format, item.Country, item.City, item.Venue,
+                    item.StartsOn, item.EndsOn, item.DatePrecision, item.ApplicationDeadline, item.Participation,
+                    item.Cost, item.Website, item.SourceUrl, item.Status, item.Priority, item.Notes),
+                    EventValidationService.ImportedStatus);
                 events.Add(new PlannedEvent(reference, key, input));
             }
             catch (AppException exception) { errors.Add($"{reference}: {exception.Message}"); }
@@ -100,7 +109,23 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
 
     private sealed record BundleDocument(string? Format, string? Source, IReadOnlyList<BundleEvent?>? Events);
     private sealed record BundleEvent(
-        string? Key, string? Title, string? Organizer, string? Scope, string? Format, string? Country, string? City, string? Venue,
-        string? StartsOn, string? EndsOn, string? DatePrecision, string? ApplicationDeadline, string? Participation, string? Cost,
-        string? Website, string? SourceUrl, string? Status, string? Priority, string? Notes);
+        string? Key,
+        string? Title,
+        string? Organizer,
+        string? Scope,
+        string? Format,
+        string? Country,
+        string? City,
+        string? Venue,
+        string? StartsOn,
+        string? EndsOn,
+        string? DatePrecision,
+        string? ApplicationDeadline,
+        string? Participation,
+        string? Cost,
+        string? Website,
+        string? SourceUrl,
+        string? Status,
+        string? Priority,
+        string? Notes);
 }

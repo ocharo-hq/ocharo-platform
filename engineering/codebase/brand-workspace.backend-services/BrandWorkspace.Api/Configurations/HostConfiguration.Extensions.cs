@@ -53,6 +53,7 @@ using BrandWorkspace.Persistence.Foundation.Repositories;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Npgsql;
 using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
+using WoW.Two.Sdk.Beta.Be.Data.Dapper;
 using WoW.Two.Sdk.Beta.Be.Data.Migrations.Bespoke;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
@@ -80,33 +81,48 @@ public static partial class HostConfiguration
     private const string MediaVerifyArgument = "verify";
 
     private const string ImportUsage =
-        "Use import sourcing|events --bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run].";
+        "Use import sourcing|events --bundle <bundle.json> --organization <organization-id> "
+        + "--actor <operator-email> [--dry-run].";
 
     private const string MediaUsage = "Use media verify alone.";
 
-    /// <summary>Keeps only the permitted deployment environment inputs, after the settings files the boot floor added: every
-    /// ambient environment source leaves, and the whitelisted variables return last.</summary>
+    /// <summary>
+    /// Keeps only the permitted deployment environment inputs, after the settings files the boot floor added: every
+    /// ambient environment source leaves, and the whitelisted variables return last.
+    /// </summary>
     private static WebApplicationBuilder AddExplicitEnvironment(this WebApplicationBuilder builder)
     {
-        foreach (var source in builder.Configuration.Sources.OfType<EnvironmentVariablesConfigurationSource>().ToArray())
+        EnvironmentVariablesConfigurationSource[] environmentSources = builder.Configuration.Sources
+            .OfType<EnvironmentVariablesConfigurationSource>()
+            .ToArray();
+        foreach (var source in environmentSources)
             builder.Configuration.Sources.Remove(source);
         var values = new Dictionary<string, string?>();
         if (Environment.GetEnvironmentVariable("ConnectionStrings__Database") is { } connection)
             values["ConnectionStrings:Database"] = connection;
         if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is { } urls) values["urls"] = urls;
-        if (Environment.GetEnvironmentVariable("AllowedHosts") is { } allowedHosts) values["AllowedHosts"] = allowedHosts;
-        foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName", "Files__BaseUrl",
-                     "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password",
-                     "Identity__Client__Authority", "Identity__Client__ClientId", "Identity__Client__ClientSecret", "Identity__Client__CookieName",
-                     "Identity__Client__PostSignOutRedirectPath", "Identity__Client__Environment", "Identity__Resource__Uri" })
+        if (Environment.GetEnvironmentVariable("AllowedHosts") is { } allowedHosts)
+            values["AllowedHosts"] = allowedHosts;
+        string[] permitted =
+        [
+            "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Commerce__SourceRoot",
+            "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
+            "Files__BaseUrl", "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password",
+            "Identity__Client__Authority", "Identity__Client__ClientId", "Identity__Client__ClientSecret",
+            "Identity__Client__CookieName", "Identity__Client__PostSignOutRedirectPath",
+            "Identity__Client__Environment", "Identity__Resource__Uri",
+        ];
+        foreach (var key in permitted)
             if (Environment.GetEnvironmentVariable(key) is { } value) values[key.Replace("__", ":")] = value;
         builder.Configuration.AddInMemoryCollection(values);
         return builder;
     }
 
-    /// <summary>Tunes the SDK boot floor to Desk's existing behaviour: no OTLP export, rate limit, output cache, embedder policy
-    /// or HTTPS redirect (the ingress terminates TLS); the SPA served from the host; forwarded headers trusted only from
-    /// loopback and <c>Deployment:TrustedProxies</c>.</summary>
+    /// <summary>
+    /// Tunes the SDK boot floor to Desk's existing behaviour: no OTLP export, rate limit, output cache, embedder policy
+    /// or HTTPS redirect (the ingress terminates TLS); the SPA served from the host; forwarded headers trusted only
+    /// from loopback and <c>Deployment:TrustedProxies</c>.
+    /// </summary>
     private static void ConfigureApiDefaults(this WebApplicationBuilder builder, ApiDefaultsOptions options)
     {
         options.ServiceName = "brand-workspace";
@@ -116,12 +132,13 @@ public static partial class HostConfiguration
         options.EnableCrossOriginEmbedderPolicy = false;
         options.EnableHttpsRedirection = false;
         options.SpaHosting = _ => { };
-        // Behind the TLS-terminating ingress, sign-in needs the forwarded scheme and host; any other sender keeps its own.
+        // Behind the TLS-terminating ingress, sign-in needs the forwarded scheme and host; any other sender keeps its
+        // own.
         foreach (var proxy in builder.Configuration.GetSection("Deployment:TrustedProxies").Get<string[]>() ?? [])
             options.TrustedProxies.Add(proxy);
     }
 
-    /// <summary>Registers the PostgreSQL connection pool and SDK connection factory.</summary>
+    /// <summary>Registers the PostgreSQL pool, the SDK connection factory and Dapper's conventions.</summary>
     private static WebApplicationBuilder AddPostgresDatabase(this WebApplicationBuilder builder)
     {
         builder.Services.AddSingleton(services => NpgsqlDataSource.Create(
@@ -129,11 +146,14 @@ public static partial class HostConfiguration
             ?? throw new InvalidOperationException("ConnectionStrings:Database is required.")));
         builder.Services.AddSingleton<DbDataSource>(services => services.GetRequiredService<NpgsqlDataSource>());
         builder.Services.AddDataSourceConnectionFactory();
+        builder.Services.AddDapperConventions();
         return builder;
     }
 
-    /// <summary>Registers foundation diagnostics, the schema migrator (the boot's and the <c>migrate</c> verb's) and the readiness
-    /// check <c>/health</c> reports.</summary>
+    /// <summary>
+    /// Registers foundation diagnostics, the schema migrator (the boot's and the <c>migrate</c> verb's) and the
+    /// readiness check <c>/health</c> reports.
+    /// </summary>
     private static WebApplicationBuilder AddFoundation(this WebApplicationBuilder builder)
     {
         builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
@@ -149,10 +169,14 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers sign-in through Ocharo's Identity instance (BFF, section <c>Identity:Client</c>), the Desk projection of
-    /// its people, default deny, and the verification of its service tokens.</summary>
-    /// <remarks>The framework identity store stays for the import commands, which resolve <c>--actor</c> by email, until
-    /// migration 011 retires Desk's own accounts.</remarks>
+    /// <summary>
+    /// Registers sign-in through Ocharo's Identity instance (BFF, section <c>Identity:Client</c>), the Desk projection
+    /// of its people, default deny, and the verification of its service tokens.
+    /// </summary>
+    /// <remarks>
+    /// The framework identity store stays for the import commands, which resolve <c>--actor</c> by email, until
+    /// migration 011 retires Desk's own accounts.
+    /// </remarks>
     private static WebApplicationBuilder AddAccess(this WebApplicationBuilder builder)
     {
         builder.Services.AddDbContext<AccessDbContext>((services, options) =>
@@ -164,34 +188,54 @@ public static partial class HostConfiguration
         // The BFF keeps sign-in sessions in IDistributedCache: a table in Desk's own database, so a restart or deploy
         // keeps everyone signed in; its `distributed_cache` set migrates beside Desk's own.
         builder.Services.AddPostgresDistributedCache();
-        builder.Services.AddOptions<PostgresDistributedCacheOptions>().Configure<IConfiguration>((options, configuration) =>
-            options.ConnectionString = configuration.GetConnectionString("Database") ?? string.Empty);
+        builder.Services.AddOptions<PostgresDistributedCacheOptions>()
+            .Configure<IConfiguration>((options, configuration) =>
+                options.ConnectionString = configuration.GetConnectionString("Database") ?? string.Empty);
         builder.Services.AddDefaultDenyAuthorization(BffAuthenticationSchemeConstants.Cookie);
         builder.AddServiceTokens();
-        // The key ring and its name stay as deployed, or every session is signed out; a local run keeps its machine folder.
-        // Resolved from the final configuration, after test and deployment overrides.
+        // The key ring and its name stay as deployed, or every session is signed out; a local run keeps its machine
+        // folder. Resolved from the final configuration, after test and deployment overrides.
         builder.Services.AddPersistentDataProtection(_ => { });
-        builder.Services.AddOptions<PersistentDataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
-        {
-            options.ApplicationName = configuration["DataProtection:ApplicationName"] ?? $"brand-workspace:{environment.EnvironmentName}";
-            options.KeyDirectory = configuration["DataProtection:KeysPath"] is { } path && !string.IsNullOrWhiteSpace(path) ? path
-                : environment.IsLocalRun(configuration)
-                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "brand-workspace", environment.EnvironmentName, "keys")
-                    : null;
-        });
+        builder.Services.AddOptions<PersistentDataProtectionOptions>()
+            .Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
+            {
+                options.ApplicationName = configuration["DataProtection:ApplicationName"]
+                    ?? $"brand-workspace:{environment.EnvironmentName}";
+                options.KeyDirectory = configuration["DataProtection:KeysPath"] is { } path
+                    && !string.IsNullOrWhiteSpace(path)
+                    ? path
+                    : environment.IsLocalRun(configuration)
+                        ? Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                            "brand-workspace",
+                            environment.EnvironmentName,
+                            "keys")
+                        : null;
+            });
         return builder;
     }
 
-    /// <summary>Verifies service tokens offline against the JWKS of Ocharo's Identity instance: the one trusted issuer is
-    /// <c>Identity:Client:Authority</c> and the one audience <c>Identity:Resource:Uri</c>, each as <see cref="Uri.AbsoluteUri"/>.</summary>
-    /// <remarks>The bearer registration takes both values now, so a test host passes them as host configuration. A missing or
-    /// malformed value registers no scheme and refuses the boot; a command that never boots, such as the media probe of the
-    /// image build, runs without them.</remarks>
+    /// <summary>
+    /// Verifies service tokens offline against the JWKS of Ocharo's Identity instance: the one trusted issuer is
+    /// <c>Identity:Client:Authority</c> and the one audience <c>Identity:Resource:Uri</c>, each as
+    /// <see cref="Uri.AbsoluteUri"/>.
+    /// </summary>
+    /// <remarks>
+    /// The bearer registration takes both values now, so a test host passes them as host configuration. A missing or
+    /// malformed value registers no scheme and refuses the boot; a command that never boots, such as the media probe of
+    /// the image build, runs without them.
+    /// </remarks>
     private static void AddServiceTokens(this WebApplicationBuilder builder)
     {
-        builder.Services.AddValidatedSettings<IdentityResourceSettings>(builder.Configuration, IdentityResourceSettings.SectionName, rules => rules
-            .ValidateSetting(nameof(IdentityResourceSettings.Uri), "absolute-uri", settings => IdentityResourceSettings.Normalize(settings.Uri) is not null,
-                $"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.Uri)} must be an absolute HTTPS URI (HTTP only on a loopback host) without a fragment."));
+        builder.Services.AddValidatedSettings<IdentityResourceSettings>(
+            builder.Configuration,
+            IdentityResourceSettings.SectionName,
+            rules => rules.ValidateSetting(
+                nameof(IdentityResourceSettings.Uri),
+                "absolute-uri",
+                settings => IdentityResourceSettings.Normalize(settings.Uri) is not null,
+                $"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.Uri)} must be an absolute "
+                + "HTTPS URI (HTTP only on a loopback host) without a fragment."));
         var isHttpsRequired = builder.Configuration.GetValue("Identity:Client:IsHttpsMetadataRequired", true);
         if (!Uri.TryCreate(builder.Configuration["Identity:Client:Authority"], UriKind.Absolute, out var authority)
             || (isHttpsRequired && authority.Scheme != Uri.UriSchemeHttps)
@@ -205,7 +249,8 @@ public static partial class HostConfiguration
             options.IsInsecureMetadataAllowedInDevelopment = !isHttpsRequired;
         });
         builder.Services.AddTokenDenyList();
-        if (builder.Configuration[$"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.SignalUrl)}"] is { Length: > 0 } signalUrl)
+        var signalUrlKey = $"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.SignalUrl)}";
+        if (builder.Configuration[signalUrlKey] is { Length: > 0 } signalUrl)
         {
             builder.Services.AddIdentitySignalReceiver(options =>
             {
@@ -216,15 +261,21 @@ public static partial class HostConfiguration
         }
     }
 
-    /// <summary>Holds the root URL of the WoW2 Files instance Desk stores its media in; unset, every byte stays in PostgreSQL.</summary>
+    /// <summary>
+    /// Holds the root URL of the WoW2 Files instance Desk stores its media in; unset, every byte stays in PostgreSQL.
+    /// </summary>
     private const string FilesBaseUrlKey = "Files:BaseUrl";
 
-    /// <summary>Registers Desk's file store: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is set, by tokens of Desk's
-    /// own Identity client <c>desk</c> (a person's exchanged within their BFF session, Desk's own client credentials for the
-    /// import CLI, the boot backfill and anonymous routes), else none. Both read at resolve time, so a test host's settings
-    /// decide (planning/files-adoption.md #13, #15).</summary>
-    /// <remarks>The BFF registered by <see cref="AddAccess"/> supplies the person's token: its subject-token source reads
-    /// the signed-in session, so the Files client exchanges it without a bearer header.</remarks>
+    /// <summary>
+    /// Registers Desk's file store: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is set, by tokens of Desk's
+    /// own Identity client <c>desk</c> (a person's exchanged within their BFF session, Desk's own client credentials
+    /// for the import CLI, the boot backfill and anonymous routes), else none. Both read at resolve time, so a test
+    /// host's settings decide (planning/files-adoption.md #13, #15).
+    /// </summary>
+    /// <remarks>
+    /// The BFF registered by <see cref="AddAccess"/> supplies the person's token: its subject-token source reads the
+    /// signed-in session, so the Files client exchanges it without a bearer header.
+    /// </remarks>
     private static WebApplicationBuilder AddDeskFiles(this WebApplicationBuilder builder)
     {
         builder.Services.AddFilesClient(_ => { });
@@ -255,8 +306,10 @@ public static partial class HostConfiguration
     private static bool UsesFiles(IServiceProvider provider) =>
         provider.GetRequiredService<IConfiguration>()[FilesBaseUrlKey] is { Length: > 0 };
 
-    /// <summary>Fills the file ids of rows the migration moved before the API listens. An unreachable or slow Files leaves
-    /// those rows on their PostgreSQL bytes and never fails the boot; the next boot tries again.</summary>
+    /// <summary>
+    /// Fills the file ids of rows the migration moved before the API listens. An unreachable or slow Files leaves those
+    /// rows on their PostgreSQL bytes and never fails the boot; the next boot tries again.
+    /// </summary>
     private static async Task BackfillFileIdsAsync(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
@@ -266,7 +319,10 @@ public static partial class HostConfiguration
         {
             await scope.ServiceProvider.GetRequiredService<DeskFilesBackfill>().RunAsync(limit.Token);
         }
-        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or InvalidOperationException or AppException)
+        catch (Exception exception) when (exception is HttpRequestException
+                                              or OperationCanceledException
+                                              or InvalidOperationException
+                                              or AppException)
         {
             app.Logger.LogWarning(exception, "Desk's file ids stay unfilled: WoW2 Files could not be reached at boot.");
         }
@@ -335,28 +391,39 @@ public static partial class HostConfiguration
         {
             options.BaseUrl = builder.Configuration["ImageProcessing:WorkerBaseUrl"];
             options.ApiKey = builder.Configuration["ImageProcessing:WorkerKey"];
-            // The worker is a sibling container on the platform's private network, which carries the ingress's own plain HTTP.
+            // The worker is a sibling container on the platform's private network, which carries the ingress's own
+            // plain HTTP.
             options.AllowPrivateNetworkHttp = true;
         });
         // The bearer scheme alone, so Desk's BFF cookie never opens these routes.
         builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingPolicy.Name, policy => policy
-            .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme).RequireScope(MediaProcessingPolicy.Scope));
+            .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+            .RequireScope(MediaProcessingPolicy.Scope));
         return builder;
     }
 
-    /// <summary>Registers the public runtime settings the SPA reads at startup: the Ocharo app and site addresses.</summary>
+    /// <summary>
+    /// Registers the public runtime settings the SPA reads at startup: the Ocharo app and site addresses.
+    /// </summary>
     private static WebApplicationBuilder AddRuntimeConfig(this WebApplicationBuilder builder)
     {
         // Every address is optional, and a malformed one is left out rather than failing the host over a menu link.
-        builder.Services.AddValidatedSettings<OcharoAppsSettings>(builder.Configuration, OcharoAppsSettings.SectionName, _ => { });
+        builder.Services.AddValidatedSettings<OcharoAppsSettings>(
+            builder.Configuration,
+            OcharoAppsSettings.SectionName,
+            _ => { });
         return builder;
     }
 
-    /// <summary>Maps the Identity session routes, and the revocation signals route when <c>Identity:Resource:SignalUrl</c> is set.</summary>
+    /// <summary>
+    /// Maps the Identity session routes, and the revocation signals route when <c>Identity:Resource:SignalUrl</c> is
+    /// set.
+    /// </summary>
     private static WebApplication MapIdentityRoutes(this WebApplication app)
     {
         app.MapIdentityBffEndpoints();
-        if (!string.IsNullOrEmpty(app.Configuration[$"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.SignalUrl)}"]))
+        var signalUrlKey = $"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.SignalUrl)}";
+        if (!string.IsNullOrEmpty(app.Configuration[signalUrlKey]))
             app.MapIdentitySignals(IdentityResourceSettings.SignalPath);
         return app;
     }
@@ -366,12 +433,18 @@ public static partial class HostConfiguration
     {
         var rejected = app.Services.GetRequiredService<OcharoAppsSettings>().RejectedSettings();
         if (rejected.Count > 0)
-            app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
+        {
+            app.Logger.LogWarning(
+                "Runtime config leaves out {Settings}: each must be a plain HTTPS address.",
+                string.Join(", ", rejected));
+        }
         app.MapControllers();
         return app;
     }
 
-    /// <summary>Registers the mediator over the handler-bearing assembly: exception-to-result outermost, then logging.</summary>
+    /// <summary>
+    /// Registers the mediator over the handler-bearing assembly: exception-to-result outermost, then logging.
+    /// </summary>
     private static WebApplicationBuilder AddMediator(this WebApplicationBuilder builder)
     {
         builder.Services.AddMediator(typeof(InfrastructureAssembly).Assembly);
@@ -379,22 +452,29 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers the HTTP surface: problem details with Desk's status mapping, and the controllers on the SDK wire
-    /// contract.</summary>
-    /// <remarks>A missing body member binds as null, as before, for the handlers to refuse with their own message.</remarks>
+    /// <summary>
+    /// Registers the HTTP surface: problem details with Desk's status mapping, and the controllers on the SDK wire
+    /// contract.
+    /// </summary>
+    /// <remarks>
+    /// A missing body member binds as null, as before, for the handlers to refuse with their own message.
+    /// </remarks>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpProblemDetails();
-        builder.Services.Replace(ServiceDescriptor.Singleton<IErrorHttpStatusCodeMapper, DeskErrorHttpStatusCodeMapper>());
+        builder.Services.Replace(
+            ServiceDescriptor.Singleton<IErrorHttpStatusCodeMapper, DeskErrorHttpStatusCodeMapper>());
         builder.Services.AddControllersWithSdkJson()
             .AddMvcOptions(options => options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
         return builder;
     }
 
-    /// <summary>Configures the HTTP pipeline: Desk's JSON errors, then the SDK's (forwarded headers, secure headers, compression,
-    /// the SPA bundle, <c>/health</c> and the SPA fallback, whose unknown <c>/api</c> paths answer a JSON 404), with Desk's
-    /// sign-in in its identity slot after routing. Public brand routes stay embeddable cross-origin
-    /// (<see cref="Commerce.Controllers.PublicBrandsController"/>).</summary>
+    /// <summary>
+    /// Configures the HTTP pipeline: Desk's JSON errors, then the SDK's (forwarded headers, secure headers,
+    /// compression, the SPA bundle, <c>/health</c> and the SPA fallback, whose unknown <c>/api</c> paths answer a JSON
+    /// 404), with Desk's sign-in in its identity slot after routing. Public brand routes stay embeddable cross-origin
+    /// (<see cref="Commerce.Controllers.PublicBrandsController"/>).
+    /// </summary>
     private static WebApplication UseHttpSurface(this WebApplication app)
     {
         app.UseHttpProblemDetails();
@@ -402,7 +482,8 @@ public static partial class HostConfiguration
         {
             identity.Use(async (context, next) =>
             {
-                if (context.Request.Path.StartsWithSegments("/api/identity") || context.Request.Path.StartsWithSegments("/api/organizations"))
+                if (context.Request.Path.StartsWithSegments("/api/identity")
+                    || context.Request.Path.StartsWithSegments("/api/organizations"))
                 {
                     context.Response.OnStarting(() =>
                     {
@@ -433,15 +514,25 @@ public static partial class HostConfiguration
             try
             {
                 // Desk's own set, then every set a module registers (the session cache's `distributed_cache`).
-                var result = await app.Services.ApplyMigrationSetsAsync("startup", ct: app.Lifetime.ApplicationStopping);
+                var result = await app.Services.ApplyMigrationSetsAsync(
+                    "startup",
+                    ct: app.Lifetime.ApplicationStopping);
                 if (result is not Result<IReadOnlyList<MigrationSetApplied>>.Success success)
-                    throw new InvalidOperationException($"Migration failed ({result}); inspect schema history and source integrity.");
-                app.Logger.LogInformation("Schema ready; {Count} migrations applied at startup.", success.Value.Sum(set => set.Applied.Count));
+                {
+                    throw new InvalidOperationException(
+                        $"Migration failed ({result}); inspect schema history and source integrity.");
+                }
+                app.Logger.LogInformation(
+                    "Schema ready; {Count} migrations applied at startup.",
+                    success.Value.Sum(set => set.Applied.Count));
                 return;
             }
-            catch (Exception exception) when (attempt < 10 && exception is NpgsqlException { IsTransient: true } or TimeoutException)
+            catch (Exception exception)
+                when (attempt < 10 && exception is NpgsqlException { IsTransient: true } or TimeoutException)
             {
-                app.Logger.LogWarning("Startup migration attempt {Attempt} could not reach the database; retrying.", attempt);
+                app.Logger.LogWarning(
+                    "Startup migration attempt {Attempt} could not reach the database; retrying.",
+                    attempt);
                 await Task.Delay(TimeSpan.FromSeconds(2), app.Lifetime.ApplicationStopping);
             }
         }

@@ -1,6 +1,8 @@
 using BrandWorkspace.Application.DesignDocuments.Queries;
 using BrandWorkspace.Domain.DesignDocuments.Models;
 using BrandWorkspace.Infrastructure.DesignDocuments.Services;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -11,10 +13,16 @@ public sealed class DesignDocumentRevisionGetAllQueryHandler(DesignDocumentServi
     : IQueryHandler<DesignDocumentRevisionGetAllQuery, AppResult<IReadOnlyList<DesignDocumentRevision>>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<IReadOnlyList<DesignDocumentRevision>>> HandleAsync(DesignDocumentRevisionGetAllQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<IReadOnlyList<DesignDocumentRevision>>> HandleAsync(
+        DesignDocumentRevisionGetAllQuery request,
+        CancellationToken cancellationToken)
     {
-        var revisions = await service.GetRevisionsAsync(request.Access, request.DocumentId, request.Limit, request.Offset,
+        Result<IReadOnlyList<DesignDocumentRevision>> revisions = await service.GetRevisionsAsync(
+            request.Access,
+            request.DocumentId,
+            request.Limit,
+            request.Offset,
             cancellationToken);
-        return AppResult<IReadOnlyList<DesignDocumentRevision>>.Ok(revisions);
+        return revisions.ToAppResult();
     }
 }

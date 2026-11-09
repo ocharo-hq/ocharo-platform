@@ -1,6 +1,8 @@
 using BrandWorkspace.Application.DesignDocuments.Commands;
 using BrandWorkspace.Domain.DesignDocuments.Models;
 using BrandWorkspace.Infrastructure.DesignDocuments.Services;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -11,9 +13,15 @@ public sealed class DesignDocumentArchiveCommandHandler(DesignDocumentService se
     : ICommandHandler<DesignDocumentArchiveCommand, AppResult<DesignDocument>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<DesignDocument>> HandleAsync(DesignDocumentArchiveCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<DesignDocument>> HandleAsync(
+        DesignDocumentArchiveCommand request,
+        CancellationToken cancellationToken)
     {
-        var archived = await service.ArchiveDocumentAsync(request.Access, request.DocumentId, request.ExpectedRevision, cancellationToken);
-        return AppResult<DesignDocument>.Ok(archived);
+        Result<DesignDocument> archived = await service.ArchiveDocumentAsync(
+            request.Access,
+            request.DocumentId,
+            request.ExpectedRevision,
+            cancellationToken);
+        return archived.ToAppResult();
     }
 }

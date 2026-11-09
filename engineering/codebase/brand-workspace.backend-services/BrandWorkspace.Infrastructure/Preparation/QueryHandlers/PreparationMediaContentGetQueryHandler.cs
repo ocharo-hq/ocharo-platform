@@ -1,6 +1,8 @@
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Preparation.Queries;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
 using BrandWorkspace.Infrastructure.Preparation.Services;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -11,8 +13,14 @@ public sealed class PreparationMediaContentGetQueryHandler(PreparationService se
     : IQueryHandler<PreparationMediaContentGetQuery, AppResult<MediaContent>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<MediaContent>> HandleAsync(PreparationMediaContentGetQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<MediaContent>> HandleAsync(
+        PreparationMediaContentGetQuery request,
+        CancellationToken cancellationToken)
     {
-        return AppResult<MediaContent>.Ok(await service.GetMediaContentAsync(request.Access, request.MediaId, cancellationToken));
+        Result<MediaContent> result = await service.GetMediaContentAsync(
+            request.Access,
+            request.MediaId,
+            cancellationToken);
+        return result.ToAppResult();
     }
 }

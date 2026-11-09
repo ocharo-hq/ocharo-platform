@@ -9,10 +9,13 @@ using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Sourcing.Models;
 using BrandWorkspace.Application.Sourcing.Repositories;
 using BrandWorkspace.Domain.Sourcing.Models;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Infrastructure.Sourcing.Services;
 
-/// <summary>Adds private supplier records from an explicit bundle without overwriting anything already in Desk.</summary>
+/// <summary>
+/// Adds private supplier records from an explicit bundle without overwriting anything already in Desk.
+/// </summary>
 public sealed partial class SourcingImportService(
     ISourcingRepository repository,
     SourcingValidationService validation,
@@ -27,8 +30,15 @@ public sealed partial class SourcingImportService(
         MaxDepth = 16
     };
 
-    public async Task<SourcingImportReport> ImportAsync(
-        OrganizationAccess access, string bundlePath, bool dryRun, CancellationToken token)
+    /// <summary>
+    /// Imports the bundle; a supplier, person or route Desk refuses stops the import with that error, while a refused
+    /// media file only counts as a failure.
+    /// </summary>
+    public async Task<Result<SourcingImportReport>> ImportAsync(
+        OrganizationAccess access,
+        string bundlePath,
+        bool dryRun,
+        CancellationToken token)
     {
         if (!access.CanEdit) throw DeskErrors.Forbidden("An editor or owner role is required.").ToException();
         PlannedBundle plan = await ReadAsync(bundlePath, token);
@@ -42,7 +52,16 @@ public sealed partial class SourcingImportService(
             {
                 report.Suppliers.Created++;
                 if (!dryRun)
-                    supplier = await repository.CreateSupplierAsync(access.OrganizationId, access.UserId, planned.Key, planned.Input, token);
+                {
+                    Result<Supplier> created = await repository.CreateSupplierAsync(
+                        access.OrganizationId,
+                        access.UserId,
+                        planned.Key,
+                        planned.Input,
+                        token);
+                    if (created.IsFailure(out AppError? error, out supplier))
+                        return Result<SourcingImportReport>.Fail(error);
+                }
             }
             else report.Suppliers.Existing++;
             if (supplier is not null) supplierIds[planned.Key] = supplier.Id;
@@ -60,9 +79,15 @@ public sealed partial class SourcingImportService(
                 }
                 report.People.Created++;
                 if (dryRun || supplier is null) continue;
-                SupplierPerson created = await repository.CreatePersonAsync(
-                    access.OrganizationId, access.UserId, supplier.Id, person.Input, token);
-                personIds[person.Key] = created.Id;
+                Result<SupplierPerson> created = await repository.CreatePersonAsync(
+                    access.OrganizationId,
+                    access.UserId,
+                    supplier.Id,
+                    person.Input,
+                    token);
+                if (created.IsFailure(out AppError? error, out var added))
+                    return Result<SourcingImportReport>.Fail(error);
+                personIds[person.Key] = added.Id;
             }
 
             // An imported route never replaces a primary route chosen in Desk.
@@ -80,9 +105,17 @@ public sealed partial class SourcingImportService(
                 RouteInput input = route.Input with
                 {
                     IsPrimary = route.Input.IsPrimary && !hasPrimary,
-                    PersonId = route.PersonKey is not null && personIds.TryGetValue(route.PersonKey, out Guid personId) ? personId : null
+                    PersonId = route.PersonKey is not null && personIds.TryGetValue(route.PersonKey, out Guid personId)
+                        ? personId
+                        : null
                 };
-                await repository.CreateRouteAsync(access.OrganizationId, access.UserId, supplier.Id, input, token);
+                Result<ContactRoute> created = await repository.CreateRouteAsync(
+                    access.OrganizationId,
+                    access.UserId,
+                    supplier.Id,
+                    input,
+                    token);
+                if (created.IsFailure(out AppError? error, out _)) return Result<SourcingImportReport>.Fail(error);
                 hasPrimary |= input.IsPrimary;
             }
         }
@@ -102,10 +135,26 @@ public sealed partial class SourcingImportService(
                 }
                 if (!dryRun)
                 {
-                    Guid? supplierId = media.SupplierKey is not null && supplierIds.TryGetValue(media.SupplierKey, out Guid id) ? id : null;
-                    await sourcing.StoreAsync(access, new NewSourcingMedia(
-                        supplierId, content, media.Capture, media.OriginalName, media.Caption, media.SourceLabel,
-                        media.SourceMessageId, media.ReceivedAt), token);
+                    Guid? supplierId = media.SupplierKey is not null
+                        && supplierIds.TryGetValue(media.SupplierKey, out Guid id)
+                            ? id
+                            : null;
+                    var item = new NewSourcingMedia(
+                        supplierId,
+                        content,
+                        media.Capture,
+                        media.OriginalName,
+                        media.Caption,
+                        media.SourceLabel,
+                        media.SourceMessageId,
+                        media.ReceivedAt);
+                    Result<SourcingMediaUpload> stored = await sourcing.StoreAsync(access, item, token);
+                    if (stored is Result<SourcingMediaUpload>.Failure refused)
+                    {
+                        report.Media.Failed++;
+                        report.Failures.Add(new SourcingImportFailure(media.Reference, refused.Error.Message));
+                        continue;
+                    }
                 }
                 report.Media.Created++;
                 report.Media.Bytes += bytes.Length;
@@ -116,7 +165,7 @@ public sealed partial class SourcingImportService(
                 report.Failures.Add(new SourcingImportFailure(media.Reference, exception.Message));
             }
         }
-        return report;
+        return Result<SourcingImportReport>.Ok(report);
     }
 
     /// <summary>Validates the whole bundle before any write; structural errors stop the import.</summary>
@@ -147,28 +196,54 @@ public sealed partial class SourcingImportService(
             string reference = $"suppliers[{index}]";
             try
             {
-                string key = validation.Key(item.Key) ?? throw DeskErrors.Invalid("A supplier key is required.").ToException();
+                string key = validation.Key(item.Key)
+                    ?? throw DeskErrors.Invalid("A supplier key is required.").ToException();
                 if (!keys.Add(key)) throw DeskErrors.Invalid($"Supplier key '{key}' is repeated.").ToException();
-                SupplierInput input = validation.Supplier(item.Name, item.Stage, item.Country, item.City, item.Website, item.Notes);
+                SupplierInput input = validation.Supplier(
+                    item.Name,
+                    item.Stage,
+                    item.Country,
+                    item.City,
+                    item.Website,
+                    item.Notes);
                 if (input.Stage == "qualified")
-                    throw DeskErrors.Invalid("Imports never mark a supplier qualified; review it in Desk.").ToException();
+                {
+                    throw DeskErrors.Invalid("Imports never mark a supplier qualified; review it in Desk.")
+                        .ToException();
+                }
                 var people = new List<PlannedPerson>();
                 var personKeys = new HashSet<string>(StringComparer.Ordinal);
                 foreach (BundlePerson person in item.People ?? [])
                 {
-                    string personKey = validation.Key(person.Key) ?? throw DeskErrors.Invalid("A person key is required.").ToException();
-                    if (!personKeys.Add(personKey)) throw DeskErrors.Invalid($"Person key '{personKey}' is repeated.").ToException();
+                    string personKey = validation.Key(person.Key)
+                        ?? throw DeskErrors.Invalid("A person key is required.").ToException();
+                    if (!personKeys.Add(personKey))
+                        throw DeskErrors.Invalid($"Person key '{personKey}' is repeated.").ToException();
                     people.Add(new PlannedPerson(personKey, validation.Person(person.Name, person.Role, person.Notes)));
                 }
                 var routes = new List<PlannedRoute>();
                 foreach (BundleRoute route in item.Routes ?? [])
                 {
                     if (route.PersonKey is not null && !personKeys.Contains(route.PersonKey))
-                        throw DeskErrors.Invalid($"Route person '{route.PersonKey}' is not a person of this supplier.").ToException();
-                    RouteInput routeInput = validation.Route(route.Channel, route.Destination, route.Label, route.SourceUrl,
-                        route.Verified, route.IsPrimary, null, route.Notes);
-                    if (routes.Any(existing => existing.Input.Channel == routeInput.Channel && existing.Input.Destination == routeInput.Destination))
-                        throw DeskErrors.Invalid($"Route {routeInput.Channel} {routeInput.Destination} is repeated.").ToException();
+                    {
+                        throw DeskErrors.Invalid($"Route person '{route.PersonKey}' is not a person of this supplier.")
+                            .ToException();
+                    }
+                    RouteInput routeInput = validation.Route(
+                        route.Channel,
+                        route.Destination,
+                        route.Label,
+                        route.SourceUrl,
+                        route.Verified,
+                        route.IsPrimary,
+                        null,
+                        route.Notes);
+                    if (routes.Any(existing => existing.Input.Channel == routeInput.Channel
+                            && existing.Input.Destination == routeInput.Destination))
+                    {
+                        throw DeskErrors.Invalid($"Route {routeInput.Channel} {routeInput.Destination} is repeated.")
+                            .ToException();
+                    }
                     routes.Add(new PlannedRoute(routeInput, route.PersonKey));
                 }
                 if (routes.Count(route => route.Input.IsPrimary) > 1)
@@ -186,7 +261,8 @@ public sealed partial class SourcingImportService(
             {
                 if (item.SupplierKey is not null && !keys.Contains(item.SupplierKey))
                     throw DeskErrors.Invalid($"Supplier '{item.SupplierKey}' is not in the bundle.").ToException();
-                if (string.IsNullOrWhiteSpace(item.Path)) throw DeskErrors.Invalid("A media path is required.").ToException();
+                if (string.IsNullOrWhiteSpace(item.Path))
+                    throw DeskErrors.Invalid("A media path is required.").ToException();
                 if (item.Sha256 is not null && !Sha256Pattern().IsMatch(item.Sha256))
                     throw DeskErrors.Invalid("SHA-256 must be 64 lowercase hexadecimal characters.").ToException();
                 media.Add(new PlannedMedia(
@@ -212,21 +288,47 @@ public sealed partial class SourcingImportService(
     [GeneratedRegex("^[a-f0-9]{64}$")]
     private static partial Regex Sha256Pattern();
 
-    private sealed record PlannedBundle(string? Source, IReadOnlyList<PlannedSupplier> Suppliers, IReadOnlyList<PlannedMedia> Media);
-    private sealed record PlannedSupplier(string Key, SupplierInput Input, IReadOnlyList<PlannedPerson> People, IReadOnlyList<PlannedRoute> Routes);
+    private sealed record PlannedBundle(
+        string? Source,
+        IReadOnlyList<PlannedSupplier> Suppliers,
+        IReadOnlyList<PlannedMedia> Media);
+    private sealed record PlannedSupplier(
+        string Key,
+        SupplierInput Input,
+        IReadOnlyList<PlannedPerson> People,
+        IReadOnlyList<PlannedRoute> Routes);
     private sealed record PlannedPerson(string Key, PersonInput Input);
     private sealed record PlannedRoute(RouteInput Input, string? PersonKey);
     private sealed record PlannedMedia(
-        string Reference, string? SupplierKey, string Path, string? Sha256, string Capture, string OriginalName, string Caption,
-        string? SourceLabel, string? SourceMessageId, DateTimeOffset? ReceivedAt);
+        string Reference,
+        string? SupplierKey,
+        string Path,
+        string? Sha256,
+        string Capture,
+        string OriginalName,
+        string Caption,
+        string? SourceLabel,
+        string? SourceMessageId,
+        DateTimeOffset? ReceivedAt);
 
-    private sealed record BundleDocument(string? Format, string? Source, IReadOnlyList<BundleSupplier>? Suppliers, IReadOnlyList<BundleMedia>? Media);
+    private sealed record BundleDocument(
+        string? Format,
+        string? Source,
+        IReadOnlyList<BundleSupplier>? Suppliers,
+        IReadOnlyList<BundleMedia>? Media);
     private sealed record BundleSupplier(
         string? Key, string? Name, string? Stage, string? Country, string? City, string? Website, string? Notes,
         IReadOnlyList<BundlePerson>? People, IReadOnlyList<BundleRoute>? Routes);
     private sealed record BundlePerson(string? Key, string? Name, string? Role, string? Notes);
     private sealed record BundleRoute(
-        string? Channel, string? Destination, string? Label, string? SourceUrl, bool Verified, bool IsPrimary, string? PersonKey, string? Notes);
+        string? Channel,
+        string? Destination,
+        string? Label,
+        string? SourceUrl,
+        bool Verified,
+        bool IsPrimary,
+        string? PersonKey,
+        string? Notes);
     private sealed record BundleMedia(
         string? SupplierKey, string? Path, string? Sha256, string? Capture, string? OriginalName, string? Caption,
         string? SourceLabel, string? SourceMessageId, DateTimeOffset? ReceivedAt);

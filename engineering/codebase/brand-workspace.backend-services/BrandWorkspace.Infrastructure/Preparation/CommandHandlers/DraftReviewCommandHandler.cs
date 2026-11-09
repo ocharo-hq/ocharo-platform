@@ -1,7 +1,8 @@
 using BrandWorkspace.Application.Preparation.Commands;
-using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.Preparation.Models;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
 using BrandWorkspace.Infrastructure.Preparation.Services;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -12,10 +13,17 @@ public sealed class DraftReviewCommandHandler(PreparationService service)
     : ICommandHandler<DraftReviewCommand, AppResult<Draft>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<Draft>> HandleAsync(DraftReviewCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<Draft>> HandleAsync(
+        DraftReviewCommand request,
+        CancellationToken cancellationToken)
     {
-        var draft = await service.ReviewAsync(request.Access, request.DraftId, request.ExpectedRevision, request.Action, request.Reason,
+        Result<Draft> result = await service.ReviewAsync(
+            request.Access,
+            request.DraftId,
+            request.ExpectedRevision,
+            request.Action,
+            request.Reason,
             cancellationToken);
-        return AppResult<Draft>.Ok(draft);
+        return result.ToAppResult();
     }
 }

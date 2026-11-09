@@ -1,25 +1,32 @@
-using BrandWorkspace.Application.Foundation.Errors;
 using System.Text.RegularExpressions;
 using BrandWorkspace.Application.Access.Models;
-using BrandWorkspace.Application.Access.Repositories;
-using BrandWorkspace.Application.Files.Constants;
 using BrandWorkspace.Application.Files.Models;
 using BrandWorkspace.Application.Files.Services;
-using BrandWorkspace.Application.Files.Repositories;
-using BrandWorkspace.Infrastructure.Files.Services;
+using BrandWorkspace.Application.Foundation.Errors;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Preparation.Repositories;
 using BrandWorkspace.Domain.Preparation.Models;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Infrastructure.Preparation.Services;
 
 /// <summary>Enforces preparation permissions and bounded inputs independently of the HTTP adapter.</summary>
-public sealed class PreparationService(IPreparationRepository repository, ImageValidationService images, IDeskFileStore files)
+public sealed class PreparationService(
+    IPreparationRepository repository,
+    ImageValidationService images,
+    IDeskFileStore files)
 {
-    public Task<IReadOnlyList<Brand>> GetBrandsAsync(OrganizationAccess access, CancellationToken token) =>
-        repository.GetBrandsAsync(access.OrganizationId, token);
+    public Task<IReadOnlyList<Brand>> GetBrandsAsync(OrganizationAccess access, CancellationToken token)
+    {
+        return repository.GetBrandsAsync(access.OrganizationId, token);
+    }
 
-    public Task<Brand> CreateBrandAsync(OrganizationAccess access, string name, string timeZone, CancellationToken token)
+    public Task<Brand> CreateBrandAsync(
+        OrganizationAccess access,
+        string name,
+        string timeZone,
+        CancellationToken token)
     {
         RequireOwner(access);
         Text(name, "Brand name", 120);
@@ -29,26 +36,56 @@ public sealed class PreparationService(IPreparationRepository repository, ImageV
         return repository.CreateBrandAsync(access.OrganizationId, name.Trim(), timeZone, token);
     }
 
-    public Task<IReadOnlyList<MediaAsset>> GetMediaAsync(OrganizationAccess access, CancellationToken token) =>
-        repository.GetMediaAsync(access.OrganizationId, token);
+    public Task<IReadOnlyList<MediaAsset>> GetMediaAsync(OrganizationAccess access, CancellationToken token)
+    {
+        return repository.GetMediaAsync(access.OrganizationId, token);
+    }
 
-    public Task<MediaContent> GetMediaContentAsync(OrganizationAccess access, Guid mediaId, CancellationToken token) =>
-        repository.GetMediaContentAsync(access.OrganizationId, mediaId, token);
+    public Task<Result<MediaContent>> GetMediaContentAsync(
+        OrganizationAccess access,
+        Guid mediaId,
+        CancellationToken token)
+    {
+        return repository.GetMediaContentAsync(access.OrganizationId, mediaId, token);
+    }
 
-    public Task<MediaAsset> CreateMediaAsync(OrganizationAccess access, string fileName, string provenance, byte[] bytes, CancellationToken token)
+    public Task<MediaAsset> CreateMediaAsync(
+        OrganizationAccess access,
+        string fileName,
+        string provenance,
+        byte[] bytes,
+        CancellationToken token)
     {
         RequireEditor(access);
         Text(provenance, "Provenance", 2000);
-        return repository.CreateMediaAsync(access.OrganizationId, access.UserId, fileName, provenance, images.Validate(fileName, bytes), token);
+        return repository.CreateMediaAsync(
+            access.OrganizationId,
+            access.UserId,
+            fileName,
+            provenance,
+            images.Validate(fileName, bytes),
+            token);
     }
 
-    public Task<IReadOnlyList<DraftSummary>> GetDraftsAsync(OrganizationAccess access, Guid? brandId, CancellationToken token) =>
-        repository.GetDraftsAsync(access.OrganizationId, brandId, token);
+    public Task<Result<IReadOnlyList<DraftSummary>>> GetDraftsAsync(
+        OrganizationAccess access,
+        Guid? brandId,
+        CancellationToken token)
+    {
+        return repository.GetDraftsAsync(access.OrganizationId, brandId, token);
+    }
 
-    public Task<Draft> GetDraftAsync(OrganizationAccess access, Guid draftId, CancellationToken token) =>
-        repository.GetDraftAsync(access.OrganizationId, draftId, token);
+    public Task<Result<Draft>> GetDraftAsync(OrganizationAccess access, Guid draftId, CancellationToken token)
+    {
+        return repository.GetDraftAsync(access.OrganizationId, draftId, token);
+    }
 
-    public Task<Draft> SaveDraftAsync(OrganizationAccess access, Guid? draftId, int? expectedRevision, DraftInput input, CancellationToken token)
+    public Task<Result<Draft>> SaveDraftAsync(
+        OrganizationAccess access,
+        Guid? draftId,
+        int? expectedRevision,
+        DraftInput input,
+        CancellationToken token)
     {
         RequireEditor(access);
         if (draftId is not null) Revision(expectedRevision ?? 0);
@@ -66,37 +103,82 @@ public sealed class PreparationService(IPreparationRepository repository, ImageV
         return repository.SaveDraftAsync(access.OrganizationId, access.UserId, draftId, expectedRevision, input, token);
     }
 
-    public Task<Draft> ReviewAsync(OrganizationAccess access, Guid draftId, int expectedRevision, ReviewAction action, string? reason, CancellationToken token)
+    public Task<Result<Draft>> ReviewAsync(
+        OrganizationAccess access,
+        Guid draftId,
+        int expectedRevision,
+        ReviewAction action,
+        string? reason,
+        CancellationToken token)
     {
-        if (action == ReviewAction.Request) RequireEditor(access); else RequireOwner(access);
+        if (action == ReviewAction.Request) RequireEditor(access);
+        else RequireOwner(access);
         Revision(expectedRevision);
         if (action == ReviewAction.Revoke) Text(reason, "Revocation reason", 1000);
-        return repository.ReviewAsync(access.OrganizationId, access.UserId, draftId, expectedRevision, action, reason, token);
+        return repository.ReviewAsync(
+            access.OrganizationId,
+            access.UserId,
+            draftId,
+            expectedRevision,
+            action,
+            reason,
+            token);
     }
 
-    public Task<ManualExport> CreateExportAsync(OrganizationAccess access, Guid draftId, int expectedRevision, Guid idempotencyKey, CancellationToken token)
+    public Task<Result<ManualExport>> CreateExportAsync(
+        OrganizationAccess access,
+        Guid draftId,
+        int expectedRevision,
+        Guid idempotencyKey,
+        CancellationToken token)
     {
         RequireEditor(access);
         Revision(expectedRevision);
         if (idempotencyKey == Guid.Empty) throw DeskErrors.Invalid("Provide an idempotency key.").ToException();
-        return repository.CreateExportAsync(access.OrganizationId, access.UserId, draftId, expectedRevision, idempotencyKey, token);
+        return repository.CreateExportAsync(
+            access.OrganizationId,
+            access.UserId,
+            draftId,
+            expectedRevision,
+            idempotencyKey,
+            token);
     }
 
-    public Task<byte[]> GetExportContentAsync(OrganizationAccess access, Guid exportId, CancellationToken token) =>
-        repository.GetExportContentAsync(access.OrganizationId, exportId, token);
-
-    /// <summary>Opens an export for its download route: a link to the private Files file, saved under its name, or the ZIP
-    /// bytes of an export stored before Files that the backfill has not reached (planning/files-adoption.md #9, #13).</summary>
-    public async Task<StoredContent> OpenExportAsync(OrganizationAccess access, Guid exportId, CancellationToken token)
+    public Task<Result<byte[]>> GetExportContentAsync(OrganizationAccess access, Guid exportId, CancellationToken token)
     {
-        if (files.IsEnabled && await repository.GetExportFileAsync(access.OrganizationId, exportId, token) is { } fileId)
-            return new StoredContent("application/zip", await files.LinkAsync(fileId, null, download: true, token), null);
-        return new StoredContent("application/zip", null, await repository.GetExportContentAsync(access.OrganizationId, exportId, token));
+        return repository.GetExportContentAsync(access.OrganizationId, exportId, token);
+    }
+
+    /// <summary>
+    /// Opens an export for its download route: a link to the private Files file, saved under its name, or the ZIP bytes
+    /// of an export stored before Files that the backfill has not reached (planning/files-adoption.md #9, #13).
+    /// </summary>
+    public async Task<Result<StoredContent>> OpenExportAsync(
+        OrganizationAccess access,
+        Guid exportId,
+        CancellationToken token)
+    {
+        if (files.IsEnabled)
+        {
+            Result<ExportFileLookup> lookup = await repository.GetExportFileAsync(
+                access.OrganizationId,
+                exportId,
+                token);
+            if (lookup.IsFailure(out AppError? error, out var found)) return Result<StoredContent>.Fail(error);
+            if (found.FileId is { } fileId)
+            {
+                var link = await files.LinkAsync(fileId, null, download: true, token);
+                return Result<StoredContent>.Ok(new StoredContent("application/zip", link, null));
+            }
+        }
+        Result<byte[]> content = await repository.GetExportContentAsync(access.OrganizationId, exportId, token);
+        return content.Map(bytes => new StoredContent("application/zip", null, bytes));
     }
 
     private static void Revision(int revision)
     {
-        if (revision < 1 || revision == int.MaxValue) throw DeskErrors.Invalid("Provide a valid expected revision.").ToException();
+        if (revision < 1 || revision == int.MaxValue)
+            throw DeskErrors.Invalid("Provide a valid expected revision.").ToException();
     }
 
     private static void RequireEditor(OrganizationAccess access)
@@ -111,7 +193,13 @@ public sealed class PreparationService(IPreparationRepository repository, ImageV
 
     private static void Text(string? value, string field, int maximum, bool required = true)
     {
-        if (value is null || value.Length > maximum || (required && string.IsNullOrWhiteSpace(value)) || value.Contains('\0'))
-            throw DeskErrors.Invalid($"{field} must contain {(required ? "1" : "0")} to {maximum} characters.").ToException();
+        if (value is null
+            || value.Length > maximum
+            || (required && string.IsNullOrWhiteSpace(value))
+            || value.Contains('\0'))
+        {
+            throw DeskErrors.Invalid($"{field} must contain {(required ? "1" : "0")} to {maximum} characters.")
+                .ToException();
+        }
     }
 }

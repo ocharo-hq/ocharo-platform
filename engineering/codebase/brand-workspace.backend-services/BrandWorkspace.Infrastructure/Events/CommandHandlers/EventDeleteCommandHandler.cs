@@ -1,5 +1,7 @@
 using BrandWorkspace.Application.Events.Commands;
 using BrandWorkspace.Infrastructure.Events.Services;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -12,7 +14,11 @@ public sealed class EventDeleteCommandHandler(EventService service)
     /// <inheritdoc />
     public async ValueTask<AppResult<Guid>> HandleAsync(EventDeleteCommand request, CancellationToken cancellationToken)
     {
-        await service.DeleteEventAsync(request.Access, request.EventId, request.ExpectedRevision, cancellationToken);
-        return AppResult<Guid>.Ok(request.EventId);
+        Result deleted = await service.DeleteEventAsync(
+            request.Access,
+            request.EventId,
+            request.ExpectedRevision,
+            cancellationToken);
+        return deleted.ToAppResult(request.EventId);
     }
 }

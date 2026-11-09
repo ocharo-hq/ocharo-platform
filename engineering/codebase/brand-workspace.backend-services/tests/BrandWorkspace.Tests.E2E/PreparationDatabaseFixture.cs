@@ -16,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Npgsql;
 using Testcontainers.PostgreSql;
+using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
 using WoW.Two.Sdk.Beta.Be.Testing;
 using WoW.Two.Sdk.Beta.Be.Testing.Containers.Postgres;
 using Xunit;
@@ -28,9 +29,12 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
     private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
     public WebApiTestHost<ApiAssemblyMarker> Factory { get; private set; } = null!;
     public NpgsqlDataSource DataSource => Factory.Services.GetRequiredService<NpgsqlDataSource>();
+    /// <summary>The shared host's connection factory, for repositories built outside its container.</summary>
+    public IDbConnectionFactory Connections => Factory.Services.GetRequiredService<IDbConnectionFactory>();
     /// <summary>The database's full connection string, for another host over the same database.</summary>
     public string ConnectionString => _database.ConnectionString;
-    public PreparationService Service { get; private set; } = null!;
+    /// <summary>The preparation workflow over the shared database, a failed result thrown as its exception.</summary>
+    public PreparationServiceBridge Service { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
@@ -38,7 +42,13 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
         var migrate = await DeskTestHost.MigrateAsync(_database.ConnectionString);
         migrate.Exit.Should().Be(0, migrate.Error);
         Factory = ApiContractTests.CreateFactory(_database.ConnectionString);
-        Service = new PreparationService(new PreparationRepository(DataSource, TimeProvider.System, new ManualPackageBuilder(), NoDeskFiles.Instance), new ImageValidationService(), NoDeskFiles.Instance);
+        var repository = new PreparationRepository(
+            Connections,
+            TimeProvider.System,
+            new ManualPackageBuilder(),
+            NoDeskFiles.Instance);
+        Service = new PreparationServiceBridge(
+            new PreparationService(repository, new ImageValidationService(), NoDeskFiles.Instance));
     }
 
     /// <summary>Creates a person, a new organization they own, and the claims their sign-in carries.</summary>
@@ -48,7 +58,8 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
         var organization = Guid.NewGuid();
         var email = $"preparation-{Guid.NewGuid():N}@example.test";
         await using var command = DataSource.CreateCommand("""
-            INSERT INTO access.users(id,"DisplayName","Email","IsActive","SecurityStamp","EmailConfirmed","PhoneNumberConfirmed","TwoFactorEnabled","LockoutEnabled","AccessFailedCount")
+            INSERT INTO access.users(id,"DisplayName","Email","IsActive","SecurityStamp","EmailConfirmed",
+                "PhoneNumberConfirmed","TwoFactorEnabled","LockoutEnabled","AccessFailedCount")
             VALUES (@user,'Preparation fixture',@email,true,@stamp,false,false,false,false,0);
             INSERT INTO access.organizations(id,name,slug) VALUES (@organization,'Non-apparel fixture',@slug);
             INSERT INTO access.memberships(organization_id,user_id,role) VALUES (@organization,@user,'owner');
@@ -63,7 +74,9 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
         return new OrganizationAccess(organization, subject, "owner", true, true);
     }
 
-    /// <summary>A client of the shared host that signs in as the person; it follows later <see cref="SetRoleAsync"/> changes.</summary>
+    /// <summary>
+    /// A client of the shared host that signs in as the person; it follows later <see cref="SetRoleAsync"/> changes.
+    /// </summary>
     public Task<HttpClient> LoginAsync(OrganizationAccess access) => LoginAsync(Factory, access);
 
     /// <summary>A client of another host over the same database that signs in as the person.</summary>

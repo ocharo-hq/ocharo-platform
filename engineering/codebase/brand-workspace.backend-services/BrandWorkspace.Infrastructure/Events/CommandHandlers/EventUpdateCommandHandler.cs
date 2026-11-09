@@ -1,7 +1,8 @@
 using BrandWorkspace.Application.Events.Commands;
-using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Domain.Events.Models;
 using BrandWorkspace.Infrastructure.Events.Services;
+using BrandWorkspace.Infrastructure.Foundation.Extensions;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
 using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
@@ -12,10 +13,17 @@ public sealed class EventUpdateCommandHandler(EventService service, EventValidat
     : ICommandHandler<EventUpdateCommand, AppResult<ShowcaseEvent>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<ShowcaseEvent>> HandleAsync(EventUpdateCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<ShowcaseEvent>> HandleAsync(
+        EventUpdateCommand request,
+        CancellationToken cancellationToken)
     {
         var input = validation.Event(request.Fields);
-        var updated = await service.UpdateEventAsync(request.Access, request.EventId, request.ExpectedRevision, input, cancellationToken);
-        return AppResult<ShowcaseEvent>.Ok(updated);
+        Result<ShowcaseEvent> updated = await service.UpdateEventAsync(
+            request.Access,
+            request.EventId,
+            request.ExpectedRevision,
+            input,
+            cancellationToken);
+        return updated.ToAppResult();
     }
 }

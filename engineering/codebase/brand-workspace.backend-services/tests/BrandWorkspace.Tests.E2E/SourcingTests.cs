@@ -12,12 +12,15 @@ using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
 using Microsoft.Extensions.DependencyInjection;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using SkiaSharp;
 using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Exercises suppliers, contact routes, shared media and bundle import against real PostgreSQL and membership.</summary>
+/// <summary>
+/// Exercises suppliers, contact routes, shared media and bundle import against real PostgreSQL and membership.
+/// </summary>
 public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFixture<PreparationDatabaseFixture>
 {
     private static readonly CancellationToken Token = CancellationToken.None;
@@ -39,7 +42,8 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         created.GetProperty("country").GetString().Should().Be("IN");
         created.GetProperty("revision").GetInt32().Should().Be(1);
         created.TryGetProperty("key", out _).Should().BeFalse();
-        await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Kashmir Weaves", stage = "quoted" }));
+        await DataAsync(
+            await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Kashmir Weaves", stage = "quoted" }));
 
         JsonElement updated = await DataAsync(await client.PutAsJsonAsync($"{path}/suppliers/{id}", new
         {
@@ -62,10 +66,20 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         JsonElement wildcard = await DataAsync(await client.GetAsync($"{path}/suppliers?query=%25"));
         wildcard.GetArrayLength().Should().Be(0);
 
-        await ProblemAsync(await client.GetAsync($"{path}/suppliers?stage=signed"), HttpStatusCode.BadRequest, "Validation");
-        await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = " " }), HttpStatusCode.BadRequest, "Validation");
-        await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Bad site", website = "javascript:alert(1)" }),
-            HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(
+            await client.GetAsync($"{path}/suppliers?stage=signed"),
+            HttpStatusCode.BadRequest,
+            "Validation");
+        await ProblemAsync(
+            await client.PostAsJsonAsync($"{path}/suppliers", new { name = " " }),
+            HttpStatusCode.BadRequest,
+            "Validation");
+        await ProblemAsync(
+            await client.PostAsJsonAsync(
+                $"{path}/suppliers",
+                new { name = "Bad site", website = "javascript:alert(1)" }),
+            HttpStatusCode.BadRequest,
+            "Validation");
     }
 
     [Fact]
@@ -74,11 +88,16 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
         string path = Path(owner);
-        Guid supplier = (await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "BMMS" }))).GetProperty("id").GetGuid();
-        Guid other = (await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Other" }))).GetProperty("id").GetGuid();
-        JsonElement person = await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/people", new { name = "Akshit Mehra", role = "Sales" }));
+        Guid supplier = (await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "BMMS" })))
+            .GetProperty("id").GetGuid();
+        Guid other = (await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Other" })))
+            .GetProperty("id").GetGuid();
+        JsonElement person = await DataAsync(await client.PostAsJsonAsync(
+            $"{path}/suppliers/{supplier}/people",
+            new { name = "Akshit Mehra", role = "Sales" }));
         Guid personId = person.GetProperty("id").GetGuid();
-        Guid foreignPerson = (await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers/{other}/people", new { name = "Someone" })))
+        Guid foreignPerson = (await DataAsync(
+                await client.PostAsJsonAsync($"{path}/suppliers/{other}/people", new { name = "Someone" })))
             .GetProperty("id").GetGuid();
 
         JsonElement whatsapp = await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new
@@ -89,7 +108,10 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         whatsapp.GetProperty("personId").GetGuid().Should().Be(personId);
         JsonElement email = await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new
         {
-            channel = "email", destination = "Sales@Example.TEST", isPrimary = true, sourceUrl = "https://example.test/contact"
+            channel = "email",
+            destination = "Sales@Example.TEST",
+            isPrimary = true,
+            sourceUrl = "https://example.test/contact"
         }));
         email.GetProperty("destination").GetString().Should().Be("sales@example.test");
 
@@ -100,21 +122,36 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         int whatsappRevision = detail.GetProperty("routes")[1].GetProperty("revision").GetInt32();
         whatsappRevision.Should().Be(2);
 
-        await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new { channel = "email", destination = "sales@example.test" }),
-            HttpStatusCode.Conflict, "Conflict");
+        await ProblemAsync(
+            await client.PostAsJsonAsync(
+                $"{path}/suppliers/{supplier}/routes",
+                new { channel = "email", destination = "sales@example.test" }),
+            HttpStatusCode.Conflict,
+            "Conflict");
         await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new
         {
             channel = "phone", destination = "+910000000002", personId = foreignPerson
         }), HttpStatusCode.BadRequest, "Validation");
-        await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new { channel = "website", destination = "not a url" }),
-            HttpStatusCode.BadRequest, "Validation");
-        await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new { channel = "pigeon", destination = "x" }),
-            HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(
+            await client.PostAsJsonAsync(
+                $"{path}/suppliers/{supplier}/routes",
+                new { channel = "website", destination = "not a url" }),
+            HttpStatusCode.BadRequest,
+            "Validation");
+        await ProblemAsync(
+            await client.PostAsJsonAsync(
+                $"{path}/suppliers/{supplier}/routes",
+                new { channel = "pigeon", destination = "x" }),
+            HttpStatusCode.BadRequest,
+            "Validation");
 
         // The same destination may serve another supplier (a shared route).
-        await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers/{other}/routes", new { channel = "whatsapp", destination = "+910000000001" }));
+        await DataAsync(await client.PostAsJsonAsync(
+            $"{path}/suppliers/{other}/routes",
+            new { channel = "whatsapp", destination = "+910000000001" }));
 
-        using HttpResponseMessage staleDelete = await client.DeleteAsync($"{path}/people/{personId}?expectedRevision=9");
+        using HttpResponseMessage staleDelete =
+            await client.DeleteAsync($"{path}/people/{personId}?expectedRevision=9");
         await ProblemAsync(staleDelete, HttpStatusCode.Conflict, "Conflict");
         await DataAsync(await client.DeleteAsync($"{path}/people/{personId}?expectedRevision=1"));
         JsonElement afterRemoval = await DataAsync(await client.GetAsync($"{path}/suppliers/{supplier}"));
@@ -126,7 +163,8 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
 
         Guid emailId = email.GetProperty("id").GetGuid();
         await DataAsync(await client.DeleteAsync($"{path}/routes/{emailId}?expectedRevision=1"));
-        (await DataAsync(await client.GetAsync($"{path}/suppliers/{supplier}"))).GetProperty("routes").GetArrayLength().Should().Be(1);
+        (await DataAsync(await client.GetAsync($"{path}/suppliers/{supplier}"))).GetProperty("routes").GetArrayLength()
+            .Should().Be(1);
     }
 
     [Fact]
@@ -136,19 +174,34 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         OrganizationAccess stranger = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
         using HttpClient strangerClient = await fixture.LoginAsync(stranger);
-        Guid supplier = (await DataAsync(await client.PostAsJsonAsync($"{Path(owner)}/suppliers", new { name = "Private" })))
+        Guid supplier = (await DataAsync(
+                await client.PostAsJsonAsync($"{Path(owner)}/suppliers", new { name = "Private" })))
             .GetProperty("id").GetGuid();
 
         (await strangerClient.GetAsync($"{Path(owner)}/suppliers")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ProblemAsync(await strangerClient.GetAsync($"{Path(stranger)}/suppliers/{supplier}"), HttpStatusCode.NotFound, "NotFound");
+        await ProblemAsync(
+            await strangerClient.GetAsync($"{Path(stranger)}/suppliers/{supplier}"),
+            HttpStatusCode.NotFound,
+            "NotFound");
         (await DataAsync(await strangerClient.GetAsync($"{Path(stranger)}/suppliers"))).GetArrayLength().Should().Be(0);
-        await ProblemAsync(await strangerClient.PostAsync($"{Path(stranger)}/media/assign",
-            JsonContent.Create(new { mediaIds = new[] { Guid.NewGuid() }, supplierId = supplier })), HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(
+            await strangerClient.PostAsync(
+                $"{Path(stranger)}/media/assign",
+                JsonContent.Create(new { mediaIds = new[] { Guid.NewGuid() }, supplierId = supplier })),
+            HttpStatusCode.BadRequest,
+            "Validation");
 
         await fixture.SetRoleAsync(owner, "viewer");
-        (await DataAsync(await client.GetAsync($"{Path(owner)}/suppliers/{supplier}"))).GetProperty("name").GetString().Should().Be("Private");
-        await ProblemAsync(await client.PostAsJsonAsync($"{Path(owner)}/suppliers", new { name = "Blocked" }), HttpStatusCode.Forbidden, "Forbidden");
-        await ProblemAsync(await UploadAsync(client, owner, Png(SKColors.Red), "red.png"), HttpStatusCode.Forbidden, "Forbidden");
+        (await DataAsync(await client.GetAsync($"{Path(owner)}/suppliers/{supplier}"))).GetProperty("name").GetString()
+            .Should().Be("Private");
+        await ProblemAsync(
+            await client.PostAsJsonAsync($"{Path(owner)}/suppliers", new { name = "Blocked" }),
+            HttpStatusCode.Forbidden,
+            "Forbidden");
+        await ProblemAsync(
+            await UploadAsync(client, owner, Png(SKColors.Red), "red.png"),
+            HttpStatusCode.Forbidden,
+            "Forbidden");
     }
 
     [Fact]
@@ -157,7 +210,8 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
         string path = Path(owner);
-        Guid supplier = (await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Lucky" }))).GetProperty("id").GetGuid();
+        Guid supplier = (await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Lucky" })))
+            .GetProperty("id").GetGuid();
         byte[] png = Png(SKColors.CornflowerBlue, 900, 600);
 
         JsonElement first = await DataAsync(await UploadAsync(client, owner, png, "../../photo:1.png"));
@@ -191,9 +245,12 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
             preview.Height.Should().Be(320);
         }
 
-        (await DataAsync(await client.GetAsync($"{path}/media/summary"))).GetProperty("unassigned").GetInt32().Should().Be(1);
+        (await DataAsync(await client.GetAsync($"{path}/media/summary"))).GetProperty("unassigned").GetInt32()
+            .Should().Be(1);
         (await DataAsync(await client.GetAsync($"{path}/media?unassigned=true"))).GetArrayLength().Should().Be(1);
-        JsonElement assigned = await DataAsync(await client.PostAsJsonAsync($"{path}/media/assign", new { mediaIds = new[] { mediaId, mediaId }, supplierId = supplier }));
+        JsonElement assigned = await DataAsync(await client.PostAsJsonAsync(
+            $"{path}/media/assign",
+            new { mediaIds = new[] { mediaId, mediaId }, supplierId = supplier }));
         assigned.GetProperty("updated").GetInt32().Should().Be(1);
         (await DataAsync(await client.GetAsync($"{path}/media?unassigned=true"))).GetArrayLength().Should().Be(0);
         JsonElement summary = (await DataAsync(await client.GetAsync($"{path}/suppliers"))).EnumerateArray().Single();
@@ -206,14 +263,26 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         }));
         captioned.GetProperty("revision").GetInt32().Should().Be(3);
         captioned.GetProperty("capture").GetString().Should().Be("screenshot");
-        await ProblemAsync(await client.PutAsJsonAsync($"{path}/media/{mediaId}", new { expectedRevision = 2, supplierId = supplier, capture = "original", caption = "" }),
-            HttpStatusCode.Conflict, "Conflict");
-        await ProblemAsync(await client.PutAsJsonAsync($"{path}/media/{mediaId}", new { expectedRevision = 3, supplierId = Guid.NewGuid(), capture = "original", caption = "" }),
-            HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(
+            await client.PutAsJsonAsync(
+                $"{path}/media/{mediaId}",
+                new { expectedRevision = 2, supplierId = supplier, capture = "original", caption = "" }),
+            HttpStatusCode.Conflict,
+            "Conflict");
+        await ProblemAsync(
+            await client.PutAsJsonAsync(
+                $"{path}/media/{mediaId}",
+                new { expectedRevision = 3, supplierId = Guid.NewGuid(), capture = "original", caption = "" }),
+            HttpStatusCode.BadRequest,
+            "Validation");
 
         await DataAsync(await client.DeleteAsync($"{path}/media/{mediaId}?expectedRevision=3"));
-        await ProblemAsync(await client.GetAsync($"{path}/media/{mediaId}/content"), HttpStatusCode.NotFound, "NotFound");
-        (await DataAsync(await UploadAsync(client, owner, png, "returned.png"))).GetProperty("duplicate").GetBoolean().Should().BeFalse();
+        await ProblemAsync(
+            await client.GetAsync($"{path}/media/{mediaId}/content"),
+            HttpStatusCode.NotFound,
+            "NotFound");
+        (await DataAsync(await UploadAsync(client, owner, png, "returned.png"))).GetProperty("duplicate").GetBoolean()
+            .Should().BeFalse();
     }
 
     [Fact]
@@ -223,30 +292,47 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         using HttpClient client = await fixture.LoginAsync(owner);
         string path = Path(owner);
 
-        JsonElement pdf = (await DataAsync(await UploadAsync(client, owner, Encoding.ASCII.GetBytes("%PDF-1.7\n%%EOF\n"), "price list.pdf")))
+        byte[] priceList = Encoding.ASCII.GetBytes("%PDF-1.7\n%%EOF\n");
+        JsonElement pdf = (await DataAsync(await UploadAsync(client, owner, priceList, "price list.pdf")))
             .GetProperty("media");
         pdf.GetProperty("contentType").GetString().Should().Be("application/pdf");
         pdf.GetProperty("hasThumbnail").GetBoolean().Should().BeFalse();
-        await ProblemAsync(await client.GetAsync($"{path}/media/{pdf.GetProperty("id").GetGuid()}/thumbnail"), HttpStatusCode.NotFound, "NotFound");
+        await ProblemAsync(
+            await client.GetAsync($"{path}/media/{pdf.GetProperty("id").GetGuid()}/thumbnail"),
+            HttpStatusCode.NotFound,
+            "NotFound");
         byte[] video = [0, 0, 0, 24, .. "ftypmp42"u8, 0, 0, 0, 0, .. "mp42isom"u8];
         JsonElement mp4 = (await DataAsync(await UploadAsync(client, owner, video, "rack.mp4"))).GetProperty("media");
         mp4.GetProperty("contentType").GetString().Should().Be("video/mp4");
-        using var range = new HttpRequestMessage(HttpMethod.Get, $"{path}/media/{mp4.GetProperty("id").GetGuid()}/content");
+        using var range = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{path}/media/{mp4.GetProperty("id").GetGuid()}/content");
         range.Headers.Range = new RangeHeaderValue(0, 3);
         using HttpResponseMessage partial = await client.SendAsync(range);
         partial.StatusCode.Should().Be(HttpStatusCode.PartialContent);
         (await partial.Content.ReadAsByteArrayAsync()).Should().Equal(video[..4]);
 
         byte[] gradient = Gradient(horizontal: true, marker: false);
-        Guid gradientId = (await DataAsync(await UploadAsync(client, owner, gradient, "gradient.png"))).GetProperty("media").GetProperty("id").GetGuid();
-        JsonElement near = await DataAsync(await UploadAsync(client, owner, Gradient(horizontal: true, marker: true), "gradient-copy.png"));
+        Guid gradientId = (await DataAsync(await UploadAsync(client, owner, gradient, "gradient.png")))
+            .GetProperty("media").GetProperty("id").GetGuid();
+        JsonElement near = await DataAsync(
+            await UploadAsync(client, owner, Gradient(horizontal: true, marker: true), "gradient-copy.png"));
         near.GetProperty("duplicate").GetBoolean().Should().BeFalse();
-        near.GetProperty("nearDuplicateIds").EnumerateArray().Select(item => item.GetGuid()).Should().Contain(gradientId);
-        JsonElement distinct = await DataAsync(await UploadAsync(client, owner, Gradient(horizontal: false, marker: false), "vertical.png"));
-        distinct.GetProperty("nearDuplicateIds").EnumerateArray().Select(item => item.GetGuid()).Should().NotContain(gradientId);
+        near.GetProperty("nearDuplicateIds").EnumerateArray().Select(item => item.GetGuid())
+            .Should().Contain(gradientId);
+        JsonElement distinct = await DataAsync(
+            await UploadAsync(client, owner, Gradient(horizontal: false, marker: false), "vertical.png"));
+        distinct.GetProperty("nearDuplicateIds").EnumerateArray().Select(item => item.GetGuid())
+            .Should().NotContain(gradientId);
 
-        await ProblemAsync(await UploadAsync(client, owner, Encoding.UTF8.GetBytes("plain text"), "notes.txt"), HttpStatusCode.BadRequest, "Validation");
-        await ProblemAsync(await UploadAsync(client, owner, [], "empty.png"), HttpStatusCode.RequestEntityTooLarge, "Validation");
+        await ProblemAsync(
+            await UploadAsync(client, owner, Encoding.UTF8.GetBytes("plain text"), "notes.txt"),
+            HttpStatusCode.BadRequest,
+            "Validation");
+        await ProblemAsync(
+            await UploadAsync(client, owner, [], "empty.png"),
+            HttpStatusCode.RequestEntityTooLarge,
+            "Validation");
     }
 
     [Fact]
@@ -261,7 +347,8 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
             byte[] photo = Png(SKColors.Peru, 40, 30);
             await File.WriteAllBytesAsync(System.IO.Path.Combine(directory, "swi-01.png"), photo);
             await File.WriteAllBytesAsync(System.IO.Path.Combine(directory, "bad.png"), Png(SKColors.Navy, 20, 20));
-            string bundle = await WriteBundleAsync(directory, "quoted", Convert.ToHexStringLower(SHA256.HashData(photo)));
+            string photoHash = Convert.ToHexStringLower(SHA256.HashData(photo));
+            string bundle = await WriteBundleAsync(directory, "quoted", photoHash);
 
             SourcingImportReport dryRun = await ImportAsync(owner, bundle, dryRun: true);
             dryRun.Suppliers.Created.Should().Be(2);
@@ -287,7 +374,8 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
             JsonElement media = (await DataAsync(await client.GetAsync($"{path}/media?supplierId={swiId}")))[0];
             media.GetProperty("capture").GetString().Should().Be("screenshot");
             media.GetProperty("sourceLabel").GetString().Should().Be("WhatsApp screenshot 2026-09-29");
-            media.GetProperty("receivedAt").GetDateTimeOffset().Should().Be(new DateTimeOffset(2026, 9, 29, 6, 54, 0, TimeSpan.Zero));
+            media.GetProperty("receivedAt").GetDateTimeOffset()
+                .Should().Be(new DateTimeOffset(2026, 9, 29, 6, 54, 0, TimeSpan.Zero));
 
             await DataAsync(await client.PutAsJsonAsync($"{path}/suppliers/{swiId}", new
             {
@@ -298,12 +386,13 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
             repeated.People.Existing.Should().Be(1);
             repeated.Routes.Existing.Should().Be(3);
             repeated.Media.Existing.Should().Be(1);
-            (repeated.Suppliers.Created + repeated.People.Created + repeated.Routes.Created + repeated.Media.Created).Should().Be(0);
+            (repeated.Suppliers.Created + repeated.People.Created + repeated.Routes.Created + repeated.Media.Created)
+                .Should().Be(0);
             JsonElement kept = await DataAsync(await client.GetAsync($"{path}/suppliers/{swiId}"));
             kept.GetProperty("name").GetString().Should().Be("SWI (edited in Desk)");
             kept.GetProperty("stage").GetString().Should().Be("dropped");
 
-            string qualified = await WriteBundleAsync(directory, "qualified", Convert.ToHexStringLower(SHA256.HashData(photo)));
+            string qualified = await WriteBundleAsync(directory, "qualified", photoHash);
             Func<Task> rejected = () => ImportAsync(owner, qualified, dryRun: false);
             (await rejected.Should().ThrowAsync<AppException>()).Which.Message.Should().Contain("qualified");
         }
@@ -313,10 +402,13 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         }
     }
 
+    /// <summary>Imports through the host's own service; a refused import throws its error.</summary>
     private async Task<SourcingImportReport> ImportAsync(OrganizationAccess owner, string bundle, bool dryRun)
     {
         using IServiceScope scope = fixture.Factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<SourcingImportService>().ImportAsync(owner, bundle, dryRun, Token);
+        SourcingImportService service = scope.ServiceProvider.GetRequiredService<SourcingImportService>();
+        Result<SourcingImportReport> report = await service.ImportAsync(owner, bundle, dryRun, Token);
+        return report.ValueOrThrow();
     }
 
     private static async Task<string> WriteBundleAsync(string directory, string stage, string sha256)
@@ -335,21 +427,36 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
                     people = new[] { new { key = "navit", name = "Navit Example", role = (string?)null, notes = "" } },
                     routes = new object[]
                     {
-                        new { channel = "whatsapp", destination = "+91 0000000001", verified = true, isPrimary = true, personKey = "navit" },
+                        new
+                        {
+                            channel = "whatsapp",
+                            destination = "+91 0000000001",
+                            verified = true,
+                            isPrimary = true,
+                            personKey = "navit"
+                        },
                         new { channel = "email", destination = "swi@example.test", verified = false, isPrimary = false }
                     }
                 },
                 new
                 {
                     key = "kriti", name = "PL Industries", stage = "contacted", country = "IN",
-                    routes = new[] { new { channel = "form", destination = "https://example.test/form", verified = false, isPrimary = true } }
+                    routes = new[]
+                    {
+                        new
+                        {
+                            channel = "form", destination = "https://example.test/form", verified = false,
+                            isPrimary = true
+                        }
+                    }
                 }
             },
             media = new object[]
             {
                 new
                 {
-                    supplierKey = "swi", path = "swi-01.png", sha256, capture = "screenshot", originalName = "swi-01.png",
+                    supplierKey = "swi", path = "swi-01.png", sha256, capture = "screenshot",
+                    originalName = "swi-01.png",
                     caption = "", sourceLabel = "WhatsApp screenshot 2026-09-29", sourceMessageId = (string?)null,
                     receivedAt = "2026-09-29T11:54:00+05:00"
                 },
