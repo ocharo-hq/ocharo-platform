@@ -4,8 +4,10 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Folder Name="/tests/">
-    <Project Path="tests/OcharoCatalogue.Tests/OcharoCatalogue.Tests.csproj" />
+  <Folder Name="/Tests/">
+    <Project Path="tests/OcharoCatalogue.Tests.E2E/OcharoCatalogue.Tests.E2E.csproj" />
+    <Project Path="tests/OcharoCatalogue.Tests.Integration/OcharoCatalogue.Tests.Integration.csproj" />
+    <Project Path="tests/OcharoCatalogue.Tests.Unit/OcharoCatalogue.Tests.Unit.csproj" />
   </Folder>
   <Project Path="OcharoCatalogue.Api/OcharoCatalogue.Api.csproj" />
   <Project Path="OcharoCatalogue.Application/OcharoCatalogue.Application.csproj" />

@@ -30,12 +30,40 @@ public sealed class OcharoCatalogueDbContext(DbContextOptions<OcharoCatalogueDbC
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<CatalogueDesignRecord>(e => { e.ToTable("catalogue_designs"); e.HasKey(x=>x.Id); e.Property(x=>x.Revision).IsConcurrencyToken(); e.HasIndex(x=>new{x.Slug,x.Locale}).IsUnique().HasFilter("Archived = 0"); });
-        modelBuilder.Entity<CatalogueDesignRevisionRecord>(e => { e.ToTable("catalogue_design_revisions"); e.HasKey(x=>x.Id); e.HasIndex(x=>new{x.DesignId,x.Revision}).IsUnique(); });
-        modelBuilder.Entity<CatalogueReleaseRecord>(e => { e.ToTable("catalogue_releases"); e.HasKey(x=>x.Id); e.HasIndex(x=>new{x.DesignId,x.CreatedAtUtc}); });
-        modelBuilder.Entity<CataloguePublicationRecord>(e => { e.ToTable("catalogue_publications"); e.HasKey(x=>x.Key); });
-        modelBuilder.Entity<CatalogueReleaseAssetRecord>(e => { e.ToTable("catalogue_release_assets"); e.HasKey(x=>x.Sha256); });
-        modelBuilder.Entity<CatalogueReleaseFileRecord>(e => { e.ToTable("catalogue_release_files"); e.HasKey(x=>x.Sha256); });
+        modelBuilder.Entity<CatalogueDesignRecord>(e =>
+        {
+            e.ToTable("catalogue_designs");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Revision).IsConcurrencyToken();
+            e.HasIndex(x => new { x.Slug, x.Locale }).IsUnique().HasFilter("Archived = 0");
+        });
+        modelBuilder.Entity<CatalogueDesignRevisionRecord>(e =>
+        {
+            e.ToTable("catalogue_design_revisions");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.DesignId, x.Revision }).IsUnique();
+        });
+        modelBuilder.Entity<CatalogueReleaseRecord>(e =>
+        {
+            e.ToTable("catalogue_releases");
+            e.HasKey(x => x.Id);
+            e.HasIndex(x => new { x.DesignId, x.CreatedAtUtc });
+        });
+        modelBuilder.Entity<CataloguePublicationRecord>(e =>
+        {
+            e.ToTable("catalogue_publications");
+            e.HasKey(x => x.Key);
+        });
+        modelBuilder.Entity<CatalogueReleaseAssetRecord>(e =>
+        {
+            e.ToTable("catalogue_release_assets");
+            e.HasKey(x => x.Sha256);
+        });
+        modelBuilder.Entity<CatalogueReleaseFileRecord>(e =>
+        {
+            e.ToTable("catalogue_release_files");
+            e.HasKey(x => x.Sha256);
+        });
         modelBuilder.Entity<ProductRecord>(e =>
         {
             e.ToTable("products");

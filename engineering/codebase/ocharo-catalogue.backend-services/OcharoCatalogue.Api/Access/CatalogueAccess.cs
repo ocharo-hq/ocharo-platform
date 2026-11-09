@@ -43,34 +43,3 @@ public static class CatalogueAccess
     private static bool IsSafe(string method) =>
         HttpMethods.IsGet(method) || HttpMethods.IsHead(method) || HttpMethods.IsOptions(method) || HttpMethods.IsTrace(method);
 }
-
-/// <summary>Holds the organization this catalogue belongs to (section <c>Catalogue</c>).</summary>
-public sealed class CatalogueAccessOptions
-{
-    /// <summary>Gets or sets the Identity organization whose members use this catalogue; <c>Catalogue:OrganizationId</c>,
-    /// required at boot.</summary>
-    public Guid OrganizationId { get; set; }
-}
-
-/// <summary>Requires <see cref="CatalogueAccess.IsAllowed"/> for the request; <see cref="RequiresApproval"/> marks the
-/// publication actions.</summary>
-public sealed class CatalogueAccessRequirement(bool requiresApproval) : IAuthorizationRequirement
-{
-    /// <summary>Gets whether the endpoint also needs <see cref="CatalogueAccess.ApprovePermission"/>.</summary>
-    public bool RequiresApproval { get; } = requiresApproval;
-}
-
-/// <summary>Validates <see cref="CatalogueAccessRequirement"/> against the request's method and the bound organization.
-/// A failure of a signed-in person answers the BFF's 403 problem, as a missing permission does.</summary>
-public sealed class CatalogueAccessHandler(IOptions<CatalogueAccessOptions> options, IHttpContextAccessor accessor)
-    : AuthorizationHandler<CatalogueAccessRequirement>
-{
-    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, CatalogueAccessRequirement requirement)
-    {
-        var http = context.Resource as HttpContext ?? accessor.HttpContext;
-        if (http is not null
-            && CatalogueAccess.IsAllowed(context.User, options.Value.OrganizationId, http.Request.Method, requirement.RequiresApproval))
-            context.Succeed(requirement);
-        return Task.CompletedTask;
-    }
-}

@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- Integration tier: services resolved from the real host below HTTP, over a temp SQLite store and an in-memory Files tenant. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\OcharoBrand.Api\OcharoBrand.Api.csproj" />
+    <ProjectReference Include="..\..\OcharoBrand.Application\OcharoBrand.Application.csproj" />
+    <ProjectReference Include="..\..\OcharoBrand.Domain\OcharoBrand.Domain.csproj" />
+    <ProjectReference Include="..\..\OcharoBrand.Infrastructure\OcharoBrand.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\OcharoBrand.Persistence\OcharoBrand.Persistence.csproj" />
+  </ItemGroup>
+
+  <!-- The host harness is owned by the E2E tier; this tier compiles the same sources. -->
+  <ItemGroup>
+    <Compile Include="..\OcharoBrand.Tests.E2E\Harness\*.cs" LinkBase="Harness" />
+  </ItemGroup>
+
+</Project>

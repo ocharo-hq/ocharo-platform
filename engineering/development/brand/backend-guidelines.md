@@ -21,5 +21,6 @@ Every address is optional; a value that is not a plain absolute HTTPS address is
 warning. `SystemStatus/` serves `GET /api/system/status`, anonymous,
 `no-store` and listed in `HostConfiguration.Sso.cs` as public SSO requests.
 
-Tests use `BrandHost` (in `RuntimeConfigTests.cs`): a temp SQLite file and blob folder, a missing seed folder, and
-optional enabled SSO. Never point a test or a browser check at `App_Data/`.
+Tests live in `codebase/ocharo-brand.backend-services/tests/` as `OcharoBrand.Tests.Unit`, `.Integration` and `.E2E`; their hosts
+use `BrandHost` (in `OcharoBrand.Tests.E2E/Harness/`): a temp SQLite file and blob folder, a missing seed folder, and
+the test identity that stands in for the Identity BFF. Never point a test or a browser check at `App_Data/`.

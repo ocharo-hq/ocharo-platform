@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- Integration tier: catalogue commands and queries through the mediator and the stores, below HTTP, over a temp SQLite store and an in-memory Files tenant. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="SkiaSharp" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\OcharoCatalogue.Api\OcharoCatalogue.Api.csproj" />
+    <ProjectReference Include="..\..\OcharoCatalogue.Application\OcharoCatalogue.Application.csproj" />
+    <ProjectReference Include="..\..\OcharoCatalogue.Domain\OcharoCatalogue.Domain.csproj" />
+    <ProjectReference Include="..\..\OcharoCatalogue.Infrastructure\OcharoCatalogue.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\OcharoCatalogue.Persistence\OcharoCatalogue.Persistence.csproj" />
+  </ItemGroup>
+
+  <!-- The host harness is owned by the E2E tier; this tier compiles the same sources. -->
+  <ItemGroup>
+    <Compile Include="..\OcharoCatalogue.Tests.E2E\Harness\*.cs" LinkBase="Harness" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- Unit tier: pure logic, no I/O (no database, no HTTP host, no files). -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="AwesomeAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\OcharoCatalogue.Api\OcharoCatalogue.Api.csproj" />
+    <ProjectReference Include="..\..\OcharoCatalogue.Application\OcharoCatalogue.Application.csproj" />
+    <ProjectReference Include="..\..\OcharoCatalogue.Domain\OcharoCatalogue.Domain.csproj" />
+    <ProjectReference Include="..\..\OcharoCatalogue.Infrastructure\OcharoCatalogue.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <!-- A product fixture is the only harness piece this tier shares. -->
+  <ItemGroup>
+    <Compile Include="..\OcharoCatalogue.Tests.E2E\Harness\ProductFixtures.cs" LinkBase="Harness" />
+  </ItemGroup>
+
+</Project>
