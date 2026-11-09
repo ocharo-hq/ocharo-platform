@@ -149,8 +149,6 @@ public static partial class HostConfiguration
             pipeline.UseMiddleware<BrandResponseHeadersMiddleware>();
             pipeline.UseAccess();
         });
-        if (app.Environment.IsLocalRun(app.Configuration))
-            app.MapOpenApi().AllowAnonymous();
         app.WarnAboutRejectedRuntimeConfig();
         app.MapControllers();
         app.MapIdentityBffEndpoints();

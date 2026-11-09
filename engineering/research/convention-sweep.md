@@ -178,10 +178,13 @@ Evidence caveats: D-24 counts `NpgsqlCommand|CreateCommand` matches; D-28, D-29 
 
 ## Exceptions
 
-Rows kept in part while fixing them in v0.2, each with what lifts it. The be sdk gaps go to the SDK as rows of its own.
+Rows kept in part while fixing them in v0.2, each with what lifts it.
 
 | id | kept | why | lifts when |
 |---|---|---|---|
-| D-21, C-3 | Desk's commerce and public brand routes serialize with `CommerceJson`; Catalogue sets `DictionaryKeyPolicy` to null | the be sdk preset sets `DictionaryKeyPolicy` to camelCase, which rewrites data keys such as size labels (`XL` → `xl`) and corrupts them on save; Marketing and Blog read those fields | the be sdk keeps dictionary keys verbatim |
-| B-2, C-2 | Brand and Catalogue map OpenAPI themselves, anonymously, on a local run only (`ExposeOpenApi = false`) | `UseApiDefaults` maps OpenAPI without `AllowAnonymous`, so default-deny answers 401 | the be sdk maps OpenAPI anonymously |
+| D-21 | Desk's commerce and public brand routes serialize with `CommerceJson`, not the SDK preset | the preset camelCased dictionary keys, which rewrote data keys such as size labels (`XL` → `xl`) | Desk re-pins to be sdk `10.0.108-beta`, which keeps dictionary keys as written |
 | C-3 | Catalogue's `/api/public/catalogue` feed keeps the old web defaults (`PublicFeedJson`): nulls written, no envelope | Marketing's `CatalogueSyncService` reads `pricing` and `retail` without checking they exist | Marketing tolerates omitted nulls |
+
+Fixed in the be sdk (`10.0.108-beta`, 2026-11-09): the wire preset keeps dictionary keys as written, and `UseApiDefaults`
+maps OpenAPI anonymously. Brand and Catalogue re-pinned and dropped their own OpenAPI mapping (B-2, C-2) and
+Catalogue's dictionary-key override (C-3).

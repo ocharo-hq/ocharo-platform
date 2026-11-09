@@ -20,7 +20,6 @@ public static partial class HostConfiguration
             options.EnableOutputCache = false;
             options.EnableCrossOriginEmbedderPolicy = false;
             options.EnableHttpsRedirection = false;
-            options.ExposeOpenApi = false;
             options.SpaHosting = _ => { };
             options.TrustProxiesFrom(builder.Configuration.GetSection("Deployment"));
         });
@@ -48,9 +47,6 @@ public static partial class HostConfiguration
         app.UseApiDefaults(pipeline => pipeline
             .UseCatalogueBoundary()
             .UseAccess());
-
-        if (app.Environment.IsLocalRun(app.Configuration))
-            app.MapOpenApi().AllowAnonymous();
 
         app.WarnAboutRejectedRuntimeConfig();
         app.MapAccess();

@@ -20,8 +20,6 @@ public static partial class HostConfiguration
             options.EnableCrossOriginEmbedderPolicy = false;
             // The ingress terminates TLS; Brand never redirected.
             options.EnableHttpsRedirection = false;
-            // Mapped anonymously on a local run by AddHttpSurface, since the private API denies by default.
-            options.ExposeOpenApi = false;
             options.SpaHosting = _ => { };
             // Behind the TLS-terminating ingress, same-origin write checks need the forwarded scheme; any other sender
             // keeps its own.

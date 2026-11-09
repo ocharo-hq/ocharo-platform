@@ -122,18 +122,13 @@ public static partial class HostConfiguration
     }
 
     /// <summary>Registers the HTTP error boundary (problem details for every client, <c>no-store</c> errors), the
-    /// catalogue's
-    /// error statuses and controllers on the SDK wire contract.</summary>
-    /// <remarks>Dictionary keys stay as stored: every catalogue dictionary is keyed by data (size labels such as
-    /// <c>XL</c>,
-    /// language codes, artifact names, runtime-config names), which the preset's camelCase key policy would
-    /// rewrite.</remarks>
+    /// catalogue's error statuses and controllers on the SDK wire contract, which keeps dictionary keys such as size
+    /// labels as written.</summary>
     private static WebApplicationBuilder AddControllers(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpProblemDetails();
         builder.Services.AddSingleton<IErrorHttpStatusCodeMapper, CatalogueErrorHttpStatusCodeMapper>();
-        builder.Services.AddControllersWithSdkJson()
-            .AddJsonOptions(options => options.JsonSerializerOptions.DictionaryKeyPolicy = null);
+        builder.Services.AddControllersWithSdkJson();
         return builder;
     }
 
