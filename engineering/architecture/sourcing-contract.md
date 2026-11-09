@@ -1,6 +1,6 @@
 # Sourcing contract — suppliers, contacts and shared media
 
-*Last updated: 2026-10-08*
+*Last updated: 2026-11-09*
 
 ## Increment
 
@@ -118,14 +118,18 @@ Private supplier records enter Desk only through an explicit bundle file and the
 
 ```bash
 dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- \
-  import sourcing --bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run]
+  import sourcing --bundle <bundle.json> --organization <organization-id> --actor <identity-user-id|email> [--dry-run]
 ```
 
 The command validates the whole bundle before writing, prints a JSON summary, and is idempotent:
 existing suppliers (by `key`), people (by supplier + case-insensitive name), routes (by supplier +
 channel + destination) and media (by SHA-256) are counted as `existing` and never overwritten, so edits
 made in Desk survive a re-import. A declared `sha256` that differs from the file's bytes fails that item.
-`--dry-run` validates and reports without writing. The actor must be a member who can edit.
+`--dry-run` validates and reports without writing.
+`--actor` names a person Desk has seen sign in through Ocharo's Identity: their Identity user id (`sub`),
+or the email their sign-in carried when one person holds it. Ocharo people sign in by phone and carry no email, so
+the id is what works for them. Identity keeps every role, and a verb runs without a sign-in, so the person imports as
+an editor of an organization Desk knows; an unknown person or organization refuses.
 
 ```jsonc
 {

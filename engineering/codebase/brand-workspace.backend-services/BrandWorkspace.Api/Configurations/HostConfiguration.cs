@@ -53,8 +53,8 @@ public static partial class HostConfiguration
 
     /// <summary>
     /// Adds Desk's own verbs beside the be sdk's <c>migrate</c> and <c>config check</c>: <c>import sourcing</c> and
-    /// <c>import events</c>, which import a bundle as an existing editor, and <c>media verify</c>, the image build's
-    /// decoder probe. Each runs on the built host without serving.
+    /// <c>import events</c>, which import a bundle as a person Desk knows from Identity, and <c>media verify</c>, the
+    /// image build's decoder probe. Each runs on the built host without serving.
     /// </summary>
     /// <param name="verbs">The service host's verbs.</param>
     public static ServiceVerbs AddDeskVerbs(this ServiceVerbs verbs)

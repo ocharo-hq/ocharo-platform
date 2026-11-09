@@ -1,6 +1,6 @@
 # Events contract — showcase events feed
 
-*Last updated: 2026-10-08*
+*Last updated: 2026-11-09*
 
 ## Increment
 
@@ -82,10 +82,14 @@ later discovery scan:
 
 ```bash
 dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- \
-  import events --bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run]
+  import events --bundle <bundle.json> --organization <organization-id> --actor <identity-user-id|email> [--dry-run]
 ```
 
 Format `ocharo.events-import.v1`: `{ format, source, events: [ { key, …record fields except id/revision/timestamps } ] }`.
 Every event needs a `key`. The command validates the whole bundle before writing, prints a JSON
 summary `{ dryRun, source, created, existing, failures[] }`, and never overwrites an existing key,
 so statuses and notes edited in Desk survive every re-import. Imported events default to `candidate`.
+`--actor` names a person Desk has seen sign in through Ocharo's Identity: their Identity user id (`sub`),
+or the email their sign-in carried when one person holds it. Ocharo people sign in by phone and carry no email, so
+the id is what works for them. Identity keeps every role, and a verb runs without a sign-in, so the person imports as
+an editor of an organization Desk knows; an unknown person or organization refuses.

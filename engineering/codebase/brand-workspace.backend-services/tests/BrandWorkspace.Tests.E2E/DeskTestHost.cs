@@ -34,7 +34,12 @@ public static class DeskTestHost
 
     /// <summary>Runs the be sdk's <c>migrate</c> verb, as the image answers it, over a Desk host built for
     /// <paramref name="connection"/>, and returns its exit code and output; the host never serves.</summary>
-    public static async Task<(int Exit, string Output, string Error)> MigrateAsync(string connection)
+    /// <param name="connection">The database's connection string.</param>
+    /// <param name="deployed">Whether the run is a deployed one (<c>DEPLOY_ENVIRONMENT</c> set), which the migrator
+    /// holds to the deployed rules, such as refusing a pending ordinal below the applied level.</param>
+    public static async Task<(int Exit, string Output, string Error)> MigrateAsync(
+        string connection,
+        bool deployed = false)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -44,6 +49,7 @@ public static class DeskTestHost
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(IdentityClientSettings)
         {
             ["ConnectionStrings:Database"] = connection,
+            ["DEPLOY_ENVIRONMENT"] = deployed ? "dev" : null,
         });
         builder.Configure();
         await using var app = builder.Build();

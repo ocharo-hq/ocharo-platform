@@ -8,25 +8,31 @@ using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
 
 namespace BrandWorkspace.Persistence.Access.Repositories;
 
-/// <summary>Accesses Desk's organizations, memberships and its projection of signed-in people.</summary>
+/// <summary>Accesses Desk's organizations and its projection of the people Identity signed in.</summary>
 public sealed class AccessRepository(IDbConnectionFactory connectionFactory) : IAccessRepository
 {
     private readonly ConcurrentDictionary<string, string> projected = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<Guid, string> projectedOrganizations = new();
 
-    public async Task<OrganizationAccess?> FindMembershipAsync(
-        Guid organizationId,
-        string userId,
-        CancellationToken token)
+    public async Task<string?> FindPersonAsync(string idOrEmail, CancellationToken token)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(idOrEmail);
+        // The id match ranks first; an email that two projected people carry names neither.
         const string sql =
-            "SELECT role FROM access.memberships WHERE organization_id=@organizationId AND user_id=@userId";
+            """
+            SELECT id AS "Id", id=@actor AS "IsId" FROM access.users
+            WHERE id=@actor OR lower("Email")=lower(@actor)
+            ORDER BY "IsId" DESC, id LIMIT 2
+            """;
         await using var connection = await connectionFactory.CreateOpenAsync(token);
-        string? role = await connection.ExecuteScalarAsync<string?>(
-            new CommandDefinition(sql, new { organizationId, userId }, cancellationToken: token));
-        return role is null
-            ? null
-            : new OrganizationAccess(organizationId, userId, role, role is "owner" or "editor", role == "owner");
+        var matches = (await connection.QueryAsync<PersonMatch>(
+            new CommandDefinition(sql, new { actor = idOrEmail.Trim() }, cancellationToken: token))).ToList();
+        return matches switch
+        {
+            [{ IsId: true } match, ..] => match.Id,
+            [var only] => only.Id,
+            _ => null,
+        };
     }
 
     public async Task<Organization?> FindOrganizationAsync(Guid organizationId, string role, CancellationToken token)
@@ -99,6 +105,13 @@ public sealed class AccessRepository(IDbConnectionFactory connectionFactory) : I
         await using var connection = await connectionFactory.CreateOpenAsync(token);
         await connection.ExecuteAsync(
             new CommandDefinition(sql, new { organizationId, name, slug, named }, cancellationToken: token));
+    }
+
+    /// <summary>A projected person an actor names, and whether the actor is their Identity user id.</summary>
+    private sealed class PersonMatch
+    {
+        public string Id { get; init; } = string.Empty;
+        public bool IsId { get; init; }
     }
 
     /// <summary>An organization's stored name and slug.</summary>

@@ -1,23 +1,29 @@
 using BrandWorkspace.Application.Access.Models;
 using BrandWorkspace.Application.Access.Repositories;
-using BrandWorkspace.Persistence.Access.Models;
-using Microsoft.AspNetCore.Identity;
 
 namespace BrandWorkspace.Api.Foundation.Verbs;
 
 /// <summary>
-/// Represents an import verb's arguments, its actor resolved to an existing editor's membership; an import never
-/// creates operators or memberships.
+/// Represents an import verb's arguments, its actor resolved to a person Desk knows from Identity, who authors the
+/// imported records as an editor of an organization Desk knows; an import never creates people or organizations.
 /// </summary>
-/// <param name="Access">The actor's membership in the organization.</param>
+/// <remarks>
+/// Identity holds every membership and role since the cutover, and a verb runs without a sign-in, so Desk checks only
+/// that it has seen both the person and the organization; whoever runs the verb on the image already holds Desk's
+/// database.
+/// </remarks>
+/// <param name="Access">The actor's editor access in the organization.</param>
 /// <param name="BundlePath">The bundle file's path.</param>
 /// <param name="DryRun">Whether the import only reports.</param>
 public sealed record ImportVerbArguments(OrganizationAccess Access, string BundlePath, bool DryRun)
 {
+    /// <summary>Holds the role an import acts in: it edits, and approves nothing.</summary>
+    public const string ActorRole = "editor";
+
     /// <summary>
-    /// Parses <c>--bundle &lt;bundle.json&gt; --organization &lt;organization-id&gt; --actor &lt;operator-email&gt;
-    /// [--dry-run]</c> and resolves the actor; wrong arguments throw <paramref name="usage"/>, an unknown actor or a
-    /// non-member refuses.
+    /// Parses <c>--bundle &lt;bundle.json&gt; --organization &lt;organization-id&gt; --actor &lt;identity-user-id or
+    /// email&gt; [--dry-run]</c> and resolves the actor; wrong arguments throw <paramref name="usage"/>, an actor Desk
+    /// never saw sign in or an organization it never saw refuses.
     /// </summary>
     /// <param name="services">A scope's provider.</param>
     /// <param name="args">The arguments after the verb's name.</param>
@@ -42,14 +48,15 @@ public sealed record ImportVerbArguments(OrganizationAccess Access, string Bundl
                 throw new ArgumentException(usage);
             index++;
         }
-        if (options.Count != 3 || !Guid.TryParse(options["--organization"], out var organizationId))
+        if (options.Count != 3 || !Guid.TryParse(options["--organization"], out var organizationId)
+            || string.IsNullOrWhiteSpace(options["--actor"]))
             throw new ArgumentException(usage);
-        var user = await services.GetRequiredService<UserManager<AccessUser>>().FindByEmailAsync(options["--actor"])
+        var repository = services.GetRequiredService<IAccessRepository>();
+        var userId = await repository.FindPersonAsync(options["--actor"], cancellationToken)
             ?? throw new InvalidOperationException("The actor is not a provisioned operator.");
-        var access = await services
-            .GetRequiredService<IAccessRepository>()
-            .FindMembershipAsync(organizationId, user.Id, cancellationToken)
-            ?? throw new InvalidOperationException("The actor is not a member of that organization.");
+        _ = await repository.FindOrganizationAsync(organizationId, ActorRole, cancellationToken)
+            ?? throw new InvalidOperationException("Desk knows no such organization.");
+        var access = new OrganizationAccess(organizationId, userId, ActorRole, CanEdit: true, CanApprove: false);
         return new ImportVerbArguments(access, options["--bundle"], dryRun);
     }
 }

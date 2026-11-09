@@ -4,7 +4,7 @@ using WoW.Two.Sdk.Beta.Be.Mediator;
 
 namespace BrandWorkspace.Api.Events.Verbs;
 
-/// <summary>Imports an events bundle as an existing editor: <c>import events</c>.</summary>
+/// <summary>Imports an events bundle as a person Desk knows from Identity: <c>import events</c>.</summary>
 public static class EventImportVerb
 {
     /// <summary>Holds the word after <c>import</c> that selects this verb.</summary>
@@ -12,7 +12,7 @@ public static class EventImportVerb
 
     /// <summary>Holds the verb's usage.</summary>
     private const string Usage =
-        "Use import events --bundle <bundle.json> --organization <organization-id> --actor <operator-email> "
+        "Use import events --bundle <bundle.json> --organization <organization-id> --actor <identity-user-id|email> "
             + "[--dry-run].";
 
     /// <summary>Runs <c>import events</c> over the built host's services.</summary>

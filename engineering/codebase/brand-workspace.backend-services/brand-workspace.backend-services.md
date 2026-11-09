@@ -50,7 +50,7 @@ built host without serving, and its exit code is the process's; anything else se
 |---|---|
 | `migrate` | the be sdk's: applies every migration set (Desk's own, then the session cache's `distributed_cache`) and exits; `migrate check`, `plan` and the rest as the SDK documents |
 | `config check` | the be sdk's: checks the settings as a boot would and exits `0` consistent, `1` refused, `2` failed |
-| `import sourcing` / `import events` | imports a bundle as an existing editor: `--bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run]`; exits `0`, `1` refused, `2` with failures |
+| `import sourcing` / `import events` | imports a bundle as an editor: `--bundle <bundle.json> --organization <organization-id> --actor <identity-user-id\|email> [--dry-run]`; the actor is a person Desk projected from Identity (by `sub`, or by an email one person carries) and the organization one Desk knows, else it refuses; exits `0`, `1` refused, `2` with failures |
 | `media verify` | decodes a fixed PNG through the packaged native decoder, with no database or key ring; the image build runs it |
 
 A verb's stdout carries only its own output; the host's logs go to stderr.
@@ -170,6 +170,13 @@ values and local `localhost` defaults.
 
 Desk signs in through Identity's BFF (`UseIdentityBff`) and issues no delegated tickets: every Ocharo app signs in
 through Ocharo's Identity on its own.
+
+- Desk keeps no accounts, sessions or memberships: `[OrganizationAccess]` reads the role from the claims and projects the
+  person and organization into `access.users` and `access.organizations`, which the records' foreign keys need.
+- Migration `013-identity-cutover` (a contract, `since` `v0.2.7`) dropped Desk's own sign-in storage with its rows:
+  `access.sessions`, `memberships`, the `sso_*` and `telegram_*` tables and the six EF `identity_*` tables. The `011`
+  reserved for it stays a gap: deployed databases already held `012-files`, and the migrator refuses a pending ordinal
+  below the applied level outside a local run.
 
 - Background removal (`/api/integrations/media/background-removal` and `/capabilities`) takes only an Identity service token,
   verified offline against the JWKS of `Identity:Client:Authority`: audience `Identity:Resource:Uri` (required at boot), scope

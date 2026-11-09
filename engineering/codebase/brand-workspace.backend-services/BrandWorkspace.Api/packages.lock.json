@@ -1503,6 +1503,16 @@
         "resolved": "10.0.0",
         "contentHash": "xZAYhPOU2rUIFpV48xsqhCx9vXs6Y+0jX2LCoSEfDFYMw9jtAOUk3iQsCnDLrFIv9NT3JGMihn7nnuZsPKqJmA=="
       },
+      "Npgsql.EntityFrameworkCore.PostgreSQL": {
+        "type": "Transitive",
+        "resolved": "10.0.0",
+        "contentHash": "E2+uSWxSB8LdsUVwPaqRWOcGOP92biry2JEwc0KJMdLJF+aZdczeIdEXVwEyv4nSVMQJH0o8tLhyAMiR6VF0lw==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "[10.0.0, 11.0.0)",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, 11.0.0)",
+          "Npgsql": "10.0.0"
+        }
+      },
       "OllamaSharp": {
         "type": "Transitive",
         "resolved": "5.5.0",
@@ -2209,8 +2219,6 @@
         "dependencies": {
           "BrandWorkspace.Application": "[0.0.0, )",
           "BrandWorkspace.Domain": "[0.0.0, )",
-          "Microsoft.AspNetCore.Identity.EntityFrameworkCore": "[10.0.3, )",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.0, )",
           "WoW2.Sdk.Beta.Be": "[10.0.108-beta, )"
         }
       },
@@ -2219,15 +2227,6 @@
       },
       "ocharocatalogue.domain": {
         "type": "Project"
-      },
-      "Microsoft.AspNetCore.Identity.EntityFrameworkCore": {
-        "type": "CentralTransitive",
-        "requested": "[10.0.3, )",
-        "resolved": "10.0.3",
-        "contentHash": "6SEGWi35DZ9syBqCT8v5vEkm9tWUayWxVkHWLwW2FdyXSwS0zzEpIzGPLVQGeug3VU8d+hK/PFxFwwZnblv/zA==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore.Relational": "10.0.3"
-        }
       },
       "Microsoft.Data.Sqlite": {
         "type": "CentralTransitive",
@@ -2238,17 +2237,6 @@
           "Microsoft.Data.Sqlite.Core": "10.0.14",
           "SQLitePCLRaw.bundle_e_sqlite3": "2.1.13",
           "SQLitePCLRaw.core": "2.1.13"
-        }
-      },
-      "Npgsql.EntityFrameworkCore.PostgreSQL": {
-        "type": "CentralTransitive",
-        "requested": "[10.0.0, )",
-        "resolved": "10.0.0",
-        "contentHash": "E2+uSWxSB8LdsUVwPaqRWOcGOP92biry2JEwc0KJMdLJF+aZdczeIdEXVwEyv4nSVMQJH0o8tLhyAMiR6VF0lw==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "[10.0.0, 11.0.0)",
-          "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, 11.0.0)",
-          "Npgsql": "10.0.0"
         }
       },
       "SkiaSharp": {

@@ -1,6 +1,6 @@
 # Preparation foundation contract
 
-*Last updated: 2026-11-02*
+*Last updated: 2026-11-09*
 
 ## Implemented increment
 
@@ -15,14 +15,13 @@ same workflow; independent future subsystems require their own vector ownership 
 
 ## Access and security
 
-Use ASP.NET Core Identity for password hashing, password verification, and lockout, composed with the
-published wow-two cookie/default-deny primitives. Keep identity storage in PostgreSQL. Generate the
-Identity schema from its EF mapping if using EF stores, then apply it as an embedded numbered SQL
-migration through the existing `migrate` verb.
-
-Persist revocable sessions. A protected Secure/HttpOnly/SameSite cookie carries the authenticated user
-and session identifier; validate active session/account state on every request. Use an eight-hour
-absolute lifetime. Persist Data Protection keys with a product/environment discriminator.
+People sign in at Ocharo's WoW2 Identity through the SDK's BFF, behind the published default-deny primitives;
+Desk holds no passwords, accounts, sessions or memberships of its own. The BFF keeps each sign-in session in
+PostgreSQL's distributed cache, ended by Identity's revocation signals, and its cookie carries only the session
+reference. Desk projects each signed-in person and organization into `access.users` and `access.organizations`, which
+its records' foreign keys need; migration `013-identity-cutover` dropped the EF identity store, sessions, memberships
+and the Telegram and SSO tables Desk's own sign-in used. Persist Data Protection keys with a product/environment
+discriminator.
 
 Framework antiforgery protects every unsafe API request, including login/logout. Bind request tokens
 to the session identifier through `IAntiforgeryAdditionalDataProvider`, not just the user name. GET session

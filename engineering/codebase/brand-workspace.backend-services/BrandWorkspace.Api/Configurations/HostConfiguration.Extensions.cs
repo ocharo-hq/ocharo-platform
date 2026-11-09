@@ -35,12 +35,8 @@ using WoW.Two.Sdk.Beta.Be.Media.Images;
 using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using BrandWorkspace.Application.Access.Models;
 using BrandWorkspace.Application.Access.Repositories;
-using BrandWorkspace.Persistence.Access.DataContexts;
-using BrandWorkspace.Persistence.Access.Models;
 using BrandWorkspace.Persistence.Access.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 using WoW.Two.Sdk.Beta.Be.Identity.Authorization;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 using WoW.Two.Sdk.Beta.Be.Identity.Jwt;
@@ -82,7 +78,7 @@ public static partial class HostConfiguration
 
     private const string ImportUsage =
         "Use import sourcing|events --bundle <bundle.json> --organization <organization-id> "
-        + "--actor <operator-email> [--dry-run].";
+        + "--actor <identity-user-id|email> [--dry-run].";
 
     private const string MediaUsage = "Use media verify alone.";
 
@@ -174,15 +170,11 @@ public static partial class HostConfiguration
     /// of its people, default deny, and the verification of its service tokens.
     /// </summary>
     /// <remarks>
-    /// The framework identity store stays for the import commands, which resolve <c>--actor</c> by email, until
-    /// migration 011 retires Desk's own accounts.
+    /// The import commands resolve <c>--actor</c> against the same projection; Desk keeps no accounts of its own since
+    /// migration <c>013-identity-cutover</c>.
     /// </remarks>
     private static WebApplicationBuilder AddAccess(this WebApplicationBuilder builder)
     {
-        builder.Services.AddDbContext<AccessDbContext>((services, options) =>
-            options.UseNpgsql(services.GetRequiredService<NpgsqlDataSource>()));
-        builder.Services.AddIdentityCore<AccessUser>(options => options.User.RequireUniqueEmail = true)
-            .AddEntityFrameworkStores<AccessDbContext>();
         builder.Services.AddSingleton<IAccessRepository, AccessRepository>();
         builder.Services.AddIdentityBff();
         // The BFF keeps sign-in sessions in IDistributedCache: a table in Desk's own database, so a restart or deploy

@@ -56,6 +56,10 @@ public sealed class FoundationRepository(IDbConnectionFactory connectionFactory)
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Checks only tables the code reads: Desk's projection of Identity's people and organizations stays, while its own
+    /// sign-in tables left with migration <c>013-identity-cutover</c>.
+    /// </remarks>
     public async Task<bool> IsReadyAsync(CancellationToken cancellationToken)
     {
         const string sql =
@@ -63,9 +67,7 @@ public sealed class FoundationRepository(IDbConnectionFactory connectionFactory)
             SELECT version = 1 AND to_regclass('foundation.worker_heartbeats') IS NOT NULL
                 AND to_regclass('foundation.probe_receipts') IS NOT NULL
                 AND to_regclass('access.users') IS NOT NULL
-                AND to_regclass('access.sessions') IS NOT NULL
                 AND to_regclass('access.organizations') IS NOT NULL
-                AND to_regclass('access.memberships') IS NOT NULL
                 AND to_regclass('preparation.brands') IS NOT NULL
                 AND to_regclass('preparation.media') IS NOT NULL
                 AND to_regclass('preparation.drafts') IS NOT NULL

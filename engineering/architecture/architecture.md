@@ -1,6 +1,6 @@
 # Architecture
 
-*Last updated: 2026-09-26*
+*Last updated: 2026-11-09*
 
 ## Product and runtime boundaries
 
@@ -51,8 +51,10 @@ PostgreSQL jobs. A client-only diagnostic command submits harmless probes withou
 Schema changes have one explicit owner: the API executable's `migrate` verb, packaged as the
 one-shot Compose migration service; the API also applies pending migrations as it boots, and the executing
 worker installs only its own queue schema. The selected shared SDK supports embedded SQL migrations with PostgreSQL locking, so the
-foundation does not carry the template's SQLite initialization path. Framework Identity uses EF stores;
-its generated DDL is versioned in `002-access` and applied by that same SQL migration owner.
+foundation does not carry the template's SQLite initialization path. Desk keeps no accounts: people sign in
+through Ocharo's WoW2 Identity, and Desk projects each signed-in person and organization into `access.users` and
+`access.organizations` for its records' foreign keys. Migration `013-identity-cutover` dropped the sign-in storage
+Desk owned before: the EF identity store, sessions and memberships of `002-access`, and the Telegram and SSO tables.
 
 The [preparation contract](preparation-contract.md) records the current security and concurrency
 boundaries. Original image and ZIP bytes use a bounded PostgreSQL storage adapter. Session cookies
