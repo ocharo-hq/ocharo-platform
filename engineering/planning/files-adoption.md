@@ -26,6 +26,11 @@ code limits and local dev data; nothing read prod.
   day (release `wave1-check`), which closed wave 1.
 - Wave 2 built and pushed 2026-11-09 (#27–#30): Blog and Editorial (329 tests), Marketing (368) and Studio (88); all
   three link `Files:BaseUrl` to this repo's `Identity:Server:Resources:2:Uri`, so nobody types it.
+- Wave 2 read back on dev 2026-11-09 (marketing `v0.1.8`, studio `v0.1.12`): Blog's logo and preview, an Editorial
+  cover, a Marketing asset and a Studio thumbnail each redirect to Files and serve their bytes; `marketing-assets` held
+  3 files on dev, which move and fill their ids on Marketing's next boot. The read-back found 240×34 Studio thumbnails
+  from a short viewport: studio `d1622c6` frames them at 240×180 from the viewport's centre.
+- Wave 3, Desk, built and pushed 2026-11-09 (#32), 305 tests passing.
 
 ## Instance
 
