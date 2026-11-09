@@ -87,7 +87,8 @@ public sealed class AccessTests
             var write = await client.PutAsJsonAsync("/api/brand/identity", new { });
 
             Assert.Equal(HttpStatusCode.Forbidden, read.StatusCode);
-            Assert.Equal("organization_access_required", await CodeAsync(read));
+            Assert.Equal("organization_access_required", await BrandCodeAsync(read));
+            Assert.Equal("Forbidden", await CodeAsync(read));
             Assert.Equal(HttpStatusCode.Forbidden, write.StatusCode);
             Assert.True((await BrandTestIdentity.SessionAsync(client)).GetProperty("isAuthenticated").GetBoolean());
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/runtime-config")).StatusCode);
@@ -105,7 +106,7 @@ public sealed class AccessTests
         Assert.Equal(HttpStatusCode.OK, (await viewer.GetAsync("/api/brand/draft")).StatusCode);
         var viewerWrite = await viewer.PostAsJsonAsync("/api/brand/appearances", new { });
         Assert.Equal(HttpStatusCode.Forbidden, viewerWrite.StatusCode);
-        Assert.Equal("edit_permission_required", await CodeAsync(viewerWrite));
+        Assert.Equal("edit_permission_required", await BrandCodeAsync(viewerWrite));
         Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsJsonAsync("/api/brand/publish", new { })).StatusCode);
 
         // An editor writes, so the request reaches the command, which refuses the empty appearance on its merits.
@@ -114,10 +115,10 @@ public sealed class AccessTests
         {
             var denied = await editor.PostAsJsonAsync(path, new { });
             Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
-            Assert.Equal("approval_permission_required", await CodeAsync(denied));
+            Assert.Equal("approval_permission_required", await BrandCodeAsync(denied));
         }
 
-        var draft = await owner.GetFromJsonAsync<JsonElement>("/api/brand/draft");
+        var draft = (await owner.GetFromJsonAsync<JsonElement>("/api/brand/draft")).GetProperty("data");
         var published = await owner.PostAsJsonAsync("/api/brand/publish", new { expectedRevision = draft.GetProperty("revision").GetInt32(), note = "x" });
         Assert.NotEqual(HttpStatusCode.Unauthorized, published.StatusCode);
         Assert.NotEqual(HttpStatusCode.Forbidden, published.StatusCode);
@@ -184,12 +185,18 @@ public sealed class AccessTests
         Assert.True(failure is InvalidOperationException or OptionsValidationException, failure?.ToString());
     }
 
-    private static async Task<string?> CodeAsync(HttpResponseMessage response)
+    /// <summary>The problem's SDK <c>code</c>, named for its error kind.</summary>
+    private static Task<string?> CodeAsync(HttpResponseMessage response) => ExtensionAsync(response, "code");
+
+    /// <summary>The problem's <c>brandCode</c>, naming which Brand refusal it is.</summary>
+    private static Task<string?> BrandCodeAsync(HttpResponseMessage response) => ExtensionAsync(response, "brandCode");
+
+    private static async Task<string?> ExtensionAsync(HttpResponseMessage response, string name)
     {
         var text = await response.Content.ReadAsStringAsync();
         if (string.IsNullOrWhiteSpace(text)) return null;
         using var document = JsonDocument.Parse(text);
-        return document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty("code", out var code)
-            ? code.GetString() : null;
+        return document.RootElement.ValueKind == JsonValueKind.Object && document.RootElement.TryGetProperty(name, out var value)
+            ? value.GetString() : null;
     }
 }

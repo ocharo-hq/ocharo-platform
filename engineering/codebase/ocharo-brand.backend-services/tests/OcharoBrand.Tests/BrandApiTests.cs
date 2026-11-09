@@ -59,6 +59,9 @@ public sealed class BrandApiTests : IAsyncDisposable
 
     private static string Sha(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
 
+    /// <summary>The private API's payload, under the SDK envelope's <c>data</c>.</summary>
+    private static JsonElement Data(JsonElement envelope) => envelope.GetProperty("data");
+
     [Fact]
     public async Task Seed_publishes_release_one_with_the_approved_logos_and_recorded_identity()
     {
@@ -69,7 +72,7 @@ public sealed class BrandApiTests : IAsyncDisposable
         var kit = await (await client.SendAsync(request)).Content.ReadFromJsonAsync<JsonElement>();
         var favicon = await client.GetAsync("/api/public/brand/logo/favicon");
         var social = await client.GetAsync("/api/public/brand/logo/social");
-        var consumers = await client.GetFromJsonAsync<JsonElement>("/api/brand/consumers");
+        var consumers = Data(await client.GetFromJsonAsync<JsonElement>("/api/brand/consumers"));
 
         Assert.Equal("Ocharo", kit.GetProperty("name").GetString());
         Assert.Equal(1, kit.GetProperty("release").GetInt32());
@@ -88,7 +91,7 @@ public sealed class BrandApiTests : IAsyncDisposable
     public async Task A_new_logo_reaches_the_stable_url_only_after_publishing()
     {
         using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
-        var draft = await client.GetFromJsonAsync<JsonElement>("/api/brand/draft");
+        var draft = Data(await client.GetFromJsonAsync<JsonElement>("/api/brand/draft"));
         var revision = draft.GetProperty("revision").GetInt32();
         var replacement = Png(200);
         using var form = new MultipartFormDataContent();
@@ -96,20 +99,20 @@ public sealed class BrandApiTests : IAsyncDisposable
         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
         form.Add(file, "file", "och-logo-black-v2.png");
         form.Add(new StringContent("Heavier needle for small sizes"), "note");
-        var uploaded = await (await client.PostAsync("/api/brand/logos/on-light", form)).Content.ReadFromJsonAsync<JsonElement>();
+        var uploaded = Data(await (await client.PostAsync("/api/brand/logos/on-light", form)).Content.ReadFromJsonAsync<JsonElement>());
 
         var draftPublic = await client.GetAsync($"/api/public/brand/media/{Sha(replacement)}");
         var draftAdmin = await client.GetAsync($"/api/brand/media/{Sha(replacement)}");
         var set = await client.PostAsJsonAsync("/api/brand/logos/on-light/current", new { expectedRevision = revision, versionId = uploaded.GetProperty("id").GetString() });
         var beforePublish = Sha(await client.GetByteArrayAsync("/api/public/brand/logo/on-light"));
-        var pending = await client.GetFromJsonAsync<JsonElement>("/api/brand/draft");
+        var pending = Data(await client.GetFromJsonAsync<JsonElement>("/api/brand/draft"));
         var stale = await client.PostAsJsonAsync("/api/brand/publish", new { expectedRevision = revision, note = "x" });
         var published = await client.PostAsJsonAsync("/api/brand/publish", new { expectedRevision = revision + 1, note = "New light logo" });
         var afterPublish = Sha(await client.GetByteArrayAsync("/api/public/brand/logo/on-light"));
         var releasedPublic = await client.GetAsync($"/api/public/brand/media/{Sha(replacement)}");
         var pinned = await client.GetFromJsonAsync<JsonElement>("/api/public/brand/releases/1");
         var nothingNew = await client.PostAsJsonAsync("/api/brand/publish", new { expectedRevision = revision + 1, note = "again" });
-        var releases = await client.GetFromJsonAsync<JsonElement>("/api/brand/releases");
+        var releases = Data(await client.GetFromJsonAsync<JsonElement>("/api/brand/releases"));
 
         Assert.Equal(HttpStatusCode.NotFound, draftPublic.StatusCode);
         Assert.Equal(HttpStatusCode.OK, draftAdmin.StatusCode);
@@ -133,7 +136,7 @@ public sealed class BrandApiTests : IAsyncDisposable
         var file = new ByteArrayContent(Png(240));
         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
         form.Add(file, "file", "navruz-on-light.png");
-        var festive = await (await client.PostAsync("/api/brand/logos/on-light", form)).Content.ReadFromJsonAsync<JsonElement>();
+        var festive = Data(await (await client.PostAsync("/api/brand/logos/on-light", form)).Content.ReadFromJsonAsync<JsonElement>());
         var now = time.GetUtcNow();
 
         var saved = await client.PostAsJsonAsync("/api/brand/appearances", new
@@ -141,7 +144,7 @@ public sealed class BrandApiTests : IAsyncDisposable
             name = "Navro‘z", startsAt = now.AddHours(-1), endsAt = now.AddDays(2),
             overrides = new Dictionary<string, string> { ["on-light"] = festive.GetProperty("id").GetString()! }, accentHex = "#1f7a4d",
         });
-        var appearance = await saved.Content.ReadFromJsonAsync<JsonElement>();
+        var appearance = Data(await saved.Content.ReadFromJsonAsync<JsonElement>());
         var overlapping = await client.PostAsJsonAsync("/api/brand/appearances", new
         {
             name = "Other", startsAt = now, endsAt = now.AddDays(1), accentHex = "#000000",
@@ -172,7 +175,7 @@ public sealed class BrandApiTests : IAsyncDisposable
         var file = new ByteArrayContent(artwork);
         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
         form.Add(file, "file", "collection-launch.png");
-        var upload = await (await client.PostAsync("/api/brand/logos/on-light", form)).Content.ReadFromJsonAsync<JsonElement>();
+        var upload = Data(await (await client.PostAsync("/api/brand/logos/on-light", form)).Content.ReadFromJsonAsync<JsonElement>());
         var startsAt = time.GetUtcNow().AddSeconds(40);
 
         var saved = await client.PostAsJsonAsync("/api/brand/appearances", new
@@ -210,7 +213,7 @@ public sealed class BrandApiTests : IAsyncDisposable
     public async Task Identity_edits_are_validated_revision_checked_and_need_the_session_csrf_token()
     {
         using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
-        var draft = await client.GetFromJsonAsync<JsonElement>("/api/brand/draft");
+        var draft = Data(await client.GetFromJsonAsync<JsonElement>("/api/brand/draft"));
         var revision = draft.GetProperty("revision").GetInt32();
         var identity = JsonSerializer.Deserialize<Dictionary<string, object?>>(draft.GetProperty("draft").GetProperty("identity").GetRawText())!;
         identity["palette"] = new[] { new { key = "accent", name = "Accent", hex = "red", role = "accent" } };
@@ -232,6 +235,47 @@ public sealed class BrandApiTests : IAsyncDisposable
         Assert.Equal("AntiforgeryValidationFailed", (await rejected.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         Assert.Equal("*", publicKit.Headers.GetValues("Access-Control-Allow-Origin").Single());
     }
+    [Fact]
+    public async Task Uploads_ShouldAnswer415ForANonImageAnd413ForAnEmptyFile_NamingTheBrandCode()
+    {
+        using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
+
+        using var text = await UploadAsync(client, "not an image"u8.ToArray(), "notes.png");
+        using var empty = await UploadAsync(client, [], "empty.png");
+
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, text.StatusCode);
+        Assert.Equal("image_type_unsupported", (await text.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("brandCode").GetString());
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, empty.StatusCode);
+        Assert.Equal("image_too_large", (await empty.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("brandCode").GetString());
+    }
+
+    [Fact]
+    public async Task PrivateApi_ShouldWrapItsPayloadInData_WhileThePublicKitStaysBare()
+    {
+        using var client = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
+
+        var draft = await client.GetFromJsonAsync<JsonElement>("/api/brand/draft");
+        var kit = await client.GetFromJsonAsync<JsonElement>("/api/public/brand");
+        var pinned = await client.GetFromJsonAsync<JsonElement>("/api/public/brand/releases/1");
+
+        Assert.Equal(1, draft.GetProperty("data").GetProperty("latestRelease").GetInt32());
+        Assert.False(kit.TryGetProperty("data", out _));
+        Assert.Equal("Ocharo", kit.GetProperty("name").GetString());
+        Assert.Equal(1, pinned.GetProperty("release").GetInt32());
+        // Nulls are omitted on the wire: the seed has no tagline and no appearance runs.
+        Assert.False(kit.TryGetProperty("tagline", out _));
+        Assert.False(kit.TryGetProperty("appearance", out _));
+    }
+
+    private static async Task<HttpResponseMessage> UploadAsync(HttpClient client, byte[] bytes, string name)
+    {
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+        form.Add(file, "file", name);
+        return await client.PostAsync("/api/brand/logos/on-light", form);
+    }
+
     [Theory]
     [InlineData("GET", "/api/brand/missing-contract-route", null, null, 404)]
     [InlineData("PATCH", "/api/brand/draft", null, null, 404)]

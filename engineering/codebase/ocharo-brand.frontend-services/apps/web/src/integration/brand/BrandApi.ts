@@ -1,11 +1,5 @@
 import { identitySession } from '../common/IdentitySessionClient';
-import {
-  ApiFailureFactory,
-  createApiClient,
-  rawEnvelope,
-  type ApiFailure,
-  type ResponseEnvelope,
-} from '@wow-two-beta/fe/foundation/http';
+import { ApiFailureFactory, createApiClient, wowTwoEnvelope, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import type {
   BrandAppearance,
@@ -17,17 +11,6 @@ import type {
   ReleaseSummary,
 } from '../../domain/brand/BrandModels';
 
-const envelope: ResponseEnvelope = {
-  unwrap: rawEnvelope.unwrap,
-  toFailure: (parsed, response) =>
-    ApiFailureFactory.create(
-      'http',
-      response,
-      typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
-        ? (parsed as Record<string, unknown>)
-        : null,
-    ),
-};
 function shape<T>(check: (value: unknown) => boolean) {
   return (value: unknown) =>
     check(value) ? ResultExtensions.ok(value as T) : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
@@ -46,9 +29,12 @@ export function describeFailure(failure: ApiFailure): string {
   return 'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi; qayta urinib ko‘ring.';
 }
 
-/** Same-origin brand endpoints; mutations are never retried automatically. */
+/**
+ * Same-origin brand endpoints; mutations are never retried automatically. The private API answers in the SDK envelope
+ * (`{ data }`) and fails with SDK problem details; the public kit is read bare, as every Ocharo app reads it.
+ */
 export function createBrandApi(fetchImplementation: typeof fetch = globalThis.fetch) {
-  const client = createApiClient({ envelope, retry: false, fetch: fetchImplementation });
+  const client = createApiClient({ envelope: wowTwoEnvelope, retry: false, fetch: fetchImplementation });
   const root = '/api/brand';
   return {
     draft: () => client.get<DraftView>(`${root}/draft`, { decode: shape(isObject) }),
@@ -85,28 +71,17 @@ export function createBrandApi(fetchImplementation: typeof fetch = globalThis.fe
         decode: shape(isObject),
       }),
     consumers: () => client.get<ConsumerView[]>(`${root}/consumers`, { decode: shape(isArray) }),
-    publicKit: () => client.get<PublicBrand>('/api/public/brand', { decode: shape(isObject) }),
-    /** Multipart upload stays on fetch: the JSON client serializes bodies. */
-    async upload(slot: string, file: File, note: string | null) {
+    /** The public kit is not enveloped. */
+    publicKit: () => client.get<PublicBrand>('/api/public/brand', { unwrap: false, decode: shape(isObject) }),
+    /** Multipart upload: the client sends `FormData` as it is, with the browser's boundary. */
+    upload(slot: string, file: File, note: string | null) {
       const form = new FormData();
       form.append('file', file);
       if (note) form.append('note', note);
-      try {
-        const response = await fetchImplementation(`${root}/logos/${encodeURIComponent(slot)}`, {
-          method: 'POST',
-          body: form,
-        });
-        const parsed: unknown = await response.json().catch(() => null);
-        if (!response.ok)
-          return ResultExtensions.fail(
-            ApiFailureFactory.create('http', response, isObject(parsed) ? (parsed as Record<string, unknown>) : null),
-          );
-        return isObject(parsed)
-          ? ResultExtensions.ok(parsed as LogoVersion)
-          : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
-      } catch {
-        return ResultExtensions.fail(ApiFailureFactory.create('transport'));
-      }
+      return client.post<LogoVersion>(`${root}/logos/${encodeURIComponent(slot)}`, {
+        body: form,
+        decode: shape(isObject),
+      });
     },
   } as const;
 }

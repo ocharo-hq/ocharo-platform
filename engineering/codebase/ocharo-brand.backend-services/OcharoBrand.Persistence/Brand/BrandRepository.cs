@@ -1,20 +1,23 @@
 using Microsoft.EntityFrameworkCore;
-using OcharoBrand.Application.Brand;
+using OcharoBrand.Application.Brand.Constants;
+using OcharoBrand.Application.Brand.Errors;
+using OcharoBrand.Application.Brand.Repositories;
 using OcharoBrand.Domain.Brand;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace OcharoBrand.Persistence.Brand;
 
 /// <summary>SQLite-backed brand state; draft saves check the revision inside one transaction.</summary>
 public sealed class BrandRepository(OcharoBrandDbContext db) : IBrandRepository
 {
-    public Task<DraftRecord?> FindDraftAsync(CancellationToken ct) => db.Drafts.AsNoTracking().FirstOrDefaultAsync(d => d.Id == BrandService.DraftId, ct);
+    public Task<DraftRecord?> FindDraftAsync(CancellationToken ct) => db.Drafts.AsNoTracking().FirstOrDefaultAsync(d => d.Id == BrandDraftConstants.DraftId, ct);
 
-    public async Task<DraftRecord> SaveDraftAsync(DraftRecord record, int expectedRevision, string summary, CancellationToken ct)
+    public async Task<Result<DraftRecord>> SaveDraftAsync(DraftRecord record, int expectedRevision, string summary, CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var current = await db.Drafts.FirstOrDefaultAsync(d => d.Id == record.Id, ct);
         if ((current?.Revision ?? 0) != expectedRevision)
-            throw BrandException.Conflict($"The brand was saved elsewhere (now revision {current?.Revision ?? 0}). Reload before saving.");
+            return Result<DraftRecord>.Fail(BrandErrors.Conflict($"The brand was saved elsewhere (now revision {current?.Revision ?? 0}). Reload before saving."));
         if (current is null) db.Drafts.Add(record);
         else
         {
@@ -27,7 +30,7 @@ public sealed class BrandRepository(OcharoBrandDbContext db) : IBrandRepository
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
         db.ChangeTracker.Clear();
-        return record;
+        return Result<DraftRecord>.Ok(record);
     }
 
     public async Task<IReadOnlyList<DraftRevisionRecord>> GetDraftRevisionsAsync(CancellationToken ct) => await db.DraftRevisions.AsNoTracking().ToListAsync(ct);
@@ -51,15 +54,16 @@ public sealed class BrandRepository(OcharoBrandDbContext db) : IBrandRepository
 
     public Task<ReleaseRecord?> FindReleaseAsync(int version, CancellationToken ct) => db.Releases.AsNoTracking().FirstOrDefaultAsync(r => r.Version == version, ct);
 
-    public async Task<ReleaseRecord> InsertReleaseAsync(ReleaseRecord record, CancellationToken ct)
+    public async Task<Result<ReleaseRecord>> InsertReleaseAsync(ReleaseRecord record, CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        if (await db.Releases.AnyAsync(r => r.Version == record.Version, ct)) throw BrandException.Conflict("Another release was just published. Reload.");
+        if (await db.Releases.AnyAsync(r => r.Version == record.Version, ct))
+            return Result<ReleaseRecord>.Fail(BrandErrors.Conflict("Another release was just published. Reload."));
         db.Releases.Add(record);
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
         db.ChangeTracker.Clear();
-        return record;
+        return Result<ReleaseRecord>.Ok(record);
     }
 
     public async Task<IReadOnlyList<AppearanceRecord>> GetAppearancesAsync(CancellationToken ct) => await db.Appearances.AsNoTracking().ToListAsync(ct);

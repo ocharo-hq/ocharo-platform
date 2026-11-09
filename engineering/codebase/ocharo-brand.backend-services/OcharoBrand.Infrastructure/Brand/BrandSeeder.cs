@@ -1,16 +1,22 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OcharoBrand.Application.Brand;
+using OcharoBrand.Application.Brand.Commands;
+using OcharoBrand.Application.Brand.Repositories;
 using OcharoBrand.Domain.Brand;
+using OcharoBrand.Infrastructure.Brand.FoundationServices;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
+using WoW.Two.Sdk.Beta.Be.Mediator;
+using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
 namespace OcharoBrand.Infrastructure.Brand;
 
 /// <summary>
 /// Seeds an empty brand from Maftuna's recorded brand decisions (spelling rule, card copy, handles, palette) and the
 /// approved logo files, then publishes release 1 so every app has a kit to read. Unknown facts (phone, taglines)
-/// stay empty rather than invented.
+/// stay empty rather than invented. A refused seed step stops the boot.
 /// </summary>
-public sealed class BrandSeeder(IBrandRepository repository, BrandService brand, IOptions<BrandOptions> options, ILogger<BrandSeeder> logger)
+public sealed class BrandSeeder(IBrandRepository repository, BrandDraftService drafts, ISender sender, IOptions<BrandOptions> options,
+    ILogger<BrandSeeder> logger)
 {
     private static readonly (string Slot, string File, string Status, string Note)[] Logos =
     [
@@ -52,15 +58,27 @@ public sealed class BrandSeeder(IBrandRepository repository, BrandService brand,
             {
                 var path = Path.Combine(root, file);
                 if (!File.Exists(path)) { logger.LogWarning("Seed logo {File} not found", file); continue; }
-                var version = await brand.UploadLogoAsync(slot, await File.ReadAllBytesAsync(path, ct), file, note, ct, path, status);
-                current[slot] = version.Id;
+                var uploaded = await sender.SendAsync(new LogoUploadCommand
+                {
+                    Slot = slot, Bytes = await File.ReadAllBytesAsync(path, ct), FileName = file, Note = note, SourcePath = path, Status = status,
+                }, ct);
+                current[slot] = Required(uploaded).Id;
             }
         }
 
         var draft = new BrandDraft { Identity = DefaultIdentity(), CurrentLogos = current };
-        await repository.SaveDraftAsync(brand.Record(draft, 1), 0, "Seeded from the Ocharo brand guidelines and approved logo files", ct);
+        (await repository.SaveDraftAsync(drafts.Record(draft, 1), 0, "Seeded from the Ocharo brand guidelines and approved logo files", ct)).ValueOrThrow();
         if (current.Count > 0)
-            await brand.PublishAsync(new PublishInput(1, "Imported from Maftuna's brand guidelines and logo files (exports are raster drafts)."), ct);
+            Required(await sender.SendAsync(new ReleasePublishCommand
+            {
+                ExpectedRevision = 1, Note = "Imported from Maftuna's brand guidelines and logo files (exports are raster drafts).",
+            }, ct));
         logger.LogInformation("Seeded brand with {Logos} logo files", current.Count);
+    }
+
+    /// <summary>A seed step's value; its refusal stops the boot.</summary>
+    private static T Required<T>(AppResult<T> result) where T : notnull
+    {
+        return result.Match(success => success.Data, failure => throw failure.Error.ToException());
     }
 }

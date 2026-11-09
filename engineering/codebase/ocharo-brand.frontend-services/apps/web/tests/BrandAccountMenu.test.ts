@@ -119,7 +119,10 @@ describe('Account menu with an Ocharo session', () => {
       Promise.resolve(
         String(input).endsWith('/api/identity/session')
           ? Response.json({ data: { ...OwnerSession, permissions: [] } })
-          : Response.json({ title: 'Forbidden', code: 'organization_access_required' }, { status: 403 }),
+          : Response.json(
+              { title: 'Forbidden', code: 'Forbidden', brandCode: 'organization_access_required' },
+              { status: 403 },
+            ),
       ),
     );
     await identitySession.fetch('/api/brand/draft');

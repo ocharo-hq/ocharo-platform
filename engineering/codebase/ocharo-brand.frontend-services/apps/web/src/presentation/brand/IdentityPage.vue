@@ -171,10 +171,7 @@ const texts = [
       <section class="panel">
         <div class="flex items-center justify-between">
           <h2 class="font-editorial text-2xl">Rasmiy havolalar</h2>
-          <button
-            class="btn-outline"
-            @click="form.links.push({ key: 'link', label: '', handle: null, url: 'https://' })"
-          >
+          <button class="btn-outline" @click="form.links.push({ key: 'link', label: '', url: 'https://' })">
             <Icon :icon="Plus" :size="14" />Havola
           </button>
         </div>

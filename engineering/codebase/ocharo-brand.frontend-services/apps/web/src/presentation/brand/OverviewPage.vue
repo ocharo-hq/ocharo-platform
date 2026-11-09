@@ -50,7 +50,7 @@ async function publish() {
               !canApprove ||
               brand.busy.value ||
               !brand.draft.value ||
-              (brand.draft.value.latestRelease !== null && brand.pending.value.length === 0)
+              (brand.draft.value.latestRelease !== undefined && brand.pending.value.length === 0)
             "
             @click="publish"
           >

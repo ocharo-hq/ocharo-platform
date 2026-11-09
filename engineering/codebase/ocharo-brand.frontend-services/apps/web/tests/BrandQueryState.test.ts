@@ -28,20 +28,17 @@ function draft(name = 'Ocharo', revision = 1): DraftView {
     draft: {
       identity: {
         name,
-        spellingRule: null,
-        descriptor: { uz: 'Tavsif', ru: null, en: null },
-        tagline: { uz: null, ru: null, en: null },
-        location: { uz: null, ru: null, en: null },
+        descriptor: { uz: 'Tavsif' },
+        tagline: {},
+        location: {},
         palette: [],
-        typography: { display: 'Georgia', body: 'Arial', notes: null },
+        typography: { display: 'Georgia', body: 'Arial' },
         links: [],
-        voiceNotes: null,
       },
       currentLogos: {},
     },
     updatedAt: '2026-10-02T00:00:00Z',
     logos: [],
-    latestRelease: null,
     unpublishedChanges: [],
   };
 }
@@ -266,8 +263,6 @@ describe('Brand initial route geometry', () => {
       height: 100,
       hasPreview: true,
       status: 'approved',
-      note: null,
-      sourcePath: null,
       uploadedAt: value.updatedAt,
     }));
     value.draft.currentLogos.master = 'logo-0';
@@ -345,10 +340,6 @@ describe('Brand initial route geometry', () => {
         endsAt: '2027-01-02T00:00:00Z',
         status: 'scheduled',
         overrides: {},
-        accentHex: null,
-        note: null,
-        linkLabel: null,
-        linkUrl: null,
       })),
     });
     await settle(useBrand().refresh());

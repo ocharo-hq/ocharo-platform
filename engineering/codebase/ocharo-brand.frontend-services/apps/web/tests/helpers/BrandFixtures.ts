@@ -6,27 +6,26 @@ import { useBrand } from '../../src/application/brand';
 import type { DraftView } from '../../src/domain/brand/BrandModels';
 import { brandApi } from '../../src/integration/brand';
 
-/** A draft on release `latestRelease`, with `changes` waiting to be published. */
+/** A draft on release `latestRelease` (none before the first), with `changes` waiting to be published; empty members are
+ * absent, as the API omits them. */
 export function draftView(latestRelease: number | null = 3, changes: string[] = ['Ranglar', 'Logotip']): DraftView {
   return {
     revision: 4,
     draft: {
       identity: {
         name: 'Ocharo',
-        spellingRule: null,
-        descriptor: { uz: 'Tavsif', ru: null, en: null },
-        tagline: { uz: null, ru: null, en: null },
-        location: { uz: null, ru: null, en: null },
+        descriptor: { uz: 'Tavsif' },
+        tagline: {},
+        location: {},
         palette: [{ key: 'ink', name: 'Ink', hex: '#272924', role: 'text' }],
-        typography: { display: 'Georgia', body: 'Arial', notes: null },
+        typography: { display: 'Georgia', body: 'Arial' },
         links: [],
-        voiceNotes: null,
       },
       currentLogos: {},
     },
     updatedAt: '2026-10-02T00:00:00Z',
     logos: [],
-    latestRelease,
+    ...(latestRelease === null ? {} : { latestRelease }),
     unpublishedChanges: changes,
   };
 }

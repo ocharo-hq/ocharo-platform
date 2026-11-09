@@ -1,7 +1,11 @@
-using System.Text;
+using OcharoBrand.Application.Brand.Errors;
+using OcharoBrand.Application.Brand.Models;
+using OcharoBrand.Application.Brand.Repositories;
 using OcharoBrand.Domain.Brand;
+using OcharoBrand.Infrastructure.Brand.Serializers;
+using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
-namespace OcharoBrand.Application.Brand;
+namespace OcharoBrand.Infrastructure.Brand.FoundationServices;
 
 /// <summary>
 /// What every Ocharo app reads: the latest release with the active appearance applied. Stable logo URLs resolve
@@ -9,9 +13,13 @@ namespace OcharoBrand.Application.Brand;
 /// </summary>
 public sealed class PublicBrandService(IBrandRepository repository, TimeProvider time)
 {
-    public async Task<BrandRelease?> LatestAsync(CancellationToken ct) =>
-        await repository.FindLatestReleaseAsync(ct) is { } record ? BrandJson.Read<BrandRelease>(record.Json) : null;
+    /// <summary>The latest release; none before the first publish.</summary>
+    public async Task<BrandRelease?> LatestAsync(CancellationToken ct)
+    {
+        return await repository.FindLatestReleaseAsync(ct) is { } record ? BrandJson.Read<BrandRelease>(record.Json) : null;
+    }
 
+    /// <summary>The scheduled appearance whose window holds now; the latest-starting one when several do.</summary>
     public async Task<BrandAppearance?> ActiveAppearanceAsync(CancellationToken ct)
     {
         var now = time.GetUtcNow();
@@ -19,11 +27,23 @@ public sealed class PublicBrandService(IBrandRepository repository, TimeProvider
             .Where(a => a.IsActive(now)).OrderByDescending(a => a.StartsAt).FirstOrDefault();
     }
 
-    public async Task<PublicBrand> BuildAsync(string? locale, CancellationToken ct, int? version = null)
+    /// <summary>The kit of the latest release with today's appearance, or of the pinned <paramref name="version"/>.</summary>
+    public async Task<Result<PublicBrand>> BuildAsync(string? locale, int? version, CancellationToken ct)
     {
-        var release = version is { } v
-            ? await repository.FindReleaseAsync(v, ct) is { } pinned ? BrandJson.Read<BrandRelease>(pinned.Json) : throw BrandException.NotFound("Release")
-            : await LatestAsync(ct) ?? throw BrandException.NotFound("Published brand");
+        BrandRelease release;
+        if (version is { } pinnedVersion)
+        {
+            if (await repository.FindReleaseAsync(pinnedVersion, ct) is not { } pinned)
+                return Result<PublicBrand>.Fail(BrandErrors.NotFound("Release"));
+            release = BrandJson.Read<BrandRelease>(pinned.Json);
+        }
+        else
+        {
+            if (await LatestAsync(ct) is not { } latest)
+                return Result<PublicBrand>.Fail(BrandErrors.NotFound("Published brand"));
+            release = latest;
+        }
+
         // Pinned releases are exact snapshots; only "latest" carries today's appearance.
         var appearance = version is null ? await ActiveAppearanceAsync(ct) : null;
         var logos = new Dictionary<string, PublicLogo>();
@@ -42,12 +62,12 @@ public sealed class PublicBrandService(IBrandRepository repository, TimeProvider
         var palette = appearance?.AccentHex is { } accent
             ? release.Identity.Palette.Select(c => c.Key == "accent" ? c with { Hex = accent } : c).ToList()
             : release.Identity.Palette;
-        return new PublicBrand(release.Identity.Name, release.Identity.SpellingRule, release.Version, release.PublishedAt, code,
+        return Result<PublicBrand>.Ok(new PublicBrand(release.Identity.Name, release.Identity.SpellingRule, release.Version, release.PublishedAt, code,
             release.Identity.Descriptor.For(code), release.Identity.Tagline.For(code), release.Identity.Location.For(code), release.Identity.Descriptor,
             palette, release.Identity.Typography, release.Identity.Links, logos,
             appearance is null ? null : new PublicAppearance(appearance.Id, appearance.Name, appearance.StartsAt, appearance.EndsAt, appearance.AccentHex,
                 appearance.LinkLabel, appearance.LinkUrl),
-            time.GetUtcNow());
+            time.GetUtcNow()));
     }
 
     /// <summary>The logo a stable URL serves right now: an active appearance override, else the released file.</summary>
@@ -83,34 +103,6 @@ public sealed class PublicBrandService(IBrandRepository repository, TimeProvider
             .SelectMany(a => new[] { a.StartsAt, a.EndsAt })
             .Where(t => t > now).Order().Cast<DateTimeOffset?>().FirstOrDefault();
         return next is { } at ? (int)Math.Ceiling((at - now).TotalSeconds) : null;
-    }
-
-    /// <summary>Palette as CSS custom properties (<c>--ocharo-{key}</c>) plus the two type stacks.</summary>
-    public async Task<string> TokensCssAsync(CancellationToken ct)
-    {
-        var brand = await BuildAsync(null, ct);
-        var css = new StringBuilder($"/* {brand.Name} brand tokens · release {brand.Release} */\n:root {{\n");
-        foreach (var color in brand.Palette) css.Append($"  --ocharo-{color.Key}: {color.Hex};\n");
-        css.Append($"  --ocharo-font-display: {Stack(brand.Typography.Display)}, Georgia, serif;\n");
-        css.Append($"  --ocharo-font-body: {Stack(brand.Typography.Body)}, Arial, sans-serif;\n");
-        css.Append("}\n");
-        return css.ToString();
-
-        static string Stack(string font) => font.Contains(' ') ? $"\"{font.Replace("\"", "")}\"" : font;
-    }
-
-    public async Task TouchAsync(string? app, string path, int release, CancellationToken ct)
-    {
-        var name = app?.Trim();
-        if (string.IsNullOrEmpty(name) || name.Length > 40 || !name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_')) return;
-        await repository.TouchConsumerAsync(new ConsumerRecord { App = name.ToLowerInvariant(), LastSeenAt = time.GetUtcNow(), LastRelease = release, LastPath = path }, ct);
-    }
-
-    public async Task<IReadOnlyList<ConsumerView>> ConsumersAsync(CancellationToken ct)
-    {
-        var latest = (await repository.FindLatestReleaseAsync(ct))?.Version ?? 0;
-        return (await repository.GetConsumersAsync(ct)).OrderBy(c => c.App)
-            .Select(c => new ConsumerView(c.App, c.LastSeenAt, c.LastRelease, c.LastRelease == latest, c.LastPath)).ToList();
     }
 
     private async Task<(LogoVersion? Logo, bool FromAppearance)> ResolveAsync(BrandRelease release, BrandAppearance? appearance, string slot, CancellationToken ct)

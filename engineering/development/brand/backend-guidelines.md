@@ -1,8 +1,15 @@
 # ventures.ocharo-brand — Backend Development Guidelines
 
-*Last updated: 2026-10-21*
+*Last updated: 2026-11-09*
 
-Defer to wow-two-ws/conventions/development/backend/. Repo deltas: application services (not mediator verticals), `BrandException` → ProblemDetails, revision-checked draft saves, lazily resolved paths (connection string and blob root) so hosts/tests can override them.
+Defer to wow-two-ws/conventions/development/backend/. Requests run through the be sdk's mediator: commands and queries in
+`OcharoBrand.Application/Brand/{Commands,Queries}`, their handlers in `OcharoBrand.Infrastructure/Brand/{CommandHandlers,QueryHandlers}`
+(shared reads in `FoundationServices/`), and both controllers inject only `ISender`. Handlers return `AppResult`; failures
+come from `BrandErrors` and render as SDK problem details (`code` names the kind, `brandCode` the Brand refusal), with
+`BrandErrorHttpStatusCodeMapper` keeping the 413, 415 and 502 no SDK kind carries and `SqliteBusyExceptionMappingRule`
+the 409 on SQLite's lock. Controllers use `AddControllersWithSdkJson` (nulls omitted): the private API answers in the
+`{ data }` envelope; the public kit and runtime config stay bare, their keys pinned. Repo deltas: revision-checked draft
+saves, lazily resolved paths (connection string and blob root) so hosts/tests can override them.
 
 Local run: the `https` launch profile sets `LOCAL_SETTINGS=true`, so the be sdk reads a gitignored
 `OcharoBrand.Api/appsettings.Local.json` holding this machine's `Brand:SeedLogoRoot`; without it, an empty store seeds

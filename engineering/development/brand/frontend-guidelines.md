@@ -1,6 +1,6 @@
 # ventures.ocharo-brand — Frontend Development Guidelines
 
-*Last updated: 2026-10-21*
+*Last updated: 2026-11-09*
 
 Defer to `wow-two-ws/conventions/development/frontend/`.
 
@@ -11,7 +11,9 @@ Defer to `wow-two-ws/conventions/development/frontend/`.
 - Runtime: Node `24.11.0` from `.nvmrc`; package manager: `pnpm@10.33.2`.
 - Shared packages use `packages/*` only when there is shared code; no runtime federation is configured.
 - App source uses `bootstrap`, `presentation`, `application`, `domain`, and `integration` layers.
-- The greeting endpoint returns plain `{ message }`; the SDK client uses `rawEnvelope` and validates that wire shape.
+- `integration/brand/BrandApi.ts` reads the private API through the SDK envelope (`wowTwoEnvelope`, `{ data }`) and the
+  public kit bare (`unwrap: false`); models type an omitted null as an optional member. A 403 problem's `brandCode`
+  (`organization_access_required`) marks a session of another organization.
 
 ## Frame
 

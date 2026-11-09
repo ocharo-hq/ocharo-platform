@@ -99,23 +99,25 @@ export function createIdentitySessionClient(
     const writing = !['GET', 'HEAD', 'OPTIONS'].includes(method);
     const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
     if (writing) {
-      if (!session.authenticated || !session.csrfToken) return problem(401, 'sign_in_required');
-      if (!hasPermission(session, BrandPermission.Edit)) return problem(403, 'edit_permission_required');
+      if (!session.authenticated || !session.csrfToken) return problem(401, 'Unauthorized', 'sign_in_required');
+      if (!hasPermission(session, BrandPermission.Edit)) return problem(403, 'Forbidden', 'edit_permission_required');
       if (/\/(publish|withdraw)\/*$/i.test(url.pathname) && !hasPermission(session, BrandPermission.Approve))
-        return problem(403, 'approval_permission_required');
+        return problem(403, 'Forbidden', 'approval_permission_required');
       headers.set('X-Csrf-Token', session.csrfToken);
     }
     const response = await fetchImplementation(input, { ...init, headers, credentials: 'same-origin' });
     if (response.status === 401) update(signedOut);
     else if (response.status === 403) {
-      const denied = (await problemCode(response)) === 'organization_access_required';
+      const denied = (await brandCode(response)) === 'organization_access_required';
       const refreshed = await initialize(true);
       if (denied && refreshed.authenticated) update({ ...refreshed, organizationDenied: true });
     }
     return response;
   };
-  function problem(status: number, code: string) {
-    return new Response(JSON.stringify({ type: 'about:blank', title: 'Ocharo access required', status, code }), {
+  /** A local refusal in the API's own problem shape: the SDK `code` names the kind, `brandCode` the Brand refusal. */
+  function problem(status: number, code: string, brandCode: string) {
+    const body = { type: `urn:wow-two:error:${code}`, title: 'Ocharo access required', status, code, brandCode };
+    return new Response(JSON.stringify(body), {
       status,
       headers: { 'content-type': 'application/problem+json' },
     });
@@ -202,10 +204,11 @@ function readSession(value: unknown): IdentitySession {
   };
 }
 
-async function problemCode(response: Response): Promise<string | null> {
+/** The refusal a Brand problem names in `brandCode`, beside the SDK's kind in `code`. */
+async function brandCode(response: Response): Promise<string | null> {
   try {
     const parsed: unknown = await response.clone().json();
-    return isRecord(parsed) && typeof parsed.code === 'string' ? parsed.code : null;
+    return isRecord(parsed) && typeof parsed.brandCode === 'string' ? parsed.brandCode : null;
   } catch {
     return null;
   }

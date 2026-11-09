@@ -2,18 +2,25 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OcharoBrand.Api.Brand;
+using OcharoBrand.Api.Brand.Mappers;
 using OcharoBrand.Api.RuntimeConfig.Settings;
-using OcharoBrand.Application;
-using OcharoBrand.Application.Brand;
+using OcharoBrand.Application.Brand.Repositories;
+using OcharoBrand.Application.Brand.Services;
+using OcharoBrand.Infrastructure;
 using OcharoBrand.Infrastructure.Brand;
+using OcharoBrand.Infrastructure.Brand.FoundationServices;
 using OcharoBrand.Persistence;
 using OcharoBrand.Persistence.Brand;
+using OcharoBrand.Persistence.Brand.Mappers;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Observability.HealthChecks;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
+using WoW.Two.Sdk.Beta.Be.Web.ErrorMapping;
+using WoW.Two.Sdk.Beta.Be.Web.Json;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 using WoW.Two.Sdk.Beta.Be.Files.Client;
@@ -41,10 +48,12 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers brand identity, media, draft/release workflows and their persistence adapters.</summary>
+    /// <summary>Registers brand identity, media, the draft/release handlers behind the mediator and their persistence adapters;
+    /// a save that meets SQLite's lock answers a conflict.</summary>
     private static WebApplicationBuilder AddBrand(this WebApplicationBuilder builder)
     {
         builder.Services.AddScoped<IBrandRepository, BrandRepository>();
+        builder.Services.AddExceptionMappingRule<SqliteBusyExceptionMappingRule>();
         builder.Services.AddOptions<BrandOptions>().Bind(builder.Configuration.GetSection(BrandOptions.Section));
         // Resolve final options after host/test overrides; retain the host content-root anchor.
         var contentRoot = builder.Environment.ContentRootPath;
@@ -55,10 +64,11 @@ public static partial class HostConfiguration
             return new LocalFileBlobRepository(Path.Combine(root, "blobs"));
         });
         builder.AddBrandFiles();
-        builder.Services.AddScoped<BrandSeeder>();
-        builder.Services.AddMediator(typeof(ApplicationAssemblyMarker).Assembly);
-        builder.Services.AddScoped<BrandService>();
+        builder.Services.AddScoped<BrandDraftService>();
         builder.Services.AddScoped<PublicBrandService>();
+        builder.Services.AddScoped<BrandSeeder>();
+        // The SDK registration converts a handler's thrown failure into its AppResult, outermost.
+        builder.Services.AddMediator(typeof(InfrastructureAssembly).Assembly);
         return builder;
     }
 
@@ -115,18 +125,20 @@ public static partial class HostConfiguration
             app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
     }
 
-    /// <summary>Registers controller delivery and JSON errors for the HTTP surface, whatever the client accepts; the boot
-    /// floor holds forwarded headers (loopback and <c>Deployment:TrustedProxies</c>) and OpenAPI.</summary>
+    /// <summary>Registers controller delivery on the SDK wire contract and SDK problem details for the HTTP surface, whatever
+    /// the client accepts, with Brand's statuses for the failures no SDK kind carries; the boot floor holds forwarded headers
+    /// (loopback and <c>Deployment:TrustedProxies</c>) and OpenAPI.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpProblemDetails();
-        builder.Services.AddControllers();
+        builder.Services.AddSingleton<IErrorHttpStatusCodeMapper, BrandErrorHttpStatusCodeMapper>();
+        builder.Services.AddControllersWithSdkJson();
         return builder;
     }
 
     /// <summary>Configures the SDK pipeline — secure headers, compression, the operator SPA, <c>/health</c> and the SPA
-    /// fallback, whose unknown <c>/api</c> routes answer a JSON 404 — with Brand's errors, headers and access between
-    /// routing and the endpoints, then the brand API and the Identity session routes. Static files, the SPA fallback and
+    /// fallback, whose unknown <c>/api</c> routes answer a JSON 404 — with SDK problem details, Brand's headers and access
+    /// between routing and the endpoints, then the brand API and the Identity session routes. Static files, the SPA fallback and
     /// the public routes (<see cref="Access.BrandAccess.IsPublic"/>) answer anonymously; an unknown private route needs a
     /// session too, so it discloses nothing to an anonymous caller.</summary>
     private static WebApplication ConfigureHttpSurface(this WebApplication app)
@@ -134,7 +146,6 @@ public static partial class HostConfiguration
         app.UseApiDefaults(pipeline =>
         {
             pipeline.UseHttpProblemDetails();
-            pipeline.UseMiddleware<BrandExceptionMiddleware>();
             pipeline.UseMiddleware<BrandResponseHeadersMiddleware>();
             pipeline.UseAccess();
         });

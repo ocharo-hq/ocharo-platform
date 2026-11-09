@@ -1,6 +1,6 @@
 # ventures.ocharo-brand — Architecture
 
-*Last updated: 2026-10-24*
+*Last updated: 2026-11-09*
 
 ```mermaid
 flowchart LR
@@ -14,22 +14,25 @@ flowchart LR
 
 | Project | Responsibility |
 |---|---|
-| `OcharoBrand.Api` | Admin + public controllers, runtime config and system status, Identity BFF sign-in and `BrandAccessMiddleware` (bound organization, `brand:edit`, `brand:approve`), response headers (CORS on `/api/public`), ProblemDetails mapping, seed-on-empty |
-| `OcharoBrand.Application` | `BrandService` (identity, logo versions, publish with diff, appearances), `PublicBrandService` (kit build, logo fallbacks, tokens CSS, consumer tracking) |
+| `OcharoBrand.Api` | `BrandsController` and `PublicBrandsController` (dispatch through `ISender`), runtime config and system status, Identity BFF sign-in and `BrandAccessMiddleware` (bound organization, `brand:edit`, `brand:approve`), response headers (CORS on `/api/public`), SDK problem details with Brand's 413/415/502 status mapper, seed-on-empty |
+| `OcharoBrand.Application` | Commands and queries (identity, logo versions, publish, appearances, consumers, public kit, media), their models, the `IBrandRepository`/`IMediaStore` contracts and the `BrandErrors` catalogue |
 | `OcharoBrand.Domain` | `BrandDraft`, `BrandIdentity` (localized text, palette, typography, links), `LogoVersion`, `BrandRelease`, `BrandAppearance`, records |
-| `OcharoBrand.Infrastructure` | `MediaStore` (kit `IBlobRepository`, SkiaSharp WebP previews), `BrandSeeder` |
+| `OcharoBrand.Infrastructure` | Command and query handlers; `BrandDraftService` (draft view, publish diff) and `PublicBrandService` (kit build, logo fallbacks, disclosure, appearance boundaries); `MediaStore` (kit `IBlobRepository`, SkiaSharp WebP previews), `FilesMediaStore`, `BrandSeeder` |
 | `OcharoBrand.Persistence` | EF Core SQLite; draft saves check the expected revision and write a snapshot |
 
 ## Contracts
 
-- `GET /api/public/brand?locale=uz|ru|en&app={name}` — latest release plus any active appearance: `{ name, spellingRule, release, publishedAt, locale, descriptor, tagline, location, descriptors, palette[], typography, links[], logos{slot: {url, fileUrl, previewUrl, contentType, width, height, sha256, fromAppearance}}, appearance }`; cached 60 s.
+- `GET /api/public/brand?locale=uz|ru|en&app={name}` — latest release plus any active appearance: `{ name, spellingRule, release, publishedAt, locale, descriptor, tagline, location, descriptors, palette[], typography, links[], logos{slot: {url, fileUrl, previewUrl, contentType, width, height, sha256, fromAppearance, fileId}}, appearance }`; cached 60 s.
+  Bare (no `{ data }` envelope); a null member is omitted, as in every Brand response (be sdk JSON), so `appearance`, `fileId`
+  and empty texts may be absent.
 - Cache lifetimes of the kit, stable logo URLs and tokens are capped at the next appearance start/end, so no cache outlives a scheduled change.
 - `GET /api/public/brand/releases/{n}` — a pinned release (no appearance applied).
 - `GET /api/public/brand/logo/{slot}[?preview=true]` — stable logo URL that always serves the current file (5-min cache + ETag).
 - `GET /api/public/brand/media/{sha}[/preview]` — immutable, content-addressed files (1-year cache), served only once disclosed: part of a published release or of an appearance that has started. Draft uploads and future appearance artwork return 404 publicly (a hash is not confidentiality); the admin app reads them through `/api/brand/media/{sha}`.
 - `GET /api/public/brand/tokens.css` — `--ocharo-{key}` colour variables plus font stacks.
 - Consumers identify themselves with `X-Ocharo-App` or `?app=`; the overview lists them with the release they last read.
-- Editing API under `/api/brand/*` is revision-checked (`expectedRevision`, 409 on conflict) and needs a signed-in
+- Editing API under `/api/brand/*` answers `{ data }` and fails with SDK problem details (`brandCode` names a Brand
+  refusal). It is revision-checked (`expectedRevision`, 409 on conflict) and needs a signed-in
   member of `Brand:OrganizationId`: writes `brand:edit`, publish and withdraw `brand:approve`, every unsafe request
   `X-Csrf-Token` (Ocharo's Identity, 2026-11-03).
 - `GET /api/runtime-config` — anonymous, `no-store`: the suite's `OCHARO_*_URL` app links from the optional `OcharoApps:*`
@@ -69,5 +72,5 @@ The SPA wears the Ocharo suite frame, as Desk and Catalogue do
 
 ## SDK usage and extraction candidates
 
-- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.71-beta` (blob storage, mediator registration, validated settings) and `@wow-two-beta/fe 0.0.31` (HTTP client, config, router, error boundary, icons, colour mode, Ocharo theme and glass, app shell, app switcher, account menu and link rows, sidebar and bottom nav).
+- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.106-beta` (host and API defaults, mediator with `AppResult`, problem details and error mapping, controller JSON, blob storage, validated settings) and `@wow-two-beta/fe 0.0.32` (HTTP client, config, router, error boundary, icons, colour mode, Ocharo theme and glass, app shell, app switcher, account menu and link rows, sidebar and bottom nav).
 - Candidates for SDK extraction (shared with Catalogue/Blog): revisioned document store, content-addressed media store with previews, local-pilot boundary middleware, a generic "published kit" client with cache + fallback.

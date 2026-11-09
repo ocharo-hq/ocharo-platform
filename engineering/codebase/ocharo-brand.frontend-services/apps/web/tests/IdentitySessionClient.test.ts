@@ -76,7 +76,9 @@ describe('Ocharo Identity sessions', () => {
     const fetcher = vi
       .fn()
       .mockResolvedValueOnce(session())
-      .mockResolvedValueOnce(Response.json({ code: 'organization_access_required' }, { status: 403 }))
+      .mockResolvedValueOnce(
+        Response.json({ code: 'Forbidden', brandCode: 'organization_access_required' }, { status: 403 }),
+      )
       .mockResolvedValueOnce(session());
     const client = createIdentitySessionClient(fetcher);
     await client.fetch('/api/brand/draft');

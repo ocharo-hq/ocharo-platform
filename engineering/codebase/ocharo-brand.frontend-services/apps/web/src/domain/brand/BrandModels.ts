@@ -1,8 +1,11 @@
-/** Brand wire and view models, mirroring the OcharoBrand API documents. */
+/**
+ * Brand wire and view models, mirroring the OcharoBrand API documents. The API omits a null member, so every member that
+ * can be empty is optional; a write may send it back absent.
+ */
 export interface LocalizedText {
-  uz: string | null;
-  ru: string | null;
-  en: string | null;
+  uz?: string;
+  ru?: string;
+  en?: string;
 }
 
 export interface BrandColor {
@@ -15,26 +18,26 @@ export interface BrandColor {
 export interface BrandTypography {
   display: string;
   body: string;
-  notes: string | null;
+  notes?: string;
 }
 
 export interface BrandLink {
   key: string;
   label: string;
-  handle: string | null;
+  handle?: string;
   url: string;
 }
 
 export interface BrandIdentity {
   name: string;
-  spellingRule: string | null;
+  spellingRule?: string;
   descriptor: LocalizedText;
   tagline: LocalizedText;
   location: LocalizedText;
   palette: BrandColor[];
   typography: BrandTypography;
   links: BrandLink[];
-  voiceNotes: string | null;
+  voiceNotes?: string;
 }
 
 export interface LogoVersion {
@@ -44,12 +47,12 @@ export interface LogoVersion {
   fileName: string;
   contentType: string;
   byteLength: number;
-  width: number | null;
-  height: number | null;
+  width?: number;
+  height?: number;
   hasPreview: boolean;
   status: 'draft' | 'approved';
-  note: string | null;
-  sourcePath: string | null;
+  note?: string;
+  sourcePath?: string;
   uploadedAt: string;
 }
 
@@ -58,7 +61,8 @@ export interface DraftView {
   revision: number;
   updatedAt: string;
   logos: LogoVersion[];
-  latestRelease: number | null;
+  /** Absent before the first release. */
+  latestRelease?: number;
   unpublishedChanges: string[];
 }
 
@@ -76,10 +80,10 @@ export interface BrandAppearance {
   endsAt: string;
   status: 'scheduled' | 'cancelled';
   overrides: Record<string, string>;
-  accentHex: string | null;
-  note: string | null;
-  linkLabel: string | null;
-  linkUrl: string | null;
+  accentHex?: string;
+  note?: string;
+  linkLabel?: string;
+  linkUrl?: string;
 }
 
 export interface ConsumerView {
@@ -93,12 +97,14 @@ export interface ConsumerView {
 export interface PublicLogo {
   url: string;
   fileUrl: string;
-  previewUrl: string | null;
+  previewUrl?: string;
   contentType: string;
-  width: number | null;
-  height: number | null;
+  width?: number;
+  height?: number;
   sha256: string;
   fromAppearance: boolean;
+  /** The WoW2 Files file holding the logo; absent while it is only in Brand's local blob folder. */
+  fileId?: string;
 }
 
 export interface PublicBrand {
@@ -108,15 +114,16 @@ export interface PublicBrand {
   logos: Record<string, PublicLogo>;
   palette: BrandColor[];
   links: BrandLink[];
-  appearance: {
+  /** Absent while no appearance runs. */
+  appearance?: {
     id: string;
     name: string;
     startsAt: string;
     endsAt: string;
-    accentHex: string | null;
-    linkLabel: string | null;
-    linkUrl: string | null;
-  } | null;
+    accentHex?: string;
+    linkLabel?: string;
+    linkUrl?: string;
+  };
 }
 
 export const slotLabels: Record<string, { label: string; hint: string }> = {

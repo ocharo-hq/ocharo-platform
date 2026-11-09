@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OcharoBrand.Application.Brand;
+using OcharoBrand.Application.Brand.Services;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using SkiaSharp;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
@@ -57,16 +57,42 @@ public sealed class FilesMediaTests : IAsyncDisposable
         var media = factory.Services.CreateScope().ServiceProvider.GetRequiredService<IMediaStore>();
 
         await files.DeleteAsync(first.Id);
-        var restored = await media.StoreAsync(bytes, default);
+        var restored = (await media.StoreAsync(bytes, default)).ValueOrThrow();
         var live = files.ById(first.Id).DeletedAtUtc;
         await files.DeleteAsync(first.Id);
         files.RestoreFails = true;
-        var replaced = await media.StoreAsync(bytes, default);
+        var replaced = (await media.StoreAsync(bytes, default)).ValueOrThrow();
 
         Assert.Equal(first.Id.ToString(), restored.FileId);
         Assert.Null(live);
         Assert.NotEqual(first.Id.ToString(), replaced.FileId);
         Assert.True(FileId.TryParse(replaced.FileId, out var id) && files.ById(id).DeletedAtUtc is null);
+    }
+
+    [Fact]
+    public async Task An_upload_files_refuses_answers_502_and_one_it_cannot_reach_503()
+    {
+        var files = new TestFiles();
+        var factory = Host(files);
+        using var owner = await BrandTestIdentity.SignedIn(factory, BrandTestIdentity.Owner);
+
+        files.UploadRefusal = AppErrorFactory.Forbidden("Not this app.");
+        using var refused = await UploadAsync(owner, Png(200));
+        files.UploadRefusal = AppErrorFactory.ExternalUnavailable("Down.");
+        using var unreachable = await UploadAsync(owner, Png(201));
+
+        Assert.Equal(HttpStatusCode.BadGateway, refused.StatusCode);
+        Assert.Equal("files_refused", (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("brandCode").GetString());
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, unreachable.StatusCode);
+    }
+
+    private static async Task<HttpResponseMessage> UploadAsync(HttpClient client, byte[] bytes)
+    {
+        using var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes);
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("image/png");
+        form.Add(file, "file", "upload.png");
+        return await client.PostAsync("/api/brand/logos/on-light", form);
     }
 
     [Fact]
@@ -137,7 +163,8 @@ public sealed class FilesMediaTests : IAsyncDisposable
         using (var client = BrandTestIdentity.Anonymous(local))
         {
             var before = await client.GetFromJsonAsync<JsonElement>("/api/public/brand");
-            Assert.All(Logos(before), logo => Assert.Equal(JsonValueKind.Null, logo.GetProperty("fileId").ValueKind));
+            // The wire contract omits a null, so a logo still only in the local blob folder carries no file id.
+            Assert.All(Logos(before), logo => Assert.False(logo.TryGetProperty("fileId", out _)));
         }
         await local.DisposeAsync();
         factories.Remove(local);
@@ -149,8 +176,8 @@ public sealed class FilesMediaTests : IAsyncDisposable
 
         Assert.Equal(moved.Id.ToString(), kit.GetProperty("logos").GetProperty("master").GetProperty("fileId").GetString());
         Assert.Equal(moved.Id.ToString(), kit.GetProperty("logos").GetProperty("social").GetProperty("fileId").GetString());
-        Assert.Null(kit.GetProperty("logos").GetProperty("on-light").GetProperty("fileId").GetString());
-        Assert.All(Logos(kit).Where(logo => logo.GetProperty("fileId").GetString() is not null),
+        Assert.False(kit.GetProperty("logos").GetProperty("on-light").TryGetProperty("fileId", out _));
+        Assert.All(Logos(kit).Where(logo => logo.TryGetProperty("fileId", out _)),
             logo => Assert.Equal(moved.Sha256, logo.GetProperty("sha256").GetString()));
     }
 
@@ -244,8 +271,13 @@ public sealed class FilesMediaTests : IAsyncDisposable
             return file;
         }
 
+        /// <summary>The failure every later upload answers; none uploads.</summary>
+        public AppError? UploadRefusal { get; set; }
+
         public async Task<Result<FileModel>> UploadAsync(Stream content, UploadSpec spec, CancellationToken cancellationToken = default)
         {
+            if (UploadRefusal is { } refusal)
+                return Result<FileModel>.Fail(refusal);
             if (spec.IdempotencyKey is { } key && keys.TryGetValue(key, out var first))
                 return Result<FileModel>.Ok(files[first]);
             using var buffer = new MemoryStream();

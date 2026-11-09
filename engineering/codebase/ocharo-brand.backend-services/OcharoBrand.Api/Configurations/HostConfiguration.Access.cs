@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Options;
 using OcharoBrand.Api.Access;
+using OcharoBrand.Api.Access.Extensions;
+using OcharoBrand.Application.Brand.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Identity.Authorization;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
@@ -46,8 +48,7 @@ public static partial class HostConfiguration
         {
             if (context.Request.Path.StartsWithSegments("/api/identity") && !context.Request.IsHttps)
             {
-                await Results.Problem(statusCode: 400, title: "HTTPS is required",
-                    extensions: new Dictionary<string, object?> { ["code"] = "https_required" }).ExecuteAsync(context);
+                await context.WriteProblemAsync(BrandErrors.HttpsRequired());
                 return;
             }
             await next(context);
