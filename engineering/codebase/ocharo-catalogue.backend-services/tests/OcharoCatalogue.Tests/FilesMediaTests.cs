@@ -165,6 +165,38 @@ public sealed class FilesMediaTests : IAsyncDisposable
         Assert.NotNull(await designs.AssetAsync(sha, default));
     }
 
+    [Fact]
+    public async Task A_file_deleted_in_files_fails_the_release_check_and_a_new_upload_brings_it_back()
+    {
+        var files = new TestFiles();
+        var services = await ServicesAsync(files);
+        var media = Scope(services).GetRequiredService<IMediaStore>();
+        var bytes = CatalogueHarness.Png(71);
+        var sha = Sha(bytes);
+        var stored = await media.StoreAsync(bytes, default);
+        FileId.TryParse(stored.FileId, out var id);
+
+        await files.DeleteAsync(id);
+        var deleted = await media.CheckAsync(sha, default);
+        var restored = await media.StoreAsync(bytes, default);
+        var afterRestore = await media.CheckAsync(sha, default);
+
+        await files.DeleteAsync(id);
+        files.RestoreFails = true;
+        var uploadsBefore = files.Uploads;
+        var replaced = await media.StoreAsync(bytes, default);
+        var afterReplace = await media.CheckAsync(sha, default);
+        var record = await Scope(services).GetRequiredService<ICatalogueRepository>().FindMediaAsync(sha, default);
+
+        Assert.Equal(MediaCheck.Missing, deleted);
+        Assert.Equal(stored.FileId, restored.FileId);
+        Assert.Equal(MediaCheck.Ok, afterRestore);
+        Assert.Equal(uploadsBefore + 1, files.Uploads);
+        Assert.NotEqual(stored.FileId, replaced.FileId);
+        Assert.Equal(replaced.FileId, record?.FileId);
+        Assert.Equal(MediaCheck.Ok, afterReplace);
+    }
+
     private async Task<ServiceProvider> ServicesAsync(TestFiles? files)
     {
         Directory.CreateDirectory(root);

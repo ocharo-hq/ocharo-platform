@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OcharoBrand.Application.Brand;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using SkiaSharp;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Files.References;
@@ -41,6 +43,30 @@ public sealed class FilesMediaTests : IAsyncDisposable
         foreach (var factory in factories)
             await factory.DisposeAsync();
         try { Directory.Delete(root, true); } catch (IOException) { }
+    }
+
+    [Fact]
+    public async Task A_logo_deleted_in_files_is_restored_or_uploaded_again_on_its_next_upload()
+    {
+        var files = new TestFiles();
+        var factory = Host(files);
+        using var anonymous = BrandTestIdentity.Anonymous(factory);
+        await anonymous.GetAsync("/api/public/brand");
+        var bytes = Png(10);
+        var first = files.BySha(Sha(bytes));
+        var media = factory.Services.CreateScope().ServiceProvider.GetRequiredService<IMediaStore>();
+
+        await files.DeleteAsync(first.Id);
+        var restored = await media.StoreAsync(bytes, default);
+        var live = files.ById(first.Id).DeletedAtUtc;
+        await files.DeleteAsync(first.Id);
+        files.RestoreFails = true;
+        var replaced = await media.StoreAsync(bytes, default);
+
+        Assert.Equal(first.Id.ToString(), restored.FileId);
+        Assert.Null(live);
+        Assert.NotEqual(first.Id.ToString(), replaced.FileId);
+        Assert.True(FileId.TryParse(replaced.FileId, out var id) && files.ById(id).DeletedAtUtc is null);
     }
 
     [Fact]
@@ -245,15 +271,31 @@ public sealed class FilesMediaTests : IAsyncDisposable
         public Task<Result<FilePage>> ListAsync(FileQuery query, CancellationToken cancellationToken = default) =>
             Task.FromResult(Result<FilePage>.Ok(new FilePage(files.Values.Where(file => query.AppId is null || file.AppId == query.AppId).ToList(), null)));
 
-        public Task<Result<FileModel>> GetAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<Result<FileModel>> GetAsync(FileId id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(files.TryGetValue(id, out var file)
+                ? Result<FileModel>.Ok(file)
+                : Result<FileModel>.Fail(AppErrorFactory.NotFound("No such file.")));
 
         public Task<Result<FileContent>> OpenReadAsync(FileId id, ByteRange? range = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<Result<FileModel>> UpdateAsync(FileId id, FilePatch patch, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
-        public Task<Result<FileModel>> DeleteAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public bool RestoreFails { get; set; }
 
-        public Task<Result<FileModel>> RestoreAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public FileModel ById(FileId id) => files[id];
+
+        public Task<Result<FileModel>> DeleteAsync(FileId id, CancellationToken cancellationToken = default)
+        {
+            files[id] = files[id] with { DeletedAtUtc = DateTimeOffset.UtcNow };
+            return Task.FromResult(Result<FileModel>.Ok(files[id]));
+        }
+
+        public Task<Result<FileModel>> RestoreAsync(FileId id, CancellationToken cancellationToken = default)
+        {
+            if (RestoreFails) return Task.FromResult(Result<FileModel>.Fail(AppErrorFactory.NotFound("Past restoring.")));
+            files[id] = files[id] with { DeletedAtUtc = null };
+            return Task.FromResult(Result<FileModel>.Ok(files[id]));
+        }
 
         public Task<Result> DetachAsync(FileId id, FileReference reference, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 

@@ -98,9 +98,22 @@ public sealed class TestFiles : IFileUploadsBroker, IFileStoreBroker, IFileRefer
 
     public Task<Result<FileModel>> UpdateAsync(FileId id, FilePatch patch, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
-    public Task<Result<FileModel>> DeleteAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    /// <summary>Gets or sets whether a restore fails, as it does past a deleted file's retention.</summary>
+    public bool RestoreFails { get; set; }
 
-    public Task<Result<FileModel>> RestoreAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<Result<FileModel>> DeleteAsync(FileId id, CancellationToken cancellationToken = default)
+    {
+        if (!files.TryGetValue(id, out var file)) return Task.FromResult(Result<FileModel>.Fail(AppErrorFactory.NotFound("No such file.")));
+        files[id] = file with { DeletedAtUtc = DateTimeOffset.UtcNow };
+        return Task.FromResult(Result<FileModel>.Ok(files[id]));
+    }
+
+    public Task<Result<FileModel>> RestoreAsync(FileId id, CancellationToken cancellationToken = default)
+    {
+        if (RestoreFails || !files.TryGetValue(id, out var file)) return Task.FromResult(Result<FileModel>.Fail(AppErrorFactory.NotFound("Past restoring.")));
+        files[id] = file with { DeletedAtUtc = null };
+        return Task.FromResult(Result<FileModel>.Ok(files[id]));
+    }
 
     public Task<Result> DetachAsync(FileId id, FileReference reference, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 

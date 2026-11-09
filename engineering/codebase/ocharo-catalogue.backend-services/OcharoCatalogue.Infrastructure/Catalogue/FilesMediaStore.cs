@@ -50,7 +50,17 @@ public sealed class FilesMediaStore(
         var contentType = MediaBytes.Check(bytes, options.Value.MaximumImageBytes);
         var sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
         var existing = await repository.FindMediaAsync(sha, ct);
-        if (existing is { FileId: not null }) return existing;
+        string? lost = null;
+        if (existing is { FileId: not null } && FileId.TryParse(existing.FileId, out var known))
+        {
+            // A file deleted in Files (its API or console) is restored while its retention lasts; one already purged, or
+            // past restoring, is uploaded anew under a key of its own, since the first key still names the lost file.
+            var current = await store.GetAsync(known, ct);
+            if (current is Result<FileModel>.Success { Value.DeletedAtUtc: null }) return existing;
+            if (current is Result<FileModel>.Failure { Error.Type: not AppErrorType.NotFound } failure) throw Refusal(failure.Error);
+            if (current is Result<FileModel>.Success && await store.RestoreAsync(known, ct) is Result<FileModel>.Success) return existing;
+            lost = existing.FileId;
+        }
 
         FileModel file;
         await using (var content = new MemoryStream(bytes, false))
@@ -60,7 +70,7 @@ public sealed class FilesMediaStore(
                 Name = $"{sha[..16]}.{MediaBytes.Extension(contentType)}",
                 ContentType = contentType,
                 AppId = CatalogueFiles.AppId,
-                IdempotencyKey = $"{CatalogueFiles.MediaReference}:{sha}",
+                IdempotencyKey = lost is null ? $"{CatalogueFiles.MediaReference}:{sha}" : $"{CatalogueFiles.MediaReference}:{sha}:{lost}",
             };
             file = Unwrap(await uploads.UploadAsync(content, spec, ct));
         }
@@ -112,6 +122,8 @@ public sealed class FilesMediaStore(
         // Files hashed the bytes on upload; the check confirms the file is still there, ready and the same.
         return await store.GetAsync(id, ct) switch
         {
+            // Files answers a deleted file too, so a release never publishes an image its link would not serve.
+            Result<FileModel>.Success { Value.DeletedAtUtc: not null } => MediaCheck.Missing,
             Result<FileModel>.Success { Value: { State: FileState.Ready } file } => file.Sha256 == sha256 ? MediaCheck.Ok : MediaCheck.Corrupt,
             Result<FileModel>.Success => MediaCheck.Corrupt,
             Result<FileModel>.Failure { Error.Type: AppErrorType.NotFound } => MediaCheck.Missing,
@@ -124,7 +136,7 @@ public sealed class FilesMediaStore(
 
     internal static void Unwrap(Result result) => result.Match(() => true, error => throw Refusal(error));
 
-    private static CatalogueException Refusal(AppError error) => error.Type switch
+    internal static CatalogueException Refusal(AppError error) => error.Type switch
     {
         AppErrorType.Validation => new CatalogueException(error.Message, 400),
         AppErrorType.NotFound => new CatalogueException("The file is gone from WoW2 Files.", 404),

@@ -324,3 +324,10 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
   - B serves plain `/m/{sha}` for its default tenant only, so Studio is given `{Files root}t/ocharo/`.
   - the first run failed before signing in: with `persist-credentials: false`, `git lfs pull` had no token; checkout
     now fetches the LFS objects itself (`ocharo-assets` `31b9786`).
+- #34 review fixes (2026-11-09, from the independent review of every commit since 2026-11-08: 0 high, 0 medium):
+  - Files answers a deleted file to `GetAsync` too, so Catalogue's release check now treats one as missing; Brand's
+    and Catalogue's next upload of the same bytes restores it within its retention, or uploads it anew under
+    `{reference}:{sha}:{lost file id}`, since the first idempotency key still names the lost file.
+  - public links name the tenant: `release.mjs` prints `{root}t/{tenant}/m/{sha}` (`OCHARO_FILES_TENANT`, `ocharo` in
+    the workflow), and Studio's sync takes the bare Files root, reading the tenant from its lock file (or `--tenant`);
+    the bare root stays the token's `resource`.

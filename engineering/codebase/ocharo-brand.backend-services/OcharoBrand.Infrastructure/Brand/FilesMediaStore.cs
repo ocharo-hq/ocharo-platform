@@ -34,6 +34,7 @@ public sealed class FilesMediaStore(
     IFileUploadsBroker uploads,
     IFileReferencesBroker references,
     IFileUrlsBroker urls,
+    IFileStoreBroker store,
     MediaStore local,
     IOptions<BrandOptions> options,
     IClock clock) : IMediaStore
@@ -43,7 +44,17 @@ public sealed class FilesMediaStore(
         var contentType = MediaBytes.Check(bytes, options.Value.MaximumImageBytes);
         var sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
         var existing = await repository.FindMediaAsync(sha, ct);
-        if (existing is { FileId: not null }) return existing;
+        string? lost = null;
+        if (existing is { FileId: not null } && FileId.TryParse(existing.FileId, out var known))
+        {
+            // A file deleted in Files (its API or console) is restored while its retention lasts; one already purged, or
+            // past restoring, is uploaded anew under a key of its own, since the first key still names the lost file.
+            var current = await store.GetAsync(known, ct);
+            if (current is Result<FileModel>.Success { Value.DeletedAtUtc: null }) return existing;
+            if (current is Result<FileModel>.Failure { Error.Type: not AppErrorType.NotFound } failure) throw Refusal(failure.Error);
+            if (current is Result<FileModel>.Success && await store.RestoreAsync(known, ct) is Result<FileModel>.Success) return existing;
+            lost = existing.FileId;
+        }
 
         FileModel file;
         await using (var content = new MemoryStream(bytes, false))
@@ -53,7 +64,7 @@ public sealed class FilesMediaStore(
                 Name = $"{sha[..16]}.{MediaBytes.Extension(contentType)}",
                 ContentType = contentType,
                 AppId = BrandFiles.AppId,
-                IdempotencyKey = $"{BrandFiles.MediaReference}:{sha}",
+                IdempotencyKey = lost is null ? $"{BrandFiles.MediaReference}:{sha}" : $"{BrandFiles.MediaReference}:{sha}:{lost}",
             };
             file = Unwrap(await uploads.UploadAsync(content, spec, ct));
         }
