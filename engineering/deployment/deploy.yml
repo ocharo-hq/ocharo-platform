@@ -10,11 +10,12 @@
 # Brand and Catalogue store in schemas `brand` and `catalogue` of the product database; each volume keeps blobs stored
 # before WoW2 Files and the retired SQLite store until `import-sqlite` (deployment.md § Brand and Catalogue pilots).
 # Desk and jobs compile only the pilots' Domain projects.
-# Both environments run as .NET Production (no dotnetEnvironment). Desk's `migrate` item applies its schema before any
+# dev runs as .NET Development and prod as Production (dotnetEnvironment). Desk's `migrate` item applies its schema before any
 # service restarts; Desk still applies it as it starts and reports ready only afterwards, and jobs refuses to start on a
 # missing schema, so it waits for Desk to be healthy.
 descriptor: 2
 product: ocharo
+dotnetEnvironment: true               # dev runs as .NET Development, prod as Production
 name: Ocharo Platform
 description: Ocharo Desk, the operator workspace for Ocharo's brand identity, product authority, commerce and business management.
 sites:
@@ -162,6 +163,8 @@ services:
         DatabaseSettings:ConnectionString: { required: true }
         Identity:Server:Issuer: { from: Sites:identity:Url }
         Identity:Server:Keys:IsEphemeral: { type: boolean, default: false }
+        # Identity's own Development file turns on ephemeral token keys; deployed dev keeps the configured one.
+        Identity:Tokens:IsKeyEphemeral: { type: boolean, default: false }
         Identity:Server:Keys:Signing:0:
           { secret: true, required: true, generate: { command: [dotnet, Identity.Api.dll, keys, generate, --role, signing] } }
         Identity:Server:Keys:Encryption:0:

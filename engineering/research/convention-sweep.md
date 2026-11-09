@@ -191,7 +191,6 @@ Rows kept in part while fixing them in v0.2, each with what lifts it.
 |---|---|---|---|
 | C-3 | Catalogue's `/api/public/catalogue` feed keeps the old web defaults (`PublicFeedJson`): nulls written, no envelope | Marketing's `CatalogueSyncService` reads `pricing` and `retail` without checking they exist | Marketing tolerates omitted nulls |
 | D-40 | Desk's Vite dev server stays HTTPS-only through mkcert, with no `VITE_HTTPS=false` mode or `*-http` launch entry | Ocharo's local transport override (`ocharo-ws/docs/local-development.md`) removes plaintext Vite modes for every Ocharo app | Ocharo drops its HTTPS-only override |
-| D-13 | Both environments run as .NET `Production` (no `dotnetEnvironment`); Desk's loopback defaults stay in `appsettings.json` | the flag also switches the descriptor's `identity` service, whose WoW2 image turns on ephemeral signing keys in its Development file | the identity lane confirms Ocharo's dev Identity overrides both key flags |
 | D-14 | `jobs` and `image-worker` have no `configCheck:` item | neither answers `config check`: the be sdk `ServiceHost` covers web hosts only, and the image worker is Python | the be sdk offers a worker host with `config check` |
 | D-32 | Desk stamps migration history with the version minus its `+commit` build metadata | the be sdk history `version` column is `varchar(20)` | the be sdk widens the column |
 | CI | `publish-docker-image.yml` pins pipelines at commit `e134a47`, not a tag | cross-repository `from` links (pipelines `e0d2bf3`) are in no tag yet; Studio and Marketing (M-6) pin the same commit | the developer tags pipelines `v0.16.0` and every Ocharo repo re-pins to it |
@@ -200,3 +199,6 @@ Fixed in the be sdk (`10.0.108-beta`, 2026-11-09): the wire preset keeps diction
 maps OpenAPI anonymously. Brand and Catalogue re-pinned and dropped their own OpenAPI mapping (B-2, C-2) and
 Catalogue's dictionary-key override (C-3); Desk re-pinned and its commerce and public brand routes left
 `CommerceJson`, which stays for stored snapshots only (D-21).
+
+D-13 fixed: dev runs as .NET Development (`dotnetEnvironment: true`); Identity's own Development file turns on
+ephemeral keys, which the descriptor pins off (`Identity:Server:Keys:IsEphemeral`, `Identity:Tokens:IsKeyEphemeral`).
