@@ -28,12 +28,15 @@ public sealed class PublicBrandService(IBrandRepository repository, IClock clock
         // Pinned releases are exact snapshots; only "latest" carries today's appearance.
         var appearance = version is null ? await ActiveAppearanceAsync(ct) : null;
         var logos = new Dictionary<string, PublicLogo>();
+        var fileIds = new Dictionary<string, string?>(StringComparer.Ordinal);
         foreach (var slot in LogoSlots.All)
         {
             var (logo, fromAppearance) = await ResolveAsync(release, appearance, slot, ct);
             if (logo is null) continue;
+            if (!fileIds.TryGetValue(logo.Sha256, out var fileId))
+                fileIds[logo.Sha256] = fileId = (await repository.FindMediaAsync(logo.Sha256, ct))?.FileId;
             logos[slot] = new PublicLogo(BrandUrls.Logo(slot), BrandUrls.Media(logo.Sha256), logo.HasPreview ? BrandUrls.Media(logo.Sha256) + "/preview" : null,
-                logo.ContentType, logo.Width, logo.Height, logo.Sha256, fromAppearance);
+                logo.ContentType, logo.Width, logo.Height, logo.Sha256, fromAppearance, fileId);
         }
 
         var code = locale is "ru" or "en" ? locale : "uz";

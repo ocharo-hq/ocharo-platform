@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http.Json;
 using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -54,9 +56,11 @@ public sealed class FilesMediaTests : IAsyncDisposable
         var media = await anonymous.GetAsync($"/api/public/brand/media/{sha}");
         var preview = await anonymous.GetAsync($"/api/public/brand/media/{sha}/preview");
         var admin = await owner.GetAsync($"/api/brand/media/{sha}");
+        var kit = await anonymous.GetFromJsonAsync<JsonElement>("/api/public/brand");
 
         Assert.Equal(3, files.Count);
         var stored = files.BySha(sha);
+        Assert.Equal(stored.Id.ToString(), kit.GetProperty("logos").GetProperty("social").GetProperty("fileId").GetString());
         Assert.Equal("brand", stored.AppId);
         Assert.Contains(new FileReference("brand.media", sha), files.ReferencesOf(stored.Id));
         Assert.Equal(HttpStatusCode.Redirect, logo.StatusCode);
@@ -98,6 +102,30 @@ public sealed class FilesMediaTests : IAsyncDisposable
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
         Assert.Equal(TestFiles.Link(moved.Id, null), response.Headers.Location);
+    }
+
+    [Fact]
+    public async Task The_public_feed_names_each_logos_files_id_and_none_for_one_still_local()
+    {
+        var local = LocalHost();
+        using (var client = BrandTestIdentity.Anonymous(local))
+        {
+            var before = await client.GetFromJsonAsync<JsonElement>("/api/public/brand");
+            Assert.All(Logos(before), logo => Assert.Equal(JsonValueKind.Null, logo.GetProperty("fileId").ValueKind));
+        }
+        await local.DisposeAsync();
+        factories.Remove(local);
+
+        var migrated = new TestFiles();
+        var moved = migrated.Add(Png(10), "brand", new FileReference("brand.media", Sha(Png(10))));
+        using var anonymous = BrandTestIdentity.Anonymous(Host(migrated));
+        var kit = await anonymous.GetFromJsonAsync<JsonElement>("/api/public/brand");
+
+        Assert.Equal(moved.Id.ToString(), kit.GetProperty("logos").GetProperty("master").GetProperty("fileId").GetString());
+        Assert.Equal(moved.Id.ToString(), kit.GetProperty("logos").GetProperty("social").GetProperty("fileId").GetString());
+        Assert.Null(kit.GetProperty("logos").GetProperty("on-light").GetProperty("fileId").GetString());
+        Assert.All(Logos(kit).Where(logo => logo.GetProperty("fileId").GetString() is not null),
+            logo => Assert.Equal(moved.Sha256, logo.GetProperty("sha256").GetString()));
     }
 
     [Fact]
@@ -162,6 +190,8 @@ public sealed class FilesMediaTests : IAsyncDisposable
     }
 
     private static string Sha(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
+
+    private static IEnumerable<JsonElement> Logos(JsonElement kit) => kit.GetProperty("logos").EnumerateObject().Select(slot => slot.Value);
 
     /// <summary>An in-memory Files tenant: uploads keep their bytes, idempotency key and app; references attach; links
     /// name the file and the asked width.</summary>

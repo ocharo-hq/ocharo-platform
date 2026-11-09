@@ -22,7 +22,10 @@ code limits and local dev data; nothing read prod.
   its read-back is a live upload (#25).
 - Wave 1, Catalogue's product images built 2026-11-09 (#24), the same way, 91 tests passing.
 - Wave 1 read back on dev 2026-11-09 by live uploads, since dev held no media to move (#25).
-- Wave 1, Catalogue's released PDFs and page PNGs built 2026-11-09 (#26), 93 tests passing; it closes wave 1's code.
+- Wave 1, Catalogue's released PDFs and page PNGs built 2026-11-09 (#26), 93 tests passing; it read back on dev the same
+  day (release `wave1-check`), which closed wave 1.
+- Wave 2 built and pushed 2026-11-09 (#27–#30): Blog and Editorial (329 tests), Marketing (368) and Studio (88); all
+  three link `Files:BaseUrl` to this repo's `Identity:Server:Resources:2:Uri`, so nobody types it.
 
 ## Instance
 
@@ -81,7 +84,7 @@ code limits and local dev data; nothing read prod.
   2026-11-08):
   - Blog references Brand's published logo file instead of copying it on a public page render
     ([`SiteService.BrandedAsync`](https://github.com/ocharo-hq/ocharo-marketing/blob/15377b74efbc2ad4ec12d6bec78a745731746ad2/engineering/codebase/ocharo-blog.backend-services/OcharoBlog.Application/Blog/Site/SiteService.cs#L53-L63)),
-    which ends an anonymous GET writing a file.
+    which ends an anonymous GET writing a file (built, #31).
   - Desk's commerce attach references the preparation file instead of copying its bytes into `commerce.media`.
 - #12 Studio thumbnails: a new save uploads the thumbnail to Files and keeps its file id; an existing data URL stays
   valid until that look is saved again. Reason: a thumbnail is a regenerable 240 px snapshot, so no migration source
@@ -248,3 +251,32 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
   - not run: a release prepared on dev. Read-back: a member prepares and publishes a PDF catalogue, then an anonymous
     `GET {catalogue}/api/public/catalogue/editions/{slug}/assets/catalogue.pdf?locale=en&release={id}` answers `302` to
     Files, and the link serves the uploaded SHA-256.
+- #27 Blog and Editorial, wave 2 (2026-11-09, `ocharo-marketing` `4518bad`):
+  - every image through Blog's media port lands in Files once per SHA-256 as app `editorial` (Blog's Identity client),
+    reference `editorial.media:{sha}`; previews are 1400 px variants; edits and static exports read originals from Files.
+  - `/media/{sha}` and its preview redirect with `no-store`, since `EditorialHttpBoundaryMiddleware` forces it on
+    `/media/*` and `EditorialAccessMiddleware` decides public or private each time.
+  - manifest source `editorial-media` (`blog-data`, `blobs/media`), wave 2.
+- #28 Marketing, wave 2 (2026-11-09, `ocharo-marketing` `bcdc6cd`):
+  - assets in all 6 roles, card PNGs, AI images, Studio imports and the seed land in Files as app `marketing`,
+    reference `marketing.asset:{sha}`, through a new `Assets.FileId`; export ZIPs are private files
+    `marketing.export:{sha}`, and `ExportFiles` keeps each revision's first export.
+  - the asset route redirects with `no-store`; the export route still answers bytes, since the desk `fetch()`es it into
+    a blob and Files' `/f` sends no `Access-Control-Allow-Origin`.
+  - the worker, seed and backfill call Files as Marketing; renders, ZIPs and delivery read through Files.
+  - `/m` would plug into `PublicationService.ProcessNextAsync`, which leaves `SocialMediaAsset.PublicUrl` unset; it
+    waits for social delivery, which is not built.
+  - manifest sources `marketing-assets` (`blobs/originals`) and `marketing-exports` (`blobs/exports`), wave 2.
+- #29 Studio, wave 2 (2026-11-09, `ocharo-studio` `97a2572`): a save uploads each new 240 px WebP once as app `studio`,
+  reference `studio.thumbnail:{sha}`, and the state keeps `/api/studio/thumbnails/{sha}/{fileId}`, which redirects a
+  member whose workspace holds it (`private, max-age=300`); data URLs saved before stay until that look is saved again.
+- #30 Blog's dev site answered 500 from 07:59Z, once Brand's first release gave it a logo to decode: the x64
+  `libSkiaSharp.so` links `libfontconfig.so.1`, which Blog's and Marketing's images lacked (`ocharo-marketing`
+  `f6ee95e`). Both images now install `libfontconfig1`, and a build step fails when `ldd` finds a missing library.
+- #31 Blog references Brand's logo file, wave 2 (2026-11-09, #11):
+  - Brand's `/api/public/brand` gives each logo's `fileId` (null while it reads locally), its releases too.
+  - Blog checks Brand's file is there, `Ready` and of the same SHA-256, attaches `editorial.media:{sha}` to it and keeps
+    Brand's file id: no download, no upload. It copies as before when the feed has no id, Files is off, or the file
+    differs.
+  - anonymous visitors now get the published brand logo from Blog's media routes, which answered `401` before: the
+    access check treats its SHA-256 as public, asking Brand once a minute.
