@@ -1,7 +1,7 @@
 # scripts/
 
 `build_shawl_import_bundle.py` maps the private shawl-sourcing ledger and supplier response folders to an
-`ocharo.sourcing-import.v1` bundle for `--import-sourcing` ([contract](../../architecture/sourcing-contract.md#import-bundle)).
+`ocharo.sourcing-import.v1` bundle for the `import sourcing` verb ([contract](../../architecture/sourcing-contract.md#import-bundle)).
 Python 3 standard library only.
 
 ```bash

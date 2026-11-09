@@ -33,9 +33,9 @@ RUN apt-get update \
 COPY --from=build /app/publish/ ./
 ENV ASPNETCORE_URLS=http://+:8080
 USER app
-RUN dotnet BrandWorkspace.Api.dll --verify-media-runtime
+RUN dotnet BrandWorkspace.Api.dll media verify
 EXPOSE 8080
 # A deployed target's AllowedHosts must include localhost (its probe host); 127.0.0.1 may be absent.
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl --fail --silent --show-error http://localhost:8080/health/ready || exit 1
+    CMD curl --fail --silent --show-error http://localhost:8080/health || exit 1
 ENTRYPOINT ["dotnet", "BrandWorkspace.Api.dll"]

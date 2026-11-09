@@ -11,6 +11,7 @@ using BrandWorkspace.Infrastructure.Commerce;
 using BrandWorkspace.Persistence.Commerce;
 using OcharoBrand.Domain.Brand;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
+using WoW.Two.Sdk.Beta.Be.Web.SecureHeaders;
 
 namespace BrandWorkspace.Api.Commerce;
 
@@ -99,7 +100,9 @@ public static class CommerceEndpoints
             if(request.ProductId is not null){var draft=await repository.GetAsync(organizationId,request.BrandId,token);CommerceRules.Require(draft?.Snapshot.Products.Any(p=>p.Document.Id==request.ProductId)==true,"Select a product in this brand.");}
             return CommerceOk(new {data=await repository.ImportCreativeAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,request,token)});
         });
-        var publicApi=app.MapGroup("/api/public/v1/brands/{slug}").AllowAnonymous().AddEndpointFilter<PreparationErrorFilter>();
+        // Other origins embed these: Blog's catalogue pages show edition page images and link the PDFs, and published product
+        // media load in Marketing and Blog, so the routes and their Files redirects answer Cross-Origin-Resource-Policy: cross-origin.
+        var publicApi=app.MapGroup("/api/public/v1/brands/{slug}").AllowAnonymous().AllowCrossOriginEmbedding().AddEndpointFilter<PreparationErrorFilter>();
         publicApi.MapGet("",async(string slug,Guid? release,ICommerceRepository repository,CancellationToken token)=>{
             var value=await repository.PublicAsync(slug,release,token);return value is null?Results.NotFound():CommerceOk(PublicProjection.Brand(value));
         });

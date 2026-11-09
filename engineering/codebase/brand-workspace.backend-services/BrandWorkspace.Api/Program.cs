@@ -1,19 +1,12 @@
 using BrandWorkspace.Api.Configurations;
+using WoW.Two.Sdk.Beta.Be.Meta;
 
-// Build and configure the host.
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
-{
-    Args = args.Contains("--migrate") || args.Contains("--import-sourcing") || args.Contains("--import-events") || args.Contains("--verify-media-runtime") ? [] : args,
-    ContentRootPath = AppContext.BaseDirectory
-});
-// Serving and --migrate apply the schema; the other commands run against an existing one.
-builder.Configure(migrate: !args.Any(argument => argument is "--import-sourcing" or "--import-events" or "--verify-media-runtime"));
-
-// Build and configure the app.
-var app = builder.Build();
-app.Configure(serveHttp: !args.Any(argument => argument is "--migrate" or "--import-sourcing" or "--import-events" or "--verify-media-runtime"));
-
-// Run.
-await app.RunCommandOrHostAsync(args);
+// Answer a verb, or build, configure and serve the host. `import sourcing|events` and `media verify` run on the built host
+// without serving; `migrate` and `config check` are the be sdk's own.
+return await ServiceHost.RunAsync(
+    args,
+    builder => builder.Configure(),
+    app => app.ConfigureAsync(),
+    verbs => verbs.AddDeskVerbs());
 
 public partial class Program;

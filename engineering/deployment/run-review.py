@@ -71,8 +71,9 @@ def healthy() -> bool:
             status = json.loads(response.read(8192))
             if not isinstance(status, dict) or status.get("service") != "brand-workspace" or status.get("persistence") != "PostgreSQL":
                 return False
-        with opener.open(ORIGIN + "/health/ready", timeout=2) as response:
-            return json.loads(response.read(8192)) == {"status": "ready"}
+        # The SDK boot bundle's /health answers 200 `Healthy` once PostgreSQL and Desk's schema are ready, else 503.
+        with opener.open(ORIGIN + "/health", timeout=2) as response:
+            return response.read(64).strip() == b"Healthy"
     except urllib.error.URLError as error:
         if isinstance(error.reason, ssl.SSLCertVerificationError):
             raise ReviewError("Local HTTPS certificate verification failed; no certificate trust was changed.") from None
@@ -276,7 +277,7 @@ def run_review(children: Children) -> int:
         "LOCAL_SETTINGS": "true",
     })
     command = ["dotnet", "run", "--project", str(PROJECT), "--no-build", "--no-launch-profile"]
-    children.run(command + ["--", "--migrate"], env=runtime_env, cwd=BACKEND, label="Explicit migrations", timeout=120)
+    children.run(command + ["--", "migrate"], env=runtime_env, cwd=BACKEND, label="Explicit migrations", timeout=120)
     api = children.start(command, env=runtime_env, cwd=BACKEND, label="Review API")
     deadline = time.monotonic() + 60
     while not healthy():

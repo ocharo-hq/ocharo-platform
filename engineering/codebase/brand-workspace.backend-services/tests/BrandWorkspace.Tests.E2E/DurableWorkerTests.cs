@@ -29,7 +29,7 @@ public sealed class DurableWorkerTests
         await database.StartAsync();
         var connection = database.ConnectionString;
 
-        // The worker never changes the schema: on an empty database it refuses to start.
+        // The worker never applies Desk's schema: on an empty database it refuses to start.
         await using (var dataSource = NpgsqlDataSource.Create(connection))
         await using (var command = dataSource.CreateCommand("SELECT to_regnamespace('foundation') IS NULL"))
             (await command.ExecuteScalarAsync()).Should().Be(true);
@@ -44,10 +44,15 @@ public sealed class DurableWorkerTests
         await using (var api = ApiContractTests.CreateFactory(connection))
         {
             using var client = api.CreateClient();
-            (await client.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
         }
-        await MigrateAsync(connection);
-        await MigrateAsync(connection); // Applying the same embedded source again is idempotent.
+        // Applying the same embedded source again, through the image's migrate verb, is idempotent.
+        foreach (var run in new[] { await DeskTestHost.MigrateAsync(connection), await DeskTestHost.MigrateAsync(connection) })
+            run.Exit.Should().Be(0, run.Error);
+        // The jobs worker installs the queue's schema as it builds its storage (Hangfire's own installer), before anything
+        // enqueues; here without starting it, so no heartbeat is recorded yet.
+        using (var installer = CreateWorker(connection, executeJobs: true))
+            installer.Services.GetRequiredService<JobStorage>().Should().NotBeNull();
         string jobId;
         var probeId = Guid.NewGuid();
         using (var clientHost = CreateWorker(connection, executeJobs: false))
@@ -61,7 +66,7 @@ public sealed class DurableWorkerTests
             using var client = api.CreateClient();
             new NpgsqlConnectionStringBuilder(api.Services.GetRequiredService<NpgsqlDataSource>().ConnectionString)
                 .Port.Should().Be(new NpgsqlConnectionStringBuilder(connection).Port);
-            (await client.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
             var status = await client.GetFromJsonAsync<JsonElement>("/api/system/status");
             status.GetProperty("service").GetString().Should().Be("brand-workspace");
             status.GetProperty("worker").GetProperty("state").GetString().Should().Be("waiting");
@@ -105,17 +110,6 @@ public sealed class DurableWorkerTests
             }
             finally { await restartedWorker.StopAsync(); }
         }
-    }
-
-    private static async Task MigrateAsync(string connection)
-    {
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development });
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(DeskTestHost.IdentityClientSettings)
-        { ["ConnectionStrings:Database"] = connection });
-        builder.Configure(migrate: true);
-        var app = builder.Build();
-        app.Configure();
-        await app.RunCommandOrHostAsync(["--migrate"]);
     }
 
     private static IHost CreateWorker(string connection, bool executeJobs)

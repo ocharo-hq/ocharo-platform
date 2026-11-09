@@ -30,13 +30,8 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await _database.StartAsync();
-        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development });
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(DeskTestHost.IdentityClientSettings)
-        { ["ConnectionStrings:Database"] = _database.ConnectionString });
-        builder.Configure(migrate: true);
-        var app = builder.Build();
-        app.Configure();
-        await app.RunCommandOrHostAsync(["--migrate"]);
+        var migrate = await DeskTestHost.MigrateAsync(_database.ConnectionString);
+        migrate.Exit.Should().Be(0, migrate.Error);
         Factory = ApiContractTests.CreateFactory(_database.ConnectionString);
         Service = new PreparationService(new PreparationRepository(DataSource, TimeProvider.System, new ManualPackageBuilder(), NoDeskFiles.Instance), new ImageValidationService(), NoDeskFiles.Instance);
     }

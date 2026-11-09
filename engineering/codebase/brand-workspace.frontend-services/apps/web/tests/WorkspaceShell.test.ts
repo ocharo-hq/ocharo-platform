@@ -17,7 +17,7 @@ import { deskRouter } from './helpers/DeskRouter';
 const ORG = '11111111-1111-4111-8111-111111111111';
 /** The single membership most tests sign in with. */
 const OwnerMembership = [{ id: ORG, name: 'Ocharo', slug: 'ocharo', role: 'owner' }];
-/** The API version `/api/system/version` reports. */
+/** The informational version `/api/system/status` reports. */
 const ApiVersion = '0.4.2';
 /** The key earlier Desk builds stored the sidebar rail choice under. */
 const SidebarCollapsedKey = 'ocharo.desk.sidebar-collapsed';
@@ -58,7 +58,7 @@ async function renderAt(
     const url = String(input instanceof Request ? input.url : input);
     const pathname = new URL(url, 'https://localhost').pathname;
     if (pathname === '/api/runtime-config') return Promise.resolve(Response.json(runtimeConfig ?? {}));
-    if (pathname === '/api/system/version') return Promise.resolve(Response.json({ version: ApiVersion }));
+    if (pathname === '/api/system/status') return Promise.resolve(Response.json({ service: 'brand-workspace', version: ApiVersion }));
     if (pathname === '/api/identity/sign-out') return Promise.resolve(Response.json({ data: { endSessionUrl: 'https://localhost:8404/connect/endsession' } }));
     return Promise.resolve(Response.json({ data: pathname === '/api/organizations' ? organizations : [] }));
   });

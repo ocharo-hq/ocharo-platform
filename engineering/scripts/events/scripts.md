@@ -1,7 +1,7 @@
 # scripts/
 
 `validate_events_bundle.py` checks an `ocharo.events-import.v1` bundle against the
-[events contract](../../architecture/events-contract.md#feed-import) before `--import-events` sees it:
+[events contract](../../architecture/events-contract.md#feed-import) before the `import events` verb sees it:
 enums, key format and uniqueness, date-precision rules, deadlines, text limits and http(s) links.
 Python 3 standard library only.
 

@@ -1,6 +1,5 @@
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
-using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using BrandWorkspace.Api.MediaProcessing;
 using BrandWorkspace.Api.Commerce;
@@ -31,9 +30,7 @@ using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using BrandWorkspace.Api.Preparation;
 using BrandWorkspace.Application.Access;
 using BrandWorkspace.Persistence.Access;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WoW.Two.Sdk.Beta.Be.Identity.Authorization;
@@ -45,7 +42,6 @@ using System.Data.Common;
 using BrandWorkspace.Application.Foundation.Repositories;
 using BrandWorkspace.Domain.Foundation.Models;
 using BrandWorkspace.Persistence.Foundation.Repositories;
-using Hangfire.PostgreSql;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Npgsql;
 using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
@@ -56,15 +52,31 @@ using BrandWorkspace.Application.Files;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Infrastructure.Files;
 using BrandWorkspace.Persistence.Files;
+using WoW.Two.Sdk.Beta.Be.Meta;
+using WoW.Two.Sdk.Beta.Be.Web.DataProtection;
 
 namespace BrandWorkspace.Api.Configurations;
 
 public static partial class HostConfiguration
 {
-    /// <summary>Registers the optional target and local settings files, then the permitted deployment environment inputs.</summary>
+    /// <summary>Holds the verb that imports a bundle: <c>import sourcing</c> or <c>import events</c>.</summary>
+    private const string ImportVerb = "import";
+
+    /// <summary>Holds the verb of the media runtime probe the image build runs: <c>media verify</c>.</summary>
+    private const string MediaVerb = "media";
+
+    /// <summary>Holds the one argument <see cref="MediaVerb"/> takes.</summary>
+    private const string MediaVerifyArgument = "verify";
+
+    private const string ImportUsage =
+        "Use import sourcing|events --bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run].";
+
+    private const string MediaUsage = "Use media verify alone.";
+
+    /// <summary>Keeps only the permitted deployment environment inputs, after the settings files the boot floor added: every
+    /// ambient environment source leaves, and the whitelisted variables return last.</summary>
     private static WebApplicationBuilder AddExplicitEnvironment(this WebApplicationBuilder builder)
     {
-        builder.AddSettingsFiles();
         foreach (var source in builder.Configuration.Sources.OfType<EnvironmentVariablesConfigurationSource>().ToArray())
             builder.Configuration.Sources.Remove(source);
         var values = new Dictionary<string, string?>();
@@ -81,6 +93,23 @@ public static partial class HostConfiguration
         return builder;
     }
 
+    /// <summary>Tunes the SDK boot floor to Desk's existing behaviour: no OTLP export, rate limit, output cache, embedder policy
+    /// or HTTPS redirect (the ingress terminates TLS); the SPA served from the host; forwarded headers trusted only from
+    /// loopback and <c>Deployment:TrustedProxies</c>.</summary>
+    private static void ConfigureApiDefaults(this WebApplicationBuilder builder, ApiDefaultsOptions options)
+    {
+        options.ServiceName = "brand-workspace";
+        options.EnableOtlpExporters = false;
+        options.EnableRateLimiting = false;
+        options.EnableOutputCache = false;
+        options.EnableCrossOriginEmbedderPolicy = false;
+        options.EnableHttpsRedirection = false;
+        options.SpaHosting = _ => { };
+        // Behind the TLS-terminating ingress, sign-in needs the forwarded scheme and host; any other sender keeps its own.
+        foreach (var proxy in builder.Configuration.GetSection("Deployment:TrustedProxies").Get<string[]>() ?? [])
+            options.TrustedProxies.Add(proxy);
+    }
+
     /// <summary>Registers the PostgreSQL connection pool and SDK connection factory.</summary>
     private static WebApplicationBuilder AddPostgresDatabase(this WebApplicationBuilder builder)
     {
@@ -92,18 +121,20 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers foundation diagnostics and, for serving and the migration command, the schema migrator.</summary>
-    private static WebApplicationBuilder AddFoundation(this WebApplicationBuilder builder, bool migrate)
+    /// <summary>Registers foundation diagnostics, the schema migrator (the boot's and the <c>migrate</c> verb's) and the readiness
+    /// check <c>/health</c> reports.</summary>
+    private static WebApplicationBuilder AddFoundation(this WebApplicationBuilder builder)
     {
         builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
         builder.Services.AddSingleton(TimeProvider.System);
-        if (!migrate) return builder;
         builder.Services.AddDatabaseBespokeMigrations(typeof(FoundationRepository).Assembly, options =>
         {
             options.Version = BuildIdentity.ProductVersion;
             options.Release = BuildIdentity.Release;
             options.AdvisoryLockId = 8_264_001;
         });
+        // Desk's own repository answers readiness: PostgreSQL reachable and Desk's schema in place.
+        builder.Services.AddHealthChecks().AddCheck<SchemaReadinessHealthCheck>("database", tags: ["ready"]);
         return builder;
     }
 
@@ -127,22 +158,17 @@ public static partial class HostConfiguration
             options.ConnectionString = configuration.GetConnectionString("Database") ?? string.Empty);
         builder.Services.AddDefaultDenyAuthorization(BffAuthenticationSchemeConstants.Cookie);
         builder.AddServiceTokens();
-        // Resolve final configuration after test/deployment overrides have been applied.
-        builder.Services.AddDataProtection();
-        builder.Services.AddOptions<Microsoft.AspNetCore.DataProtection.KeyManagement.KeyManagementOptions>()
-            .Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
-            {
-                var path = configuration["DataProtection:KeysPath"];
-                if (string.IsNullOrWhiteSpace(path))
-                {
-                    if (!environment.IsLocalRun(configuration)) throw new InvalidOperationException("DataProtection:KeysPath must name durable storage.");
-                    path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "brand-workspace", environment.EnvironmentName, "keys");
-                }
-                options.XmlRepository = new Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository(
-                    new DirectoryInfo(path), Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
-            });
-        builder.Services.AddOptions<DataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
-            options.ApplicationDiscriminator = configuration["DataProtection:ApplicationName"] ?? $"brand-workspace:{environment.EnvironmentName}");
+        // The key ring and its name stay as deployed, or every session is signed out; a local run keeps its machine folder.
+        // Resolved from the final configuration, after test and deployment overrides.
+        builder.Services.AddPersistentDataProtection(_ => { });
+        builder.Services.AddOptions<PersistentDataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
+        {
+            options.ApplicationName = configuration["DataProtection:ApplicationName"] ?? $"brand-workspace:{environment.EnvironmentName}";
+            options.KeyDirectory = configuration["DataProtection:KeysPath"] is { } path && !string.IsNullOrWhiteSpace(path) ? path
+                : environment.IsLocalRun(configuration)
+                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "brand-workspace", environment.EnvironmentName, "keys")
+                    : null;
+        });
         return builder;
     }
 
@@ -312,12 +338,11 @@ public static partial class HostConfiguration
     {
         // Every address is optional, and a malformed one is left out rather than failing the host over a menu link.
         builder.Services.AddValidatedSettings<OcharoAppsSettings>(builder.Configuration, OcharoAppsSettings.SectionName, _ => { });
-        builder.Services.AddControllers();
         return builder;
     }
 
-    /// <summary>Maps the runtime-config controller and warns once about any address it leaves out.</summary>
-    private static WebApplication MapRuntimeConfig(this WebApplication app)
+    /// <summary>Maps the controllers — runtime config and system status — and warns once about any runtime-config address left out.</summary>
+    private static WebApplication MapControllerEndpoints(this WebApplication app)
     {
         var rejected = app.Services.GetRequiredService<OcharoAppsSettings>().RejectedSettings();
         if (rejected.Count > 0)
@@ -326,95 +351,44 @@ public static partial class HostConfiguration
         return app;
     }
 
-    /// <summary>Registers the HTTP surface: forwarded headers trusted only from loopback and <c>Deployment:TrustedProxies</c>, and JSON errors.</summary>
+    /// <summary>Registers the HTTP surface: JSON errors and the controllers.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
-        // Behind the TLS-terminating ingress, sign-in needs the forwarded scheme and host; any other sender keeps its own.
-        var proxies = builder.Configuration.GetSection("Deployment:TrustedProxies").Get<string[]>() ?? [];
-        builder.Services.AddProxyAwareHosting(options =>
-        {
-            foreach (var proxy in proxies)
-                options.TrustedProxies.Add(proxy);
-        });
         builder.Services.AddHttpProblemDetails();
+        builder.Services.AddControllers();
         return builder;
     }
 
-    /// <summary>Configures public technical status and SPA endpoints without business mutations.</summary>
-    private static WebApplication AddFoundationEndpoints(this WebApplication app)
+    /// <summary>Configures the HTTP pipeline: Desk's JSON errors, then the SDK's (forwarded headers, secure headers, compression,
+    /// the SPA bundle, <c>/health</c> and the SPA fallback, whose unknown <c>/api</c> paths answer a JSON 404), with Desk's
+    /// sign-in in its identity slot after routing. Public brand routes stay embeddable cross-origin
+    /// (<see cref="CommerceEndpoints"/>).</summary>
+    private static WebApplication UseHttpSurface(this WebApplication app)
     {
-        app.UseProxyAwareHosting();
         app.UseHttpProblemDetails();
-        app.UseDefaultFiles();
-        app.UseStaticFiles();
-        app.UseRouting();
-        app.Use(async (context, next) =>
+        app.UseApiDefaults(identity =>
         {
-            if (context.Request.Path.StartsWithSegments("/api/identity") || context.Request.Path.StartsWithSegments("/api/organizations"))
+            identity.Use(async (context, next) =>
             {
-                context.Response.OnStarting(() =>
+                if (context.Request.Path.StartsWithSegments("/api/identity") || context.Request.Path.StartsWithSegments("/api/organizations"))
                 {
-                    context.Response.Headers.CacheControl = "no-store";
-                    context.Response.Headers.Pragma = "no-cache";
-                    return Task.CompletedTask;
-                });
-                if (!context.Request.IsHttps)
-                {
-                    await AccessProblems.Create(400, "HTTPS is required", "https_required").ExecuteAsync(context);
-                    return;
+                    context.Response.OnStarting(() =>
+                    {
+                        context.Response.Headers.CacheControl = "no-store";
+                        context.Response.Headers.Pragma = "no-cache";
+                        return Task.CompletedTask;
+                    });
+                    if (!context.Request.IsHttps)
+                    {
+                        await AccessProblems.Create(400, "HTTPS is required", "https_required").ExecuteAsync(context);
+                        return;
+                    }
                 }
-            }
-            await next(context);
+                await next(context);
+            });
+            identity.UseIdentityBff();
         });
-        app.UseIdentityBff();
-        app.MapGet("/api/system/version", (HttpContext context) =>
-        {
-            context.Response.Headers.CacheControl = "no-store";
-            return Results.Ok(new { service = "BrandWorkspace", version = BuildIdentity.Version });
-        }).AllowAnonymous();
-        app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).AllowAnonymous();
-        app.MapGet("/health/ready", async (IFoundationRepository repository, CancellationToken token) =>
-        {
-            try
-            {
-                return await repository.IsReadyAsync(token) ? Results.Ok(new { status = "ready" })
-                    : Results.Problem(statusCode: 503, title: "Database schema is not ready");
-            }
-            catch (Exception exception) when (exception is NpgsqlException or TimeoutException)
-            {
-                return Results.Problem(statusCode: 503, title: "Database schema is not ready");
-            }
-        }).AllowAnonymous();
-        app.MapGet("/api/system/status", async (IFoundationRepository repository, TimeProvider time, CancellationToken token) =>
-        {
-            try
-            {
-                if (!await repository.IsReadyAsync(token))
-                    return Results.Problem(statusCode: 503, title: "Database schema is not ready");
-                var worker = WorkerSnapshot.From(await repository.GetLastHeartbeatAsync(token), time.GetUtcNow());
-                return Results.Ok(new { service = "brand-workspace", stage = "foundation", persistence = "PostgreSQL", worker });
-            }
-            catch (Exception exception) when (exception is NpgsqlException or TimeoutException)
-            {
-                return Results.Problem(statusCode: 503, title: "Database schema is not ready");
-            }
-        }).AllowAnonymous();
-        app.MapFallback("/api/{**path}", () => Results.Problem(statusCode: 404, title: "Not Found")).AllowAnonymous();
-        app.MapFallbackToFile("index.html").AllowAnonymous();
         return app;
-    }
-
-    /// <summary>Applies pending schema migrations, then the job queue's provider-owned schema, and returns the labels applied.</summary>
-    private static async Task<IReadOnlyList<string>> MigrateSchemaAsync(this WebApplication app, string appliedBy)
-    {
-        // Desk's own set, then every set a module registers (the session cache's `distributed_cache`).
-        var result = await app.Services.ApplyMigrationSetsAsync(appliedBy);
-        if (result is not Result<IReadOnlyList<MigrationSetApplied>>.Success success)
-            throw new InvalidOperationException($"Migration failed ({result}); inspect schema history and source integrity.");
-        // The queue's own installer is idempotent; the serving API registers no job client or server.
-        await using var connection = await app.Services.GetRequiredService<NpgsqlDataSource>().OpenConnectionAsync();
-        PostgreSqlObjectsInstaller.Install(connection);
-        return [.. success.Value.SelectMany(set => set.Applied)];
     }
 
     /// <summary>Applies the schema before the API listens, so readiness never precedes it.</summary>
@@ -426,50 +400,18 @@ public static partial class HostConfiguration
         {
             try
             {
-                var applied = await app.MigrateSchemaAsync("startup");
-                app.Logger.LogInformation("Schema ready; {Count} migrations applied at startup.", applied.Count);
+                // Desk's own set, then every set a module registers (the session cache's `distributed_cache`).
+                var result = await app.Services.ApplyMigrationSetsAsync("startup", ct: app.Lifetime.ApplicationStopping);
+                if (result is not Result<IReadOnlyList<MigrationSetApplied>>.Success success)
+                    throw new InvalidOperationException($"Migration failed ({result}); inspect schema history and source integrity.");
+                app.Logger.LogInformation("Schema ready; {Count} migrations applied at startup.", success.Value.Sum(set => set.Applied.Count));
                 return;
             }
             catch (Exception exception) when (attempt < 10 && exception is NpgsqlException { IsTransient: true } or TimeoutException)
             {
                 app.Logger.LogWarning("Startup migration attempt {Attempt} could not reach the database; retrying.", attempt);
-                await Task.Delay(TimeSpan.FromSeconds(2));
+                await Task.Delay(TimeSpan.FromSeconds(2), app.Lifetime.ApplicationStopping);
             }
         }
-    }
-
-    /// <summary>Runs the explicit migration command, or applies the schema and starts the API; no path starts a worker.</summary>
-    public static async Task RunCommandOrHostAsync(this WebApplication app, string[] args)
-    {
-        if (args.Contains("--verify-media-runtime"))
-        {
-            if (args.Length != 1) throw new ArgumentException("Use --verify-media-runtime alone.");
-            try { MediaRuntimeVerification.Run(app.Services.GetRequiredService<ImageValidationService>()); }
-            finally { await app.DisposeAsync(); }
-            return;
-        }
-        if (args.Length == 1 && args[0] == "--migrate")
-        {
-            var migrated = await app.MigrateSchemaAsync("api-cli");
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { migrated, queueSchema = "ready" }));
-            await app.DisposeAsync();
-            return;
-        }
-        if (args.Contains("--migrate")) throw new ArgumentException("Use --migrate alone.");
-        if (args.Contains("--import-sourcing"))
-        {
-            try { await SourcingImportCommand.RunAsync(app.Services, args); }
-            finally { await app.DisposeAsync(); }
-            return;
-        }
-        if (args.Contains("--import-events"))
-        {
-            try { await EventImportCommand.RunAsync(app.Services, args); }
-            finally { await app.DisposeAsync(); }
-            return;
-        }
-        await app.MigrateOnStartupAsync();
-        await app.BackfillFileIdsAsync();
-        await app.RunAsync();
     }
 }

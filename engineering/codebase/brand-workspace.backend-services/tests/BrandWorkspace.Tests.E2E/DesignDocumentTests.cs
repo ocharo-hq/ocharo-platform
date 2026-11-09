@@ -23,14 +23,14 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     public async Task Readiness_ShouldRequireTheDocumentSchema()
     {
         using HttpClient client = fixture.Factory.CreateClient();
-        using HttpResponseMessage ready = await client.GetAsync("/health/ready");
+        using HttpResponseMessage ready = await client.GetAsync("/health");
         ready.StatusCode.Should().Be(HttpStatusCode.OK);
         await using NpgsqlCommand hide = fixture.DataSource.CreateCommand(
             "ALTER SCHEMA design_documents RENAME TO design_documents_unavailable");
         await hide.ExecuteNonQueryAsync();
         try
         {
-            using HttpResponseMessage missing = await client.GetAsync("/health/ready");
+            using HttpResponseMessage missing = await client.GetAsync("/health");
             missing.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         }
         finally
@@ -39,7 +39,7 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
                 "ALTER SCHEMA design_documents_unavailable RENAME TO design_documents");
             await restore.ExecuteNonQueryAsync();
         }
-        using HttpResponseMessage recovered = await client.GetAsync("/health/ready");
+        using HttpResponseMessage recovered = await client.GetAsync("/health");
         recovered.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 

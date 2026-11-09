@@ -18,7 +18,7 @@ same workflow; independent future subsystems require their own vector ownership 
 Use ASP.NET Core Identity for password hashing, password verification, and lockout, composed with the
 published wow-two cookie/default-deny primitives. Keep identity storage in PostgreSQL. Generate the
 Identity schema from its EF mapping if using EF stores, then apply it as an embedded numbered SQL
-migration through the existing sole `--migrate` owner. Normal startup never applies schema.
+migration through the existing `migrate` verb.
 
 Persist revocable sessions. A protected Secure/HttpOnly/SameSite cookie carries the authenticated user
 and session identifier; validate active session/account state on every request. Use an eight-hour

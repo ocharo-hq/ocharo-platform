@@ -34,7 +34,7 @@ services:
 
   migrate:
     <<: *api-image
-    command: ["--migrate"]
+    command: ["migrate"]
     environment: *runtime-environment
     depends_on:
       postgres:

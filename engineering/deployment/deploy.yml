@@ -26,8 +26,8 @@ migrate:
     timeout: 10m
 # After migrate and before any restart, and on every settings-only apply, Identity's image checks the settings the deploy
 # applies (pipelines v0.15.0, Wheelhouse v0.12): exit 0 consistent, 1 refused, 2 failed, a `config-result` line last; a
-# refused or retired key stops the deploy while the running release keeps serving. Desk, jobs, the image worker and the
-# pilots have settings too, but their images answer no `config check` yet, so they get an item once they do.
+# refused or retired key stops the deploy while the running release keeps serving. Desk and the pilots answer
+# `config check` since v0.2 Iteration 1 and get items with their migrate steps; jobs and the image worker answer none yet.
 configCheck:
   - service: identity
     command: [dotnet, Identity.Api.dll, config, check]
@@ -42,8 +42,8 @@ services:
       - codebase/ocharo-brand.backend-services/OcharoBrand.Domain/**
       - codebase/ocharo-catalogue.backend-services/Directory.*.props
       - codebase/ocharo-catalogue.backend-services/OcharoCatalogue.Domain/**
-    # Desk serves its own readiness probe (PostgreSQL and schema); it does not use the SDK boot bundle's /health.
-    health: /health/ready
+    # The SDK boot bundle's /health, with Desk's readiness check: PostgreSQL reachable and Desk's schema applied.
+    health: /health
     needs: [postgres]
     # Desk's BFF keeps sign-in sessions in the `cache.distributed_cache` table of its own database (be sdk
     # AddPostgresDistributedCache, set `distributed_cache`, applied with Desk's schema) and its Data Protection key

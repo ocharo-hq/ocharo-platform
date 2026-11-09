@@ -117,7 +117,7 @@ Private supplier records enter Desk only through an explicit bundle file and the
 
 ```bash
 dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- \
-  --import-sourcing --bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run]
+  import sourcing --bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run]
 ```
 
 The command validates the whole bundle before writing, prints a JSON summary, and is idempotent:

@@ -48,9 +48,9 @@ preparation APIs resolve current organization membership. Unknown API routes ret
 The worker is a separate executable; its normal host consumes durable
 PostgreSQL jobs. A client-only diagnostic command submits harmless probes without starting a worker.
 
-Schema changes have one explicit owner: the API executable's `--migrate` command, packaged as the
-one-shot Compose migration service. Ordinary API and worker startup does not create or upgrade
-schema. The selected shared SDK supports embedded SQL migrations with PostgreSQL locking, so the
+Schema changes have one explicit owner: the API executable's `migrate` verb, packaged as the
+one-shot Compose migration service; the API also applies pending migrations as it boots, and the executing
+worker installs only its own queue schema. The selected shared SDK supports embedded SQL migrations with PostgreSQL locking, so the
 foundation does not carry the template's SQLite initialization path. Framework Identity uses EF stores;
 its generated DDL is versioned in `002-access` and applied by that same SQL migration owner.
 

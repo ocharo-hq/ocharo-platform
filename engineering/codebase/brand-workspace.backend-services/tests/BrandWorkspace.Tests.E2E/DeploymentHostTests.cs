@@ -34,9 +34,9 @@ public sealed class DeploymentHostTests
             await using var factory = DeployedFactory(database.ConnectionString, keys.FullName);
             using var client = factory.CreateClient();
 
-            (await client.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
             (await client.GetAsync("/api/system/status")).StatusCode.Should().Be(HttpStatusCode.OK);
-            factory.Services.GetService<IBackgroundJobClient>().Should().BeNull("the serving API installs the queue schema without a job client");
+            factory.Services.GetService<IBackgroundJobClient>().Should().BeNull("the serving API registers no job client; the jobs worker owns the queue");
             await using var dataSource = NpgsqlDataSource.Create(database.ConnectionString);
             await using var command = dataSource.CreateCommand("SELECT count(*) FROM public.migration_history WHERE applied_by = 'startup'");
             ((long)(await command.ExecuteScalarAsync())!).Should().BePositive();

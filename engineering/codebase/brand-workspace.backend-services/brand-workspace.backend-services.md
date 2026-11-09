@@ -38,15 +38,28 @@ From this directory, after a build:
 
 ```sh
 dotnet run --project BrandWorkspace.Api --no-build --launch-profile https
-dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- --migrate
+dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- migrate
 dotnet run --project BrandWorkspace.Worker --no-build --no-launch-profile
 ```
 
-The API owns the schema. Serving applies pending embedded SQL migrations (SDK checksum
-journal, PostgreSQL advisory lock `8264001`) and the provider-owned Hangfire schema before it
-listens, so `/health/ready` never precedes them. An unreachable database is retried ten times,
-two seconds apart; any other migration failure aborts startup. `--migrate` applies the same
-steps and exits. The worker never changes schema and refuses to start before it exists.
+`Program.cs` hands its arguments to the be sdk's `ServiceHost.RunAsync`: a first argument that names a verb runs it on the
+built host without serving, and its exit code is the process's; anything else serves.
+
+| Verb | Does |
+|---|---|
+| `migrate` | the be sdk's: applies every migration set (Desk's own, then the session cache's `distributed_cache`) and exits; `migrate check`, `plan` and the rest as the SDK documents |
+| `config check` | the be sdk's: checks the settings as a boot would and exits `0` consistent, `1` refused, `2` failed |
+| `import sourcing` / `import events` | imports a bundle as an existing editor: `--bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run]`; exits `0`, `1` refused, `2` with failures |
+| `media verify` | decodes a fixed PNG through the packaged native decoder, with no database or key ring; the image build runs it |
+
+A verb's stdout carries only its own output; the host's logs go to stderr.
+
+The API owns Desk's schema. Serving applies pending embedded SQL migrations (SDK checksum
+journal, PostgreSQL advisory lock `8264001`) before it listens, deployed included, so `/health`
+never reports ready ahead of them. An unreachable database is retried ten times, two seconds apart;
+any other migration failure aborts startup. The `migrate` verb applies the same sets and exits.
+The worker never applies Desk's schema and refuses to start before it exists; the executing worker
+installs the job queue's own schema (Hangfire's idempotent installer) as it builds its storage.
 The API serves HTTPS `8264` only (Ocharo's HTTPS-only override; `8265` stays reserved);
 Docker explicitly supplies `ASPNETCORE_URLS=http://+:8080`. Worker has no port.
 
@@ -95,17 +108,24 @@ does not consume pending work.
 
 ## HTTP contract
 
-- `GET /health/live`: process liveness, independent of database availability.
-- `GET /health/ready`: connectivity and expected application/queue schema; HTTP `503`
-  problem JSON when unavailable. No schema creation occurs during this check.
-- `GET /api/system/status`: HTTP `200` with this schema when persistence is ready:
+The host boots on the be sdk's `AddApiDefaults`/`UseApiDefaults` (service name `brand-workspace`): Serilog, proxy-aware
+hosting, the secure headers, compression, the SPA bundle and its fallback, and `/health`. OTLP export, rate limiting,
+output caching, the embedder policy and the HTTPS redirect stay off, as before. Every response carries the SDK's secure
+headers, `Cross-Origin-Resource-Policy: same-origin` included; the public brand routes (`/api/public/v1/brands/{slug}/…`)
+answer `cross-origin` instead, because Blog and Marketing pages embed their media and edition files.
+
+- `GET /health`: the boot bundle's endpoint, anonymous: `200 Healthy` once PostgreSQL answers and Desk's
+  schema is in place, else `503 Unhealthy`. No schema creation occurs during this check.
+- `GET /api/system/status` (`SystemController`): HTTP `200` with this schema when persistence is ready, `503`
+  problem JSON otherwise; `version` is the informational version:
 
 ```json
 {
   "service": "brand-workspace",
   "stage": "foundation",
   "persistence": "PostgreSQL",
-  "worker": { "state": "waiting", "lastSeenAtUtc": null }
+  "worker": { "state": "waiting", "lastSeenAtUtc": null },
+  "version": "0.4.2+0123456789abcdef0123456789abcdef01234567"
 }
 ```
 
@@ -115,8 +135,7 @@ This is worker-process liveness, not provider readiness or proof that a particul
 job succeeded. A database outage produces HTTP `503`, never a fabricated heartbeat.
 Unknown `/api` paths, including dotted paths and non-GET methods, return JSON `404`.
 
-- `GET /api/runtime-config`: the public settings the SPA reads once at startup (`RuntimeConfigController`, the
-  only MVC controller). Anonymous, `Cache-Control: no-store`, and never a secret. It answers a flat JSON object of
+- `GET /api/runtime-config`: the public settings the SPA reads once at startup (`RuntimeConfigController`). Anonymous, `Cache-Control: no-store`, and never a secret. It answers a flat JSON object of
   the configured `OcharoApps:*` addresses under the SPA's config keys; an unset or malformed address is left out,
   and nothing configured answers `{}`:
 
@@ -161,26 +180,29 @@ migration manifest (`engineering/deployment/files-migration.yml`, wave 3) gives 
 - the commerce attach references the preparation image's file instead of copying its bytes.
 - the boot fills file ids for rows stored before Files: a `desk` file in Files with the row's SHA-256 and its own
   reference. Until then the row reads its PostgreSQL bytes; an unreachable Files leaves the boot running.
-- a person's request calls Files with their exchanged token (the BFF session); the `--import-sourcing` CLI, the boot and
+- a person's request calls Files with their exchanged token (the BFF session); the `import sourcing` verb, the boot and
   anonymous routes call it as Desk, by client credentials of `Identity:Client`. The worker touches no media.
 - with `Files:BaseUrl` unset, every byte stays in PostgreSQL as before.
 
 ## SDK adoption boundary
 
-Published `WoW2.Sdk.Beta.Be` and `WoW2.Sdk.Beta.Be.Testing` are pinned to `10.0.105-beta`, Files' `Abstractions` and
+Published `WoW2.Sdk.Beta.Be` and `WoW2.Sdk.Beta.Be.Testing` are pinned to `10.0.106-beta`, Files' `Abstractions` and
 `Client` to `10.0.5-beta`, and the Identity packages to `10.0.30-beta`.
 The family was renamed from `WoW2.Sdk.Backend.Beta` at `10.0.67-beta`.
 
 The worker calls public SDK `AddHangfireJobs` with explicit PostgreSQL storage
-options (`PrepareSchemaIfNecessary=false`). The SDK's PostgreSQL preset auto-creates
+options (`PrepareSchemaIfNecessary` only for the executing worker). The SDK's PostgreSQL preset auto-creates
 schema and its jobs registration always includes a server. Therefore CLI-only
 submission uses upstream `AddHangfire` at the host composition boundary. This is
 an SDK client-only/schema-control preset gap; no product scheduler abstraction or
 private SDK API was introduced. Shared SDK files were not changed.
 
 Application schema migration uses public `AddDatabaseBespokeMigrations(assembly)`
-and `AddDataSourceConnectionFactory`. The API alone installs the Hangfire schema, through
-Hangfire's own idempotent installer, without registering a job client. No EF model competes
+and `AddDataSourceConnectionFactory`. The executing worker installs the Hangfire schema, through
+Hangfire's own idempotent installer; the API registers no job client. No EF model competes
 for schema ownership, so the SDK's EF startup runner does not apply; the SDK's bespoke startup
 helper needs `AddPostgresPersistence`, so the host calls the same runner directly.
-Forwarded headers use the SDK's `AddProxyAwareHosting`/`UseProxyAwareHosting`.
+Forwarded headers come from the boot bundle, trusting loopback and `Deployment:TrustedProxies`. The Data Protection
+key ring uses the SDK's `AddPersistentDataProtection`: application name `DataProtection:ApplicationName`, else
+`brand-workspace:{Environment}`; key directory `DataProtection:KeysPath`, else, on a local run only, the user's
+application-data folder `brand-workspace/{Environment}/keys`.

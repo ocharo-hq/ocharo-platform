@@ -8,14 +8,14 @@
 `wwwroot`. `Dockerfile.worker` publishes the independent worker. Both build from
 `engineering/codebase/`, require NuGet lockfiles, and run as the image's unprivileged `app` user.
 Both images include `libfontconfig1` for the matching SkiaSharp Linux native provider. The API image
-build runs `--verify-media-runtime` as that same user: it decodes a known PNG through the production
+build runs the `media verify` verb as that same user: it decodes a known PNG through the production
 validator and verifies its hash without contacting PostgreSQL or starting HTTP. This catches missing
 native dependencies and incompatible native/managed library versions before the image is accepted.
 
 Compose names the local stack `brand-workspace`. PostgreSQL stores its data in the
-`brand-workspace_postgres-data` volume. A one-shot `migrate` service runs the API `--migrate` command;
-both ordinary hosts wait for its successful completion. The API also verifies the schema as it starts
-(nothing is pending by then); the worker never changes schema.
+`brand-workspace_postgres-data` volume. A one-shot `migrate` service runs the API's `migrate` verb;
+both ordinary hosts wait for its successful completion. The API also applies pending migrations as it starts
+(nothing is pending by then); the executing worker installs only its own queue schema.
 The API's separate `brand-workspace_data-protection-keys` volume preserves protected sessions across
 process replacement. Its image directory belongs to the unprivileged runtime user.
 
@@ -99,7 +99,7 @@ precedes them; an unreachable database is retried ten times, two seconds apart, 
 startup, so a rollout stops on an unmigrated schema. The same steps run explicitly, without serving:
 
 ```bash
-dotnet run --project BrandWorkspace.Api --no-launch-profile -- --migrate
+dotnet run --project BrandWorkspace.Api --no-launch-profile -- migrate
 ```
 
 That command runs from the backend directory with `ConnectionStrings__Database` configured.
@@ -119,9 +119,8 @@ the existing PostgreSQL state. This is a queue durability check, not a publicati
 
 ## Health semantics
 
-- `/health/live`: the API process serves requests; it does not check dependencies.
-- `/health/ready`: PostgreSQL is reachable and the expected application/queue schema is present.
-- `/api/system/status`: foundation metadata and latest worker heartbeat (`waiting`, `healthy`, `stale`).
+- `/health`: the be sdk's endpoint; 200 while PostgreSQL is reachable and Desk's schema is current, else 503.
+- `/api/system/status`: foundation metadata, the informational version and latest worker heartbeat (`waiting`, `healthy`, `stale`).
 - Worker image health: process liveness only. Read system status for heartbeat freshness.
 
 These endpoints expose only technical diagnostics. Authenticated preparation lives under the
@@ -280,8 +279,7 @@ Executed verification is recorded in [verification](../research/previous-work/ve
 ## Convention adoption status
 
 `deploy.yml` lists Desk, jobs, the private image worker and the Brand and Catalogue pilots
-([below](#brand-and-catalogue-pilots)). Desk probes `/health/ready`, its own readiness route, until it adopts the
-SDK boot bundle's `/health`.
+([below](#brand-and-catalogue-pilots)). Desk, Brand and Catalogue probe the be sdk's `/health`.
 
 ## Brand and Catalogue pilots
 

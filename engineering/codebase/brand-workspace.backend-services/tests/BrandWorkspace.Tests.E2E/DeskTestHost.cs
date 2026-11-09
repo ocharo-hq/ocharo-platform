@@ -3,13 +3,16 @@ using System.Globalization;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using BrandWorkspace.Api;
+using BrandWorkspace.Api.Configurations;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using WoW.Two.Sdk.Beta.Be.Data;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 using WoW.Two.Sdk.Beta.Be.Identity.Core.Organizations;
 using WoW.Two.Sdk.Beta.Be.Testing;
@@ -23,8 +26,22 @@ namespace BrandWorkspace.Tests.E2E;
 public static class DeskTestHost
 {
     /// <summary>The API's application name, which a test host that migrates takes too: the module migration sets claim
-    /// their schema as <c>{application}@local</c>, as Desk's own <c>--migrate</c> does.</summary>
+    /// their schema as <c>{application}@local</c>, as Desk's own <c>migrate</c> verb does.</summary>
     public static readonly string ApplicationName = typeof(ApiAssemblyMarker).Assembly.GetName().Name!;
+
+    /// <summary>Runs the be sdk's <c>migrate</c> verb, as the image answers it, over a Desk host built for
+    /// <paramref name="connection"/>, and returns its exit code and output; the host never serves.</summary>
+    public static async Task<(int Exit, string Output, string Error)> MigrateAsync(string connection)
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { ApplicationName = ApplicationName, EnvironmentName = Environments.Development });
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>(IdentityClientSettings) { ["ConnectionStrings:Database"] = connection });
+        builder.Configure();
+        await using var app = builder.Build();
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var exit = await MigrateCommand.RunAsync(app.Services, [MigrateCommand.Name], output, error);
+        return (exit, output.ToString(), error.ToString());
+    }
 
     /// <summary>Names the registered person a request signs in as.</summary>
     public const string PersonHeader = "X-Test-Person";

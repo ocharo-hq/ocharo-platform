@@ -6,8 +6,7 @@ origin="${origin%/}"
 check_tmp="$(mktemp -d "${TMPDIR:-/tmp}/brand-workspace-check.XXXXXX")"
 trap 'rm -rf "$check_tmp"' EXIT
 
-curl --fail --silent --show-error --max-time 10 "$origin/health/live" >"$check_tmp/live.json"
-curl --fail --silent --show-error --max-time 10 "$origin/health/ready" >"$check_tmp/ready.json"
+curl --fail --silent --show-error --max-time 10 "$origin/health" >"$check_tmp/health.txt"
 curl --fail --silent --show-error --max-time 10 \
   "$origin/api/system/status" >"$check_tmp/status.json"
 
@@ -41,13 +40,11 @@ directory = pathlib.Path(sys.argv[1])
 def read(name):
     return json.loads((directory / name).read_text())
 
-if read("live.json") != {"status": "alive"}:
-    raise SystemExit("Liveness must report status=alive.")
-if read("ready.json") != {"status": "ready"}:
-    raise SystemExit("Readiness must report status=ready.")
+if (directory / "health.txt").read_text().strip() != "Healthy":
+    raise SystemExit("Health must report Healthy.")
 
 status = read("status.json")
-if not isinstance(status, dict) or set(status) != {"service", "stage", "persistence", "worker"}:
+if not isinstance(status, dict) or set(status) != {"service", "stage", "persistence", "worker", "version"}:
     raise SystemExit("System status does not match the foundation contract.")
 if (status["service"], status["stage"], status["persistence"]) != (
     "brand-workspace", "foundation", "PostgreSQL"

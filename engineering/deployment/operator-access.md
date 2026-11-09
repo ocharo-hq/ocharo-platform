@@ -13,14 +13,14 @@ owner or admin makes at Identity; the invite's role reaches Desk as `org_role` a
 Run schema migrations from this directory before starting the stack:
 
 ```bash
-docker compose --env-file .env run --rm --no-deps migrate --migrate
+docker compose --env-file .env run --rm --no-deps migrate
 ```
 
 The normal HTTP host requires `DataProtection__KeysPath` outside Development. Compose supplies this
 automatically. A local host can use a private absolute directory under the ignored `.local/` folder.
 Protect its contents: possession of Data Protection keys is security-sensitive. Migration requires
 PostgreSQL but no HTTP listener, HTTPS certificate, or key ring. The independent
-`--verify-media-runtime` command decodes a known image without PostgreSQL or HTTP configuration.
+`media verify` verb decodes a known image without PostgreSQL or HTTP configuration.
 
 ## HTTPS and sessions
 

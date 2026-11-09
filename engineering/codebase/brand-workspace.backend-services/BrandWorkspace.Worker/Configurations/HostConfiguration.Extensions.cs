@@ -43,9 +43,11 @@ public static partial class HostConfiguration
     {
         builder.Services.AddSingleton<IFoundationRepository, FoundationRepository>();
         var connection = builder.Configuration.GetConnectionString("Database")!;
+        // The executing worker owns the queue's schema: Hangfire's own idempotent installer creates or upgrades it as the
+        // storage is built. A client-only CLI run never changes the schema.
         void ConfigureStorage(IGlobalConfiguration configuration) => configuration.UsePostgreSqlStorage(
             storage => storage.UseNpgsqlConnection(connection),
-            new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = false, QueuePollInterval = TimeSpan.FromSeconds(1) });
+            new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = executeJobs, QueuePollInterval = TimeSpan.FromSeconds(1) });
         if (executeJobs)
         {
             builder.Services.AddHangfireJobs(ConfigureStorage, options =>
@@ -70,12 +72,13 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Configures mandatory foundation readiness before worker execution or CLI commands.</summary>
+    /// <summary>Configures mandatory foundation readiness (Desk's schema, which the API applies) before worker execution or CLI
+    /// commands; the executing worker then installs the queue's own schema as its storage is built.</summary>
     private static async Task<IHost> ConfigureFoundationAsync(this IHost host)
     {
         var repository = host.Services.GetRequiredService<IFoundationRepository>();
         if (!await repository.IsReadyAsync(CancellationToken.None))
-            throw new InvalidOperationException("Database schema is not ready; run the API --migrate command first.");
+            throw new InvalidOperationException("Database schema is not ready; start the API, which applies it as it boots, or run its migrate verb first.");
         return host;
     }
 

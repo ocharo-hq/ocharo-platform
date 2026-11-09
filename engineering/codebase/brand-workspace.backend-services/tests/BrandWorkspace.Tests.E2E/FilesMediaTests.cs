@@ -306,7 +306,7 @@ public sealed class FilesMediaTests(PreparationDatabaseFixture fixture) : IClass
         await using (var unavailable = Host(down))
         {
             using var client = await fixture.LoginAsync(unavailable, owner);
-            (await client.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
             (await RowAsync("SELECT count(*) FROM preparation.media_files WHERE organization_id=$1", owner.OrganizationId)).Should().Equal(0L);
             using var form = new MultipartFormDataContent();
             form.Add(new ByteArrayContent(Png(SKColors.Gold, 10, 10)), "file", "down.png");
@@ -317,7 +317,7 @@ public sealed class FilesMediaTests(PreparationDatabaseFixture fixture) : IClass
         // The real client, against a Files host nobody answers: the boot still completes.
         await using var real = Host(null, new() { ["Files:BaseUrl"] = TestFiles.Url, ["Identity:Client:ClientSecret"] = "test-secret" });
         using var anonymous = DeskTestHost.CreateClient(real);
-        (await anonymous.GetAsync("/health/ready")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await anonymous.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
         var options = real.Services.GetRequiredService<IOptions<FilesClientOptions>>().Value;
         options.BaseAddress.Should().Be(new Uri(TestFiles.Url));
         options.Identity!.TokenEndpoint.Should().Be(new Uri("https://identity.example.test/connect/token"));

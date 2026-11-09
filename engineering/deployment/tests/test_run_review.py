@@ -115,7 +115,7 @@ class LauncherTests(unittest.TestCase):
         self.assertIn('--no-build', command)
         self.assertEqual(options['env']['DataProtection__ApplicationName'], 'brand-workspace:Development')
         self.assertTrue(options['env']['ConnectionStrings__Database'].endswith('Password="quoted"";literal"'))
-        self.assertTrue(any('--migrate' in command for command, _ in children.commands))
+        self.assertTrue(any(command[-2:] == ['--', 'migrate'] for command, _ in children.commands))
         self.assertTrue(any('--disable-build-servers' in command for command, _ in children.commands))
 
     def test_absent_postgres_is_attached_and_owned(self):
@@ -160,11 +160,11 @@ class LauncherTests(unittest.TestCase):
         opener = Mock()
         opener.open.side_effect = [
             io.BytesIO(b'{"service":"brand-workspace","persistence":"PostgreSQL"}'),
-            io.BytesIO(b'{"status":"unavailable"}'),
+            io.BytesIO(b'Unhealthy'),
         ]
         with patch.object(review.urllib.request, 'build_opener', return_value=opener):
             self.assertFalse(review.healthy())
-        self.assertTrue(opener.open.call_args_list[-1].args[0].endswith('/health/ready'))
+        self.assertTrue(opener.open.call_args_list[-1].args[0].endswith('/health'))
 
     def test_cleanup_preserves_restarted_same_container(self):
         children = FakeChildren()

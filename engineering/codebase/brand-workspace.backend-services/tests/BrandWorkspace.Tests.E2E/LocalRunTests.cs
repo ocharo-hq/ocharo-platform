@@ -43,7 +43,7 @@ public sealed class LocalRunTests
         await using var app = Build(["--DEPLOY_ENVIRONMENT=dev"]);
 
         var keys = () => app.Services.GetRequiredService<IOptions<KeyManagementOptions>>().Value;
-        keys.Should().Throw<InvalidOperationException>().WithMessage("DataProtection:KeysPath must name durable storage.");
+        keys.Should().Throw<OptionsValidationException>().WithMessage("*KeyDirectory is required outside a local run*");
     }
 
     [Fact]

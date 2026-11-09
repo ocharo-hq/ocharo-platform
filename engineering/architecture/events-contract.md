@@ -81,7 +81,7 @@ later discovery scan:
 
 ```bash
 dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- \
-  --import-events --bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run]
+  import events --bundle <bundle.json> --organization <organization-id> --actor <operator-email> [--dry-run]
 ```
 
 Format `ocharo.events-import.v1`: `{ format, source, events: [ { key, …record fields except id/revision/timestamps } ] }`.
