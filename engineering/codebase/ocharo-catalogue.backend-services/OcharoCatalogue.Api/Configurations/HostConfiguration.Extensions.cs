@@ -1,21 +1,20 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using OcharoCatalogue.Api.Catalogue;
 using OcharoCatalogue.Api.RuntimeConfig.Settings;
 using OcharoCatalogue.Application;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Infrastructure.Catalogue;
-using OcharoCatalogue.Infrastructure.Time;
 using OcharoCatalogue.Persistence;
 using OcharoCatalogue.Persistence.Catalogue;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Mediator;
+using WoW.Two.Sdk.Beta.Be.Observability.HealthChecks;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
-using WoW.Two.Sdk.Beta.Be.Web.Hosting;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using WoW.Two.Sdk.Beta.Be.Files.Client;
 
@@ -23,7 +22,8 @@ namespace OcharoCatalogue.Api.Configurations;
 
 public static partial class HostConfiguration
 {
-    /// <summary>Registers the SQLite catalogue context with lazy host configuration.</summary>
+    /// <summary>Registers the SQLite catalogue context with lazy host configuration, and its readiness check on
+    /// <c>/health</c>.</summary>
     private static WebApplicationBuilder AddSqliteDatabase(this WebApplicationBuilder builder)
     {
         var configuration = builder.Configuration;
@@ -38,13 +38,7 @@ public static partial class HostConfiguration
                 connection.DataSource = Path.Combine(contentRoot, file);
             options.UseSqlite(connection.ToString());
         });
-        return builder;
-    }
-
-    /// <summary>Registers the shared catalogue clock.</summary>
-    private static WebApplicationBuilder AddClock(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddSingleton<IClock, SystemClock>();
+        builder.Services.AddHealthChecks().AddDatabaseReadinessCheck<OcharoCatalogueDbContext>();
         return builder;
     }
 
@@ -100,22 +94,19 @@ public static partial class HostConfiguration
             app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
     }
 
-    /// <summary>Registers forwarded headers trusted only from loopback and <c>Deployment:TrustedProxies</c>, the HTTP error
-    /// boundary, controllers and OpenAPI.</summary>
+    /// <summary>Registers the HTTP error boundary (problem details for every client, <c>no-store</c> errors) and controllers.</summary>
     private static WebApplicationBuilder AddControllers(this WebApplicationBuilder builder)
     {
-        // Behind the TLS-terminating ingress, same-origin write checks need the forwarded scheme; any other sender keeps its own.
-        var proxies = builder.Configuration.GetSection("Deployment:TrustedProxies").Get<string[]>() ?? [];
-        builder.Services.AddProxyAwareHosting(options =>
-        {
-            foreach (var proxy in proxies)
-                options.TrustedProxies.Add(proxy);
-        });
         builder.Services.AddHttpProblemDetails();
         builder.Services.AddControllers();
-        builder.Services.AddOpenApi();
         return builder;
     }
+
+    /// <summary>Configures Catalogue's own HTTP boundary ahead of sign-in: rejected commands as problem details, response
+    /// headers and the cross-origin write refusal.</summary>
+    private static IApplicationBuilder UseCatalogueBoundary(this IApplicationBuilder app) => app
+        .UseMiddleware<CatalogueExceptionMiddleware>()
+        .UseMiddleware<CatalogueHttpBoundaryMiddleware>();
 
     /// <summary>Holds the root URL of the WoW2 Files instance Catalogue stores its product images and release artifacts in;
     /// unset, they stay in the local blob folder and SQLite.</summary>

@@ -40,11 +40,11 @@ public sealed class CatalogueDesignTests
         var media=await h.Get<IMediaStore>().StoreAsync(CatalogueHarness.Png((byte)(id.EndsWith("1")?81:95)),Ct);
         var locale=new ProductLocale(approved?"approved":"draft",id,"Silk",null,null);
         var doc=new ProductDocument {Id=id,GarmentType="nimcha",VariantCode=id[^3..],Status="active",Locales=new(locale,locale,locale){Additional=new Dictionary<string,ProductLocale>{{"fr",locale}}},Media=[new("image","model","model.png","image/png",media.ByteLength,media.Sha256,media.Width,media.Height,true,null,null)],Pricing=new("UZS","confirmed",[new(1,9,250000),new(10,null,190000)],null)};
-        return await h.Get<ICatalogueRepository>().InsertProductAsync(ProductService.ToRecord(doc,1,h.Clock.UtcNow,h.Clock.UtcNow),"Seed",Ct);
+        return await h.Get<ICatalogueRepository>().InsertProductAsync(ProductService.ToRecord(doc,1,h.Clock.GetUtcNow(),h.Clock.GetUtcNow()),"Seed",Ct);
     }
     private static async Task Mutate(CatalogueHarness h,string id,Func<ProductDocument,ProductDocument> change)
     {
-        var repo=h.Get<ICatalogueRepository>();var row=(await repo.FindProductAsync(id,Ct))!;var doc=change(CatalogueJson.Read<ProductDocument>(row.Json));await repo.UpdateProductAsync(ProductService.ToRecord(doc,row.Revision+1,row.CreatedAt,h.Clock.UtcNow),row.Revision,"Changed",Ct);
+        var repo=h.Get<ICatalogueRepository>();var row=(await repo.FindProductAsync(id,Ct))!;var doc=change(CatalogueJson.Read<ProductDocument>(row.Json));await repo.UpdateProductAsync(ProductService.ToRecord(doc,row.Revision+1,row.CreatedAt,h.Clock.GetUtcNow()),row.Revision,"Changed",Ct);
     }
     private static async Task<string> Fingerprint(CatalogueReleaseService service,Guid id)=>Json(await service.PreparationAsync(id,Ct)).GetProperty("fingerprint").GetString()!;
 

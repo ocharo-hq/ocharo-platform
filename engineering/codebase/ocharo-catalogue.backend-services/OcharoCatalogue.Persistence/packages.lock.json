@@ -1953,13 +1953,13 @@
       },
       "WoW2.Sdk.Beta.Be.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.105-beta",
-        "contentHash": "wMmwbyV5UR1FjllGLEzUkZ4aW1N3APe0kKauZPhAlBW79wqZm5fUpspgsNCyxflVnzn/rdRxKdnQQW4Flkv33g=="
+        "resolved": "10.0.106-beta",
+        "contentHash": "kUGtai/mdLpaU1yMNnd/tryrb2uJt4xPu3dm8uGeRaAwLotvnY/bsSTPG+zS0vFcJJeNVwrgdfev1vn8ncNFOw=="
       },
       "WoW2.Sdk.Beta.Be.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.105-beta",
-        "contentHash": "P+zQCPwqKSv4yL2r5/hM5+rOlKr+Id4ddXzFrCUcDDIwj6TvgIQwlBRK0/In8k12oInYZnC8eTHGNj88McebMw=="
+        "resolved": "10.0.106-beta",
+        "contentHash": "z7jCZS98OFgBXhVSh5KG/YZaX3JPCqhR/BLzQ/W8TiOdWrkvdOLTVDS+7ic0hJbKZwexmkmedCbmhnttSy9JjQ=="
       },
       "YamlDotNet": {
         "type": "Transitive",
@@ -1980,7 +1980,7 @@
         "type": "Project",
         "dependencies": {
           "OcharoCatalogue.Domain": "[0.0.0, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.105-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.106-beta, )"
         }
       },
       "ocharocatalogue.domain": {
@@ -2024,9 +2024,9 @@
       },
       "WoW2.Sdk.Beta.Be": {
         "type": "CentralTransitive",
-        "requested": "[10.0.105-beta, )",
-        "resolved": "10.0.105-beta",
-        "contentHash": "6itcLb2lt5HBchTJuoLxrhKVN6raxSOwoRDtyAoldLIUDyNa21tPf0AHe4Z/jNpelFS5RIY7XOTGJa0M7savTg==",
+        "requested": "[10.0.106-beta, )",
+        "resolved": "10.0.106-beta",
+        "contentHash": "GReN938fpkHKIGPBHXDl1/Aqp3xGxfDS1YWGMpWng+m59OihU6HUTylBgAPJNz4wOTJKgl95p1DW9KbizXWKRQ==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -2160,8 +2160,8 @@
           "System.Security.Cryptography.Pkcs": "10.0.13",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.105-beta",
-          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.105-beta",
+          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.106-beta",
+          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.106-beta",
           "YamlDotNet": "16.3.0",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",

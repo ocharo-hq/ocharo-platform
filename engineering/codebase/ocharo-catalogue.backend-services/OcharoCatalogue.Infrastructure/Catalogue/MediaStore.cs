@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Application.Catalogue.Services;
@@ -14,7 +13,7 @@ namespace OcharoCatalogue.Infrastructure.Catalogue;
 /// <summary>Stores originals once per SHA-256 and a WebP preview (alpha preserved) for fast grids, in the local blob
 /// folder. It serves a run with no WoW2 Files (<c>Files:BaseUrl</c> unset), and <see cref="FilesMediaStore"/> reads
 /// through it the files stored before Files until the migration fills their ids (planning/files-adoption.md #24).</summary>
-public sealed class MediaStore(ICatalogueRepository repository, IBlobRepository blobs, IOptions<CatalogueOptions> options, IClock clock) : IMediaStore
+public sealed class MediaStore(ICatalogueRepository repository, IBlobRepository blobs, IOptions<CatalogueOptions> options, TimeProvider timeProvider) : IMediaStore
 {
     public async Task<MediaBlobRecord> StoreAsync(byte[] bytes, CancellationToken ct)
     {
@@ -54,7 +53,7 @@ public sealed class MediaStore(ICatalogueRepository repository, IBlobRepository 
             PreviewPath = previewPath,
             Width = width,
             Height = height,
-            StoredAt = clock.UtcNow,
+            StoredAt = timeProvider.GetUtcNow(),
         };
         await repository.SaveMediaAsync(record, ct);
         return record;

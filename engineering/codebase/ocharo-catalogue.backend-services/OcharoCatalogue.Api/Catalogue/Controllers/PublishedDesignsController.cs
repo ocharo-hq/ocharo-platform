@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OcharoCatalogue.Application.Catalogue.Services;
+using WoW.Two.Sdk.Beta.Be.Web.SecureHeaders;
 
 namespace OcharoCatalogue.Api.Catalogue.Controllers;
 
@@ -31,7 +32,9 @@ public sealed class PublishedDesignsController(CatalogueReleaseService releases)
             ct));
     }
 
+    /// <summary>Serves a published release's PDF or page image; Blog and other Ocharo origins embed and link them.</summary>
     [HttpGet("{slug}/assets/{asset}")]
+    [AllowCrossOriginEmbedding]
     public async Task<IActionResult> Asset(
         string slug,
         string asset,

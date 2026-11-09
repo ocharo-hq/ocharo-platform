@@ -17,4 +17,26 @@
     <ProjectReference Include="..\OcharoCatalogue.Domain\OcharoCatalogue.Domain.csproj" />
   </ItemGroup>
 
+  <!-- Single-host serving: every build installs and builds the frontend workspace and copies apps/web/dist into wwwroot;
+       the image builds the SPA in its own Node stage and passes -p:BuildSpa=false. -->
+  <PropertyGroup>
+    <SpaRoot>$(MSBuildProjectDirectory)/../../ocharo-catalogue.frontend-services/</SpaRoot>
+  </PropertyGroup>
+
+  <Target Name="BuildSpa"
+          BeforeTargets="PrepareForBuild;ResolveProjectStaticWebAssets"
+          Condition="'$(BuildSpa)' != 'false' and '$(DesignTimeBuild)' != 'true' and '$(NoBuild)' != 'true'">
+    <Error Condition="!Exists('$(SpaRoot)package.json')"
+           Text="SpaRoot must point to the frontend workspace directory." />
+    <Exec Command="pnpm install --frozen-lockfile" WorkingDirectory="$(SpaRoot)" />
+    <Exec Command="pnpm run deploy" WorkingDirectory="$(SpaRoot)" />
+    <ItemGroup>
+      <Content Remove="@(Content)"
+               Condition="$([System.String]::Copy('%(Content.Identity)').Replace('\', '/').StartsWith('wwwroot/'))" />
+      <Content Include="wwwroot/**/*"
+               CopyToOutputDirectory="PreserveNewest"
+               CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+
 </Project>

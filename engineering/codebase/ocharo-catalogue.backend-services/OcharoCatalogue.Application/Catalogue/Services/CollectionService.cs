@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Domain.Catalogue.Entities;
@@ -8,7 +7,7 @@ using OcharoCatalogue.Domain.Catalogue.Models;
 namespace OcharoCatalogue.Application.Catalogue.Services;
 
 /// <summary>Named, ordered product selections (season lines, lookbooks, merchant sheets).</summary>
-public sealed partial class CollectionService(ICatalogueRepository repository, IClock clock)
+public sealed partial class CollectionService(ICatalogueRepository repository, TimeProvider timeProvider)
 {
     public async Task<IReadOnlyList<CollectionDetail>> ListAsync(CancellationToken ct) =>
         (await repository.GetCollectionsAsync(ct))
@@ -49,7 +48,7 @@ public sealed partial class CollectionService(ICatalogueRepository repository, I
             Id = id,
             SortOrder = input.SortOrder,
             Revision = (existing?.Revision ?? 0) + 1,
-            UpdatedAt = clock.UtcNow,
+            UpdatedAt = timeProvider.GetUtcNow(),
             Json = CatalogueJson.Write(document),
         };
         return Detail(await repository.SaveCollectionAsync(record, creating ? null : input.ExpectedRevision, ct));

@@ -13,7 +13,7 @@ const root = mkdtempSync(join(tmpdir(), 'ocharo-catalogue-e2e-'));
 const project = fileURLToPath(
   new URL('../../../../../ocharo-catalogue.backend-services/OcharoCatalogue.Api/', import.meta.url),
 );
-const api = spawn('dotnet', ['run', '--project', project, '--no-launch-profile'], {
+const api = spawn('dotnet', ['run', '--project', project, '--no-launch-profile', '--property:BuildSpa=false'], {
   stdio: 'inherit',
   env: {
     ...process.env,

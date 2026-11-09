@@ -3,14 +3,13 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Domain.Catalogue.Models;
 
 namespace OcharoCatalogue.Application.Catalogue.Services;
 
 /// <summary>Exports: a full JSON backup, a CSV price sheet and per-product files in the workspace product schema.</summary>
-public sealed class CatalogueExportService(ICatalogueRepository repository, SettingsService settings, IClock clock)
+public sealed class CatalogueExportService(ICatalogueRepository repository, SettingsService settings, TimeProvider timeProvider)
 {
     public async Task<byte[]> JsonBundleAsync(CancellationToken ct)
     {
@@ -21,7 +20,7 @@ public sealed class CatalogueExportService(ICatalogueRepository repository, Sett
         var bundle = new
         {
             format = "ocharo-catalogue/1",
-            exportedAt = clock.UtcNow,
+            exportedAt = timeProvider.GetUtcNow(),
             settings = await settings.GetAsync(ct),
             products,
             collections,

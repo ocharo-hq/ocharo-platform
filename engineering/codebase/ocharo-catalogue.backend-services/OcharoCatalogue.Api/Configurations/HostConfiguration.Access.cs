@@ -1,12 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.DataProtection.Repositories;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OcharoCatalogue.Api.Access;
 using OcharoCatalogue.Infrastructure.Catalogue;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
+using WoW.Two.Sdk.Beta.Be.Web.DataProtection;
 
 namespace OcharoCatalogue.Api.Configurations;
 
@@ -44,24 +41,22 @@ public static partial class HostConfiguration
             .AddPolicy(CatalogueAccess.ApprovePolicy, Policy(approval: true))
             .SetFallbackPolicy(member);
 
-        // Resolve final configuration after test/deployment overrides have been applied.
-        builder.Services.AddDataProtection();
-        builder.Services.AddOptions<KeyManagementOptions>()
+        // The application name and key directory are the ones Catalogue has always used, so existing cookies stay readable;
+        // both resolve from the final configuration, after test and deployment overrides.
+        builder.Services.AddPersistentDataProtection(_ => { });
+        builder.Services.AddOptions<PersistentDataProtectionOptions>()
             .Configure<IConfiguration, IHostEnvironment, IOptions<CatalogueOptions>>((options, configuration, environment, catalogue) =>
             {
+                options.ApplicationName = configuration["DataProtection:ApplicationName"] ?? $"ocharo-catalogue:{environment.EnvironmentName}";
                 var path = configuration["DataProtection:KeysPath"];
                 if (string.IsNullOrWhiteSpace(path)) path = Path.Combine(catalogue.Value.DataRoot, "keys");
-                if (!Path.IsPathRooted(path)) path = Path.Combine(environment.ContentRootPath, path);
-                options.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(path), NullLoggerFactory.Instance);
+                options.KeyDirectory = Path.IsPathRooted(path) ? path : Path.Combine(environment.ContentRootPath, path);
             });
-        builder.Services.AddOptions<DataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
-            options.ApplicationDiscriminator = configuration["DataProtection:ApplicationName"] ?? $"ocharo-catalogue:{environment.EnvironmentName}");
         return builder;
     }
 
-    /// <summary>Adds sign-in to the pipeline and maps the Identity session routes: <c>GET /api/identity/session</c>,
-    /// <c>GET /api/identity/sign-in</c>, <c>POST /api/identity/sign-out</c> and the code callback.</summary>
-    private static WebApplication UseAccess(this WebApplication app)
+    /// <summary>Configures sign-in in the pipeline, after routing: HTTPS for the session routes, then the BFF.</summary>
+    private static IApplicationBuilder UseAccess(this IApplicationBuilder app)
     {
         app.Use(async (context, next) =>
         {
@@ -75,6 +70,13 @@ public static partial class HostConfiguration
             await next(context);
         });
         app.UseIdentityBff();
+        return app;
+    }
+
+    /// <summary>Maps the Identity session routes: <c>GET /api/identity/session</c>, <c>GET /api/identity/sign-in</c>,
+    /// <c>POST /api/identity/sign-out</c> and the code callback.</summary>
+    private static WebApplication MapAccess(this WebApplication app)
+    {
         app.MapIdentityBffEndpoints();
         return app;
     }

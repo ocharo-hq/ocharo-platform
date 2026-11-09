@@ -5,6 +5,7 @@ using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
 using OcharoCatalogue.Infrastructure.Catalogue;
+using WoW.Two.Sdk.Beta.Be.Web.SecureHeaders;
 
 namespace OcharoCatalogue.Api.Catalogue.Controllers;
 
@@ -38,8 +39,10 @@ public sealed class CatalogueController(
     }
 
     /// <summary>Serves public media to anyone and private media to members only, reading a session only when one is sent.</summary>
+    /// <remarks>Other Ocharo origins (Marketing, Blog) show these images in place, so they may embed them.</remarks>
     [HttpGet("media/{sha256}")]
     [AllowAnonymous]
+    [AllowCrossOriginEmbedding]
     public Task<IActionResult> Media(string sha256, CancellationToken ct)
     {
         return ServeAsync(
@@ -50,6 +53,7 @@ public sealed class CatalogueController(
 
     [HttpGet("media/{sha256}/preview")]
     [AllowAnonymous]
+    [AllowCrossOriginEmbedding]
     public Task<IActionResult> Preview(string sha256, CancellationToken ct)
     {
         return ServeAsync(

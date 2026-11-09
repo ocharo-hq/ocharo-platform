@@ -1,7 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection.Repositories;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
@@ -26,7 +31,7 @@ public sealed class CatalogueAccessTests
         using var client = CreateClient(host.Factory, person: null);
 
         foreach (var path in new[] { "/api/public/catalogue", "/api/public/catalogue/editions", "/api/runtime-config", "/api/system/status",
-                     "/api/system/version", "/health" })
+                     "/health" })
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync(path)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/catalogue/products")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/catalogue/designs")).StatusCode);
@@ -116,6 +121,21 @@ public sealed class CatalogueAccessTests
     }
 
     [Fact]
+    public async Task DataProtection_ShouldKeepItsApplicationName_AndItsKeyRingUnderTheDataRoot()
+    {
+        await using var host = CatalogueHost.Create(new Dictionary<string, string?>());
+        var services = host.Factory.Services;
+
+        var discriminator = services.GetRequiredService<IOptions<DataProtectionOptions>>().Value.ApplicationDiscriminator;
+        var keys = services.GetRequiredService<IOptions<KeyManagementOptions>>().Value.XmlRepository;
+
+        // A changed name or directory would sign every person out.
+        Assert.Equal("ocharo-catalogue:Testing", discriminator);
+        var ring = Assert.IsType<FileSystemXmlRepository>(keys);
+        Assert.Equal(Path.Combine(services.GetRequiredService<IConfiguration>()["Catalogue:DataRoot"]!, "keys"), ring.Directory.FullName);
+    }
+
+    [Fact]
     public async Task Media_ShouldServePublicBytesToAnyone_AndPrivateBytesOnlyToMembers()
     {
         await using var host = CatalogueHost.Create(new Dictionary<string, string?>());
@@ -166,6 +186,23 @@ public sealed class CatalogueAccessTests
         Assert.Equal(HttpStatusCode.OK, draft.StatusCode);
         Assert.True(draft.Headers.CacheControl?.Private);
         Assert.True(draft.Headers.CacheControl?.NoStore);
+    }
+
+    [Fact]
+    public async Task PublicMediaAndReleaseFiles_ShouldStayEmbeddableByOtherOrigins_AndTheRestSameOrigin()
+    {
+        await using var host = CatalogueHost.Create(new Dictionary<string, string?>());
+        using var client = CreateClient(host.Factory, person: null);
+
+        using var media = await client.GetAsync($"/api/catalogue/media/{new string('f', 64)}/preview");
+        using var release = await client.GetAsync($"/api/public/catalogue/editions/spring/assets/catalogue.pdf?locale=en&release={Guid.NewGuid()}");
+        using var feed = await client.GetAsync("/api/public/catalogue");
+        using var shell = await client.GetAsync("/c/spring");
+
+        Assert.Equal("cross-origin", media.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
+        Assert.Equal("cross-origin", release.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
+        Assert.Equal("same-origin", feed.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
+        Assert.Equal("same-origin", shell.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
     }
 
     [Fact]

@@ -1,12 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Domain.Catalogue.Entities;
 namespace OcharoCatalogue.Application.Catalogue.Services;
 
-public sealed class CatalogueDesignService(IDesignRepository designs,ICatalogueRepository products,IClock clock)
+public sealed class CatalogueDesignService(IDesignRepository designs,ICatalogueRepository products,TimeProvider timeProvider)
 {
     public async Task<IReadOnlyList<CatalogueDesignSummary>> ListAsync(bool archived,CancellationToken ct)=>(await designs.ListAsync(archived,ct)).Select(Summary).ToArray();
     public async Task<CatalogueDesignDetail> GetAsync(Guid id,CancellationToken ct)=>Detail(await designs.GetAsync(id,ct)??throw CatalogueException.NotFound("Catalogue design"));
@@ -17,7 +16,7 @@ public sealed class CatalogueDesignService(IDesignRepository designs,ICatalogueR
         CatalogueDesignValidation.Require(references.All(id=>known.Any(p=>p.Id==id)),"Catalogue pages must reference existing products.");
         foreach(var hash in CatalogueDesignValidation.ImageHashes(snapshot))CatalogueDesignValidation.Require(await products.FindMediaAsync(hash,ct) is not null&&known.Any(row=>CatalogueJson.Read<OcharoCatalogue.Domain.Catalogue.Models.ProductDocument>(row.Json).Media.Any(image=>image.Sha256==hash)),"Catalogue images must belong to the product media library.");
         if(id is not null&&input.ExpectedRevision is null)throw new CatalogueException("Send the catalogue revision you edited.");
-        var now=clock.UtcNow;var saved=await designs.SaveAsync(new(){Id=id??Guid.NewGuid(),Title=input.Title.Trim(),Slug=definition.Slug,Locale=snapshot.GetProperty("locale").GetString()!,Json=snapshot.GetRawText(),CreatedAtUtc=now,UpdatedAtUtc=now},id is null?null:input.ExpectedRevision,ct);return Detail(saved);
+        var now=timeProvider.GetUtcNow();var saved=await designs.SaveAsync(new(){Id=id??Guid.NewGuid(),Title=input.Title.Trim(),Slug=definition.Slug,Locale=snapshot.GetProperty("locale").GetString()!,Json=snapshot.GetRawText(),CreatedAtUtc=now,UpdatedAtUtc=now},id is null?null:input.ExpectedRevision,ct);return Detail(saved);
     }
     public async Task<CatalogueDesignDetail> DuplicateAsync(Guid id,string? title,CancellationToken ct)
     {
@@ -27,7 +26,7 @@ public sealed class CatalogueDesignService(IDesignRepository designs,ICatalogueR
         var newTitle=string.IsNullOrWhiteSpace(title)?source.Title[..Math.Min(source.Title.Length,150)]+" (copy)":title;
         return await SaveAsync(null,new(newTitle,JsonSerializer.SerializeToElement(node,CatalogueJson.Options)),ct);
     }
-    public Task ArchiveAsync(Guid id,int expected,CancellationToken ct)=>designs.ArchiveAsync(id,expected,clock.UtcNow,ct);
+    public Task ArchiveAsync(Guid id,int expected,CancellationToken ct)=>designs.ArchiveAsync(id,expected,timeProvider.GetUtcNow(),ct);
     public async Task<object> RevisionsAsync(Guid id,CancellationToken ct){_=await GetAsync(id,ct);return(await designs.RevisionsAsync(id,ct)).Select(r=>new {id=r.DesignId,r.Revision,r.Title,r.SavedAtUtc}).ToArray();}
     public async Task<CatalogueDesignDetail> RevisionAsync(Guid id,int revision,CancellationToken ct)
     {

@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Domain.Catalogue.Entities;
@@ -8,7 +7,7 @@ using OcharoCatalogue.Domain.Catalogue.Models;
 namespace OcharoCatalogue.Application.Catalogue.Services;
 
 /// <summary>Product commands and queries: validation, revision-checked saves, history and bulk edits.</summary>
-public sealed partial class ProductService(ICatalogueRepository repository, SettingsService settings, IMediaStore media, IClock clock)
+public sealed partial class ProductService(ICatalogueRepository repository, SettingsService settings, IMediaStore media, TimeProvider timeProvider)
 {
     private const int MaxText = 600;
     private const int MaxDescription = 4000;
@@ -54,7 +53,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         if (existing.Any(r => r.Id == id)) throw CatalogueException.Conflict($"A product with id '{id}' already exists.");
 
         var document = Normalize(input with { VariantCode = variant }, id, current, [], null, null);
-        var now = clock.UtcNow;
+        var now = timeProvider.GetUtcNow();
         var record = ToRecord(document, revision: 1, now, now);
         await repository.InsertProductAsync(record, Summary(input.ChangeSummary, "Created"), ct);
         return await DetailAsync(record, ct);
@@ -67,7 +66,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         var current = CatalogueJson.Read<ProductDocument>(record.Json);
         var document = Normalize(input with { VariantCode = input.VariantCode ?? current.VariantCode }, id, await settings.GetAsync(ct),
             current.Media, current.SourceVerbatim, current.Source, current.Locales, current.Pricing);
-        var saved = await repository.UpdateProductAsync(ToRecord(document, expected + 1, record.CreatedAt, clock.UtcNow),
+        var saved = await repository.UpdateProductAsync(ToRecord(document, expected + 1, record.CreatedAt, timeProvider.GetUtcNow()),
             expected, Summary(input.ChangeSummary, Describe(current, document)), ct);
         return await DetailAsync(saved, ct);
     }
@@ -92,7 +91,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             },
             Pricing = source.Pricing is null ? null : source.Pricing with { Status = PricingStatus.Draft },
         };
-        var now = clock.UtcNow;
+        var now = timeProvider.GetUtcNow();
         var created = ToRecord(copy, 1, now, now);
         await repository.InsertProductAsync(created, $"Duplicated from {source.Id}", ct);
         return await DetailAsync(created, ct);
@@ -114,7 +113,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         var item = new ProductMedia(Guid.NewGuid().ToString("N")[..12], role, SafeFileName(fileName), stored.ContentType,
             stored.ByteLength, stored.Sha256, stored.Width, stored.Height, MediaPreview.Exists(stored), null, null);
         var updated = document with { Media = [.. document.Media, item] };
-        var saved = await repository.UpdateProductAsync(ToRecord(updated, record.Revision + 1, record.CreatedAt, clock.UtcNow),
+        var saved = await repository.UpdateProductAsync(ToRecord(updated, record.Revision + 1, record.CreatedAt, timeProvider.GetUtcNow()),
             record.Revision, $"Added {role} image {item.FileName}", ct);
         return await DetailAsync(saved, ct);
     }
@@ -142,7 +141,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         var document = CatalogueJson.Read<ProductDocument>(snapshot.Json);
         var problem = ActivationProblem(document);
         if (problem is not null) throw new CatalogueException($"Cannot restore an active product: {problem}.");
-        var saved = await repository.UpdateProductAsync(ToRecord(document, expectedRevision + 1, record.CreatedAt, clock.UtcNow),
+        var saved = await repository.UpdateProductAsync(ToRecord(document, expectedRevision + 1, record.CreatedAt, timeProvider.GetUtcNow()),
             expectedRevision, $"Restored revision {revision}", ct);
         return await DetailAsync(saved, ct);
     }
@@ -161,7 +160,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             var next = document with { Status = input.Status };
             var problem = ActivationProblem(next);
             if (problem is not null) { skipped.Add($"{id}: {problem}"); continue; }
-            await repository.UpdateProductAsync(ToRecord(next, record.Revision + 1, record.CreatedAt, clock.UtcNow),
+            await repository.UpdateProductAsync(ToRecord(next, record.Revision + 1, record.CreatedAt, timeProvider.GetUtcNow()),
                 record.Revision, $"Status {document.Status} → {input.Status}", ct);
             changed++;
         }
@@ -201,7 +200,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
             if (!ProductPublicationEligibility.ValidTiers(tiers)) { skipped.Add($"{id}: adjusted price is out of range"); continue; }
             if (tiers.SequenceEqual(pricing.Tiers)) continue;
             var next = document with { Pricing = pricing with { Tiers = tiers, Status = PricingStatus.Draft } };
-            await repository.UpdateProductAsync(ToRecord(next, record.Revision + 1, record.CreatedAt, clock.UtcNow),
+            await repository.UpdateProductAsync(ToRecord(next, record.Revision + 1, record.CreatedAt, timeProvider.GetUtcNow()),
                 record.Revision, input.Mode == "percent" ? $"Prices {input.Value:+0.##;-0.##}%" : $"Prices {input.Value:+0;-0} UZS", ct);
             changed++;
         }
@@ -232,7 +231,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         var problem = ActivationProblem(next);
         if (problem is not null) throw new CatalogueException($"Cannot keep the product active: {problem}.");
         var approved = CatalogueLocales.All.Count(code => locales.For(code).Status == LocaleStatus.Approved);
-        var saved = await repository.UpdateProductAsync(ToRecord(next, input.ExpectedRevision + 1, record.CreatedAt, clock.UtcNow),
+        var saved = await repository.UpdateProductAsync(ToRecord(next, input.ExpectedRevision + 1, record.CreatedAt, timeProvider.GetUtcNow()),
             input.ExpectedRevision, $"Edited copy ({approved}/{CatalogueLocales.All.Count} approved)", ct);
         var primary = PrimaryImage(next);
         return new ProductCopyRow(saved.Id, saved.GarmentType, saved.Status, saved.Revision,
@@ -369,7 +368,7 @@ public sealed partial class ProductService(ICatalogueRepository repository, Sett
         var current = CatalogueJson.Read<ProductDocument>(record.Json);
         var next = current with { Stock = Stock(input.Stock, current.Sizes), MadeToOrder = input.MadeToOrder };
         var summary = next.MadeToOrder ? "Stock: made to order" : next.Stock is null ? "Stock: not tracked" : $"Stock: {next.Stock.Values.Sum()} pieces";
-        var saved = await repository.UpdateProductAsync(ToRecord(next, input.ExpectedRevision + 1, record.CreatedAt, clock.UtcNow), input.ExpectedRevision, summary, ct);
+        var saved = await repository.UpdateProductAsync(ToRecord(next, input.ExpectedRevision + 1, record.CreatedAt, timeProvider.GetUtcNow()), input.ExpectedRevision, summary, ct);
         return StockRowOf(next, saved.Status, saved.Revision);
     }
 

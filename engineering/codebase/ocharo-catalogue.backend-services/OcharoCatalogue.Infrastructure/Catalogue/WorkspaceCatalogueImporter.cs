@@ -3,7 +3,6 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Options;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Repositories;
@@ -21,7 +20,7 @@ public sealed partial class WorkspaceCatalogueImporter(
     IMediaStore media,
     SettingsService settings,
     IOptions<CatalogueOptions> options,
-    IClock clock)
+    TimeProvider timeProvider)
 {
     private static readonly string[] FamilyOrder = ["nimcha", "baska", "korset", "kostyum", "abaya", "look"];
 
@@ -58,7 +57,7 @@ public sealed partial class WorkspaceCatalogueImporter(
             var (document, stored, notes) = await MapAsync(json, name, Path.GetRelativePath(root, file), sha, directory, known, input.IncludeReferenceImages, ct);
             warnings.AddRange(notes.Select(n => $"{name}: {n}"));
             images += stored;
-            var now = clock.UtcNow;
+            var now = timeProvider.GetUtcNow();
             if (existing is null)
             {
                 await repository.InsertProductAsync(ProductService.ToRecord(document, 1, now, now), "Imported from workspace", ct);
@@ -151,7 +150,7 @@ public sealed partial class WorkspaceCatalogueImporter(
                 .Where(i => i.Question.Length > 0)
                 .ToList(),
             SourceVerbatim = Text((json["source"] as JsonObject)?["verbatim"]),
-            Source = new ProductSource("workspace-json", relativePath, sha, clock.UtcNow),
+            Source = new ProductSource("workspace-json", relativePath, sha, timeProvider.GetUtcNow()),
         };
         return (document, stored, notes);
     }

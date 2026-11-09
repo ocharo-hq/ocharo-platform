@@ -2,8 +2,8 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Time.Testing;
 using OcharoCatalogue.Api.Configurations;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Persistence;
 using SkiaSharp;
 
@@ -14,7 +14,7 @@ public sealed class CatalogueHarness : IAsyncDisposable
 {
     public string Root { get; } = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-tests", Guid.NewGuid().ToString("N"));
     public ServiceProvider Services { get; }
-    public FixedClock Clock { get; } = new();
+    public FakeTimeProvider Clock { get; } = new(new DateTimeOffset(2026, 9, 28, 9, 0, 0, TimeSpan.Zero));
 
     private CatalogueHarness(string? sourceRoot, TestFiles? files)
     {
@@ -35,7 +35,7 @@ public sealed class CatalogueHarness : IAsyncDisposable
         builder.Configuration.Sources.Clear();
         builder.Configuration.AddInMemoryCollection(settings);
         builder.Configure();
-        builder.Services.AddSingleton<IClock>(Clock);
+        builder.Services.AddSingleton<TimeProvider>(Clock);
         files?.Register(builder.Services);
         Services = builder.Services.BuildServiceProvider();
     }
@@ -117,10 +117,4 @@ public sealed class CatalogueHarness : IAsyncDisposable
         File.WriteAllText(Path.Combine(folder, $"och-{id}.json"), json.ToJsonString());
         return folder;
     }
-}
-
-/// <summary>Deterministic clock.</summary>
-public sealed class FixedClock : IClock
-{
-    public DateTimeOffset UtcNow { get; set; } = new(2026, 9, 28, 9, 0, 0, TimeSpan.Zero);
 }

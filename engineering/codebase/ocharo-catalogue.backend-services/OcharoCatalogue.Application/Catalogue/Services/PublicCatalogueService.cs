@@ -1,4 +1,3 @@
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Domain.Catalogue.Models;
@@ -6,7 +5,7 @@ using OcharoCatalogue.Domain.Catalogue.Models;
 namespace OcharoCatalogue.Application.Catalogue.Services;
 
 /// <summary>Builds the read-only feed other Ocharo platforms consume: active products and published collections only.</summary>
-public sealed class PublicCatalogueService(ICatalogueRepository repository, SettingsService settings, IClock clock)
+public sealed class PublicCatalogueService(ICatalogueRepository repository, SettingsService settings, TimeProvider timeProvider)
 {
     public async Task<PublicCatalogue> BuildAsync(string? locale, CancellationToken ct)
     {
@@ -28,7 +27,7 @@ public sealed class PublicCatalogueService(ICatalogueRepository repository, Sett
             .OrderBy(c => c.SortOrder)
             .Select(c => new PublicCollection(c.Id, c.Names.For(code), c.Names, c.Description, c.ProductIds.Where(active.Contains).ToList()))
             .ToList();
-        return new PublicCatalogue(current.BrandName, current.Currency, code, clock.UtcNow, current.PriceNote, current.GarmentTypes, collections, products);
+        return new PublicCatalogue(current.BrandName, current.Currency, code, timeProvider.GetUtcNow(), current.PriceNote, current.GarmentTypes, collections, products);
     }
 
     public static PublicProduct ToPublic(ProductDocument d, int revision, DateTimeOffset updatedAt, string locale,

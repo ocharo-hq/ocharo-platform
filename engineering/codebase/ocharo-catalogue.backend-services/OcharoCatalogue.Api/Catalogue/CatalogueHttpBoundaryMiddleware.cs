@@ -1,16 +1,19 @@
+using Microsoft.Extensions.Options;
+using OcharoCatalogue.Infrastructure.Catalogue;
+
 namespace OcharoCatalogue.Api.Catalogue;
 
 /// <summary>
-/// Sets the catalogue's response headers and refuses cross-origin writes before sign-in runs: every response is
-/// <c>nosniff</c>, the private API is <c>no-store</c>, and the read-only public feed and media routes stay readable
-/// cross-origin so sibling Ocharo apps (Marketing, Blog) can consume them. Who may call what is the Identity sign-in's
-/// (<see cref="Access.CatalogueAccess"/>).
+/// Sets the catalogue's response headers and refuses cross-origin writes before sign-in runs: the private API is
+/// <c>no-store</c>, and the read-only public feed and media routes stay readable cross-origin so sibling Ocharo apps
+/// (Marketing, Blog) can consume them; <c>nosniff</c> and the other secure headers are the SDK pipeline's. A write is
+/// accepted from the host's own origin and from <see cref="CatalogueOptions.TrustedOrigins"/>. Who may call what is the
+/// Identity sign-in's (<see cref="Access.CatalogueAccess"/>).
 /// </summary>
-public sealed class CatalogueHttpBoundaryMiddleware(RequestDelegate next, IConfiguration configuration)
+public sealed class CatalogueHttpBoundaryMiddleware(RequestDelegate next, IOptions<CatalogueOptions> options)
 {
     public async Task InvokeAsync(HttpContext context)
     {
-        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
         var path = context.Request.Path;
         if (path.StartsWithSegments("/api/public") || path.StartsWithSegments("/api/catalogue/media"))
             context.Response.Headers.AccessControlAllowOrigin = "*";
@@ -40,7 +43,6 @@ public sealed class CatalogueHttpBoundaryMiddleware(RequestDelegate next, IConfi
             return false;
         var authority = uri.GetLeftPart(UriPartial.Authority);
         if (string.Equals(authority, $"{request.Scheme}://{request.Host.Value}", StringComparison.OrdinalIgnoreCase)) return true;
-        var trusted = configuration.GetSection("Catalogue:TrustedOrigins").Get<string[]>() ?? [];
-        return trusted.Contains(authority, StringComparer.OrdinalIgnoreCase);
+        return options.Value.TrustedOrigins.Contains(authority, StringComparer.OrdinalIgnoreCase);
     }
 }

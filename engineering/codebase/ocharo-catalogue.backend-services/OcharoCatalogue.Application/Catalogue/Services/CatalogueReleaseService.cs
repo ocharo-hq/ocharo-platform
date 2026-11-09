@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using System.Text.Json;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Domain.Catalogue.Entities;
@@ -8,7 +7,7 @@ using OcharoCatalogue.Domain.Catalogue.Models;
 namespace OcharoCatalogue.Application.Catalogue.Services;
 
 /// <summary>Prepares immutable catalogue outputs from saved local designs and reviewed product revisions.</summary>
-public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogueRepository repository,SettingsService settings,IDesignArtifactValidator artifacts,IMediaStore media,IReleaseAssetStore releaseAssets,IClock clock)
+public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogueRepository repository,SettingsService settings,IDesignArtifactValidator artifacts,IMediaStore media,IReleaseAssetStore releaseAssets,TimeProvider timeProvider)
 {
     public const int MaximumTotalBytes=256*1024*1024;
     private sealed record Preparation(CatalogueDesignRecord Design,JsonElement Snapshot,CatalogueDefinition Definition,IReadOnlyList<ProductRecord> Rows,IReadOnlyDictionary<string,ProductDocument> Products,IReadOnlyList<string> References,string Fingerprint);
@@ -65,7 +64,7 @@ public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogue
         var currentSettings=await settings.GetAsync(ct);var garments=currentSettings.GarmentTypes.ToDictionary(g=>g.Key);
         var publicProducts=productIds.Select(productId=>{var row=p.Rows.Single(r=>r.Id==productId);return PublicCatalogueService.ToPublic(p.Products[productId],row.Revision,row.UpdatedAt,p.Design.Locale,garments);}).ToArray();
         JsonElement? web=webPages.Length>0?BuildWeb(p,webPages,publicProducts):null;
-        var release=new CataloguePreparedRelease(Guid.NewGuid(),p.Design.Id,p.Design.Revision,p.Definition.Slug,p.Design.Title,p.Definition.Description,p.Design.Locale,clock.UtcNow,web,publicProducts,pages,pdf,links);
+        var release=new CataloguePreparedRelease(Guid.NewGuid(),p.Design.Id,p.Design.Revision,p.Definition.Slug,p.Design.Title,p.Definition.Description,p.Design.Locale,timeProvider.GetUtcNow(),web,publicProducts,pages,pdf,links);
         // The artifacts reach their store before the release's transaction, which records where they went; a refused
         // transaction leaves them stored, and preparing again finds them by SHA-256.
         var storage=await releaseAssets.StoreAsync(stored.Select(a=>new ReleaseArtifact(a.Sha256,a.Type,DownloadName(release,a.Name),a.Bytes)).DistinctBy(a=>a.Sha256).ToArray(),ct);
@@ -76,9 +75,9 @@ public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogue
         var record=await designs.ReleaseAsync(releaseId,ct)??throw CatalogueException.NotFound("Prepared release");
         if(record.DesignId!=designId)throw CatalogueException.NotFound("Prepared release");
         await VerifyMediaAsync(CatalogueJson.Read<CataloguePreparedRelease>(record.Json).Products.SelectMany(product=>product.Images).Select(image=>image.Sha256),ct);
-        return Summary(await designs.PublishAsync(designId,releaseId,expected,clock.UtcNow,ct));
+        return Summary(await designs.PublishAsync(designId,releaseId,expected,timeProvider.GetUtcNow(),ct));
     }
-    public Task WithdrawAsync(Guid designId,int expected,CancellationToken ct)=>designs.WithdrawAsync(designId,expected,clock.UtcNow,ct);
+    public Task WithdrawAsync(Guid designId,int expected,CancellationToken ct)=>designs.WithdrawAsync(designId,expected,timeProvider.GetUtcNow(),ct);
     private async Task VerifyMediaAsync(IEnumerable<string> hashes,CancellationToken ct)
     {
         foreach(var hash in hashes.Distinct(StringComparer.Ordinal))

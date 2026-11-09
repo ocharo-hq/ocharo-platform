@@ -28,7 +28,7 @@ public sealed class ProductPublicationTests
         Media = product.Media.Select(image => new MediaInput(image.Id, image.Role, image.Alt, image.IsActive, image.Group)).ToList(),
     };
     private static async Task Seed(CatalogueHarness harness, ProductDocument product) =>
-        await harness.Get<ICatalogueRepository>().InsertProductAsync(ProductService.ToRecord(product, 1, harness.Clock.UtcNow, harness.Clock.UtcNow), "Test fixture", default);
+        await harness.Get<ICatalogueRepository>().InsertProductAsync(ProductService.ToRecord(product, 1, harness.Clock.GetUtcNow(), harness.Clock.GetUtcNow()), "Test fixture", default);
 
     [Fact]
     public void Legacy_json_stays_readable_and_additional_languages_round_trip_without_fallback()

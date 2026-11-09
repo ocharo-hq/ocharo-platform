@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OcharoCatalogue.Application.Abstractions;
 using OcharoCatalogue.Application.Catalogue;
 using OcharoCatalogue.Application.Catalogue.Repositories;
 using OcharoCatalogue.Application.Catalogue.Services;
@@ -43,7 +42,7 @@ public sealed class FilesMediaStore(
     IFileStoreBroker store,
     MediaStore local,
     IOptions<CatalogueOptions> options,
-    IClock clock) : IMediaStore
+    TimeProvider timeProvider) : IMediaStore
 {
     public async Task<MediaBlobRecord> StoreAsync(byte[] bytes, CancellationToken ct)
     {
@@ -92,7 +91,7 @@ public sealed class FilesMediaStore(
             FileId = file.Id.ToString(),
             Width = width,
             Height = height,
-            StoredAt = clock.UtcNow,
+            StoredAt = timeProvider.GetUtcNow(),
         };
         await repository.SaveMediaAsync(record, ct);
         return record;

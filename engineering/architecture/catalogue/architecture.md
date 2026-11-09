@@ -35,8 +35,8 @@ flowchart LR
 - Stock: `GET /api/catalogue/products/stock`, `PUT /api/catalogue/products/{id}/stock` `{ expectedRevision, stock: {size: pieces} | null, madeToOrder }`; the public feed adds `availability` and `availableSizes` only.
 - Copy grid: `GET /api/catalogue/products/copy`, `PUT /api/catalogue/products/{id}/copy` `{ expectedRevision, locales }` — replaces only the three-language copy.
 - `GET /api/runtime-config` — anonymous, `no-store`, public values only: the `OcharoApps:{Desk,Catalogue,Studio,Marketing,Editorial,Brand,Atlas,Wear,Blog}` settings as `OCHARO_*_URL` keys, the same keys Desk serves. A value that is not an absolute HTTPS address without credentials, query or fragment is left out, with one startup warning naming the setting.
-- `GET /api/system/status` — anonymous, `no-store`: `{ service, status, version }` with the informational version. `GET /api/system/version` stays for existing callers.
-- With SSO enabled, `/c`, `/api/public`, `/api/catalogue/media`, `/health`, `/api/system/version`, `/api/system/status` and `/api/runtime-config` stay reachable without a session.
+- `GET /api/system/status` — anonymous, `no-store`: `{ service, status, version }` with the informational version. `/health` is the be sdk's, with the database readiness check.
+- With SSO enabled, `/c`, `/api/public`, `/api/catalogue/media`, `/health`, `/api/system/status` and `/api/runtime-config` stay reachable without a session.
 
 ## Brand
 

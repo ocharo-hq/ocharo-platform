@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace OcharoCatalogue.Tests;
 
-/// <summary>The conventional status endpoint reports the running version, anonymously, beside the retained version route.</summary>
+/// <summary>The conventional status endpoint reports the running version, anonymously; the retired version route is gone.</summary>
 public sealed class SystemStatusTests
 {
     [Fact]
@@ -14,7 +14,7 @@ public sealed class SystemStatusTests
         using var client = CatalogueSignIn.CreateClient(host.Factory, person: null);
 
         using var status = await client.GetAsync("/api/system/status");
-        using var version = await client.GetAsync("/api/system/version");
+        using var retired = await client.GetAsync("/api/system/version");
 
         Assert.Equal(HttpStatusCode.OK, status.StatusCode);
         Assert.True(status.Headers.CacheControl!.NoStore);
@@ -22,8 +22,7 @@ public sealed class SystemStatusTests
         Assert.Equal("OcharoCatalogue", body.GetProperty("service").GetString());
         Assert.Equal("live", body.GetProperty("status").GetString());
         Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("version").GetString()));
-        Assert.Equal(HttpStatusCode.OK, version.StatusCode);
-        Assert.Equal(body.GetProperty("version").GetString(),
-            (await version.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("version").GetString());
+        Assert.Equal(HttpStatusCode.NotFound, retired.StatusCode);
+        Assert.Equal("application/problem+json", retired.Content.Headers.ContentType?.MediaType);
     }
 }

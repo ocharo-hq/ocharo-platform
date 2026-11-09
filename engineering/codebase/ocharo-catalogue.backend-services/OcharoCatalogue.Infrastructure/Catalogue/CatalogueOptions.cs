@@ -22,4 +22,10 @@ public sealed class CatalogueOptions
 
     /// <summary>Longest side of generated web previews.</summary>
     public int PreviewSize { get; set; } = 900;
+
+    /// <summary>
+    /// HTTPS origins (scheme and authority, such as <c>https://localhost:8282</c>) whose browser writes the API accepts
+    /// besides its own; every other cross-origin write is refused. Empty by default.
+    /// </summary>
+    public string[] TrustedOrigins { get; set; } = [];
 }

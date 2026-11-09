@@ -1,7 +1,5 @@
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
-using WoW.Two.Sdk.Beta.Be.Web.Hosting;
-using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
-using OcharoCatalogue.Api.Catalogue;
+using WoW.Two.Sdk.Beta.Be.Meta;
 
 namespace OcharoCatalogue.Api.Configurations;
 
@@ -11,10 +9,24 @@ public static partial class HostConfiguration
     /// <summary>Configures the application builder (services).</summary>
     public static WebApplicationBuilder Configure(this WebApplicationBuilder builder)
     {
-        builder.AddSettingsFiles();
+        // Lay the SDK boot floor first; it reads the target's and a local run's settings files. Catalogue never redirected
+        // to HTTPS (the ingress terminates TLS), never rate-limited or cached output, and other Ocharo origins embed its
+        // public media and release files, so those stay as they were. OpenAPI is mapped below, anonymous on a local run.
+        builder.AddApiDefaults(options =>
+        {
+            options.ServiceName = "ocharo-catalogue";
+            options.EnableOtlpExporters = false;
+            options.EnableRateLimiting = false;
+            options.EnableOutputCache = false;
+            options.EnableCrossOriginEmbedderPolicy = false;
+            options.EnableHttpsRedirection = false;
+            options.ExposeOpenApi = false;
+            options.SpaHosting = _ => { };
+            options.TrustProxiesFrom(builder.Configuration.GetSection("Deployment"));
+        });
+
         builder
             .AddSqliteDatabase()
-            .AddClock()
             .AddCatalogue()
             .AddAccess()
             .AddMediator()
@@ -29,35 +41,20 @@ public static partial class HostConfiguration
     {
         await app.InitializeCatalogueAsync();
 
-        app.UseProxyAwareHosting();
-        app.UseHttpProblemDetails();
-
-        app.UseMiddleware<CatalogueExceptionMiddleware>();
-        app.UseMiddleware<CatalogueHttpBoundaryMiddleware>();
-
-        // Serve the Vue SPA from wwwroot (single-deploy: API + UI in one host), ahead of sign-in: the shell is public.
-        app.UseDefaultFiles();
-        app.UseStaticFiles();
-
-        // Every endpoint below needs a member of the bound organization unless it allows anonymous callers: the published
-        // reader and its API, the public feed, public media, runtime config, status, health and the SPA shell.
-        app.UseRouting();
-        app.UseAccess();
+        // SDK pipeline: secure headers, compression, the SPA bundle (public, ahead of sign-in), /health (database
+        // readiness) and the SPA fallback with its JSON 404 under /api. Every endpoint needs a member of the bound
+        // organization unless it allows anonymous callers: the published reader and its API, the public feed, public
+        // media, runtime config, status, health and the SPA shell.
+        app.UseApiDefaults(pipeline => pipeline
+            .UseCatalogueBoundary()
+            .UseAccess());
 
         if (app.Environment.IsLocalRun(app.Configuration))
             app.MapOpenApi().AllowAnonymous();
 
         app.WarnAboutRejectedRuntimeConfig();
+        app.MapAccess();
         app.MapControllers();
-        // Retained for existing callers; `GET api/system/status` is the conventional status endpoint.
-        app.MapGet("/api/system/version", (HttpContext context) =>
-        {
-            context.Response.Headers.CacheControl = "no-store";
-            return Results.Ok(new { service = "OcharoCatalogue", version = BuildIdentity.Version });
-        }).AllowAnonymous();
-        app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "OcharoCatalogue" })).AllowAnonymous();
-        app.MapFallback("/api/{**slug}", () => Results.Problem(statusCode: 404, title: "API route not found")).AllowAnonymous();
-        app.MapFallbackToFile("index.html").AllowAnonymous();
 
         return app;
     }
