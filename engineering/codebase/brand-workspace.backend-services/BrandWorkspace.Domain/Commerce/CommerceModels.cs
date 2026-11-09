@@ -33,7 +33,8 @@ public sealed record SourceEvidence(string Kind, string Id, int Revision, string
 public sealed record CommerceDraft(Guid BrandId, int Revision, CommerceSnapshot Snapshot, DateTimeOffset UpdatedAt);
 public sealed record CommerceRelease(Guid Id, Guid BrandId, int Revision, int SourceRevision, DateTimeOffset PublishedAt,
     string Note, CommerceSnapshot Snapshot, DateTimeOffset? WithdrawnAt = null);
-public sealed record CommerceBlob(string Sha256, string ContentType, byte[] Bytes);
+/// <summary>Content-addressed brand media: its bytes, or with WoW2 Files the file holding them and no bytes.</summary>
+public sealed record CommerceBlob(string Sha256, string ContentType, byte[] Bytes, string? FileId = null);
 public sealed record CreativeSource(string Application, string WorkspaceId, string LookId, int Revision);
 public sealed record CreativeAssetRelease(string Id, string Sha256);
 public sealed record CreativeMaterial(string Slot, string Source, string? MaterialId, string? Sha256);

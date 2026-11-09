@@ -295,18 +295,26 @@ public sealed class SourcingRepository(NpgsqlDataSource dataSource, TimeProvider
     }
 
     public async Task<SourcingMediaUpload> CreateMediaAsync(
-        Guid organizationId, string actor, NewSourcingMedia media, CancellationToken token)
+        Guid organizationId, string actor, NewSourcingMedia media, string? fileId, CancellationToken token)
     {
         DateTimeOffset now = time.GetUtcNow();
         InspectedMedia content = media.Content;
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
         await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(token);
         await RequireSupplierReferenceAsync(connection, transaction, organizationId, media.SupplierId, token);
-        await using (NpgsqlCommand bytes = Command(connection, transaction, """
-            INSERT INTO sourcing.media_contents(organization_id, sha256, bytes, thumbnail)
-            VALUES ($1, $2, $3, $4::bytea)
-            ON CONFLICT (organization_id, sha256) DO NOTHING
-            """, organizationId, content.Sha256, content.Bytes, content.Thumbnail))
+        // With WoW2 Files the row keeps only the file id: the thumbnail is the original's 480 px variant (files-adoption #10).
+        await using (NpgsqlCommand bytes = fileId is null
+            ? Command(connection, transaction, """
+                INSERT INTO sourcing.media_contents(organization_id, sha256, bytes, thumbnail)
+                VALUES ($1, $2, $3, $4::bytea)
+                ON CONFLICT (organization_id, sha256) DO NOTHING
+                """, organizationId, content.Sha256, content.Bytes, content.Thumbnail)
+            : Command(connection, transaction, """
+                INSERT INTO sourcing.media_contents(organization_id, sha256, file_id)
+                VALUES ($1, $2, $3)
+                ON CONFLICT (organization_id, sha256) DO UPDATE
+                    SET file_id = COALESCE(sourcing.media_contents.file_id, EXCLUDED.file_id)
+                """, organizationId, content.Sha256, fileId))
         {
             await bytes.ExecuteNonQueryAsync(token);
         }
@@ -386,26 +394,29 @@ public sealed class SourcingRepository(NpgsqlDataSource dataSource, TimeProvider
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
         await using NpgsqlCommand command = Command(connection, null, """
-            SELECT c.bytes, m.content_type, m.original_name
+            SELECT c.bytes, m.content_type, m.original_name, c.file_id
             FROM sourcing.media m
             JOIN sourcing.media_contents c ON c.organization_id=m.organization_id AND c.sha256=m.sha256
             WHERE m.organization_id=$1 AND m.id=$2
             """, organizationId, mediaId);
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
         if (!await reader.ReadAsync(token)) throw NotFound("media item");
-        return new SourcingMediaContent(reader.GetFieldValue<byte[]>(0), reader.GetString(1), reader.GetString(2));
+        return new SourcingMediaContent(reader.IsDBNull(0) ? null : reader.GetFieldValue<byte[]>(0), reader.GetString(1), reader.GetString(2),
+            NullableString(reader, 3));
     }
 
-    public async Task<byte[]> GetMediaThumbnailAsync(Guid organizationId, Guid mediaId, CancellationToken token)
+    public async Task<SourcingThumbnail> GetMediaThumbnailAsync(Guid organizationId, Guid mediaId, CancellationToken token)
     {
         await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(token);
         await using NpgsqlCommand command = Command(connection, null, """
-            SELECT c.thumbnail
+            SELECT c.thumbnail, CASE WHEN m.has_thumbnail THEN c.file_id END
             FROM sourcing.media m
             JOIN sourcing.media_contents c ON c.organization_id=m.organization_id AND c.sha256=m.sha256
             WHERE m.organization_id=$1 AND m.id=$2
             """, organizationId, mediaId);
-        return await command.ExecuteScalarAsync(token) as byte[] ?? throw NotFound("thumbnail");
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token) || (reader.IsDBNull(0) && reader.IsDBNull(1))) throw NotFound("thumbnail");
+        return new SourcingThumbnail(reader.IsDBNull(0) ? null : reader.GetFieldValue<byte[]>(0), NullableString(reader, 1));
     }
 
     private static async Task<Supplier?> ReadSupplierAsync(

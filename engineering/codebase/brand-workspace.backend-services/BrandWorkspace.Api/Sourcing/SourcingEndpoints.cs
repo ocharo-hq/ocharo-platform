@@ -121,19 +121,25 @@ public static class SourcingEndpoints
             await service.DeleteMediaAsync(Access(context), mediaId, expectedRevision, token);
             return Results.Ok(new { data = new { id = mediaId } });
         });
+        // The desk loads both with img, video and plain links, so a member gets a redirect to a Files link once Files holds
+        // the original; membership still decides here, and the answer stays no-store (files-adoption #9).
         group.MapGet("/media/{mediaId:guid}/content", async (Guid mediaId, HttpContext context, SourcingService service,
             CancellationToken token) =>
         {
-            var content = await service.GetMediaContentAsync(Access(context), mediaId, token);
+            var content = await service.OpenMediaAsync(Access(context), mediaId, token);
             context.Response.Headers.XContentTypeOptions = "nosniff";
-            return Results.File(content.Bytes, content.ContentType, enableRangeProcessing: true);
+            return content.Location is { } location
+                ? Results.Redirect(location.AbsoluteUri)
+                : Results.File(content.Bytes!, content.ContentType, enableRangeProcessing: true);
         });
         group.MapGet("/media/{mediaId:guid}/thumbnail", async (Guid mediaId, HttpContext context, SourcingService service,
             CancellationToken token) =>
         {
-            byte[] thumbnail = await service.GetMediaThumbnailAsync(Access(context), mediaId, token);
+            var thumbnail = await service.OpenThumbnailAsync(Access(context), mediaId, token);
             context.Response.Headers.XContentTypeOptions = "nosniff";
-            return Results.File(thumbnail, "image/webp");
+            return thumbnail.Location is { } location
+                ? Results.Redirect(location.AbsoluteUri)
+                : Results.File(thumbnail.Bytes!, thumbnail.ContentType);
         });
         return app;
     }

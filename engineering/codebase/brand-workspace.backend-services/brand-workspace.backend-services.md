@@ -1,6 +1,6 @@
 # Backend foundation
 
-*Last updated: 2026-11-05*
+*Last updated: 2026-11-09*
 
 .NET 10 API and independent worker, with PostgreSQL-owned technical diagnostics.
 The API exposes no business mutation and starts no job processor. Authentication,
@@ -142,10 +142,33 @@ through Ocharo's Identity on its own.
   verified offline against the JWKS of `Identity:Client:Authority`: audience `Identity:Resource:Uri` (required at boot), scope
   `desk.remove-background`. Bad token or none `401`, missing scope `403`; the BFF cookie stays the default scheme and never opens it.
 
+## Media in WoW2 Files
+
+With `Files:BaseUrl` set, Desk's 4 byte stores keep their bytes in WoW2 Files, tenant `ocharo`, as app `desk`
+(`engineering/planning/files-adoption.md` #9–#15). Each upload's idempotency key is its reference, the same the
+migration manifest (`engineering/deployment/files-migration.yml`, wave 3) gives the files it moves:
+
+| Rows | Reference | Route |
+|---|---|---|
+| `preparation.media` | `desk.preparation-media:{organization_id}/{id}` | `/media/{id}/content` answers bytes, read through Files: the design export `fetch()`es it |
+| `preparation.exports` | `desk.preparation-export:{organization_id}/{id}`, a private ZIP | `/exports/{id}/download` redirects to a link saved as `manual-content-{id}.zip` |
+| `commerce.media` | `desk.commerce-media:{brand_id}/{sha256}` | the member route answers bytes (design export); the public media and edition assets redirect |
+| `sourcing.media_contents` | `desk.sourcing-media:{organization_id}/{sha256}` | content redirects; the thumbnail redirects to the 480 px variant, and no thumbnail bytes are stored |
+
+- every route keeps its own access decision and its `no-store`; a link lives 15 minutes.
+- migration `012-files` adds `file_id` beside each `bytes` column and drops its `NOT NULL`. The immutable preparation rows
+  never change: a row stored before Files gets its file id in an insert-only `media_files` or `export_files` record.
+- the commerce attach references the preparation image's file instead of copying its bytes.
+- the boot fills file ids for rows stored before Files: a `desk` file in Files with the row's SHA-256 and its own
+  reference. Until then the row reads its PostgreSQL bytes; an unreachable Files leaves the boot running.
+- a person's request calls Files with their exchanged token (the BFF session); the `--import-sourcing` CLI, the boot and
+  anonymous routes call it as Desk, by client credentials of `Identity:Client`. The worker touches no media.
+- with `Files:BaseUrl` unset, every byte stays in PostgreSQL as before.
+
 ## SDK adoption boundary
 
-Published `WoW2.Sdk.Beta.Be` and `WoW2.Sdk.Beta.Be.Testing` are pinned to `10.0.71-beta`
-(settings files and the local-run check); NuGet availability was verified on 19 October 2026.
+Published `WoW2.Sdk.Beta.Be` and `WoW2.Sdk.Beta.Be.Testing` are pinned to `10.0.105-beta`, Files' `Abstractions` and
+`Client` to `10.0.5-beta`, and the Identity packages to `10.0.30-beta`.
 The family was renamed from `WoW2.Sdk.Backend.Beta` at `10.0.67-beta`.
 
 The worker calls public SDK `AddHangfireJobs` with explicit PostgreSQL storage

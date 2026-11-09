@@ -1,4 +1,5 @@
 using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Files;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Sourcing.Models;
 using BrandWorkspace.Application.Sourcing.Repositories;
@@ -6,11 +7,14 @@ using BrandWorkspace.Domain.Sourcing.Models;
 
 namespace BrandWorkspace.Infrastructure.Sourcing.Services;
 
-/// <summary>Enforces membership roles and validation for suppliers, contacts and shared media.</summary>
+/// <summary>Enforces membership roles and validation for suppliers, contacts and shared media. With WoW2 Files, an original
+/// lands there once per organization and SHA-256 before its row is stored, and its 480 px variant serves as the thumbnail
+/// (planning/files-adoption.md #10, #13).</summary>
 public sealed class SourcingService(
     ISourcingRepository repository,
     SourcingValidationService validation,
-    SourcingMediaInspector inspector)
+    SourcingMediaInspector inspector,
+    IDeskFileStore files)
 {
     public const int NearDuplicateDistance = 6;
 
@@ -118,7 +122,12 @@ public sealed class SourcingService(
         RequireEditor(access);
         SourcingMedia? existing = await repository.FindMediaBySha256Async(access.OrganizationId, media.Content.Sha256, token);
         if (existing is not null) return new SourcingMediaUpload(existing, true, []);
-        SourcingMediaUpload stored = await repository.CreateMediaAsync(access.OrganizationId, access.UserId, media, token);
+        // A person's upload goes with their exchanged token, the import CLI with Desk's own.
+        string? fileId = files.IsEnabled
+            ? (await files.StoreAsync(media.Content.Bytes, DeskFiles.Name(media.Content.Sha256, media.Content.ContentType),
+                media.Content.ContentType, DeskFileReference.SourcingMedia(access.OrganizationId, media.Content.Sha256), token)).Id
+            : null;
+        SourcingMediaUpload stored = await repository.CreateMediaAsync(access.OrganizationId, access.UserId, media, fileId, token);
         if (stored.Duplicate || media.Content.PerceptualHash is not { } hash) return stored;
         IReadOnlyList<Guid> near = await repository.FindNearDuplicatesAsync(
             access.OrganizationId, hash, NearDuplicateDistance, stored.Media.Id, token);
@@ -147,11 +156,28 @@ public sealed class SourcingService(
         return repository.DeleteMediaAsync(access.OrganizationId, mediaId, expectedRevision, token);
     }
 
-    public Task<SourcingMediaContent> GetMediaContentAsync(OrganizationAccess access, Guid mediaId, CancellationToken token) =>
-        repository.GetMediaContentAsync(access.OrganizationId, mediaId, token);
+    /// <summary>Opens an original for a route the browser loads directly (img, video, a new tab): a Files link when Files
+    /// holds it, else its bytes.</summary>
+    public async Task<StoredContent> OpenMediaAsync(OrganizationAccess access, Guid mediaId, CancellationToken token)
+    {
+        SourcingMediaContent content = await repository.GetMediaContentAsync(access.OrganizationId, mediaId, token);
+        if (files.IsEnabled && content.FileId is { } fileId)
+            return new StoredContent(content.ContentType, await files.LinkAsync(fileId, null, download: false, token), null);
+        return new StoredContent(content.ContentType, null, content.Bytes ?? throw Unavailable());
+    }
 
-    public Task<byte[]> GetMediaThumbnailAsync(OrganizationAccess access, Guid mediaId, CancellationToken token) =>
-        repository.GetMediaThumbnailAsync(access.OrganizationId, mediaId, token);
+    /// <summary>Opens a thumbnail: the original's 480 px Files variant, or the WebP stored before Files.</summary>
+    public async Task<StoredContent> OpenThumbnailAsync(OrganizationAccess access, Guid mediaId, CancellationToken token)
+    {
+        SourcingThumbnail thumbnail = await repository.GetMediaThumbnailAsync(access.OrganizationId, mediaId, token);
+        if (files.IsEnabled && thumbnail.FileId is { } fileId)
+            return new StoredContent("image/webp", await files.LinkAsync(fileId, DeskFiles.SourcingThumbnailWidth, download: false, token), null);
+        return new StoredContent("image/webp", null, thumbnail.Bytes ?? throw Unavailable());
+    }
+
+    /// <summary>Refuses a row whose bytes only WoW2 Files holds, in a run without it.</summary>
+    private static PreparationException Unavailable() =>
+        new("unavailable", "This file is stored in WoW2 Files, which this run does not reach.");
 
     private static void RequireEditor(OrganizationAccess access)
     {

@@ -1,6 +1,6 @@
 # Foundation HTTP and durable worker tests
 
-*Last updated: 2026-10-20*
+*Last updated: 2026-11-09*
 
 Run `dotnet test tests/BrandWorkspace.Tests.E2E` from the backend solution directory.
 Docker must be available; the suite starts its own PostgreSQL 18 container through the SDK test fixture.
@@ -12,4 +12,7 @@ ready), refuse startup on drifted schema history, and apply forwarded headers on
 Test hosts sign in through `DeskTestHost`, a stand-in for the Identity BFF cookie scheme driven by the `X-Test-Person` header;
 no call reaches an Identity instance, and `AccessIdentityTests` cover the claims-based organization access.
 `RuntimeConfigTests` serve the configured `OcharoApps:*` addresses anonymously and `no-store`, and drop malformed ones.
+`FilesMediaTests` run Desk on WoW2 Files through `TestFiles`, an in-memory broker set: each media kind lands once, routes
+redirect or answer bytes, rows stored before Files read their bytes until the boot backfill, and an unreachable Files
+spares the boot.
 No shared development database is changed. The suite does not contact social providers.

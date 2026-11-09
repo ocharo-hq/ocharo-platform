@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Files;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Preparation.Repositories;
 using BrandWorkspace.Domain.Preparation.Models;
@@ -7,7 +8,7 @@ using BrandWorkspace.Domain.Preparation.Models;
 namespace BrandWorkspace.Infrastructure.Preparation.Services;
 
 /// <summary>Enforces preparation permissions and bounded inputs independently of the HTTP adapter.</summary>
-public sealed class PreparationService(IPreparationRepository repository, ImageValidationService images)
+public sealed class PreparationService(IPreparationRepository repository, ImageValidationService images, IDeskFileStore files)
 {
     public Task<IReadOnlyList<Brand>> GetBrandsAsync(OrganizationAccess access, CancellationToken token) =>
         repository.GetBrandsAsync(access.OrganizationId, token);
@@ -77,6 +78,15 @@ public sealed class PreparationService(IPreparationRepository repository, ImageV
 
     public Task<byte[]> GetExportContentAsync(OrganizationAccess access, Guid exportId, CancellationToken token) =>
         repository.GetExportContentAsync(access.OrganizationId, exportId, token);
+
+    /// <summary>Opens an export for its download route: a link to the private Files file, saved under its name, or the ZIP
+    /// bytes of an export stored before Files that the backfill has not reached (planning/files-adoption.md #9, #13).</summary>
+    public async Task<StoredContent> OpenExportAsync(OrganizationAccess access, Guid exportId, CancellationToken token)
+    {
+        if (files.IsEnabled && await repository.GetExportFileAsync(access.OrganizationId, exportId, token) is { } fileId)
+            return new StoredContent("application/zip", await files.LinkAsync(fileId, null, download: true, token), null);
+        return new StoredContent("application/zip", null, await repository.GetExportContentAsync(access.OrganizationId, exportId, token));
+    }
 
     private static void Revision(int revision)
     {

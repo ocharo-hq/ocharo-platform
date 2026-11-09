@@ -69,6 +69,13 @@ public sealed class CommerceRepository(NpgsqlDataSource source, TimeProvider tim
         await using(var cmd=Cmd(c,tx,"INSERT INTO commerce.profiles(organization_id,brand_id,current_revision,updated_at) VALUES($1,$2,$3,$4) ON CONFLICT(organization_id,brand_id) DO UPDATE SET current_revision=$3,updated_at=$4",organizationId,brandId,revision,now)) await cmd.ExecuteNonQueryAsync(token);
         foreach(var blob in blobs)
         {
+            if(blob.FileId is {} fileId)
+            {
+                // WoW2 Files holds the bytes, checked before upload; a row stored before Files takes the file in place.
+                CommerceRules.Require(CommerceRules.Hash(blob.Sha256),"Imported media bytes do not match their hash.");
+                await using var file=Cmd(c,tx,"INSERT INTO commerce.media(brand_id,sha256,content_type,file_id) VALUES($1,$2,$3,$4) ON CONFLICT(brand_id,sha256) DO UPDATE SET file_id=COALESCE(commerce.media.file_id,EXCLUDED.file_id)",brandId,blob.Sha256,blob.ContentType,fileId); await file.ExecuteNonQueryAsync(token);
+                continue;
+            }
             CommerceRules.Require(blob.Bytes.Length > 0 && blob.Bytes.Length <= maximumBlobBytes && blob.Sha256==Convert.ToHexStringLower(SHA256.HashData(blob.Bytes)),"Imported media bytes do not match their hash.");
             await using var cmd=Cmd(c,tx,"INSERT INTO commerce.media(brand_id,sha256,content_type,bytes) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",brandId,blob.Sha256,blob.ContentType,blob.Bytes); await cmd.ExecuteNonQueryAsync(token);
         }
@@ -170,8 +177,13 @@ public sealed class CommerceRepository(NpgsqlDataSource source, TimeProvider tim
     }
     public async Task<CommerceBlob?> BlobAsync(Guid brandId,string sha256,CancellationToken token)
     {
-        await using var c=await source.OpenConnectionAsync(token);await using var cmd=Cmd(c,null,"SELECT content_type,bytes FROM commerce.media WHERE brand_id=$1 AND sha256=$2",brandId,sha256);
-        await using var r=await cmd.ExecuteReaderAsync(token);return await r.ReadAsync(token)?new(sha256,r.GetString(0),(byte[])r[1]):null;
+        await using var c=await source.OpenConnectionAsync(token);await using var cmd=Cmd(c,null,"SELECT content_type,bytes,file_id FROM commerce.media WHERE brand_id=$1 AND sha256=$2",brandId,sha256);
+        await using var r=await cmd.ExecuteReaderAsync(token);return await r.ReadAsync(token)?new(sha256,r.GetString(0),r.IsDBNull(1)?[]:(byte[])r[1],r.IsDBNull(2)?null:r.GetString(2)):null;
+    }
+    public async Task<string?> MediaFileAsync(Guid brandId,string sha256,CancellationToken token)
+    {
+        await using var c=await source.OpenConnectionAsync(token);await using var cmd=Cmd(c,null,"SELECT file_id FROM commerce.media WHERE brand_id=$1 AND sha256=$2",brandId,sha256);
+        return await cmd.ExecuteScalarAsync(token) as string;
     }
     public async Task<CreativeImport> ImportCreativeAsync(Guid organizationId,string actor,CreativeImportInput input,CancellationToken token)
     {

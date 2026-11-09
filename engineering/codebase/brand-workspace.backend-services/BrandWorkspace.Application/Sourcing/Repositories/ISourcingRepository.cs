@@ -33,13 +33,15 @@ public interface ISourcingRepository
     Task<SourcingMedia?> FindMediaBySha256Async(Guid organizationId, string sha256, CancellationToken token);
     Task<IReadOnlyList<Guid>> FindNearDuplicatesAsync(
         Guid organizationId, long perceptualHash, int maximumDistance, Guid excludedMediaId, CancellationToken token);
+    /// <summary>Stores media once per organization; with <paramref name="fileId"/> WoW2 Files holds the bytes, and the
+    /// thumbnail is that file's variant, so neither stays in PostgreSQL.</summary>
     Task<SourcingMediaUpload> CreateMediaAsync(
-        Guid organizationId, string actor, NewSourcingMedia media, CancellationToken token);
+        Guid organizationId, string actor, NewSourcingMedia media, string? fileId, CancellationToken token);
     Task<SourcingMedia> UpdateMediaAsync(
         Guid organizationId, Guid mediaId, int expectedRevision, MediaUpdateInput input, CancellationToken token);
     Task<int> AssignMediaAsync(
         Guid organizationId, IReadOnlyList<Guid> mediaIds, Guid? supplierId, CancellationToken token);
     Task DeleteMediaAsync(Guid organizationId, Guid mediaId, int expectedRevision, CancellationToken token);
     Task<SourcingMediaContent> GetMediaContentAsync(Guid organizationId, Guid mediaId, CancellationToken token);
-    Task<byte[]> GetMediaThumbnailAsync(Guid organizationId, Guid mediaId, CancellationToken token);
+    Task<SourcingThumbnail> GetMediaThumbnailAsync(Guid organizationId, Guid mediaId, CancellationToken token);
 }

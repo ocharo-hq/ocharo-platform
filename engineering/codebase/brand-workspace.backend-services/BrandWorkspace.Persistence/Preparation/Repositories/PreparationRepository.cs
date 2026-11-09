@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using BrandWorkspace.Application.Files;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Preparation.Repositories;
 using BrandWorkspace.Application.Preparation.Services;
@@ -11,10 +12,21 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 
 namespace BrandWorkspace.Persistence.Preparation.Repositories;
 
-/// <summary>PostgreSQL storage with organization-qualified access and serialized draft transitions.</summary>
-public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, TimeProvider time, IManualPackageBuilder packages)
-    : IPreparationRepository
+/// <summary>PostgreSQL storage with organization-qualified access and serialized draft transitions. With WoW2 Files, images
+/// and export ZIPs keep their bytes there (planning/files-adoption.md #13): a row stores the file id, and a row stored
+/// before Files reads its bytes until the boot backfill records its moved file in <c>media_files</c> or
+/// <c>export_files</c>, since both tables reject updates.</summary>
+public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, TimeProvider time, IManualPackageBuilder packages,
+    IDeskFileStore files) : IPreparationRepository
 {
+    /// <summary>The metadata columns of <c>preparation.media m</c>, its size included when Files holds the bytes.</summary>
+    private const string MediaColumns =
+        "m.id,m.file_name,m.content_type,COALESCE(octet_length(m.bytes)::bigint,m.byte_length),m.sha256,m.provenance,m.created_at";
+
+    /// <summary>Joins the file id recorded for a media row stored before Files.</summary>
+    private const string MediaFileJoin =
+        "LEFT JOIN preparation.media_files f ON f.organization_id=m.organization_id AND f.media_id=m.id";
+
     public async Task<IReadOnlyList<Brand>> GetBrandsAsync(Guid organizationId, CancellationToken token)
     {
         await using var connection = await dataSource.OpenConnectionAsync(token);
@@ -41,7 +53,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
     {
         await using var connection = await dataSource.OpenConnectionAsync(token);
         await using var command = Command(connection, null,
-            "SELECT id,file_name,content_type,octet_length(bytes)::bigint,sha256,provenance,created_at FROM preparation.media WHERE organization_id=$1 ORDER BY created_at DESC,id",
+            $"SELECT {MediaColumns} FROM preparation.media m WHERE m.organization_id=$1 ORDER BY m.created_at DESC,m.id",
             organizationId);
         await using var reader = await command.ExecuteReaderAsync(token);
         var media = new List<MediaAsset>();
@@ -54,12 +66,18 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
     {
         var media = new MediaAsset(Guid.NewGuid(), organizationId, fileName, image.ContentType, image.Bytes.LongLength,
             image.Sha256, provenance, time.GetUtcNow());
+        // With Files the original lands there first, under the row's own reference; a refused insert leaves it referenced.
+        var file = files.IsEnabled
+            ? await files.StoreAsync(image.Bytes, DeskFiles.Name(image.Sha256, image.ContentType), image.ContentType,
+                DeskFileReference.PreparationMedia(organizationId, media.Id), token)
+            : null;
         await using var connection = await dataSource.OpenConnectionAsync(token);
         await using var command = Command(connection, null,
             """
-            INSERT INTO preparation.media(organization_id,id,file_name,content_type,bytes,sha256,provenance,created_by,created_at)
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)
-            """, organizationId, media.Id, fileName, image.ContentType, image.Bytes, image.Sha256, provenance, actor, media.CreatedAtUtc);
+            INSERT INTO preparation.media(organization_id,id,file_name,content_type,bytes,sha256,provenance,created_by,created_at,file_id,byte_length)
+            VALUES($1,$2,$3,$4,$5::bytea,$6,$7,$8,$9,$10::text,$11::bigint)
+            """, organizationId, media.Id, fileName, image.ContentType, file is null ? image.Bytes : null, image.Sha256, provenance, actor,
+            media.CreatedAtUtc, file?.Id, file is null ? null : image.Bytes.LongLength);
         await command.ExecuteNonQueryAsync(token);
         return media;
     }
@@ -68,6 +86,17 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
     {
         await using var connection = await dataSource.OpenConnectionAsync(token);
         return await ReadMediaContentAsync(connection, null, organizationId, mediaId, token);
+    }
+
+    public async Task<PreparationMediaFile> GetMediaFileAsync(Guid organizationId, Guid mediaId, CancellationToken token)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(token);
+        await using var command = Command(connection, null,
+            $"SELECT {MediaColumns},COALESCE(m.file_id,f.file_id) FROM preparation.media m {MediaFileJoin} WHERE m.organization_id=$1 AND m.id=$2",
+            organizationId, mediaId);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The image was not found.");
+        return new PreparationMediaFile(ReadMedia(reader, organizationId), reader.IsDBNull(7) ? null : reader.GetString(7));
     }
 
     public async Task<IReadOnlyList<DraftSummary>> GetDraftsAsync(Guid organizationId, Guid? brandId, CancellationToken token)
@@ -116,9 +145,9 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
         long total = 0;
         foreach (var mediaId in input.MediaIds)
         {
-            var item = await ReadMediaContentAsync(connection, transaction, organizationId, mediaId, token);
-            media.Add(item.Asset);
-            total += item.Asset.ByteLength;
+            var item = await ReadMediaAsync(connection, transaction, organizationId, mediaId, token);
+            media.Add(item);
+            total += item.ByteLength;
         }
         if (total > 25L * 1024 * 1024) throw new PreparationException("too-large", "Selected media must total at most 25 MiB.");
         var now = time.GetUtcNow();
@@ -236,12 +265,18 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             media.Add(await ReadMediaContentAsync(connection, transaction, organizationId, asset.Id, token));
         var export = Export(organizationId, Guid.NewGuid(), draftId, expectedRevision, time.GetUtcNow());
         var bytes = packages.Build(new PackageSnapshot(organizationId, export, draft, media));
+        // A private file under the export's own reference. It uploads while the key and the draft head stay locked, so the
+        // idempotency key and request hash keep deciding exactly as before; a rolled-back insert leaves it referenced.
+        var file = files.IsEnabled
+            ? await files.StoreAsync(bytes, $"manual-content-{export.Id:D}.zip", "application/zip",
+                DeskFileReference.PreparationExport(organizationId, export.Id), token)
+            : null;
         await using (var insert = Command(connection, transaction,
             """
-            INSERT INTO preparation.exports(organization_id,id,draft_id,revision,approval_id,idempotency_key,request_hash,bytes,sha256,created_by,created_at)
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-            """, organizationId, export.Id, draftId, expectedRevision, draft.Approval.Id, idempotencyKey, requestHash, bytes,
-            Convert.ToHexStringLower(SHA256.HashData(bytes)), actor, export.CreatedAtUtc))
+            INSERT INTO preparation.exports(organization_id,id,draft_id,revision,approval_id,idempotency_key,request_hash,bytes,sha256,created_by,created_at,file_id)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8::bytea,$9,$10,$11,$12::text)
+            """, organizationId, export.Id, draftId, expectedRevision, draft.Approval.Id, idempotencyKey, requestHash,
+            file is null ? bytes : null, Convert.ToHexStringLower(SHA256.HashData(bytes)), actor, export.CreatedAtUtc, file?.Id))
             await insert.ExecuteNonQueryAsync(token);
         await transaction.CommitAsync(token);
         return export;
@@ -249,11 +284,26 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
 
     public async Task<byte[]> GetExportContentAsync(Guid organizationId, Guid exportId, CancellationToken token)
     {
+        var (bytes, fileId, sha256) = await ReadExportAsync(organizationId, exportId, token);
+        return bytes ?? await files.ReadAsync(fileId!, sha256, token);
+    }
+
+    public async Task<string?> GetExportFileAsync(Guid organizationId, Guid exportId, CancellationToken token) =>
+        (await ReadExportAsync(organizationId, exportId, token)).FileId;
+
+    /// <summary>Reads an export's stored bytes, or the Files file that holds them, and their SHA-256.</summary>
+    private async Task<(byte[]? Bytes, string? FileId, string Sha256)> ReadExportAsync(Guid organizationId, Guid exportId, CancellationToken token)
+    {
         await using var connection = await dataSource.OpenConnectionAsync(token);
         await using var command = Command(connection, null,
-            "SELECT bytes FROM preparation.exports WHERE organization_id=$1 AND id=$2", organizationId, exportId);
-        return await command.ExecuteScalarAsync(token) as byte[]
-            ?? throw new PreparationException("not-found", "The export was not found.");
+            """
+            SELECT e.bytes,COALESCE(e.file_id,f.file_id),e.sha256 FROM preparation.exports e
+            LEFT JOIN preparation.export_files f ON f.organization_id=e.organization_id AND f.export_id=e.id
+            WHERE e.organization_id=$1 AND e.id=$2
+            """, organizationId, exportId);
+        await using var reader = await command.ExecuteReaderAsync(token);
+        if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The export was not found.");
+        return (reader.IsDBNull(0) ? null : reader.GetFieldValue<byte[]>(0), reader.IsDBNull(1) ? null : reader.GetString(1), reader.GetString(2));
     }
 
     private static async Task<Draft> ReadDraftAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction,
@@ -290,15 +340,36 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             content.SourceNotes, content.Media, requested, approval);
     }
 
-    private static async Task<MediaContent> ReadMediaContentAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction,
+    /// <summary>Reads an image and its exact bytes: from PostgreSQL while it keeps them, else from WoW2 Files, checked
+    /// against its SHA-256.</summary>
+    private async Task<MediaContent> ReadMediaContentAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction,
+        Guid organizationId, Guid mediaId, CancellationToken token)
+    {
+        MediaAsset asset;
+        byte[]? bytes;
+        string? fileId;
+        await using (var command = Command(connection, transaction,
+            $"SELECT {MediaColumns},m.bytes,COALESCE(m.file_id,f.file_id) FROM preparation.media m {MediaFileJoin} WHERE m.organization_id=$1 AND m.id=$2",
+            organizationId, mediaId))
+        await using (var reader = await command.ExecuteReaderAsync(token))
+        {
+            if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The image was not found.");
+            asset = ReadMedia(reader, organizationId);
+            bytes = reader.IsDBNull(7) ? null : reader.GetFieldValue<byte[]>(7);
+            fileId = reader.IsDBNull(8) ? null : reader.GetString(8);
+        }
+        return new MediaContent(asset, bytes ?? await files.ReadAsync(fileId!, asset.Sha256, token));
+    }
+
+    /// <summary>Reads an image's metadata only.</summary>
+    private static async Task<MediaAsset> ReadMediaAsync(NpgsqlConnection connection, NpgsqlTransaction? transaction,
         Guid organizationId, Guid mediaId, CancellationToken token)
     {
         await using var command = Command(connection, transaction,
-            "SELECT id,file_name,content_type,octet_length(bytes)::bigint,sha256,provenance,created_at,bytes FROM preparation.media WHERE organization_id=$1 AND id=$2",
-            organizationId, mediaId);
+            $"SELECT {MediaColumns} FROM preparation.media m WHERE m.organization_id=$1 AND m.id=$2", organizationId, mediaId);
         await using var reader = await command.ExecuteReaderAsync(token);
         if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The image was not found.");
-        return new MediaContent(ReadMedia(reader, organizationId), reader.GetFieldValue<byte[]>(7));
+        return ReadMedia(reader, organizationId);
     }
 
     private static MediaAsset ReadMedia(NpgsqlDataReader reader, Guid organizationId) =>

@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using BrandWorkspace.Api;
 using BrandWorkspace.Api.Configurations;
 using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Files;
 using BrandWorkspace.Infrastructure.Preparation.Services;
 using BrandWorkspace.Persistence.Preparation.Repositories;
 using Microsoft.AspNetCore.Builder;
@@ -22,6 +23,8 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
     private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
     public WebApiTestHost<ApiAssemblyMarker> Factory { get; private set; } = null!;
     public NpgsqlDataSource DataSource => Factory.Services.GetRequiredService<NpgsqlDataSource>();
+    /// <summary>The database's full connection string, for another host over the same database.</summary>
+    public string ConnectionString => _database.ConnectionString;
     public PreparationService Service { get; private set; } = null!;
 
     public async Task InitializeAsync()
@@ -35,7 +38,7 @@ public sealed class PreparationDatabaseFixture : IAsyncLifetime
         app.Configure();
         await app.RunCommandOrHostAsync(["--migrate"]);
         Factory = ApiContractTests.CreateFactory(_database.ConnectionString);
-        Service = new PreparationService(new PreparationRepository(DataSource, TimeProvider.System, new ManualPackageBuilder()), new ImageValidationService());
+        Service = new PreparationService(new PreparationRepository(DataSource, TimeProvider.System, new ManualPackageBuilder(), NoDeskFiles.Instance), new ImageValidationService(), NoDeskFiles.Instance);
     }
 
     /// <summary>Creates a person, a new organization they own, and the claims their sign-in carries.</summary>

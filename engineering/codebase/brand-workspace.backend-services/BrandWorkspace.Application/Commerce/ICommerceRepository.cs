@@ -13,6 +13,8 @@ public interface ICommerceRepository
     Task WithdrawAsync(Guid organizationId, string actor, Guid brandId, Guid releaseId, string reason, CancellationToken token);
     Task<CommerceRelease?> PublicAsync(string slug, Guid? releaseId, CancellationToken token);
     Task<CommerceBlob?> BlobAsync(Guid brandId, string sha256, CancellationToken token);
+    /// <summary>Reads the WoW2 Files file holding a brand's media; none when the brand lacks it or PostgreSQL alone holds it.</summary>
+    Task<string?> MediaFileAsync(Guid brandId, string sha256, CancellationToken token);
     Task<CreativeImport> ImportCreativeAsync(Guid organizationId, string actor, CreativeImportInput input, CancellationToken token);
     Task<IReadOnlyList<CreativeImport>> CreativeImportsAsync(Guid organizationId, Guid brandId, CancellationToken token);
 }

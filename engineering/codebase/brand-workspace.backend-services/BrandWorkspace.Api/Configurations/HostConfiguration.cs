@@ -14,7 +14,7 @@ public static partial class HostConfiguration
     /// <summary>Configures the application builder (services).</summary>
     public static WebApplicationBuilder Configure(this WebApplicationBuilder builder, bool migrate = false) =>
         builder.AddExplicitEnvironment().AddPostgresDatabase().AddFoundation(migrate).AddAccess()
-            .AddPreparation().AddDesignDocuments().AddCommerce().AddSourcing().AddEvents().AddMediaProcessing().AddRuntimeConfig().AddHttpSurface();
+            .AddDeskFiles().AddPreparation().AddDesignDocuments().AddCommerce().AddSourcing().AddEvents().AddMediaProcessing().AddRuntimeConfig().AddHttpSurface();
 
     /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>
     public static WebApplication Configure(this WebApplication app, bool serveHttp = true) =>

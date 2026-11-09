@@ -32,6 +32,7 @@ sources:
     type: ContentType
     reference: "catalogue.release:{Sha256}"
   # Wave 3. Desk's bytes sit in the target's PostgreSQL; every row also keeps its SHA-256, which the mover checks.
+  # Rows Desk stores with Files keep no bytes; the mover reads only rows whose content is not NULL (Files `ColumnQuery`).
   - id: desk-preparation-media
     wave: 3
     kind: postgres-column

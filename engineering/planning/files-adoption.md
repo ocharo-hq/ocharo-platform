@@ -280,3 +280,25 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
     differs.
   - anonymous visitors now get the published brand logo from Blog's media routes, which answered `401` before: the
     access check treats its SHA-256 as public, asking Brand once a minute.
+- #32 Desk, wave 3 (2026-11-09):
+  - every new file lands in Files once as private app `desk`, under the manifest's reference shapes (#20), which double
+    as idempotency keys; new rows keep a `file_id` and no bytes.
+  - `preparation.media`: `/media/{id}/content` still answers bytes, read from Files, since the design export
+    `fetch()`es it. `preparation.exports`: the download redirects, saved as `manual-content-{id}.zip`.
+  - `commerce.media`: the member route answers bytes (the design export reads it too); public `/media/{sha}` and edition
+    assets redirect, edition files named `{slug}-{locale}-{asset}`. The attach references the preparation file (#11);
+    a preparation image with no file id yet uploads once under the commerce reference.
+  - `sourcing.media_contents`: content and thumbnail redirect, the thumbnail to the 480 px variant (#10); no thumbnail
+    bytes are written.
+  - migration `012-files` (011 stays reserved for the Identity cutover) adds `file_id`, drops `NOT NULL` from `bytes`
+    and checks that a row has bytes or a file; `preparation.media` gains `byte_length`. The immutable tables never take
+    an UPDATE: copy-and-repoint is an insert-only `preparation.media_files` / `export_files` record, and reads take
+    `COALESCE(row.file_id, record.file_id)`.
+  - the export ZIP uploads inside the export transaction, under the key and draft locks, so `(organization,
+    idempotency_key)` and `request_hash` behave as before; other uploads run before their transactions.
+  - boot fills legacy rows' ids from `desk` files of the same SHA-256 that carry the row's own reference, so no file
+    crosses an organization or brand; the mover already skips rows with NULL content.
+  - deleting sourcing media leaves its Files file referenced: a swept file would block a re-upload under the same
+    idempotency key. A preparation image whose name's extension disagrees with its bytes fails Files' type check and
+    stays on bytes.
+  - deploy: `desk` links `Files:BaseUrl` to `Identity:Server:Resources:2:Uri`; `jobs` needs nothing.

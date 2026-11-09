@@ -68,6 +68,11 @@ services:
         # Revocation signals: each URL is typed once per environment on `identity`, so both ends always name the same value.
         Identity:Client:SignalUrl: { from: Identity:Server:Clients:0:SignalUrl }
         Identity:Resource:SignalUrl: { from: Identity:Server:Resources:0:SignalUrl }
+        # Media, exports, edition files and sourcing files live in WoW2 Files, tenant `ocharo` on the shared files host, reached
+        # with client 0: an operator's exchanged token within their session, Desk's own for the sourcing import, the boot
+        # backfill and public routes; linked to the Uri this descriptor types for its Files resource. Rows stored before
+        # Files keep their bytes until the migration and boot fill their ids (planning/files-adoption.md #13, #32).
+        Files:BaseUrl: { from: Identity:Server:Resources:2:Uri }
         # Background removal: the private image worker, a sibling on the platform network. Its address is an owner key
         # typed per environment as `http://ocharo-<environment>-image-worker:8080`, its platform name: the bare service
         # name is an alias every environment's worker would share on that one network, and the descriptor has no template

@@ -51,6 +51,11 @@ using Npgsql;
 using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
 using WoW.Two.Sdk.Beta.Be.Data.Migrations.Bespoke;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
+using WoW.Two.Sdk.Beta.Be.Files.Client;
+using BrandWorkspace.Application.Files;
+using BrandWorkspace.Application.Preparation.Models;
+using BrandWorkspace.Infrastructure.Files;
+using BrandWorkspace.Persistence.Files;
 
 namespace BrandWorkspace.Api.Configurations;
 
@@ -67,7 +72,7 @@ public static partial class HostConfiguration
             values["ConnectionStrings:Database"] = connection;
         if (Environment.GetEnvironmentVariable("ASPNETCORE_URLS") is { } urls) values["urls"] = urls;
         if (Environment.GetEnvironmentVariable("AllowedHosts") is { } allowedHosts) values["AllowedHosts"] = allowedHosts;
-        foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
+        foreach (var key in new[] { "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Commerce__SourceRoot", "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName", "Files__BaseUrl",
                      "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password",
                      "Identity__Client__Authority", "Identity__Client__ClientId", "Identity__Client__ClientSecret", "Identity__Client__CookieName",
                      "Identity__Client__PostSignOutRedirectPath", "Identity__Client__Environment", "Identity__Resource__Uri" })
@@ -175,10 +180,67 @@ public static partial class HostConfiguration
         }
     }
 
+    /// <summary>Holds the root URL of the WoW2 Files instance Desk stores its media in; unset, every byte stays in PostgreSQL.</summary>
+    private const string FilesBaseUrlKey = "Files:BaseUrl";
+
+    /// <summary>Registers Desk's file store: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is set, by tokens of Desk's
+    /// own Identity client <c>desk</c> (a person's exchanged within their BFF session, Desk's own client credentials for the
+    /// import CLI, the boot backfill and anonymous routes), else none. Both read at resolve time, so a test host's settings
+    /// decide (planning/files-adoption.md #13, #15).</summary>
+    /// <remarks>The BFF registered by <see cref="AddAccess"/> supplies the person's token: its subject-token source reads
+    /// the signed-in session, so the Files client exchanges it without a bearer header.</remarks>
+    private static WebApplicationBuilder AddDeskFiles(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddFilesClient(_ => { });
+        builder.Services.AddOptions<FilesClientOptions>().Configure<IConfiguration>((files, configuration) =>
+        {
+            if (configuration[FilesBaseUrlKey] is not { Length: > 0 } url)
+                return;
+            files.BaseAddress = new Uri(url);
+            if (!Uri.TryCreate(configuration["Identity:Client:Authority"], UriKind.Absolute, out var authority))
+                return;
+            files.Identity = new FilesClientIdentityOptions
+            {
+                TokenEndpoint = new Uri(authority, "connect/token"),
+                ClientId = configuration["Identity:Client:ClientId"] ?? string.Empty,
+                ClientSecret = configuration["Identity:Client:ClientSecret"] ?? string.Empty,
+            };
+        });
+        builder.Services.AddScoped<FilesDeskStore>();
+        builder.Services.AddScoped<IDeskFileStore>(provider => UsesFiles(provider)
+            ? provider.GetRequiredService<FilesDeskStore>()
+            : NoDeskFiles.Instance);
+        builder.Services.AddScoped<IDeskFileIdRepository, DeskFileIdRepository>();
+        builder.Services.AddScoped<DeskFilesBackfill>();
+        return builder;
+    }
+
+    /// <summary>Tells whether this run stores media in WoW2 Files.</summary>
+    private static bool UsesFiles(IServiceProvider provider) =>
+        provider.GetRequiredService<IConfiguration>()[FilesBaseUrlKey] is { Length: > 0 };
+
+    /// <summary>Fills the file ids of rows the migration moved before the API listens. An unreachable or slow Files leaves
+    /// those rows on their PostgreSQL bytes and never fails the boot; the next boot tries again.</summary>
+    private static async Task BackfillFileIdsAsync(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        if (!UsesFiles(scope.ServiceProvider)) return;
+        using var limit = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        try
+        {
+            await scope.ServiceProvider.GetRequiredService<DeskFilesBackfill>().RunAsync(limit.Token);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or InvalidOperationException or PreparationException)
+        {
+            app.Logger.LogWarning(exception, "Desk's file ids stay unfilled: WoW2 Files could not be reached at boot.");
+        }
+    }
+
     /// <summary>Registers the organization-scoped content preparation workflow.</summary>
     private static WebApplicationBuilder AddPreparation(this WebApplicationBuilder builder)
     {
-        builder.Services.AddSingleton<IPreparationRepository, PreparationRepository>();
+        // Scoped, as its Files store is: a person's request calls Files with that person's token.
+        builder.Services.AddScoped<IPreparationRepository, PreparationRepository>();
         builder.Services.AddSingleton<IManualPackageBuilder, ManualPackageBuilder>();
         builder.Services.AddSingleton<ImageValidationService>();
         builder.Services.AddScoped<PreparationService>();
@@ -199,6 +261,7 @@ public static partial class HostConfiguration
     {
         builder.Services.AddSingleton<ICommerceRepository, CommerceRepository>();
         builder.Services.AddSingleton<LegacyCommerceReader>();
+        builder.Services.AddScoped<CommerceMediaFiles>();
         return builder;
     }
 
@@ -406,6 +469,7 @@ public static partial class HostConfiguration
             return;
         }
         await app.MigrateOnStartupAsync();
+        await app.BackfillFileIdsAsync();
         await app.RunAsync();
     }
 }

@@ -22,6 +22,7 @@ public static class PreparationConfiguration
         group.MapGet("/media", async (HttpContext context, PreparationService service, CancellationToken token) =>
             Results.Ok(new { data = await service.GetMediaAsync(OrganizationAccessFilter.GetAccess(context), token) }));
         group.MapPost("/media", UploadAsync);
+        // Bytes, never a redirect: the design export fetch()es this route into a blob, and Files' /f links send no CORS header.
         group.MapGet("/media/{mediaId:guid}/content", async (Guid mediaId, HttpContext context, PreparationService service, CancellationToken token) =>
         {
             var media = await service.GetMediaContentAsync(OrganizationAccessFilter.GetAccess(context), mediaId, token);
@@ -52,11 +53,15 @@ public static class PreparationConfiguration
             async (Guid draftId, CreateExportRequest request, HttpContext context, PreparationService service, CancellationToken token) =>
                 Results.Ok(new { data = await service.CreateExportAsync(OrganizationAccessFilter.GetAccess(context), draftId,
                     request.ExpectedRevision, request.IdempotencyKey, token) }));
+        // The desk links here with <a href>, so a redirect to the private Files file (saved under the same name) serves it;
+        // the organization filter still decides, and the response stays no-store.
         group.MapGet("/exports/{exportId:guid}/download", async (Guid exportId, HttpContext context, PreparationService service, CancellationToken token) =>
         {
-            var bytes = await service.GetExportContentAsync(OrganizationAccessFilter.GetAccess(context), exportId, token);
+            var export = await service.OpenExportAsync(OrganizationAccessFilter.GetAccess(context), exportId, token);
             context.Response.Headers.XContentTypeOptions = "nosniff";
-            return Results.File(bytes, "application/zip", $"manual-content-{exportId:D}.zip");
+            return export.Location is { } location
+                ? Results.Redirect(location.AbsoluteUri)
+                : Results.File(export.Bytes!, export.ContentType, $"manual-content-{exportId:D}.zip");
         });
         return app;
     }

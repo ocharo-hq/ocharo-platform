@@ -34,7 +34,7 @@ public static class CommerceEndpoints
         scoped.MapPut("/brands/{brandId:guid}/commerce",async(Guid organizationId,Guid brandId,CommerceSave request,HttpContext h,ICommerceRepository repository,CancellationToken token)=>{
             Editor(h);var a=OrganizationAccessFilter.GetAccess(h);return CommerceOk(new {data=await repository.SaveAsync(organizationId,a.UserId,brandId,request.ExpectedRevision,request.Snapshot,[],a.CanApprove,token)});
         });
-        scoped.MapPost("/brands/{brandId:guid}/commerce/adopt-preserved",async(Guid organizationId,Guid brandId,AdoptionRequest request,HttpContext h,ICommerceRepository repository,LegacyCommerceReader reader,IConfiguration config,IWebHostEnvironment env,CancellationToken token)=>{
+        scoped.MapPost("/brands/{brandId:guid}/commerce/adopt-preserved",async(Guid organizationId,Guid brandId,AdoptionRequest request,HttpContext h,ICommerceRepository repository,LegacyCommerceReader reader,CommerceMediaFiles media,IConfiguration config,IWebHostEnvironment env,CancellationToken token)=>{
             Owner(h);
             // Global preserved data may only enter the explicitly bound organization. Check before donor access.
             if(!Guid.TryParse(config["Commerce:AdoptionOrganizationId"],out var adoptionOrganizationId) || adoptionOrganizationId==Guid.Empty || adoptionOrganizationId!=organizationId)
@@ -43,32 +43,37 @@ public static class CommerceEndpoints
             var root=config["Commerce:SourceRoot"];
             if(string.IsNullOrWhiteSpace(root)){if(!env.IsLocalRun(config))throw new PreparationException("validation","Preserved source storage is not configured.");root=Path.GetFullPath(Path.Combine(env.ContentRootPath,"../.."));}
             var imported=await reader.ReadAsync(root,request.Slug,token);
-            return CommerceOk(new {data=await repository.SaveAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,0,imported.Snapshot,imported.Blobs,true,token,preserveImportedPrices:true)});
+            var blobs=await media.StoreAsync(brandId,imported.Blobs,MaximumImageBytes,null,token);
+            return CommerceOk(new {data=await repository.SaveAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,0,imported.Snapshot,blobs,true,token,preserveImportedPrices:true)});
         });
-        scoped.MapPost("/brands/{brandId:guid}/commerce/media",async(Guid organizationId,Guid brandId,AttachMediaRequest request,HttpContext h,ICommerceRepository repository,IPreparationRepository preparation,CancellationToken token)=>{
+        // With WoW2 Files the brand references the preparation image's file instead of copying its bytes (files-adoption #11).
+        scoped.MapPost("/brands/{brandId:guid}/commerce/media",async(Guid organizationId,Guid brandId,AttachMediaRequest request,HttpContext h,ICommerceRepository repository,CommerceMediaFiles media,CancellationToken token)=>{
             Editor(h);var a=OrganizationAccessFilter.GetAccess(h);var draft=await repository.GetAsync(organizationId,brandId,token)??throw new PreparationException("not-found","Save a brand draft first.");
-            var media=await preparation.GetMediaContentAsync(organizationId,request.MediaId,token);
-            var approvals=draft.Snapshot.MediaApprovals.ToDictionary(x=>x.Key,x=>x.Value);approvals[media.Asset.Sha256]=request.Provenance;
-            var saved=await repository.SaveAsync(organizationId,a.UserId,brandId,request.ExpectedRevision,draft.Snapshot with {MediaApprovals=approvals},[new(media.Asset.Sha256,media.Asset.ContentType,media.Bytes)],a.CanApprove,token);
+            var blob=await media.FromPreparationAsync(organizationId,brandId,request.MediaId,token);
+            var approvals=draft.Snapshot.MediaApprovals.ToDictionary(x=>x.Key,x=>x.Value);approvals[blob.Sha256]=request.Provenance;
+            var saved=await repository.SaveAsync(organizationId,a.UserId,brandId,request.ExpectedRevision,draft.Snapshot with {MediaApprovals=approvals},[blob],a.CanApprove,token);
             return CommerceOk(new {data=saved});
         });
-        scoped.MapGet("/brands/{brandId:guid}/commerce/media/{sha256}",async(Guid organizationId,Guid brandId,string sha256,HttpContext h,ICommerceRepository repository,CancellationToken token)=>{
+        // Bytes, never a redirect: the design export fetch()es this route into a blob, and Files' /f links send no CORS header.
+        scoped.MapGet("/brands/{brandId:guid}/commerce/media/{sha256}",async(Guid organizationId,Guid brandId,string sha256,HttpContext h,ICommerceRepository repository,CommerceMediaFiles files,CancellationToken token)=>{
             h.Response.Headers.CacheControl="no-store";
             h.Response.Headers.XContentTypeOptions="nosniff";
             if(!CommerceRules.Hash(sha256))return Results.NotFound();
             // Resolve the brand through the organization before reading its private content-addressed bytes.
             if(await repository.GetAsync(organizationId,brandId,token) is null)return Results.NotFound();
-            var media=await repository.BlobAsync(brandId,sha256,token);
-            return media is null?Results.NotFound():Results.File(media.Bytes,media.ContentType);
+            var media=await files.ReadAsync(brandId,sha256,token);
+            return media is null?Results.NotFound():Results.File(media.Bytes!,media.ContentType);
         });
-        scoped.MapPost("/brands/{brandId:guid}/commerce/catalogue-editions",async(Guid organizationId,Guid brandId,HttpContext h,ICommerceRepository repository,IDesignDocumentRepository designs,TimeProvider time,CancellationToken token)=>{
+        scoped.MapPost("/brands/{brandId:guid}/commerce/catalogue-editions",async(Guid organizationId,Guid brandId,HttpContext h,ICommerceRepository repository,IDesignDocumentRepository designs,CommerceMediaFiles media,TimeProvider time,CancellationToken token)=>{
             Editor(h);
             var metadataAndFiles=await ReadEditionForm(h,token);var metadata=metadataAndFiles.Metadata;
             var draft=await repository.GetAsync(organizationId,brandId,token)??throw new PreparationException("not-found","Save the brand draft first.");
             if(draft.Revision!=metadata.ExpectedRevision)throw new PreparationException("conflict","The draft changed. Reload before attaching the edition.");
             var design=await designs.GetDocumentAsync(organizationId,metadata.SourceDesignId,metadata.SourceRevision,token);
             var built=CatalogueEditionBuilder.Build(design,brandId,metadataAndFiles.Files,time.GetUtcNow(),draft.Snapshot);
-            var saved=await repository.AttachCatalogueEditionAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,metadata.ExpectedRevision,built.Edition,built.Blobs,token);
+            // The artifacts land in Files before the attach's transaction, named as the public download saves them.
+            var blobs=await media.StoreAsync(brandId,built.Blobs,CatalogueEditionBuilder.MaximumPdfBytes,EditionNames(draft.Snapshot.Slug,built.Edition),token);
+            var saved=await repository.AttachCatalogueEditionAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,brandId,metadata.ExpectedRevision,built.Edition,blobs,token);
             return CommerceOk(new{data=saved});
         });
         scoped.MapPost("/brands/{brandId:guid}/commerce/catalogue-editions/{editionId:guid}/publish",async(Guid organizationId,Guid brandId,Guid editionId,ReleaseRequest request,HttpContext h,ICommerceRepository repository,CancellationToken token)=>{
@@ -89,7 +94,7 @@ public static class CommerceEndpoints
         scoped.MapPost("/creative-imports",async(Guid organizationId,CreativeImportInput request,HttpContext h,ICommerceRepository repository,IPreparationRepository preparation,CancellationToken token)=>{
             Editor(h);
             CommerceRules.ValidateCreativeInput(request);
-            var media=await preparation.GetMediaContentAsync(organizationId,request.Derivative.MediaId,token);
+            var media=await preparation.GetMediaFileAsync(organizationId,request.Derivative.MediaId,token);
             CommerceRules.Require(media.Asset.Sha256==request.Derivative.Sha256&&media.Asset.ContentType==request.Derivative.MediaType,"Derivative bytes do not match the submitted manifest.");
             if(request.ProductId is not null){var draft=await repository.GetAsync(organizationId,request.BrandId,token);CommerceRules.Require(draft?.Snapshot.Products.Any(p=>p.Document.Id==request.ProductId)==true,"Select a product in this brand.");}
             return CommerceOk(new {data=await repository.ImportCreativeAsync(organizationId,OrganizationAccessFilter.GetAccess(h).UserId,request,token)});
@@ -101,7 +106,8 @@ public static class CommerceEndpoints
         publicApi.MapGet("/catalogue",async(string slug,string? locale,Guid? release,ICommerceRepository repository,CancellationToken token)=>{
             var value=await repository.PublicAsync(slug,release,token);return value is null?Results.NotFound():CommerceOk(PublicProjection.Catalogue(value,locale??"uz"));
         });
-        publicApi.MapGet("/catalogue-editions/{editionId:guid}/{asset}",async(string slug,Guid editionId,string asset,Guid? release,string? download,HttpContext h,ICommerceRepository repository,CancellationToken token)=>{
+        // The release check decides each time and the answer stays no-store; with WoW2 Files it redirects to a link.
+        publicApi.MapGet("/catalogue-editions/{editionId:guid}/{asset}",async(string slug,Guid editionId,string asset,Guid? release,string? download,HttpContext h,ICommerceRepository repository,CommerceMediaFiles files,CancellationToken token)=>{
             h.Response.Headers.XContentTypeOptions="nosniff";h.Response.Headers.CacheControl="no-store";
             if(release is null)return Results.NotFound();
             var published=await repository.PublicAsync(slug,release,token);
@@ -115,17 +121,29 @@ public static class CommerceEndpoints
                 if(asset==$"{page.Id}.pdf"){hash=page.PdfSha256;contentType="application/pdf";break;}
             }
             if(hash is null)return Results.NotFound();
-            var blob=await repository.BlobAsync(published.BrandId,hash,token);
+            var blob=await files.OpenAsync(published.BrandId,hash,download=="1",token);
             if(blob is null || blob.ContentType!=contentType)return Results.NotFound();
-            return Results.File(blob.Bytes,contentType!,download=="1"?$"{published.Snapshot.Slug}-{edition.Locale}-{asset}":null);
+            if(blob.Location is {} location)return Results.Redirect(location.AbsoluteUri);
+            return Results.File(blob.Bytes!,contentType!,download=="1"?$"{published.Snapshot.Slug}-{edition.Locale}-{asset}":null);
         });
-        publicApi.MapGet("/media/{sha256}",async(string slug,string sha256,Guid? release,HttpContext h,ICommerceRepository repository,CancellationToken token)=>{
+        publicApi.MapGet("/media/{sha256}",async(string slug,string sha256,Guid? release,HttpContext h,ICommerceRepository repository,CommerceMediaFiles files,CancellationToken token)=>{
             var value=await repository.PublicAsync(slug,release,token);
             if(value is null||!CommerceRules.ApprovedHashes(value.Snapshot).Contains(sha256))return Results.NotFound();
-            var media=await repository.BlobAsync(value.BrandId,sha256,token);if(media is null)return Results.NotFound();
-            h.Response.Headers.XContentTypeOptions="nosniff";h.Response.Headers.CacheControl="no-store";return Results.File(media.Bytes,media.ContentType);
+            var media=await files.OpenAsync(value.BrandId,sha256,false,token);if(media is null)return Results.NotFound();
+            h.Response.Headers.XContentTypeOptions="nosniff";h.Response.Headers.CacheControl="no-store";
+            return media.Location is {} location?Results.Redirect(location.AbsoluteUri):Results.File(media.Bytes!,media.ContentType);
         });
         return app;
+    }
+    /// <summary>The largest brand image the adoption and attach flows store.</summary>
+    private const int MaximumImageBytes=15*1024*1024;
+    /// <summary>Names each edition artifact as the public download saves it: <c>{slug}-{locale}-{asset}</c>.</summary>
+    private static IReadOnlyDictionary<string,string> EditionNames(string slug,CatalogueEdition edition)
+    {
+        var names=new Dictionary<string,string>(StringComparer.Ordinal);
+        if(edition.PdfSha256 is {} pdf)names.TryAdd(pdf,$"{slug}-{edition.Locale}-catalogue.pdf");
+        foreach(var page in edition.Pages){names.TryAdd(page.PngSha256,$"{slug}-{edition.Locale}-{page.Id}.png");names.TryAdd(page.PdfSha256,$"{slug}-{edition.Locale}-{page.Id}.pdf");}
+        return names;
     }
     private static async Task<(CatalogueEditionUpload Metadata,IReadOnlyDictionary<string,byte[]> Files)> ReadEditionForm(HttpContext h,CancellationToken token)
     {

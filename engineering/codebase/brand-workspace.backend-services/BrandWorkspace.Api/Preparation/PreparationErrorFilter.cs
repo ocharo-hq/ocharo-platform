@@ -17,6 +17,9 @@ public sealed class PreparationErrorFilter : IEndpointFilter
                 "conflict" => 409,
                 "forbidden" => 403,
                 "too-large" => 413,
+                // WoW2 Files could not be reached, or refused a call Desk made.
+                "unavailable" => 503,
+                "upstream" => 502,
                 _ => 400
             };
             return Results.Problem(statusCode: status, title: exception.Message,
