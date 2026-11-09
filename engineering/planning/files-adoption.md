@@ -32,8 +32,10 @@ code limits and local dev data; nothing read prod.
   from a short viewport: studio `d1622c6` frames them at 240×180 from the viewport's centre.
 - Wave 3, Desk, released as `v0.1.34` 2026-11-09 (#32), 305 tests passing; on dev, preparation and sourcing read back
   from Files the same day (the thumbnail as the 480×360 variant); export download and commerce wait for the final check.
-- Wave 4, Assets and Studio's garment sync, built and pushed 2026-11-09 (#33); its first upload waits for client 7's
-  secret on `identity` and in `ocharo-assets`' GitHub secrets.
+- Wave 4, Assets and Studio's garment sync, built 2026-11-09 (#33) and read back on dev the same day: platform
+  `v0.1.35` carries client 7, `release-garments` run `42597164692` uploaded the 7 GLBs and the manifest, each serves
+  anonymously from `t/ocharo/m/{sha}` with its SHA-256, and Studio's Files sync wrote byte-identical models. This
+  closes the four waves' code; wave 3's export and commerce read-backs remain for the final check.
 
 ## Instance
 
@@ -320,3 +322,5 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
   - Studio's `sync-garments.mjs --files <root>` fetches the manifest pinned in `garments-release.lock.json` and each
     GLB from `/m/{sha}`, checking size and SHA-256; the local-library mode is unchanged.
   - B serves plain `/m/{sha}` for its default tenant only, so Studio is given `{Files root}t/ocharo/`.
+  - the first run failed before signing in: with `persist-credentials: false`, `git lfs pull` had no token; checkout
+    now fetches the LFS objects itself (`ocharo-assets` `31b9786`).
