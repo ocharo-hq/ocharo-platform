@@ -145,7 +145,7 @@ through Ocharo's Identity on its own.
 ## Media in WoW2 Files
 
 With `Files:BaseUrl` set, Desk's 4 byte stores keep their bytes in WoW2 Files, tenant `ocharo`, as app `desk`
-(`engineering/planning/files-adoption.md` #9–#15). Each upload's idempotency key is its reference, the same the
+(`engineering/research/files-adoption.md` #9–#15). Each upload's idempotency key is its reference, the same the
 migration manifest (`engineering/deployment/files-migration.yml`, wave 3) gives the files it moves:
 
 | Rows | Reference | Route |

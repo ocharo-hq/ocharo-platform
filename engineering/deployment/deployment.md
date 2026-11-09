@@ -234,7 +234,7 @@ a required key, and Wheelhouse checks each saved value against its type and keep
   descriptor. Brand reads it first (wave 1): with it Brand stores in Files and redirects its media routes to Files
   links; logos stored before Files read from `brand-data` until the migration moves them. Catalogue's product images
   follow the same way on `catalogue-data`, and so do its released PDFs and page PNGs, which SQLite held before. Plan:
-  `planning/files-adoption.md`.
+  `research/files-adoption.md`.
 - Revocation signals: on `identity`, each client's `SignalUrl` (`{site}/api/identity/signal`, clients 0 to 5) and each
   resource's (`{site}/signals/identity`, resources 0 to 2) is an owner key typed per environment, for the same reason as
   redirect URIs. Each app links its `Identity:Client:SignalUrl`, and Desk and Editorial their `Identity:Resource:SignalUrl`,

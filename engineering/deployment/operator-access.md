@@ -5,7 +5,7 @@
 ## Account ownership
 
 Operators sign in through Ocharo's own WoW2 Identity instance; Desk keeps no passwords and offers no sign-in of its own
-(cutover 2026-11-02, [identity cutover](../planning/identity-cutover.md)). A person joins Ocharo through an invite an
+(cutover 2026-11-02, [identity cutover](../research/identity-cutover.md)). A person joins Ocharo through an invite an
 owner or admin makes at Identity; the invite's role reaches Desk as `org_role` and its permissions as `org_permission`
 (`desk:edit`, `desk:approve`). Desk reads its client from the `Identity:Client` section (`Authority`, `ClientId`,
 `ClientSecret`, `CookieName`); a local run keeps them in the ignored `BrandWorkspace.Api/appsettings.Local.json`.

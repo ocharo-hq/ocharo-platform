@@ -7,5 +7,5 @@ Identity cutover. Ocharo people now sign in by phone at Ocharo's WoW2 Identity i
 the code in Telegram; Desk signs in through the SDK's BFF.
 
 - Bots, tokens and environments: [Telegram bots](telegram-bots.md).
-- Sign-in flow, invites and rollout: [identity cutover](../planning/identity-cutover.md).
+- Sign-in flow, invites and rollout: [identity cutover](../research/identity-cutover.md).
 - Desk's `telegram_*` and `sso_*` tables stay until migration `011-identity-cutover`.

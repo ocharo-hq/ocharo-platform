@@ -1,5 +1,5 @@
 # Where this repo's legacy files live, for the Wheelhouse migration module that moves them into WoW2 Files: tenant
-# `ocharo` on the shared files host B (Files t9 #4; planning/files-adoption.md #20). Each source names the reference its
+# `ocharo` on the shared files host B (Files t9 #4; research/files-adoption.md #20). Each source names the reference its
 # files get, so the cutover build finds each file id in Files' id map. Waves run dev first, prod parked: Brand, then
 # Catalogue (wave 1), then Desk (wave 3); Blog and Marketing list theirs in ocharo-marketing. The shape follows t9's
 # draft while the module is unbuilt; where it adds to the draft (a composite `key`, a `wave`), it says so.

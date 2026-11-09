@@ -168,7 +168,7 @@ Visual scratch: `/private/tmp/ocharo-template-review/`. Source PDF references fo
 Implemented only inside the migrated Brand Workspace repository at `workbench/brand-platform-ws/workbench/brand-workspace`. Original Ocharo assets, historical builders and Ocharo Studio remain unchanged.
 
 - `engineering/scripts/import-ocharo-templates.py` reproducibly imports 16 catalogue pages × 3 locales, 29 garments, and 2 card faces × 3 locales. It reads sources without executing historical builders.
-- `engineering/scripts/README.ocharo-templates.md` documents geometry, derivative retention, provenance, font fallbacks and export limitations.
+- `engineering/scripts/ocharo-templates.md` documents geometry, derivative retention, provenance, font fallbacks and export limitations.
 - `Templates.ts` provides isolated document factories; JSON seeds use normalized millimetre geometry.
 - `public/templates/ocharo/manifest.json` records 74 current curated assets and original/derivative hashes. Earlier served derivatives remain available for immutable saved-document compatibility.
 - `DesignCanvas.vue` renders the document with image crops, opacity, rounded frames, rotation and text styling. Drag/resize emits one immutable completed transaction; cancelled movement and locked elements are covered by tests.

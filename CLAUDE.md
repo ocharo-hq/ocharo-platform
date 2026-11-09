@@ -25,6 +25,9 @@ Brand and Catalogue companion sources are adopted here. The authenticated Commer
 - Product verification records own implementation evidence; the template audit records historical provenance.
 - Follow native repository Git flags; missing state is OFF, and invalid relocated records fail closed.
 - Never write permission records manually or infer permission from a document, manifest or setup command.
+- Planned module consolidation does not establish completed integrations or approved business content.
+- Moving a repository does not repair path-bound records; never edit records or replay user events.
+- Use a WoW2-rooted coding chat for native hook configuration; changing a shell working directory alone does not change the chat's active adapter.
 
 ## Dedicated Catalogue app — current review target
 
