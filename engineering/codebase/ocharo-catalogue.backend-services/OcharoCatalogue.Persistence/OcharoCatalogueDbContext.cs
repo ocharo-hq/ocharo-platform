@@ -1,10 +1,12 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OcharoCatalogue.Domain.Catalogue.Entities;
 
 namespace OcharoCatalogue.Persistence;
 
-/// <summary>EF Core context for the catalogue store (SQLite): document rows plus indexed scalars.</summary>
+/// <summary>EF Core context over Catalogue's PostgreSQL schema (<c>catalogue</c>): document rows plus indexed scalars.
+/// The <c>catalogue</c> migration set owns the tables; this context only maps them.</summary>
 public sealed class OcharoCatalogueDbContext(DbContextOptions<OcharoCatalogueDbContext> options) : DbContext(options)
 {
     public DbSet<ProductRecord> Products => Set<ProductRecord>();
@@ -23,36 +25,38 @@ public sealed class OcharoCatalogueDbContext(DbContextOptions<OcharoCatalogueDbC
     /// <inheritdoc />
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        // SQLite cannot ORDER BY a TEXT-stored DateTimeOffset — store it as a sortable binary long instead.
-        configurationBuilder.Properties<DateTimeOffset>().HaveConversion<DateTimeOffsetToBinaryConverter>();
+        // `timestamptz` holds an instant at offset zero; a value with another offset is written as the same instant.
+        configurationBuilder.Properties<DateTimeOffset>().HaveConversion<UtcInstantConverter>();
     }
 
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.HasDefaultSchema(CatalogueDatabaseConstants.Schema);
         modelBuilder.Entity<CatalogueDesignRecord>(e =>
         {
             e.ToTable("catalogue_designs");
             e.HasKey(x => x.Id);
             e.Property(x => x.Revision).IsConcurrencyToken();
-            e.HasIndex(x => new { x.Slug, x.Locale }).IsUnique().HasFilter("Archived = 0");
         });
         modelBuilder.Entity<CatalogueDesignRevisionRecord>(e =>
         {
             e.ToTable("catalogue_design_revisions");
             e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.DesignId, x.Revision }).IsUnique();
+            e.HasOne<CatalogueDesignRecord>().WithMany().HasForeignKey(x => x.DesignId);
         });
         modelBuilder.Entity<CatalogueReleaseRecord>(e =>
         {
             e.ToTable("catalogue_releases");
             e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.DesignId, x.CreatedAtUtc });
+            e.HasOne<CatalogueDesignRecord>().WithMany().HasForeignKey(x => x.DesignId);
         });
         modelBuilder.Entity<CataloguePublicationRecord>(e =>
         {
             e.ToTable("catalogue_publications");
             e.HasKey(x => x.Key);
+            e.HasOne<CatalogueDesignRecord>().WithMany().HasForeignKey(x => x.DesignId);
+            e.HasOne<CatalogueReleaseRecord>().WithMany().HasForeignKey(x => x.ReleaseId);
         });
         modelBuilder.Entity<CatalogueReleaseAssetRecord>(e =>
         {
@@ -69,17 +73,13 @@ public sealed class OcharoCatalogueDbContext(DbContextOptions<OcharoCatalogueDbC
             e.ToTable("products");
             e.HasKey(x => x.Id);
             e.Property(x => x.Id).HasMaxLength(64);
-            e.Property(x => x.Json).IsRequired();
             e.Property(x => x.Revision).IsConcurrencyToken();
-            e.HasIndex(x => new { x.Status, x.SortOrder });
-            e.HasIndex(x => x.GarmentType);
         });
         modelBuilder.Entity<ProductRevisionRecord>(e =>
         {
             e.ToTable("product_revisions");
             e.HasKey(x => x.Id);
-            e.HasIndex(x => new { x.ProductId, x.Revision }).IsUnique();
-            e.Property(x => x.Json).IsRequired();
+            e.HasOne<ProductRecord>().WithMany().HasForeignKey(x => x.ProductId);
         });
         modelBuilder.Entity<CollectionRecord>(e =>
         {
@@ -98,5 +98,36 @@ public sealed class OcharoCatalogueDbContext(DbContextOptions<OcharoCatalogueDbC
             e.HasKey(x => x.Id);
             e.Property(x => x.Revision).IsConcurrencyToken();
         });
+
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            foreach (var property in entity.GetProperties())
+                property.SetColumnName(ColumnName(property.Name));
+        }
     }
+
+    /// <summary>Names a record property's column: snake_case, <c>Json</c> as <c>document</c>, and an instant's
+    /// <c>…AtUtc</c> as <c>…_at</c> (<c>timestamptz</c> is UTC by type).</summary>
+    internal static string ColumnName(string property)
+    {
+        if (property == nameof(ProductRecord.Json))
+            return "document";
+        if (property.EndsWith("AtUtc", StringComparison.Ordinal))
+            property = property[..^3];
+        var name = new StringBuilder(property.Length + 4);
+        for (var index = 0; index < property.Length; index++)
+        {
+            var character = property[index];
+            if (char.IsUpper(character) && index > 0 && !char.IsDigit(property[index - 1]))
+                name.Append('_');
+            name.Append(char.ToLowerInvariant(character));
+        }
+
+        return name.ToString();
+    }
+
+    /// <summary>Writes every instant at offset zero, as Npgsql requires for <c>timestamptz</c>.</summary>
+    private sealed class UtcInstantConverter() : ValueConverter<DateTimeOffset, DateTimeOffset>(
+        value => value.ToUniversalTime(),
+        value => value);
 }

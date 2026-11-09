@@ -5,7 +5,7 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <!-- E2E tier: whole HTTP request flows through the real host over a temp SQLite store, signed in by the test identity. -->
+  <!-- E2E tier: whole HTTP request flows through the real host over a fresh PostgreSQL database (Docker), signed in by the test identity. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
@@ -15,6 +15,7 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />

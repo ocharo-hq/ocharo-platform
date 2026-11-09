@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace OcharoCatalogue.Tests.Harness;
 
-/// <summary>An isolated Catalogue host with its own SQLite file and blob folder, behind the test sign-in
+/// <summary>An isolated Catalogue host with its own PostgreSQL database and blob folder, behind the test sign-in
 /// (<see cref="CatalogueSignIn"/>).</summary>
 public sealed class CatalogueHost : IAsyncDisposable
 {
@@ -21,12 +21,18 @@ public sealed class CatalogueHost : IAsyncDisposable
     public static CatalogueHost Create(IReadOnlyDictionary<string, string?> settings)
     {
         var root = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-host", Guid.NewGuid().ToString("N"));
-        var configuration = new Dictionary<string, string?>(settings)
+        // The test's own settings win, so two hosts may share one database, as a restart does.
+        var configuration = new Dictionary<string, string?>
         {
-            ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(root, "test.db")};Pooling=False",
+            [CatalogueTestDatabase.ConnectionKey] = settings.TryGetValue(CatalogueTestDatabase.ConnectionKey, out var database)
+                ? database
+                : CatalogueTestDatabase.For(Path.Combine(root, "test.db")),
+            [CatalogueTestDatabase.OwnerKey] = CatalogueTestDatabase.OwnerInstance,
             ["Catalogue:DataRoot"] = Path.Combine(root, "data"),
             ["Catalogue:SeedOnEmpty"] = "false",
         };
+        foreach (var (key, value) in settings)
+            configuration[key] = value;
         Directory.CreateDirectory(root);
         var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {

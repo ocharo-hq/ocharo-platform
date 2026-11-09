@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.DataProtection.Repositories;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -11,6 +11,8 @@ using OcharoCatalogue.Domain.Catalogue.Models;
 using OcharoCatalogue.Application.Catalogue.Core.Repositories;
 using OcharoCatalogue.Application.Catalogue.Media.Services;
 using OcharoCatalogue.Infrastructure.Catalogue.Products.Mappers;
+using OcharoCatalogue.Persistence;
+using WoW.Two.Sdk.Beta.Be.Caching.Postgres;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 
 namespace OcharoCatalogue.Tests.E2E;
@@ -122,18 +124,30 @@ public sealed class CatalogueAccessTests
     }
 
     [Fact]
-    public async Task DataProtection_ShouldKeepApplicationNameAndKeyRingUnderDataRoot_WhenHostBoots()
+    public async Task DataProtection_ShouldKeepApplicationNameAndShareKeysAndSessionsInPostgres_WhenHostRestarts()
     {
-        await using var host = CatalogueHost.Create(new Dictionary<string, string?>());
-        var services = host.Factory.Services;
+        var database = await CatalogueTestDatabase.CreateAsync();
+        var settings = new Dictionary<string, string?> { [CatalogueTestDatabase.ConnectionKey] = database };
+        string protectedText;
+        await using (var first = CatalogueHost.Create(settings))
+        {
+            var services = first.Factory.Services;
+            var discriminator = services.GetRequiredService<IOptions<DataProtectionOptions>>().Value.ApplicationDiscriminator;
+            var keys = services.GetRequiredService<IOptions<KeyManagementOptions>>().Value.XmlRepository;
 
-        var discriminator = services.GetRequiredService<IOptions<DataProtectionOptions>>().Value.ApplicationDiscriminator;
-        var keys = services.GetRequiredService<IOptions<KeyManagementOptions>>().Value.XmlRepository;
+            // A changed name would sign every person out.
+            discriminator.Should().Be("ocharo-catalogue:Testing");
+            keys.Should().BeOfType<PostgresXmlRepository>();
+            services.GetRequiredService<IDistributedCache>().Should().BeOfType<PostgresDistributedCache>();
+            protectedText = services.GetRequiredService<IDataProtectionProvider>().CreateProtector("session").Protect("signed in");
+            await services.GetRequiredService<IDistributedCache>().SetStringAsync("session-key", "kept");
+        }
 
-        // A changed name or directory would sign every person out.
-        discriminator.Should().Be("ocharo-catalogue:Testing");
-        var ring = keys.Should().BeOfType<FileSystemXmlRepository>().Which;
-        ring.Directory.FullName.Should().Be(Path.Combine(services.GetRequiredService<IConfiguration>()["Catalogue:DataRoot"]!, "keys"));
+        // A replaced container reads the same ring and the same sessions.
+        await using var second = CatalogueHost.Create(settings);
+        second.Factory.Services.GetRequiredService<IDataProtectionProvider>().CreateProtector("session").Unprotect(protectedText)
+            .Should().Be("signed in");
+        (await second.Factory.Services.GetRequiredService<IDistributedCache>().GetStringAsync("session-key")).Should().Be("kept");
     }
 
     [Fact]

@@ -33,7 +33,7 @@ public sealed class FilesMediaRouteTests : IAsyncDisposable
             builder.UseCatalogueSignIn();
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(root, "web.db")};Pooling=False",
+                [CatalogueTestDatabase.ConnectionKey] = CatalogueTestDatabase.For(Path.Combine(root, "web.db")), [CatalogueTestDatabase.OwnerKey] = CatalogueTestDatabase.OwnerInstance,
                 ["Catalogue:DataRoot"] = Path.Combine(root, "web"),
                 ["Catalogue:SourceRoot"] = null,
                 ["Files:BaseUrl"] = TestFiles.Url,

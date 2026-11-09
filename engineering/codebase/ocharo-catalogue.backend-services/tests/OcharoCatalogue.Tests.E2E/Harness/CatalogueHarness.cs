@@ -4,28 +4,30 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Time.Testing;
 using OcharoCatalogue.Api.Configurations;
-using OcharoCatalogue.Persistence;
 using SkiaSharp;
 
 namespace OcharoCatalogue.Tests.Harness;
 
-/// <summary>A real SQLite file + real blob folder per test, wired exactly like the host; optionally on an in-memory WoW2 Files.</summary>
+/// <summary>A fresh PostgreSQL database + real blob folder per test, wired exactly like the host; optionally on an in-memory
+/// WoW2 Files.</summary>
 public sealed class CatalogueHarness : IAsyncDisposable
 {
     public string Root { get; } = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-tests", Guid.NewGuid().ToString("N"));
     public ServiceProvider Services { get; }
     public FakeTimeProvider Clock { get; } = new(new DateTimeOffset(2026, 9, 28, 9, 0, 0, TimeSpan.Zero));
 
-    private CatalogueHarness(string? sourceRoot, TestFiles? files)
+    private CatalogueHarness(string? sourceRoot, TestFiles? files, IReadOnlyDictionary<string, string?>? overrides)
     {
         Directory.CreateDirectory(Root);
         var settings = new Dictionary<string, string?>
         {
-            ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(Root, "catalogue.db")};Pooling=False",
+            [CatalogueTestDatabase.ConnectionKey] = CatalogueTestDatabase.For(Path.Combine(Root, "catalogue.db")), [CatalogueTestDatabase.OwnerKey] = CatalogueTestDatabase.OwnerInstance,
             ["Catalogue:DataRoot"] = Path.Combine(Root, "data"),
             ["Catalogue:SourceRoot"] = sourceRoot,
             ["Files:BaseUrl"] = files is null ? null : TestFiles.Url,
         };
+        foreach (var (key, value) in overrides ?? new Dictionary<string, string?>())
+            settings[key] = value;
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             ApplicationName = typeof(HostConfiguration).Assembly.GetName().Name,
@@ -41,12 +43,11 @@ public sealed class CatalogueHarness : IAsyncDisposable
     }
 
     /// <summary>Creates a harness; with <paramref name="files"/>, Catalogue stores in that in-memory WoW2 Files.</summary>
-    public static async Task<CatalogueHarness> CreateAsync(string? sourceRoot = null, TestFiles? files = null)
-    {
-        var harness = new CatalogueHarness(sourceRoot, files);
-        await harness.Services.InitializeDatabaseAsync();
-        return harness;
-    }
+    /// <remarks>The database comes from the template, which holds every set at this build's level, so the store starts
+    /// as a migrated, empty catalogue.</remarks>
+    public static Task<CatalogueHarness> CreateAsync(
+        string? sourceRoot = null, TestFiles? files = null, IReadOnlyDictionary<string, string?>? settings = null) =>
+        Task.Run(() => new CatalogueHarness(sourceRoot, files, settings));
 
     public T Get<T>() where T : notnull => Services.CreateScope().ServiceProvider.GetRequiredService<T>();
 

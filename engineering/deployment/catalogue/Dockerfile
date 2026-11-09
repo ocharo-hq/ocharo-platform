@@ -6,8 +6,10 @@
 #
 #   docker build -f engineering/deployment/catalogue/Dockerfile -t ocharocatalogue engineering/codebase
 #
-# Wheelhouse runs it from deploy.yml with the target's settings: it signs in through Ocharo's Identity, so a
-# bare `docker run` without those settings refuses to boot. Its SQLite store lives on the `catalogue-data` volume.
+# Wheelhouse runs it from deploy.yml with the target's settings: it signs in through Ocharo's Identity and keeps its
+# state in schema `catalogue` of the product database (ConnectionStrings:Database), so a bare `docker run` without
+# those settings refuses to boot. The `catalogue-data` volume keeps the blobs stored before WoW2 Files and the retired
+# SQLite store until `import-sqlite` copies it (catalogue.md § PostgreSQL move).
 
 # ---- Stage 1: build the Vue workspace ----
 FROM node:24.11.0-alpine AS spa
@@ -45,10 +47,9 @@ WORKDIR /app
 RUN apt-get update && apt-get install --yes --no-install-recommends curl libfontconfig1 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app ./
 
-# SQLite store on a volume so data survives container replacement; the sign-in key ring defaults to /data/keys beside it
-# (DataProtection__KeysPath overrides).
-ENV ConnectionStrings__OcharoCatalogue="Data Source=/data/ocharo-catalogue.db" \
-    Catalogue__DataRoot=/data
+# The data volume: blobs stored before WoW2 Files, and the retired SQLite store (/data/ocharo-catalogue.db) and file key
+# ring (/data/keys) that `import-sqlite` reads once, then leaves retired beside them.
+ENV Catalogue__DataRoot=/data
 RUN mkdir -p /data && chown app:app /data
 VOLUME ["/data"]
 

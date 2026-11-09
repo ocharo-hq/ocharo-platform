@@ -11,7 +11,7 @@
 flowchart LR
   WS[Maftuna workspace<br/>portfolio/products/*/och-*.json] -->|read-only import, SHA-256| API
   UI[Vue operator app<br/>/] --> API[OcharoCatalogue.Api]
-  API --> DB[(SQLite<br/>document rows + revisions)]
+  API --> DB[(PostgreSQL ocharo_env<br/>schema catalogue: document rows + revisions)]
   API --> Blobs[(Blob store<br/>originals + WebP previews)]
   API -->|/api/public/catalogue| MKT[Ocharo Marketing]
   API -->|/api/public/catalogue| BLOG[Ocharo Blog]
@@ -23,12 +23,12 @@ flowchart LR
 | `OcharoCatalogue.Application` | Contracts only: commands, queries and models per subdomain (`Catalogue/Products/`, `Collections/`, `Settings/`, `Media/`, `Designs/`, `Publishing/`, `Importing/`, `Exporting/`), with `Core/` holding `CatalogueErrors`, the stored-JSON options and the repository contracts |
 | `OcharoCatalogue.Domain` | `ProductDocument` (locales, pricing tiers, media, review issues, provenance), `CollectionDocument`, `CatalogueSettings`, records |
 | `OcharoCatalogue.Infrastructure` | The mediator handlers (`CommandHandlers/`, `QueryHandlers/`) and the foundation services, mappers, policies and validators they share, per subdomain; `MediaStore` and `FilesMediaStore`, the release asset stores, `WorkspaceImportService` |
-| `OcharoCatalogue.Persistence` | EF Core SQLite; saves check the expected revision inside a transaction and write a snapshot; `SqliteBusyExceptionMappingRule` |
+| `OcharoCatalogue.Persistence` | EF Core over PostgreSQL schema `catalogue` of the product database, owned by the bespoke `catalogue` migration set; saves check the expected revision inside a serializable transaction and write a snapshot; `PostgresBusyExceptionMappingRule`; the Data Protection key ring table; the one-time `import-sqlite` copy of the retired SQLite store |
 
 ## Contracts
 
 - `GET /api/public/catalogue?locale=uz|ru|en` — `{ brand, currency, locale, generatedAt, priceNote, garmentTypes, collections[], products[] }`; products carry copy for the requested locale plus all locales, pricing tiers, and image URLs (`/api/catalogue/media/{sha}` + `/preview`). This feed keeps its frozen wire shape — unenveloped, null fields written (`PublicFeedJson`) — because Marketing's catalogue sync reads `pricing` and `retail` without checking they exist; Blog reads it too.
-- Every other JSON endpoint answers the SDK wire: the success payload under `{ data }` (`ApiResponse<T>`), SDK JSON (camelCase, null fields left out), and failures as SDK problem details from `AppErrorProblemDetailsFactory` (`type` `urn:wow-two:error:{Type}`, `code`, `detail`, trace ids). Dictionary keys stay as stored (size labels, language codes, runtime-config names). An upload too large answers 413, one in an unaccepted format 415, a call WoW2 Files refused 502; a busy SQLite store 409.
+- Every other JSON endpoint answers the SDK wire: the success payload under `{ data }` (`ApiResponse<T>`), SDK JSON (camelCase, null fields left out), and failures as SDK problem details from `AppErrorProblemDetailsFactory` (`type` `urn:wow-two:error:{Type}`, `code`, `detail`, trace ids). Dictionary keys stay as stored (size labels, language codes, runtime-config names). An upload too large answers 413, one in an unaccepted format 415, a call WoW2 Files refused 502; a save PostgreSQL could not serialize beside another 409. While the retired SQLite store waits for `import-sqlite`, every `/api/catalogue` and `/api/public` route answers 503 (`storage_moving`).
 - Media URLs are content-addressed and immutable (1-year cache).
 - Editing API under `/api/catalogue/*` is revision-checked (`expectedRevision`, 409 on conflict) and loopback-only on a local
   run; a deployed host serves it publicly without sign-in until the identity server lands (`Catalogue:PublicAccess`,
@@ -57,4 +57,4 @@ flowchart LR
 ## SDK usage and extraction candidates
 
 - Uses the published kit `WoW2.Sdk.Beta.Be 10.0.106-beta` (blob storage, mediator with `AppResult` and its exception-to-result interceptor, problem details, SDK JSON) and `@wow-two-beta/fe 0.0.41` (HTTP client, BFF session strategy and auth provider, session-bound query client, storage seam, router and guard, config, colour mode, Ocharo theme and glass, splash, app shell, app switcher, account menu and link rows, sidebar and bottom navigation, error boundary, icons, buttons, cards, badges and form fields).
-- Product-local candidates for later SDK extraction: revisioned document store (document row + snapshot + expected-revision save), content-addressed media store with previews, local-pilot boundary middleware, CSV formula-safe writer, lazily resolved SQLite/blob paths, and the frontend's `sessionStorage` broker (`integration/common/SessionStorageBroker.ts`, the SDK ships only the `localStorage` one).
+- Product-local candidates for later SDK extraction: revisioned document store (document row + snapshot + expected-revision save), content-addressed media store with previews, local-pilot boundary middleware, CSV formula-safe writer, lazily resolved connection string and blob paths, and the frontend's `sessionStorage` broker (`integration/common/SessionStorageBroker.ts`, the SDK ships only the `localStorage` one).

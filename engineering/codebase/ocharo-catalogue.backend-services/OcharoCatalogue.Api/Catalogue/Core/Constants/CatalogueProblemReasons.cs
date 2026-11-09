@@ -8,4 +8,7 @@ public static class CatalogueProblemReasons
 
     /// <summary>Holds the reason of a sign-in request sent over plain HTTP.</summary>
     public const string HttpsRequired = "https_required";
+
+    /// <summary>Holds the reason of a catalogue route refused while the retired SQLite store waits for its import.</summary>
+    public const string StorageMoving = "storage_moving";
 }

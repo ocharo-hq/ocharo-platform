@@ -105,7 +105,7 @@ public sealed class FilesMediaStoreTests : IAsyncDisposable
     }
 
     [Fact]
-    public async Task ReleaseAssetStore_ShouldReadFromSqliteUntilMigrated_WhenArtifactWasPreparedBeforeFiles()
+    public async Task ReleaseAssetStore_ShouldReadFromTheDatabaseUntilMigrated_WhenArtifactWasPreparedBeforeFiles()
     {
         var bytes = CatalogueHarness.Png(85);
         var sha = Sha(bytes);
@@ -171,12 +171,12 @@ public sealed class FilesMediaStoreTests : IAsyncDisposable
         afterReplace.Should().Be(MediaCheck.Ok);
     }
 
-    private async Task<ServiceProvider> ServicesAsync(TestFiles? files)
+    private Task<ServiceProvider> ServicesAsync(TestFiles? files)
     {
         Directory.CreateDirectory(root);
         var settings = new Dictionary<string, string?>
         {
-            ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(root, "catalogue.db")};Pooling=False",
+            [CatalogueTestDatabase.ConnectionKey] = CatalogueTestDatabase.For(Path.Combine(root, "catalogue.db")), [CatalogueTestDatabase.OwnerKey] = CatalogueTestDatabase.OwnerInstance,
             ["Catalogue:DataRoot"] = Path.Combine(root, "data"),
             ["Files:BaseUrl"] = files is null ? null : TestFiles.Url,
         };
@@ -193,8 +193,7 @@ public sealed class FilesMediaStoreTests : IAsyncDisposable
             Use(builder.Services, files);
         var services = builder.Services.BuildServiceProvider();
         hosts.Add(services);
-        await services.InitializeDatabaseAsync();
-        return services;
+        return Task.FromResult(services);
     }
 
     private static IServiceProvider Scope(IServiceProvider services) => services.CreateScope().ServiceProvider;

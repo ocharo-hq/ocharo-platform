@@ -5,6 +5,7 @@ using SkiaSharp;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using OcharoCatalogue.Domain.Catalogue.Entities;
 using OcharoCatalogue.Domain.Catalogue.Models;
 using OcharoCatalogue.Persistence;
@@ -120,11 +121,10 @@ public sealed class CatalogueDesignTests
         n["productRevisions"]![row.Id]=2;await ds.SaveAsync(d.Id,new("Inactive selected photo",Json(n),2),Ct);
         Json(await rs.PreparationAsync(d.Id,Ct)).GetProperty("pdfPageIds").EnumerateArray().Should().BeEmpty();
     }
-    [Fact] public async Task AdditiveUpgrade_ShouldPreserveProductHistoryAndBeRepeatable_WhenApplied()
+    [Fact] public async Task MigrationSet_ShouldPreserveProductHistoryAndBeRepeatable_WhenAppliedAgain()
     {
-        await using var h=await CatalogueHarness.CreateAsync();await Seed(h);var db=h.Get<OcharoCatalogueDbContext>();
-        foreach(var sql in new[]{"DROP TABLE catalogue_design_revisions","DROP TABLE catalogue_designs","DROP TABLE catalogue_publications","DROP TABLE catalogue_releases","DROP TABLE catalogue_release_assets"})await db.Database.ExecuteSqlRawAsync(sql);
-        await h.Services.InitializeDatabaseAsync();await h.Services.InitializeDatabaseAsync();
+        await using var h=await CatalogueHarness.CreateAsync();await Seed(h);var database=h.Get<IConfiguration>()[CatalogueTestDatabase.ConnectionKey]!;
+        await CatalogueTestDatabase.MigrateAsync(database);await CatalogueTestDatabase.MigrateAsync(database);
         (await h.Get<ICatalogueRepository>().GetProductsAsync(Ct)).Should().ContainSingle();(await h.Get<ICatalogueRepository>().GetRevisionsAsync("nimcha-v01",Ct)).Should().ContainSingle();
         await h.Designs.SaveAsync(null,new("After upgrade",Snapshot()),Ct);(await h.Designs.ListAsync(false,Ct)).Should().ContainSingle();
     }

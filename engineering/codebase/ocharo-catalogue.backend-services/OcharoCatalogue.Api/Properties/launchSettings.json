@@ -8,7 +8,8 @@
       "applicationUrl": "https://localhost:8278",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "LOCAL_SETTINGS": "true"
+        "LOCAL_SETTINGS": "true",
+        "Catalogue__TrustedOrigins__0": "https://localhost:8282"
       }
     }
   }

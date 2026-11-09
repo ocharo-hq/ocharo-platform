@@ -20,7 +20,7 @@ public sealed class CatalogueDesignApiTests
         var root=Path.Combine(Path.GetTempPath(),"catalogue-design-api",Guid.NewGuid().ToString("N"));
         await using var host=new WebApplicationFactory<Program>().WithWebHostBuilder(builder=>{
             builder.UseEnvironment("Testing");builder.UseCatalogueSignIn();builder.ConfigureAppConfiguration((_,config)=>config.AddInMemoryCollection(new Dictionary<string,string?>{
-                ["ConnectionStrings:OcharoCatalogue"]=$"Data Source={Path.Combine(root,"api.db")};Pooling=False",["Catalogue:DataRoot"]=Path.Combine(root,"data"),["Catalogue:SeedOnEmpty"]="false"
+                [CatalogueTestDatabase.ConnectionKey] = CatalogueTestDatabase.For(Path.Combine(root,"api.db")), [CatalogueTestDatabase.OwnerKey] = CatalogueTestDatabase.OwnerInstance,["Catalogue:DataRoot"]=Path.Combine(root,"data"),["Catalogue:SeedOnEmpty"]="false"
             }));
         });
         using var client=CatalogueSignIn.CreateClient(host,CatalogueSignIn.Owner);

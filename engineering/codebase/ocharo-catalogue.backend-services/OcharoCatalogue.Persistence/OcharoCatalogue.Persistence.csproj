@@ -6,12 +6,21 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Read once, by the import of the retired SQLite store. -->
+    <PackageReference Include="Microsoft.Data.Sqlite" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OcharoCatalogue.Application\OcharoCatalogue.Application.csproj" />
     <ProjectReference Include="..\OcharoCatalogue.Domain\OcharoCatalogue.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The `catalogue` migration set; CatalogueDatabaseConstants.MigrationResourcePrefix names the folder. -->
+    <EmbeddedResource Include="Migrations/**/*.sql" Exclude="Migrations/Dev/**/*.sql">
+      <LogicalName>OcharoCatalogue/Migrations/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

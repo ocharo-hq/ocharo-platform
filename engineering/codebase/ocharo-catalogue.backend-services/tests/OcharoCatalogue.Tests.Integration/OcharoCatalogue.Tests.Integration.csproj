@@ -5,7 +5,7 @@
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
-  <!-- Integration tier: catalogue commands and queries through the mediator and the stores, below HTTP, over a temp SQLite store and an in-memory Files tenant. -->
+  <!-- Integration tier: catalogue commands and queries through the mediator and the stores, below HTTP, over a fresh PostgreSQL database (Docker) and an in-memory Files tenant. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
@@ -15,6 +15,7 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />

@@ -28,6 +28,16 @@ public static class CatalogueHttpErrors
             CatalogueProblemReasons.HttpsRequired);
     }
 
+    /// <summary>Creates the error of a catalogue route asked while the retired SQLite store waits for
+    /// <c>import-sqlite</c>.</summary>
+    public static AppError StorageMoving()
+    {
+        return Reasoned(
+            AppErrorType.ExternalUnavailable,
+            "Catalogue storage is moving. Try again in a few minutes.",
+            CatalogueProblemReasons.StorageMoving);
+    }
+
     private static AppError Reasoned(
         AppErrorType type,
         string message,

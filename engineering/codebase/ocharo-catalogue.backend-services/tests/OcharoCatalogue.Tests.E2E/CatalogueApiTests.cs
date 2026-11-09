@@ -19,7 +19,7 @@ public sealed class CatalogueApiTests
             builder.UseCatalogueSignIn();
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(root, "api.db")};Pooling=False",
+                [CatalogueTestDatabase.ConnectionKey] = CatalogueTestDatabase.For(Path.Combine(root, "api.db")), [CatalogueTestDatabase.OwnerKey] = CatalogueTestDatabase.OwnerInstance,
                 ["Catalogue:DataRoot"] = Path.Combine(root, "data"),
                 ["Catalogue:SourceRoot"] = source,
             }));

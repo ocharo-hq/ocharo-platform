@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Npgsql;
 using OcharoCatalogue.Api.Access;
 using OcharoCatalogue.Api.Catalogue.Core.Errors;
 using OcharoCatalogue.Api.Catalogue.Core.Extensions;
 using OcharoCatalogue.Infrastructure.Catalogue.Core.Options;
+using OcharoCatalogue.Persistence;
+using WoW.Two.Sdk.Beta.Be.Caching.Postgres;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
-using WoW.Two.Sdk.Beta.Be.Web.DataProtection;
 
 namespace OcharoCatalogue.Api.Configurations;
 
@@ -13,19 +16,16 @@ public static partial class HostConfiguration
 {
     /// <summary>
     /// Registers sign-in through Ocharo's Identity instance (BFF, section <c>Identity:Client</c>), the bound
-    /// organization
-    /// (<c>Catalogue:OrganizationId</c>, required at boot), default deny with <see
-    /// cref="CatalogueAccess.MemberPolicy"/>
-    /// as the fallback, and a Data Protection key ring that survives restarts.
+    /// organization (<c>Catalogue:OrganizationId</c>, required at boot), default deny with <see
+    /// cref="CatalogueAccess.MemberPolicy"/> as the fallback, and the sessions and Data Protection key ring that encrypts
+    /// them, both in the product database, so a restart or deploy keeps everyone signed in.
     /// </summary>
     /// <remarks>
-    ///   - the BFF keeps its sessions in the SDK's default in-memory <c>IDistributedCache</c>: Catalogue's store is
-    /// SQLite
-    ///     and the SDK ships no SQLite cache, so a restart or deploy signs everyone in again; the key ring persists, so
-    ///     the cookies and tokens it protects stay readable
-    ///   - the key ring lives at <c>DataProtection:KeysPath</c>, else <c>{Catalogue:DataRoot}/keys</c>, which a
-    /// deployed
-    ///     host keeps on its data volume
+    ///   - the BFF keeps its sessions in <c>IDistributedCache</c>: the be sdk's PostgreSQL cache in schema
+    ///     <c>catalogue_cache</c>, apart from Desk's <c>cache</c> and Studio's <c>studio_cache</c>, its
+    ///     <c>distributed_cache</c> set migrating beside Catalogue's own
+    ///   - the key ring lives in <c>catalogue.data_protection_keys</c> under the application name Catalogue has always
+    ///     used; <c>import-sqlite</c> copies the file ring it kept on the data volume
     /// </remarks>
     private static WebApplicationBuilder AddAccess(this WebApplicationBuilder builder)
     {
@@ -35,6 +35,12 @@ public static partial class HostConfiguration
                 "Catalogue:OrganizationId must name the Identity organization this catalogue belongs to.")
             .ValidateOnStart();
         builder.Services.AddIdentityBff();
+        builder.Services.AddPostgresDistributedCache();
+        builder.Services.AddOptions<PostgresDistributedCacheOptions>().Configure<IConfiguration>((options, configuration) =>
+        {
+            options.ConnectionString = configuration.GetConnectionString(CatalogueDatabaseConstants.ConnectionStringName) ?? string.Empty;
+            options.Schema = CatalogueDatabaseConstants.CacheSchema;
+        });
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddSingleton<IAuthorizationHandler, CatalogueAccessHandler>();
         AuthorizationPolicy Policy(bool approval) => new AuthorizationPolicyBuilder(BffAuthenticationSchemeConstants.Cookie)
@@ -47,17 +53,13 @@ public static partial class HostConfiguration
             .AddPolicy(CatalogueAccess.ApprovePolicy, Policy(approval: true))
             .SetFallbackPolicy(member);
 
-        // The application name and key directory are the ones Catalogue has always used, so existing cookies stay readable;
-        // both resolve from the final configuration, after test and deployment overrides.
-        builder.Services.AddPersistentDataProtection(_ => { });
-        builder.Services.AddOptions<PersistentDataProtectionOptions>()
-            .Configure<IConfiguration, IHostEnvironment, IOptions<CatalogueOptions>>((options, configuration, environment, catalogue) =>
-            {
-                options.ApplicationName = configuration["DataProtection:ApplicationName"] ?? $"ocharo-catalogue:{environment.EnvironmentName}";
-                var path = configuration["DataProtection:KeysPath"];
-                if (string.IsNullOrWhiteSpace(path)) path = Path.Combine(catalogue.Value.DataRoot, "keys");
-                options.KeyDirectory = Path.IsPathRooted(path) ? path : Path.Combine(environment.ContentRootPath, path);
-            });
+        // The application name is the one Catalogue has always used, so the copied keys still read what they protected;
+        // it resolves from the final configuration, after test and deployment overrides.
+        builder.Services.AddDataProtection();
+        builder.Services.AddOptions<KeyManagementOptions>().Configure<NpgsqlDataSource>((options, dataSource) =>
+            options.XmlRepository = new PostgresXmlRepository(dataSource));
+        builder.Services.AddOptions<DataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
+            options.ApplicationDiscriminator = configuration["DataProtection:ApplicationName"] ?? $"ocharo-catalogue:{environment.EnvironmentName}");
         return builder;
     }
 

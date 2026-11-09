@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using OcharoCatalogue.Application.Catalogue.Core.Constants;
 using OcharoCatalogue.Application.Catalogue.Core.Errors;
@@ -6,8 +7,8 @@ using OcharoCatalogue.Domain.Catalogue.Entities;
 
 namespace OcharoCatalogue.Persistence.Catalogue;
 
-/// <summary>Stores catalogue state in SQLite, with revision checks enforced inside one transaction; a stale revision
-/// fails as a conflict.</summary>
+/// <summary>Stores catalogue state in PostgreSQL, with revision checks enforced inside one serializable transaction; a
+/// stale revision fails as a conflict, and a transaction another save overtook fails as busy.</summary>
 public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogueRepository
 {
     /// <inheritdoc />
@@ -28,7 +29,7 @@ public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogu
         string summary,
         CancellationToken ct)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         if (await db.Products.AnyAsync(product => product.Id == record.Id, ct))
         {
             throw Conflict($"A product with id '{record.Id}' already exists.");
@@ -49,7 +50,7 @@ public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogu
         string summary,
         CancellationToken ct)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var current = await db.Products.FirstOrDefaultAsync(product => product.Id == record.Id, ct)
             ?? throw CatalogueErrors.NotFound("Product").ToException();
         if (current.Revision != expectedRevision)
@@ -105,7 +106,7 @@ public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogu
         int? expectedRevision,
         CancellationToken ct)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var current = await db.Collections.FirstOrDefaultAsync(collection => collection.Id == record.Id, ct);
         if (expectedRevision is null)
         {
@@ -197,7 +198,7 @@ public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogu
         int? expectedRevision,
         CancellationToken ct)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var current = await db.Settings.FirstOrDefaultAsync(settings => settings.Id == record.Id, ct);
         if (current is null)
         {

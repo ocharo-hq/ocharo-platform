@@ -24,7 +24,8 @@ and `Identity:Client` configured and answers every authoring route only to a sig
 configures Identity nor signs in yet, so it does not run as it stands; it needs a session for its page and its API
 seeding first.
 
-Requirements: the .NET 10 SDK, the workspace's Node and pnpm, and Playwright's Chromium
+Requirements: the .NET 10 SDK, Docker (or `CATALOGUE_E2E_DATABASE`, below), the workspace's Node and pnpm, and
+Playwright's Chromium
 (`pnpm --filter @ocharocatalogue/web exec playwright install chromium` when it is missing).
 The optional `tesseract` command with the `eng`, `ara`, `fas` and `urd` languages enables the checks that
 read exported PDF text; without it those checks are skipped and noted in the test annotations.
@@ -33,8 +34,10 @@ store, because it seeds products with the original catalogue's product IDs; othe
 
 ## Isolation
 
-By default the suite starts its own API on `18278` and Vite on `18282`, with a fresh temporary SQLite store and
-media root that are removed when the run ends. It never reads `appsettings.Local.json` or a developer's
+By default the suite starts its own API on `18278` and Vite on `18282`, with a fresh PostgreSQL database in a
+throwaway `postgres:18-alpine` container and a temporary media root, both removed when the run ends; the API runs as a
+local run, which creates the database and applies the `catalogue` set at boot. `CATALOGUE_E2E_DATABASE` names a
+disposable database on another server instead. It never reads `appsettings.Local.json` or a developer's
 `App_Data`. Each test seeds its own synthetic products and catalogues through the API, with a run token in every
 name and slug, so tests can share one store and run in parallel.
 

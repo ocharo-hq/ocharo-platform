@@ -44,6 +44,15 @@
           "SkiaSharp.NativeAssets.macOS": "3.119.2"
         }
       },
+      "Testcontainers.PostgreSql": {
+        "type": "Direct",
+        "requested": "[4.1.0, )",
+        "resolved": "4.1.0",
+        "contentHash": "7e9JH4m76/t4/MjmXgwt3fmfID80nY7MTo4UXHMisix3F3OoDmRC71absOshwxQQ/mCZNxR37HehgC51rt/YaA==",
+        "dependencies": {
+          "Testcontainers": "4.1.0"
+        }
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.2, )",
@@ -455,6 +464,19 @@
         "type": "Transitive",
         "resolved": "1.6.1",
         "contentHash": "4H/f2uYJOZ+YObZjpY9ABrKZI+JNw3uizp6oMzTXwDw6F+2qIPhpRl/1t68O/6e98+vqNiYGu+lswmwdYUy3gg=="
+      },
+      "Docker.DotNet.Enhanced": {
+        "type": "Transitive",
+        "resolved": "3.126.1",
+        "contentHash": "UPyLBLBaVE3s7OCWM0h5g9w6mUOag5sOIP5CldFQekIWo/gHixgZR+o5fG7eCFH4ZdKlvBGM4ALFuOyPoKoJ3A=="
+      },
+      "Docker.DotNet.Enhanced.X509": {
+        "type": "Transitive",
+        "resolved": "3.126.1",
+        "contentHash": "XFHMC/iWHbloQgg9apZrxu010DmSamaAggu8nomCqTeotGyUGkv2Tt/aqk1ljC/4tjtTrb9LtFQwYpwZbMbiKg==",
+        "dependencies": {
+          "Docker.DotNet.Enhanced": "3.126.1"
+        }
       },
       "DocumentFormat.OpenXml": {
         "type": "Transitive",
@@ -969,6 +991,17 @@
           "Microsoft.EntityFrameworkCore": "10.0.14"
         }
       },
+      "Microsoft.EntityFrameworkCore.Sqlite": {
+        "type": "Transitive",
+        "resolved": "10.0.14",
+        "contentHash": "lxrwnVwvlIfQD4IF4WUVupE6Qxfj3MfFftDVwo7tsGAWCKLL8Ttb8UjIt+gE4e9nRlH7EgdC6TrsArFGnNYREw==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore.Sqlite.Core": "10.0.14",
+          "Microsoft.Extensions.DependencyModel": "10.0.14",
+          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.13",
+          "SQLitePCLRaw.core": "2.1.13"
+        }
+      },
       "Microsoft.EntityFrameworkCore.Sqlite.Core": {
         "type": "Transitive",
         "resolved": "10.0.14",
@@ -1388,16 +1421,6 @@
         "resolved": "10.0.0",
         "contentHash": "xZAYhPOU2rUIFpV48xsqhCx9vXs6Y+0jX2LCoSEfDFYMw9jtAOUk3iQsCnDLrFIv9NT3JGMihn7nnuZsPKqJmA=="
       },
-      "Npgsql.EntityFrameworkCore.PostgreSQL": {
-        "type": "Transitive",
-        "resolved": "10.0.0",
-        "contentHash": "E2+uSWxSB8LdsUVwPaqRWOcGOP92biry2JEwc0KJMdLJF+aZdczeIdEXVwEyv4nSVMQJH0o8tLhyAMiR6VF0lw==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "[10.0.0, 11.0.0)",
-          "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, 11.0.0)",
-          "Npgsql": "10.0.0"
-        }
-      },
       "OllamaSharp": {
         "type": "Transitive",
         "resolved": "5.5.0",
@@ -1747,6 +1770,11 @@
         "resolved": "0.50.4",
         "contentHash": "/hxjUR7DEX6mky8/LQXyrnrKioOL6D6veAID1EZpro+q4s02x5dHEYBV3qjEN6lDYYilDoQQ76BcmQj+lRx51w=="
       },
+      "SharpZipLib": {
+        "type": "Transitive",
+        "resolved": "1.4.2",
+        "contentHash": "yjj+3zgz8zgXpiiC3ZdF/iyTBbz2fFvMxZFEBPUcwZjIvXOf37Ylm+K58hqMfIBt5JgU/Z2uoUS67JmTLe973A=="
+      },
       "ShimSkiaSharp": {
         "type": "Transitive",
         "resolved": "5.1.1",
@@ -2018,6 +2046,17 @@
         "resolved": "9.0.11",
         "contentHash": "s8yUYuYYu+PAwvBdhLG1KyrGrk9gkYeuPxfAsXsTqqWyepwSyEw8hAaflW4nO98NG52YpYI1am2+9o+79h2RtQ=="
       },
+      "Testcontainers": {
+        "type": "Transitive",
+        "resolved": "4.1.0",
+        "contentHash": "5oudr81h9084amKZrjVIWdVWycR2YhqT9ePnN/ID7xinwx3ZLAI4EhYiyurfrDMvWcHJp5+c9x+qPRxOcq1IXQ==",
+        "dependencies": {
+          "Docker.DotNet.Enhanced": "3.126.1",
+          "Docker.DotNet.Enhanced.X509": "3.126.1",
+          "SSH.NET": "2024.1.0",
+          "SharpZipLib": "1.4.2"
+        }
+      },
       "TimeZoneConverter": {
         "type": "Transitive",
         "resolved": "7.0.0",
@@ -2150,8 +2189,9 @@
       "ocharocatalogue.persistence": {
         "type": "Project",
         "dependencies": {
+          "Microsoft.Data.Sqlite": "[10.0.14, )",
           "Microsoft.EntityFrameworkCore": "[10.0.14, )",
-          "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.14, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.0, )",
           "OcharoCatalogue.Application": "[0.0.0, )",
           "OcharoCatalogue.Domain": "[0.0.0, )"
         }
@@ -2186,16 +2226,15 @@
           "Microsoft.EntityFrameworkCore.Analyzers": "10.0.14"
         }
       },
-      "Microsoft.EntityFrameworkCore.Sqlite": {
+      "Npgsql.EntityFrameworkCore.PostgreSQL": {
         "type": "CentralTransitive",
-        "requested": "[10.0.14, )",
-        "resolved": "10.0.14",
-        "contentHash": "lxrwnVwvlIfQD4IF4WUVupE6Qxfj3MfFftDVwo7tsGAWCKLL8Ttb8UjIt+gE4e9nRlH7EgdC6TrsArFGnNYREw==",
+        "requested": "[10.0.0, )",
+        "resolved": "10.0.0",
+        "contentHash": "E2+uSWxSB8LdsUVwPaqRWOcGOP92biry2JEwc0KJMdLJF+aZdczeIdEXVwEyv4nSVMQJH0o8tLhyAMiR6VF0lw==",
         "dependencies": {
-          "Microsoft.EntityFrameworkCore.Sqlite.Core": "10.0.14",
-          "Microsoft.Extensions.DependencyModel": "10.0.14",
-          "SQLitePCLRaw.bundle_e_sqlite3": "2.1.13",
-          "SQLitePCLRaw.core": "2.1.13"
+          "Microsoft.EntityFrameworkCore": "[10.0.0, 11.0.0)",
+          "Microsoft.EntityFrameworkCore.Relational": "[10.0.0, 11.0.0)",
+          "Npgsql": "10.0.0"
         }
       },
       "PdfPig": {

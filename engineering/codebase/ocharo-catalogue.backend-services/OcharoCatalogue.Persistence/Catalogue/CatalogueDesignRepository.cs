@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using OcharoCatalogue.Application.Catalogue.Core.Errors;
 using OcharoCatalogue.Application.Catalogue.Core.Repositories;
@@ -7,8 +8,8 @@ using OcharoCatalogue.Domain.Catalogue.Entities;
 
 namespace OcharoCatalogue.Persistence.Catalogue;
 
-/// <summary>Stores catalogue designs, releases and publications; revision and source checks run in the same SQLite
-/// transaction as every write, and a failed check fails as a conflict.</summary>
+/// <summary>Stores catalogue designs, releases and publications; revision and source checks run in the same serializable
+/// PostgreSQL transaction as every write, and a failed check fails as a conflict.</summary>
 public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db) : IDesignRepository
 {
     /// <inheritdoc />
@@ -32,7 +33,7 @@ public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db) : IDe
         int? expectedRevision,
         CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var current = await db.CatalogueDesigns.FirstOrDefaultAsync(design => design.Id == record.Id, ct);
         var slugTaken = await db.CatalogueDesigns.AnyAsync(
             design => design.Id != record.Id
@@ -85,7 +86,7 @@ public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db) : IDe
         DateTimeOffset now,
         CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var current = await db.CatalogueDesigns.FirstOrDefaultAsync(design => design.Id == id, ct);
         Check(current, expectedRevision);
         current!.Archived = true;
@@ -147,7 +148,7 @@ public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db) : IDe
         IReadOnlyList<CatalogueReleaseFileRecord> files,
         CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var design = await db.CatalogueDesigns.AsNoTracking().FirstOrDefaultAsync(
             row => row.Id == release.DesignId,
             ct);
@@ -183,7 +184,7 @@ public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db) : IDe
         DateTimeOffset now,
         CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var design = await db.CatalogueDesigns.AsNoTracking().FirstOrDefaultAsync(row => row.Id == designId, ct);
         Check(design, expectedRevision);
         var release = await db.CatalogueReleases.FirstOrDefaultAsync(
@@ -235,7 +236,7 @@ public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db) : IDe
         DateTimeOffset now,
         CancellationToken ct)
     {
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var design = await db.CatalogueDesigns.AsNoTracking().FirstOrDefaultAsync(row => row.Id == designId, ct);
         Check(design, expectedRevision);
         await db.CatalogueReleases

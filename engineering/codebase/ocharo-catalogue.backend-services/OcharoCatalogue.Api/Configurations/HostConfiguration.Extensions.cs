@@ -1,4 +1,3 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OcharoCatalogue.Api.Catalogue.Core.Mappers;
@@ -24,6 +23,13 @@ using OcharoCatalogue.Infrastructure.Catalogue.Publishing.Validators;
 using OcharoCatalogue.Infrastructure.Catalogue.Settings.FoundationServices;
 using OcharoCatalogue.Persistence;
 using OcharoCatalogue.Persistence.Catalogue;
+using OcharoCatalogue.Persistence.Import;
+using Npgsql;
+using WoW.Two.Sdk.Beta.Be.Data;
+using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
+using WoW.Two.Sdk.Beta.Be.Data.EntityFrameworkCore;
+using WoW.Two.Sdk.Beta.Be.Data.Errors;
+using WoW.Two.Sdk.Beta.Be.Data.Migrations.Bespoke;
 using WoW.Two.Sdk.Beta.Be.Files.Client;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
@@ -40,28 +46,61 @@ namespace OcharoCatalogue.Api.Configurations;
 public static partial class HostConfiguration
 {
     /// <summary>Holds the root URL of the WoW2 Files instance Catalogue stores its product images and release artifacts
-    /// in;
-    /// unset, they stay in the local blob folder and SQLite.</summary>
+    /// in; unset, they stay in the local blob folder and the database.</summary>
     private const string FilesBaseUrlKey = "Files:BaseUrl";
 
-    /// <summary>Registers the SQLite catalogue context with lazy host configuration, and its readiness check on
-    /// <c>/health</c>.</summary>
-    private static WebApplicationBuilder AddSqliteDatabase(this WebApplicationBuilder builder)
+    /// <summary>Registers Catalogue's PostgreSQL storage in the product database (<c>ConnectionStrings:Database</c>, filled
+    /// per target by Wheelhouse): the <c>catalogue</c> migration set, the EF context that maps it, its readiness check on
+    /// <c>/health</c>, and the import of the retired SQLite store with the gate that holds catalogue routes until it
+    /// ran.</summary>
+    /// <remarks>Every value resolves from the final configuration, so a test host's settings decide.</remarks>
+    private static WebApplicationBuilder AddCatalogueDatabase(this WebApplicationBuilder builder)
     {
-        var configuration = builder.Configuration;
+        // The configured string, not the data source's: a data source drops the password from its own copy.
+        static string ConnectionString(IServiceProvider provider) =>
+            provider.GetRequiredService<IConfiguration>().GetConnectionString(CatalogueDatabaseConstants.ConnectionStringName)
+            ?? throw new InvalidOperationException($"ConnectionStrings:{CatalogueDatabaseConstants.ConnectionStringName} is required.");
+        builder.Services.AddSingleton(provider => NpgsqlDataSource.Create(ConnectionString(provider)));
+        builder.Services.AddKeyedSingleton<IDbConnectionFactory>(CatalogueDatabaseConstants.MigrationSetName, static (provider, _) =>
+            new DataSourceConnectionFactory(provider.GetRequiredService<NpgsqlDataSource>()));
+        builder.Services.AddKeyedSingleton(CatalogueDatabaseConstants.MigrationSetName, static (provider, _) =>
+            new DatabaseSettings { ConnectionString = ConnectionString(provider) });
+        builder.Services.AddDatabaseBespokeMigrationSet(
+            CatalogueDatabaseConstants.MigrationSetName,
+            static _ => new EmbeddedResourceMigrationBroker(typeof(OcharoCatalogueDbContext).Assembly, CatalogueDatabaseConstants.MigrationResourcePrefix),
+            static migration =>
+            {
+                migration.SchemaName = CatalogueDatabaseConstants.Schema;
+                migration.SchemaOwner = "product";
+                migration.AdvisoryLockId = CatalogueDatabaseConstants.AdvisoryLockId;
+                migration.Version = BuildIdentity.MigrationVersion;
+                migration.Release = BuildIdentity.MigrationRelease;
+            });
         builder.Services.AddDbContext<OcharoCatalogueDbContext>((provider, options) =>
-        {
-            var raw = (provider.GetService<IConfiguration>() ?? configuration)["ConnectionStrings:OcharoCatalogue"]
-                ?? "Data Source=App_Data/ocharo-catalogue.db";
-            var connection = new SqliteConnectionStringBuilder(raw);
-            var contentRoot = provider.GetService<IHostEnvironment>()?.ContentRootPath;
-            if (connection.DataSource is { Length: > 0 } file && file != ":memory:"
-                && !Path.IsPathRooted(file) && contentRoot is not null)
-                connection.DataSource = Path.Combine(contentRoot, file);
-            options.UseSqlite(connection.ToString());
-        });
+            options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()));
         builder.Services.AddHealthChecks().AddDatabaseReadinessCheck<OcharoCatalogueDbContext>();
+
+        builder.Services.AddSingleton<LegacySqliteSettings>(LegacySettings);
+        builder.Services.AddSingleton<LegacySqliteImport>();
         return builder;
+    }
+
+    /// <summary>Resolves where the retired SQLite store and key ring sit: <c>LegacySqlite:{Path,KeysPath}</c>, else the
+    /// paths the SQLite release used — <c>{Catalogue:DataRoot}/ocharo-catalogue.db</c> and <c>DataProtection:KeysPath</c>,
+    /// else <c>{Catalogue:DataRoot}/keys</c> — relative to the content root.</summary>
+    private static LegacySqliteSettings LegacySettings(IServiceProvider provider)
+    {
+        var configuration = provider.GetRequiredService<IConfiguration>();
+        var contentRoot = provider.GetRequiredService<IHostEnvironment>().ContentRootPath;
+        var dataRoot = provider.GetRequiredService<IOptions<CatalogueOptions>>().Value.DataRoot;
+        string Rooted(string path) => Path.GetFullPath(Path.IsPathRooted(path) ? path : Path.Combine(contentRoot, path));
+        static string? Set(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+        var section = configuration.GetSection(LegacySqliteSettings.SectionName);
+        return new LegacySqliteSettings
+        {
+            Path = Rooted(Set(section["Path"]) ?? Path.Combine(dataRoot, "ocharo-catalogue.db")),
+            KeysPath = Rooted(Set(section["KeysPath"]) ?? Set(configuration["DataProtection:KeysPath"]) ?? Path.Combine(dataRoot, "keys")),
+        };
     }
 
     /// <summary>Registers catalogue settings, repositories, media, import and the foundation services the handlers
@@ -95,11 +134,13 @@ public static partial class HostConfiguration
     }
 
     /// <summary>Registers the mediator over the handler-bearing Infrastructure assembly; the SDK installs its
-    /// exception-to-result converter first, and a busy SQLite store maps to the catalogue's busy conflict.</summary>
+    /// exception-to-result converter first. A save PostgreSQL could not serialize maps to the catalogue's busy conflict,
+    /// and the be sdk's data rule maps a key or concurrency clash to a conflict.</summary>
     private static WebApplicationBuilder AddMediator(this WebApplicationBuilder builder)
     {
         builder.Services.AddMediator(typeof(InfrastructureAssembly).Assembly);
-        builder.Services.AddExceptionMappingRule<SqliteBusyExceptionMappingRule>();
+        builder.Services.AddExceptionMappingRule<PostgresBusyExceptionMappingRule>();
+        builder.Services.AddDbExceptionMapping();
         return builder;
     }
 
@@ -132,17 +173,18 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Configures Catalogue's own HTTP boundary ahead of sign-in: response headers and the cross-origin write
-    /// refusal.</summary>
+    /// <summary>Configures Catalogue's own HTTP boundary ahead of sign-in: response headers, the cross-origin write
+    /// refusal, and the 503 every catalogue route answers while the retired SQLite store waits for its import.</summary>
     private static IApplicationBuilder UseCatalogueBoundary(this IApplicationBuilder app)
     {
-        return app.UseMiddleware<CatalogueHttpBoundaryMiddleware>();
+        return app.UseMiddleware<CatalogueHttpBoundaryMiddleware>()
+            .UseMiddleware<LegacyStoreGateMiddleware>();
     }
 
     /// <summary>Registers the media and release-artifact stores: WoW2 Files over HTTP when <see
     /// cref="FilesBaseUrlKey"/> is
     /// set, by tokens of Catalogue's own Identity client (a person's exchanged within their session, Catalogue's own
-    /// otherwise), else the local blob folder and SQLite. Both read at resolve time, so a test host's settings decide
+    /// otherwise), else the local blob folder and the database. Both read at resolve time, so a test host's settings decide
     /// (research/files-adoption.md #24, #26).</summary>
     private static WebApplicationBuilder AddCatalogueFiles(this WebApplicationBuilder builder)
     {
@@ -194,12 +236,21 @@ public static partial class HostConfiguration
         }
     }
 
-    /// <summary>Configures catalogue storage and imports configured records into an empty catalogue.</summary>
+    /// <summary>Brings the database to this build's level — applied on a local run, verified on any other boot — then
+    /// fills missing Files ids and seeds an empty catalogue from the configured records.</summary>
+    /// <remarks>While the retired SQLite store waits for <c>import-sqlite</c>, neither runs: a seed or a backfill would
+    /// write rows the copy then refuses as diverged.</remarks>
     private static async Task InitializeCatalogueAsync(this WebApplication app)
     {
-        await app.Services.InitializeDatabaseAsync();
+        await app.Services.MigrateBespokeOnStartupAsync(app.Lifetime.ApplicationStopping);
 
         using var scope = app.Services.CreateScope();
+        if (scope.ServiceProvider.GetRequiredService<LegacySqliteSettings>().IsWaiting)
+        {
+            app.Logger.LogWarning("The retired SQLite store waits for `import-sqlite`; catalogue routes answer 503 until it runs.");
+            return;
+        }
+
         if (UsesFiles(scope.ServiceProvider))
             await scope.ServiceProvider.BackfillFileIdsAsync(app.Logger);
         var options = scope.ServiceProvider.GetRequiredService<IOptions<CatalogueOptions>>().Value;

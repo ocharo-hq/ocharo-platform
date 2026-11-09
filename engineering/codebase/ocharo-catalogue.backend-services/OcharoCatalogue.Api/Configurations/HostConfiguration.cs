@@ -25,7 +25,7 @@ public static partial class HostConfiguration
         });
 
         builder
-            .AddSqliteDatabase()
+            .AddCatalogueDatabase()
             .AddCatalogue()
             .AddAccess()
             .AddMediator()
