@@ -1,6 +1,6 @@
 # Ocharo Platform — Ocharo Desk
 
-*Last updated: 2026-09-29*
+*Last updated: 2026-10-19*
 
 **Ocharo Desk** is the authenticated operator workspace for brand identity, products, media review and
 content preparation. Platform owns canonical Brand/Product facts and immutable releases. Marketing
@@ -81,17 +81,17 @@ commits. Setup documents do not grant Git permission or change remote configurat
 ## Foundation and template history
 
 The original documentation baseline `04a13f5` and Brand Workspace history remain intact.
-The adapted foundation was completed under [r0.1](engineering/research/previous-work/rough-track/r0.1/r0.1.md),
-authenticated preparation under [r0.2](engineering/research/previous-work/rough-track/r0.2/r0.2.md), and catalogue/card
-editing and the overview under [r0.3](engineering/research/previous-work/rough-track/r0.3/r0.3.md).
+The adapted foundation was completed under r0.1,
+authenticated preparation under r0.2, and catalogue/card
+editing and the overview under r0.3.
 The [verification index](engineering/research/previous-work/verification.md) retains the milestone evidence.
 
 The v22 catalogue is an editable 16-page template in Uzbek, Russian and English. Prices, garment/page
 order, photographs, crop and frame geometry can be edited, saved, reopened and exported. The card
 editor preserves the wordmark, supports contact editing and color/background variants, and exports
 both 85×55mm faces. Three overview layouts use workspace counts. Historical variants, screenshots and
-export limitations remain in the [r0.3 review guide](engineering/research/previous-work/rough-track/r0.3/r0.3-review.md)
-and [r0.3 verification](engineering/research/previous-work/rough-track/r0.3/r0.3-verification.md).
+export limitations remain in the r0.3 review guide
+and r0.3 verification.
 
 ## Brand and Catalogue source adoption
 

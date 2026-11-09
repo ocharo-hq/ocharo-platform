@@ -1,6 +1,6 @@
 # Business overview variants
 
-*Last updated: 2026-09-27*
+*Last updated: 2026-10-19*
 
 ## Purpose
 
@@ -42,5 +42,5 @@ and screenshots follow that integration; source/type checks alone do not establi
 Validation on 2026-09-27: frontend `pnpm typecheck` passed (Vue TypeScript and SFC checks),
 and targeted ESLint for `OverviewPage.vue` passed. Final trusted-HTTPS browser checks exercised all three
 views, remembered selection after reload and 390px mobile layout without overflow or page errors.
-The [review guide](previous-work/rough-track/r0.3/r0.3-review.md) preserves the rendered alternatives;
+The r0.3 review guide, now in git history, preserved the rendered alternatives;
 developer preference remains open.

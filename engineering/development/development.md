@@ -1,6 +1,6 @@
 # Development
 
-*Last updated: 2026-09-26*
+*Last updated: 2026-10-19*
 
 Use shared wow-two conventions; repository documents carry only product-specific choices.
 The initial bootstrap is one coordinated lane. Parallel business subsystems need an explicit vector
@@ -11,7 +11,7 @@ Studio remains independently owned. Shared package and solution changes have one
 
 Backend rules: [backend guidelines](backend-guidelines.md).
 Frontend rules: [frontend guidelines](frontend-guidelines.md).
-Execution: [scaffold track](../research/previous-work/rough-track/r0.1/r0.1.md).
+Execution: [version track](../planning/version-track/v0.1/v0.1.md).
 
 ## Toolchain and verification
 

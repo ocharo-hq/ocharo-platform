@@ -84,7 +84,7 @@ portfolio includes four separate public applications and Motion; reconcile that 
 consolidation rather than treating this chat's older recommendation as the final repository count.
 
 The interrupted request “pull the choice images here” remains unfulfilled. Three overview alternatives
-and card variants are saved in the [review guide](../engineering/research/previous-work/rough-track/r0.3/r0.3-review.md).
+and card variants are saved in the review guide.
 The request did not specify which image choices; no preferred layout or brand variant was selected.
 No agent-authored code is known to exist only in chat. External editor buffers and unsaved browser edits
 were not inspected or recovered; saving remains explicit in the current editor.
@@ -96,19 +96,19 @@ Application builds and suites were not rerun for this handoff. The milestones be
 ## Current milestone
 
 The product now lives in Maftuna’s [Brand Platform workspace](../../../README.md).
-The current [r0.3 design increment](../engineering/research/previous-work/rough-track/r0.3/r0.3.md) provides
+The current r0.3 design increment provides
 catalogue/card editors, immutable server revisions, PDF/PNG/editable-JSON exports and three overview layouts.
 All 80 frontend and 72 backend tests passed, with trusted-HTTPS browser and visual PDF checks.
-[Developer review](../engineering/research/previous-work/rough-track/r0.3/r0.3-review.md) remains open; the original
+Developer review remains open; the original
 catalogue/card source files and Ocharo Studio stay unchanged.
 
 ## Earlier preparation milestone
 
 The developer committed the documentation baseline as `04a13f5` and created the GitHub remote
 `https://github.com/sulton-max/ventures.brand-workspace.git`. The adapted .NET/Vue/PostgreSQL/worker
-foundation was committed as `d4b1add` under [r0.1](../engineering/research/previous-work/rough-track/r0.1/r0.1.md).
+foundation was committed as `d4b1add` under r0.1.
 The developer requested continued scaffolding. Authenticated preparation is implemented under
-[r0.2](../engineering/research/previous-work/rough-track/r0.2/r0.2.md). Technical verification passed 79 tests,
+r0.2. Technical verification passed 79 tests,
 the HTTPS browser/package workflows, and session/export persistence across container replacement.
 Developer review remains open; [verification](../engineering/research/previous-work/verification.md) records the limits.
 
@@ -133,7 +133,7 @@ shared API/worker store. Executed verification and its limits are recorded separ
 
 ## Continuation
 
-Review the current [editor increment](../engineering/research/previous-work/rough-track/r0.3/r0.3-review.md) and the usable preparation increment under [r0.2](../engineering/research/previous-work/rough-track/r0.2/r0.2.md).
+Review the current editor increment and the usable preparation increment under r0.2.
 Local email/password operators are provisioned through the administrator CLI; public registration and
 email delivery are absent. The workflow provides isolated organizations, brands, immutable PNG/JPEG
 uploads, versioned drafts, review, owner approval/revocation, and downloadable manual ZIP snapshots.

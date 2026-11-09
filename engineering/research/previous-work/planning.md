@@ -2,7 +2,9 @@
 
 > Preserved pre-consolidation evidence; not an active plan. Current work belongs to the canonical version track and backlog. Historical permissions and runtime observations are not current authorization.
 
-*Last updated: 2026-09-27 12:36 AM*
+*Last updated: 2026-10-19*
+
+> The rough track was retired and removed on 2026-10-19; its records remain in git history at `b58fcbd`.
 
 ## Current track
 
@@ -11,9 +13,9 @@ The authorized Ocharo Platform build adds canonical Commerce and delegated app a
 
 | Track | Scope | State |
 |---|---|---|
-| [r0.1](rough-track/r0.1/r0.1.md) | Adapted template foundation | Done; developer requested continuation |
-| [r0.3](rough-track/r0.3/r0.3.md) | Design editors and business overview | Technical verification complete; developer review pending |
-| [r0.2](rough-track/r0.2/r0.2.md) | Authenticated content preparation | Technical work verified; developer review pending |
+| r0.1 | Adapted template foundation | Done; developer requested continuation |
+| r0.3 | Design editors and business overview | Technical verification complete; developer review pending |
+| r0.2 | Authenticated content preparation | Technical work verified; developer review pending |
 
 No version track is active during this coordinated product bootstrap. Later product work remains in the
 [backlog](../../planning/backlog.md); this baseline does not assign speculative release versions.
@@ -53,4 +55,4 @@ Detailed current work belongs only in the rough track.
 
 [Template audit](../template-audit.md) and [verification](verification.md) distinguish current
 source evidence, adopted changes, and checks not yet executed.
-Current design-editor evidence: [r0.3 verification](rough-track/r0.3/r0.3-verification.md).
+Current design-editor evidence: r0.3 verification.

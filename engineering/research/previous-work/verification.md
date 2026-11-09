@@ -2,14 +2,14 @@
 
 > Preserved pre-consolidation evidence; not an active plan. Current work belongs to the canonical version track and backlog. Historical permissions and runtime observations are not current authorization.
 
-*Last updated: 2026-09-27 12:36 AM*
+*Last updated: 2026-10-19*
 
 ## Current increment
 
 [Platform build verification](platform-build-verification.md) records the current authenticated Commerce
 and connected-app implementation. The editor and preparation records below retain their historical checks.
 
-The [r0.3 verification record](rough-track/r0.3/r0.3-verification.md) covers the relocated workspace,
+The r0.3 verification record covers the relocated workspace,
 pnpm migration, design editors, revised backend suites, browser workflows and PDF review.
 The preparation evidence below is historical r0.2 evidence; its npm commands and counts describe that snapshot.
 
@@ -17,7 +17,7 @@ The preparation evidence below is historical r0.2 evidence; its npm commands and
 
 The developer's documentation baseline is `04a13f5952e15d3ee862647fe0f8757a42046416`.
 The adapted template foundation is `d4b1add`. This record covers the following authenticated
-preparation increment under [r0.2](rough-track/r0.2/r0.2.md). The initial history and remote are
+preparation increment under r0.2. The initial history and remote are
 preserved. No remote push, release, provider connection, or publication was performed.
 
 The product uses published backend SDK `10.0.58-beta`, Vue SDK `0.0.6`, eight NuGet lockfiles,
