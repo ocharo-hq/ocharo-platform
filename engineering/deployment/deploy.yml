@@ -165,6 +165,8 @@ services:
         Identity:Server:Keys:IsEphemeral: { type: boolean, default: false }
         # Identity's own Development file turns on ephemeral token keys; deployed dev keeps the configured one.
         Identity:Tokens:IsKeyEphemeral: { type: boolean, default: false }
+        # As a Development boot, the image's Serilog logs every SQL command at Information; keep EF's commands at Warning.
+        Serilog:MinimumLevel:Override:Microsoft.EntityFrameworkCore.Database.Command: { default: Warning }
         Identity:Server:Keys:Signing:0:
           { secret: true, required: true, generate: { command: [dotnet, Identity.Api.dll, keys, generate, --role, signing] } }
         Identity:Server:Keys:Encryption:0:
