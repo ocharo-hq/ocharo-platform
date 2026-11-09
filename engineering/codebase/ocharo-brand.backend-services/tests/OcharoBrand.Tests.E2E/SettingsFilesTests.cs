@@ -47,7 +47,6 @@ public sealed class SettingsFilesTests
             if (deployEnvironment is not null) builder.UseSetting("DEPLOY_ENVIRONMENT", deployEnvironment);
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>(BrandTestIdentity.Settings(root))
             {
-                ["ConnectionStrings:OcharoBrand"] = $"Data Source={Path.Combine(root, "brand.db")};Pooling=False",
                 ["Brand:DataRoot"] = Path.Combine(root, "data"),
             }));
             builder.ConfigureServices(BrandTestIdentity.Use);

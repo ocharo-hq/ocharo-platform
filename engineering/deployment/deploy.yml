@@ -31,6 +31,9 @@ migrate:
   - service: desk
     command: [dotnet, BrandWorkspace.Api.dll, migrate]
     timeout: 10m
+  - service: brand                      # the `brand` set and its session cache's `distributed_cache` set (schema brand_cache)
+    command: [dotnet, OcharoBrand.Api.dll, migrate]
+    timeout: 5m
 # After migrate and before any restart, and on every settings-only apply, each item's image checks the settings the
 # deploy applies (pipelines v0.15.0, Wheelhouse v0.12): exit 0 consistent, 1 refused, 2 failed, a `config-result` line
 # last; a refused or retired key stops the deploy while the running release keeps serving. Identity, Desk, Brand and
@@ -376,14 +379,18 @@ services:
     paths:
       - codebase/ocharo-brand.backend-services/**
       - codebase/ocharo-brand.frontend-services/**
-    health: /health
-    # Brand's BFF keeps sign-in sessions in memory (no SQLite IDistributedCache), so a restart or deploy signs everyone
-    # out once; its Data Protection key ring sits on the brand-data volume (the image's DataProtection__KeysPath).
+    health: /health                     # be sdk readiness over the PostgreSQL context
+    needs: [postgres]
+    # Rows in schema `brand` of the product database; sessions (schema `brand_cache`) and the Data Protection key ring
+    # (`brand.data_protection_keys`) live there too, so a restart or deploy keeps everyone signed in.
     settings:
       # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies (the ingress, whose forwarded scheme the
-      # same-origin write check needs); nobody types them.
-      required: [AllowedHosts, Deployment:TrustedProxies]
+      # same-origin write check needs), and fills ConnectionStrings:Database from the target's own PostgreSQL; nobody
+      # types them.
+      required: [ConnectionStrings:Database, AllowedHosts, Deployment:TrustedProxies]
       keys:
+        # Today's key-ring name, so sessions survive dev switching to .NET Development.
+        DataProtection:ApplicationName: { default: "ocharo-brand:Production" }
         # Sign-in through Ocharo's Identity as client 1, linked like Desk's; reads need membership of the bound
         # organization, writes brand:edit, publish and withdraw brand:approve.
         Identity:Client:Authority: { from: Sites:identity:Url }
@@ -411,7 +418,9 @@ services:
         OcharoApps:Wear: { type: url }
         OcharoApps:Blog: { from: { repository: marketing, key: Sites:blog:Url } }
     volumes:
-      brand-data: /data                # SQLite store (ocharo-brand.db) and blobs stored before WoW2 Files
+      # Blobs stored before WoW2 Files, and the retired SQLite store and file key ring until `import-sqlite`
+      # (deployment/brand/brand.md § PostgreSQL move).
+      brand-data: /data
     sites:
       brand: {}
   catalogue:

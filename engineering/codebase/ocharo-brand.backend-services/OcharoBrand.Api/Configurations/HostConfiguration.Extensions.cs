@@ -1,6 +1,7 @@
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using OcharoBrand.Api.Brand;
 using OcharoBrand.Api.Brand.Mappers;
 using OcharoBrand.Api.RuntimeConfig.Settings;
@@ -12,6 +13,10 @@ using OcharoBrand.Infrastructure.Brand.FoundationServices;
 using OcharoBrand.Persistence;
 using OcharoBrand.Persistence.Brand;
 using OcharoBrand.Persistence.Brand.Mappers;
+using OcharoBrand.Persistence.Import;
+using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
+using WoW.Two.Sdk.Beta.Be.Data.EntityFrameworkCore;
+using WoW.Two.Sdk.Beta.Be.Data.Migrations.Bespoke;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
@@ -30,30 +35,77 @@ namespace OcharoBrand.Api.Configurations;
 
 public static partial class HostConfiguration
 {
-    /// <summary>Registers the SQLite context with final host configuration and content-root-relative storage, and its
-    /// readiness check on the bundle's <c>/health</c>.</summary>
-    private static WebApplicationBuilder AddSqliteDatabase(this WebApplicationBuilder builder)
+    /// <summary>Registers Brand's PostgreSQL storage in the product database (<c>ConnectionStrings:Database</c>, filled per
+    /// target by Wheelhouse): the <c>brand</c> migration set in schema <c>brand</c>, the context over it with snake_case
+    /// names, its readiness check on the bundle's <c>/health</c>, and the import of the retired SQLite store.</summary>
+    /// <remarks>Brand stores no organization or account id, so its set keys into no Identity table and depends on none.</remarks>
+    private static WebApplicationBuilder AddPostgresDatabase(this WebApplicationBuilder builder)
     {
+        // The configured string, not the data source's: a data source drops the password from its own copy.
+        static string ConnectionString(IServiceProvider provider) =>
+            provider.GetRequiredService<IConfiguration>().GetConnectionString(BrandDatabaseConstants.ConnectionStringName)
+            ?? throw new InvalidOperationException($"ConnectionStrings:{BrandDatabaseConstants.ConnectionStringName} is required.");
+        builder.Services.AddSingleton(provider => NpgsqlDataSource.Create(ConnectionString(provider)));
+        builder.Services.AddKeyedSingleton<IDbConnectionFactory>(BrandDatabaseConstants.MigrationSetName, static (provider, _) =>
+            new DataSourceConnectionFactory(provider.GetRequiredService<NpgsqlDataSource>()));
+        builder.Services.AddKeyedSingleton(BrandDatabaseConstants.MigrationSetName, static (provider, _) =>
+            new DatabaseSettings { ConnectionString = ConnectionString(provider) });
+        builder.Services.AddDatabaseBespokeMigrationSet(
+            BrandDatabaseConstants.MigrationSetName,
+            static _ => new EmbeddedResourceMigrationBroker(typeof(OcharoBrandDbContext).Assembly, BrandDatabaseConstants.MigrationResourcePrefix),
+            static migration =>
+            {
+                migration.SchemaName = BrandDatabaseConstants.Schema;
+                migration.SchemaOwner = "product";
+                migration.AdvisoryLockId = BrandDatabaseConstants.AdvisoryLockId;
+                migration.Version = BuildIdentity.MigrationVersion;
+                migration.Release = BuildIdentity.MigrationRelease;
+            });
         builder.Services.AddDbContext<OcharoBrandDbContext>((provider, options) =>
-        {
-            var raw = (provider.GetService<IConfiguration>() ?? builder.Configuration)["ConnectionStrings:OcharoBrand"]
-                ?? "Data Source=App_Data/ocharo-brand.db";
-            var connection = new SqliteConnectionStringBuilder(raw);
-            var contentRoot = provider.GetService<IHostEnvironment>()?.ContentRootPath;
-            if (connection.DataSource is { Length: > 0 } file && file != ":memory:" && !Path.IsPathRooted(file) && contentRoot is not null)
-                connection.DataSource = Path.Combine(contentRoot, file);
-            options.UseSqlite(connection.ToString());
-        });
+            options.UseNpgsql(provider.GetRequiredService<NpgsqlDataSource>()).UseSnakeCaseNamingConvention());
         builder.Services.AddHealthChecks().AddDatabaseReadinessCheck<OcharoBrandDbContext>();
+        builder.AddLegacySqlite();
         return builder;
     }
 
+    /// <summary>Registers where the retired SQLite store, its key ring and its blob folder sit, from today's settings, and
+    /// the one-time import that copies them; relative paths resolve against the content root.</summary>
+    /// <remarks>The key ring defaults to today's <c>DataProtection:KeysPath</c>, else a local run's machine folder.</remarks>
+    private static WebApplicationBuilder AddLegacySqlite(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton(provider =>
+        {
+            var configuration = provider.GetRequiredService<IConfiguration>();
+            var environment = provider.GetRequiredService<IHostEnvironment>();
+            var configured = configuration.GetSection(LegacySqliteSettings.SectionName).Get<LegacySqliteSettings>() ?? new LegacySqliteSettings();
+            var keys = configuration[$"{LegacySqliteSettings.SectionName}:{nameof(LegacySqliteSettings.KeysPath)}"]
+                ?? configuration["DataProtection:KeysPath"]
+                ?? (environment.IsLocalRun(configuration) ? LocalKeyRing(environment) : configured.KeysPath);
+            var blobs = configuration[$"{LegacySqliteSettings.SectionName}:{nameof(LegacySqliteSettings.BlobsPath)}"]
+                ?? Path.Combine(provider.GetRequiredService<IOptions<BrandOptions>>().Value.DataRoot, "blobs");
+            var root = environment.ContentRootPath;
+            return configured with
+            {
+                Path = Path.GetFullPath(configured.Path, root),
+                KeysPath = Path.GetFullPath(keys, root),
+                BlobsPath = Path.GetFullPath(blobs, root),
+            };
+        });
+        builder.Services.TryAddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton<LegacySqliteImport>();
+        return builder;
+    }
+
+    /// <summary>The machine folder a local run kept its key ring in before the move.</summary>
+    private static string LocalKeyRing(IHostEnvironment environment) =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ocharo-brand", environment.EnvironmentName, "keys");
+
     /// <summary>Registers brand identity, media, the draft/release handlers behind the mediator and their persistence adapters;
-    /// a save that meets SQLite's lock answers a conflict.</summary>
+    /// a save that loses to a concurrent one answers a conflict.</summary>
     private static WebApplicationBuilder AddBrand(this WebApplicationBuilder builder)
     {
         builder.Services.AddScoped<IBrandRepository, BrandRepository>();
-        builder.Services.AddExceptionMappingRule<SqliteBusyExceptionMappingRule>();
+        builder.Services.AddExceptionMappingRule<PostgresBusyExceptionMappingRule>();
         builder.Services.AddOptions<BrandOptions>().Bind(builder.Configuration.GetSection(BrandOptions.Section));
         // Resolve final options after host/test overrides; retain the host content-root anchor.
         var contentRoot = builder.Environment.ContentRootPath;
@@ -148,6 +200,7 @@ public static partial class HostConfiguration
             pipeline.UseHttpProblemDetails();
             pipeline.UseMiddleware<BrandResponseHeadersMiddleware>();
             pipeline.UseAccess();
+            pipeline.UseMiddleware<BrandStorageMovingMiddleware>();
         });
         app.WarnAboutRejectedRuntimeConfig();
         app.MapControllers();
@@ -155,10 +208,16 @@ public static partial class HostConfiguration
         return app;
     }
 
-    /// <summary>Configures mandatory brand database preparation and seeds an empty brand before traffic starts.</summary>
+    /// <summary>Seeds an empty brand and fills file ids before traffic starts; while the retired SQLite store waits for
+    /// <c>import-sqlite</c>, neither runs, so the copy finds PostgreSQL as the migration left it.</summary>
     private static async Task<WebApplication> InitializeBrandAsync(this WebApplication app)
     {
-        await app.Services.InitializeBrandDatabaseAsync();
+        if (app.Services.GetRequiredService<LegacySqliteSettings>().Waiting)
+        {
+            app.Logger.LogWarning("Brand's SQLite store waits for `import-sqlite`; brand routes answer 503 until it is copied.");
+            return app;
+        }
+
         using var scope = app.Services.CreateScope();
         if (UsesFiles(scope.ServiceProvider))
             await scope.ServiceProvider.BackfillFileIdsAsync(app.Logger);
@@ -177,23 +236,5 @@ public static partial class HostConfiguration
         {
             logger.LogWarning(exception, "Brand's file ids stay unfilled: WoW2 Files could not be reached at boot.");
         }
-    }
-
-    /// <summary>Configures the SQLite schema and write-ahead log before brand seeding.</summary>
-    private static async Task InitializeBrandDatabaseAsync(this IServiceProvider services)
-    {
-        using var scope = services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<OcharoBrandDbContext>();
-        var source = new SqliteConnectionStringBuilder(db.Database.GetConnectionString()).DataSource;
-        if (!string.IsNullOrEmpty(source) && source != ":memory:" && Path.GetDirectoryName(Path.GetFullPath(source)) is { } folder)
-            Directory.CreateDirectory(folder);
-        await db.Database.EnsureCreatedAsync();
-        await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;");
-        // A store made before WoW2 Files lacks the file-id column; EnsureCreated never alters an existing table.
-        var hasFileId = await db.Database
-            .SqlQueryRaw<int>("SELECT COUNT(*) AS Value FROM pragma_table_info('media_blobs') WHERE name = 'FileId'")
-            .SingleAsync();
-        if (hasFileId == 0)
-            await db.Database.ExecuteSqlRawAsync("ALTER TABLE media_blobs ADD COLUMN FileId TEXT NULL;");
     }
 }

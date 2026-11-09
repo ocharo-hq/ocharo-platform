@@ -174,9 +174,9 @@ public sealed class AccessTests
     }
 
     [Theory]
-    [InlineData("DataProtection:KeysPath")]
+    [InlineData("ConnectionStrings:Database")]
     [InlineData("Brand:OrganizationId")]
-    public async Task DeployedHost_ShouldRefuseToBoot_WhenKeyRingOrOrganizationIsMissing(string key)
+    public async Task DeployedHost_ShouldRefuseToBoot_WhenDatabaseOrOrganizationIsMissing(string key)
     {
         await using var host = BrandHost.Create(new Dictionary<string, string?> { ["DEPLOY_ENVIRONMENT"] = "prod", [key] = null });
 

@@ -66,7 +66,7 @@ pnpm dev
 The Vite app uses HTTPS on `8288` and proxies `/api` to the backend HTTPS profile on `8286`.
 Development and browser checks use trusted HTTPS; configure `VITE_API_CA_PATH` for the backend certificate.
 `VITE_API_TARGET` can select a running local backend for those checks; the default is `https://localhost:8286`.
-Browser checks run the API against a throwaway content root (`--contentRoot <scratch>`), never the ignored `App_Data/`.
+Browser checks run the API against a throwaway content root (`--contentRoot <scratch>`) and a throwaway database, never the ignored `App_Data/` or a shared database.
 
 ```sh
 pnpm typecheck

@@ -1,3 +1,4 @@
+using WoW.Two.Sdk.Beta.Be.Data;
 using WoW.Two.Sdk.Beta.Be.Meta;
 
 namespace OcharoBrand.Api.Configurations;
@@ -26,12 +27,14 @@ public static partial class HostConfiguration
             options.TrustProxiesFrom(builder.Configuration.GetSection("Deployment"));
         });
 
-        return builder.AddAccess().AddSqliteDatabase().AddBrand().AddRuntimeConfig().AddHttpSurface();
+        return builder.AddPostgresDatabase().AddAccess().AddBrand().AddRuntimeConfig().AddHttpSurface();
     }
 
     /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>
     public static async Task<WebApplication> ConfigureAsync(this WebApplication app)
     {
+        // A local run applies every set at boot; a deployed boot only verifies the levels the migrate step applied.
+        await app.Services.MigrateBespokeOnStartupAsync(app.Lifetime.ApplicationStopping);
         await app.InitializeBrandAsync();
         return app.ConfigureHttpSurface();
     }

@@ -29,4 +29,7 @@ public static class BrandErrorCodes
 
     /// <summary>A session route reached over plain HTTP.</summary>
     public const string HttpsRequired = "https_required";
+
+    /// <summary>A brand route reached while the retired SQLite store waits for <c>import-sqlite</c>.</summary>
+    public const string StorageMoving = "storage_moving";
 }

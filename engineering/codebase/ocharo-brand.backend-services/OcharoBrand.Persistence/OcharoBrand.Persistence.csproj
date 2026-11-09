@@ -5,13 +5,24 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Kit: migration sets, snake_case naming, exception mapping. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <!-- Read once, by the import of the retired SQLite store. -->
+    <PackageReference Include="Microsoft.Data.Sqlite" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OcharoBrand.Application\OcharoBrand.Application.csproj" />
     <ProjectReference Include="..\OcharoBrand.Domain\OcharoBrand.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The `brand` migration set; BrandDatabaseConstants.MigrationResourcePrefix names the folder. -->
+    <EmbeddedResource Include="Migrations/**/*.sql">
+      <LogicalName>OcharoBrand/Migrations/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
 
 </Project>

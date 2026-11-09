@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OcharoBrand.Tests.Support;
+using WoW.Two.Sdk.Beta.Be.Data.Migrations.Bespoke;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 using WoW.Two.Sdk.Beta.Be.Identity.Core.Organizations;
 
@@ -43,14 +45,19 @@ internal static class BrandTestIdentity
         .ToDictionary(person => person.Subject, StringComparer.Ordinal);
 
     /// <summary>Settings that satisfy <c>Identity:Client</c> validation without any network call to the authority, bind the
-    /// test organization and keep the Data Protection key ring under <paramref name="root"/>.</summary>
-    public static Dictionary<string, string?> Settings(string root) => new()
+    /// test organization, open <paramref name="database"/> (else a fresh product database, migrated as the deploy step
+    /// leaves it) and point the retired SQLite store, its key ring and blobs under <paramref name="root"/>, never at the
+    /// machine's own <c>App_Data</c>.</summary>
+    public static Dictionary<string, string?> Settings(string root, string? database = null) => new()
     {
         ["Identity:Client:Authority"] = "https://identity.example.test/",
         ["Identity:Client:ClientId"] = "brand",
         ["Identity:Client:CookieName"] = CookieName,
         ["Brand:OrganizationId"] = Organization.ToString(),
-        ["DataProtection:KeysPath"] = Path.Combine(root, "keys"),
+        ["ConnectionStrings:Database"] = database ?? BrandTestDatabase.CreateAsync().GetAwaiter().GetResult(),
+        [MigrationConstants.OwnerInstanceConfigurationKey] = BrandTestDatabase.OwnerInstance,
+        ["LegacySqlite:Path"] = Path.Combine(root, "legacy", "ocharo-brand.db"),
+        ["LegacySqlite:KeysPath"] = Path.Combine(root, "legacy", "keys"),
     };
 
     /// <summary>Replaces the BFF cookie scheme's handler with the header-driven test handler.</summary>

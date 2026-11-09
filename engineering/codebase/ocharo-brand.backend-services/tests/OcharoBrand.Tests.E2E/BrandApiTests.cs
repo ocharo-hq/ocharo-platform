@@ -11,9 +11,9 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace OcharoBrand.Tests.E2E;
 
-/// <summary>Full HTTP pipeline over a temp store, seeded from generated stand-ins for the approved logo files, as the
-/// organization's owner (<see cref="BrandTestIdentity.Owner"/>) with the session's CSRF token. The host's clock stands
-/// still (<see cref="FakeTimeProvider"/>), so appearance boundaries and cache lifetimes are exact.</summary>
+/// <summary>Full HTTP pipeline over a fresh product database, seeded from generated stand-ins for the approved logo files,
+/// as the organization's owner (<see cref="BrandTestIdentity.Owner"/>) with the session's CSRF token. The host's clock
+/// stands still (<see cref="FakeTimeProvider"/>), so appearance boundaries and cache lifetimes are exact.</summary>
 public sealed class BrandApiTests : IAsyncDisposable
 {
     private readonly string root = Path.Combine(Path.GetTempPath(), "ocharo-brand-tests", Guid.NewGuid().ToString("N"));
@@ -32,7 +32,6 @@ public sealed class BrandApiTests : IAsyncDisposable
             builder.UseEnvironment("Testing");
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(new Dictionary<string, string?>(BrandTestIdentity.Settings(root))
             {
-                ["ConnectionStrings:OcharoBrand"] = $"Data Source={Path.Combine(root, "brand.db")};Pooling=False",
                 ["Brand:DataRoot"] = Path.Combine(root, "data"),
                 ["Brand:SeedLogoRoot"] = logos,
             }));

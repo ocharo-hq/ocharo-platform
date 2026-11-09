@@ -6,7 +6,7 @@ using Serilog.Core;
 
 namespace OcharoBrand.Tests.Harness;
 
-/// <summary>An isolated Brand host with its own SQLite file, blob folder and key ring, signed in through
+/// <summary>An isolated Brand host with its own product database, blob folder and legacy paths, signed in through
 /// <see cref="BrandTestIdentity"/>; <c>settings</c> apply last, so a test may change or clear (null) any default.</summary>
 /// <remarks>The seed folder does not exist, so an empty store seeds without logos and no real artwork is read.</remarks>
 internal sealed class BrandHost : IAsyncDisposable
@@ -25,7 +25,6 @@ internal sealed class BrandHost : IAsyncDisposable
     {
         var root = Path.Combine(Path.GetTempPath(), "ocharo-brand-host", Guid.NewGuid().ToString("N"));
         var configuration = BrandTestIdentity.Settings(root);
-        configuration["ConnectionStrings:OcharoBrand"] = $"Data Source={Path.Combine(root, "test.db")};Pooling=False";
         configuration["Brand:DataRoot"] = Path.Combine(root, "data");
         configuration["Brand:SeedLogoRoot"] = Path.Combine(root, "missing-logos");
         foreach (var (key, value) in settings)

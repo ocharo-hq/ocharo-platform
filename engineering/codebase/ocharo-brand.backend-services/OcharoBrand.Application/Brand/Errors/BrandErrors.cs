@@ -60,6 +60,10 @@ public static class BrandErrors
     public static AppError HttpsRequired() =>
         Coded(AppErrorType.Validation, "HTTPS is required", BrandErrorCodes.HttpsRequired);
 
+    /// <summary>A brand route reached while the retired SQLite store waits for its copy into PostgreSQL.</summary>
+    public static AppError StorageMoving() =>
+        Coded(AppErrorType.ExternalUnavailable, "Brand storage is moving; try again shortly.", BrandErrorCodes.StorageMoving);
+
     private static AppError Coded(AppErrorType type, string message, string code)
     {
         return AppError.Of(type, message, new Dictionary<string, object?>(StringComparer.Ordinal)

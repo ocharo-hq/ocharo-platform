@@ -6,8 +6,9 @@
 #
 #   docker build -f engineering/deployment/brand/Dockerfile -t ocharobrand engineering/codebase
 #
-# Wheelhouse runs it from deploy.yml with the target's settings: it signs in through Ocharo's Identity, so a
-# bare `docker run` without those settings refuses to boot. Its SQLite store lives on the `brand-data` volume.
+# Wheelhouse runs it from deploy.yml with the target's settings: it stores in schema `brand` of the product database
+# and signs in through Ocharo's Identity, so a bare `docker run` without those settings refuses to boot. The `brand-data`
+# volume keeps the retired SQLite store until `import-sqlite` copies it, and the blobs stored before WoW2 Files.
 
 # ---- Stage 1: build the Vue workspace ----
 FROM node:24.11.0-alpine AS spa
@@ -46,11 +47,11 @@ WORKDIR /app
 RUN apt-get update && apt-get install --yes --no-install-recommends curl libfontconfig1 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /app ./
 
-# SQLite store, blobs and the Data Protection key ring that encrypts sign-in sessions on a volume, so data and
-# the keys survive container replacement.
-ENV ConnectionStrings__OcharoBrand="Data Source=/data/ocharo-brand.db" \
-    Brand__DataRoot=/data \
-    DataProtection__KeysPath=/data/keys
+# Brand's rows, sessions and Data Protection key ring live in PostgreSQL. The volume holds the blobs stored before WoW2
+# Files and, until `import-sqlite` retires them, the SQLite store and file key ring the import reads.
+ENV Brand__DataRoot=/data \
+    LegacySqlite__Path=/data/ocharo-brand.db \
+    LegacySqlite__KeysPath=/data/keys
 RUN mkdir -p /data && chown app:app /data
 VOLUME ["/data"]
 

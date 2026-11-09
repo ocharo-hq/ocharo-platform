@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OcharoBrand.Tests.Support;
 using WoW.Two.Sdk.Beta.Be.Files.References;
 using WoW.Two.Sdk.Beta.Be.Files.Store;
 using WoW.Two.Sdk.Beta.Be.Files.Uploads;
@@ -10,7 +11,7 @@ using WoW.Two.Sdk.Beta.Be.Files.Urls;
 
 namespace OcharoBrand.Tests.Harness;
 
-/// <summary>A temp folder holding one Brand store (SQLite file, blob folder, seed logos) that several hosts open in turn,
+/// <summary>One Brand store (a product database, plus a temp blob folder and seed logos) that several hosts open in turn,
 /// either on <see cref="TestFiles"/> (<c>Files:BaseUrl</c> set) or local only, as a Brand moving onto WoW2 Files sees it.</summary>
 internal sealed class FilesWorkspace : IAsyncDisposable
 {
@@ -30,15 +31,20 @@ internal sealed class FilesWorkspace : IAsyncDisposable
     /// <summary>The temp folder every host of this workspace shares.</summary>
     public string Root { get; }
 
-    /// <summary>A host whose Files brokers are <paramref name="files"/>.</summary>
-    public WebApplicationFactory<Program> Host(TestFiles files) => Factory(new() { ["Files:BaseUrl"] = TestFiles.BaseUrl }, services =>
-    {
-        services.AddSingleton(files);
-        services.AddSingleton<IFileUploadsBroker>(files);
-        services.AddSingleton<IFileStoreBroker>(files);
-        services.AddSingleton<IFileReferencesBroker>(files);
-        services.AddSingleton<IFileUrlsBroker>(files);
-    });
+    /// <summary>The product database every host of this workspace opens.</summary>
+    public string Database { get; } = BrandTestDatabase.CreateAsync().GetAwaiter().GetResult();
+
+    /// <summary>A host whose Files brokers are <paramref name="files"/>, with <paramref name="extra"/> settings beside the
+    /// Files address.</summary>
+    public WebApplicationFactory<Program> Host(TestFiles files, Dictionary<string, string?>? extra = null) =>
+        Factory(new(extra ?? []) { ["Files:BaseUrl"] = TestFiles.BaseUrl }, services =>
+        {
+            services.AddSingleton(files);
+            services.AddSingleton<IFileUploadsBroker>(files);
+            services.AddSingleton<IFileStoreBroker>(files);
+            services.AddSingleton<IFileReferencesBroker>(files);
+            services.AddSingleton<IFileUrlsBroker>(files);
+        });
 
     /// <summary>A host with no Files address: every file stays in the local blob folder.</summary>
     public WebApplicationFactory<Program> LocalHost() => Factory([], _ => { });
@@ -46,9 +52,8 @@ internal sealed class FilesWorkspace : IAsyncDisposable
     /// <summary>A host over this workspace's store; <paramref name="extra"/> settings apply last.</summary>
     public WebApplicationFactory<Program> Factory(Dictionary<string, string?> extra, Action<IServiceCollection> services)
     {
-        var settings = new Dictionary<string, string?>(BrandTestIdentity.Settings(Root))
+        var settings = new Dictionary<string, string?>(BrandTestIdentity.Settings(Root, Database))
         {
-            ["ConnectionStrings:OcharoBrand"] = $"Data Source={Path.Combine(Root, "brand.db")};Pooling=False",
             ["Brand:DataRoot"] = Path.Combine(Root, "data"),
             ["Brand:SeedLogoRoot"] = logos,
         };

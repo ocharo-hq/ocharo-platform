@@ -23,7 +23,8 @@
     <!-- ASP.NET Core / EF Core (.NET 10). Floors satisfy the kit's transitive minimums (no downgrades). -->
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
+    <!-- PostgreSQL: the product database (`ocharo_{env}`), schema `brand`. -->
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.9" />
   </ItemGroup>
@@ -31,12 +32,14 @@
   <ItemGroup>
     <!-- Image decode + web previews (same version as Ocharo Marketing). -->
     <PackageVersion Include="SkiaSharp" Version="3.119.2" />
+    <!-- Read once, by `import-sqlite`, the copy of the retired SQLite store. -->
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Test stack. -->
     <PackageVersion Include="AwesomeAssertions" Version="9.0.0" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.1.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.9" />
     <PackageVersion Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.1.0" />

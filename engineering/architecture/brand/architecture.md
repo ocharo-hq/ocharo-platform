@@ -6,19 +6,20 @@
 flowchart LR
   WS[Maftuna workspace<br/>portfolio/brand/logo] -->|read-only seed, SHA-256| API
   UI[Vue operator app<br/>/] --> API[OcharoBrand.Api]
-  API --> DB[(SQLite<br/>draft + revisions, logo versions,<br/>releases, appearances, consumers)]
-  API --> Blobs[(Blob store<br/>originals + WebP previews)]
+  API --> DB[(PostgreSQL ocharo_env, schema brand<br/>draft + revisions, logo versions,<br/>releases, appearances, media, consumers,<br/>key ring; sessions in brand_cache)]
+  API --> Files[(WoW2 Files<br/>originals + previews)]
+  API -.->|files stored before Files| Blobs[(Local blob folder<br/>brand-data volume)]
   API -->|/api/public/brand| CAT[Ocharo Catalogue<br/>print sheets]
   API -->|/api/public/brand| BLOG[Ocharo Blog<br/>header, footer, export]
 ```
 
 | Project | Responsibility |
 |---|---|
-| `OcharoBrand.Api` | `BrandsController` and `PublicBrandsController` (dispatch through `ISender`), runtime config and system status, Identity BFF sign-in and `BrandAccessMiddleware` (bound organization, `brand:edit`, `brand:approve`), response headers (CORS on `/api/public`), SDK problem details with Brand's 413/415/502 status mapper, seed-on-empty |
+| `OcharoBrand.Api` | `BrandsController` and `PublicBrandsController` (dispatch through `ISender`), runtime config and system status, Identity BFF sign-in with sessions in the be sdk PostgreSQL cache and `BrandAccessMiddleware` (bound organization, `brand:edit`, `brand:approve`), response headers (CORS on `/api/public`), SDK problem details with Brand's 413/415/502/503 status mapper, seed-on-empty, the `import-sqlite` verb and the 503 while the retired SQLite store waits for it |
 | `OcharoBrand.Application` | Commands and queries (identity, logo versions, publish, appearances, consumers, public kit, media), their models, the `IBrandRepository`/`IMediaStore` contracts and the `BrandErrors` catalogue |
 | `OcharoBrand.Domain` | `BrandDraft`, `BrandIdentity` (localized text, palette, typography, links), `LogoVersion`, `BrandRelease`, `BrandAppearance`, records |
 | `OcharoBrand.Infrastructure` | Command and query handlers; `BrandDraftService` (draft view, publish diff) and `PublicBrandService` (kit build, logo fallbacks, disclosure, appearance boundaries); `MediaStore` (kit `IBlobRepository`, SkiaSharp WebP previews), `FilesMediaStore`, `BrandSeeder` |
-| `OcharoBrand.Persistence` | EF Core SQLite; draft saves check the expected revision and write a snapshot |
+| `OcharoBrand.Persistence` | EF Core over PostgreSQL schema `brand` (snake_case), owned by the bespoke SQL `brand` migration set (`Migrations/001-baseline`); draft saves check the expected revision and write a snapshot, a write that loses a race answers 409; the Data Protection key ring table; `Import/` copies the retired SQLite store once, verified |
 
 ## Contracts
 
@@ -39,8 +40,20 @@ flowchart LR
   settings (Desk, Catalogue, Studio, Marketing, Editorial, Brand, Atlas, Wear, Blog). Only absolute HTTPS values without
   credentials, query or fragment are served; startup logs one warning naming every rejected setting.
 - `GET /api/system/status` — anonymous, `no-store`: `{ service, status: "live", version }`. It, `/health` (the be sdk's,
-  with the database readiness check) and runtime config are exempt from the Ocharo SSO boundary; with SSO off they stay
+  with the PostgreSQL readiness check) and runtime config are exempt from the Ocharo SSO boundary; with SSO off they stay
   behind the pilot boundary like every other route.
+
+## Storage
+
+- One `ocharo_{env}` database per environment, shared with Desk, Identity and Studio; Brand owns schema `brand` (its
+  `brand` set, `brand_migration_history`, advisory lock `8262001`) and `brand_cache` (the be sdk's `distributed_cache`
+  set). The deploy's `migrate` step applies both; a deployed boot only verifies their levels, a local run applies them.
+- Brand binds one organization by setting and stores no organization or account id, so its set keys into no Identity
+  table and declares no dependency on it.
+- Documents (draft, revision snapshots, logo versions, releases, appearances) stay text, byte for byte as written;
+  instants are `timestamptz` in UTC.
+- The SQLite store retired on 2026-11-09: `import-sqlite` copies it once per environment and refuses on any divergence
+  (`../../deployment/brand/brand.md` § PostgreSQL move).
 
 ## Operator frame
 
