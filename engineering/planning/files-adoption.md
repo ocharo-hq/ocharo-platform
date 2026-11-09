@@ -18,8 +18,8 @@ code limits and local dev data; nothing read prod.
 - M2 started 2026-11-08: the registry entries (#18) and roles (#19) are in `engineering/deployment/deploy.yml`, and the
   migration manifest (#20) is written.
 - Wave 1, Brand built 2026-11-09 (#23): it stores in Files and redirects to Files links, with 49 tests passing on an
-  in-memory broker set; platform `v0.1.29` carries it. Not yet run against a real Files: dev waits on B's `files-dev`
-  deployment and the 3 logos' move.
+  in-memory broker set; platform `v0.1.29` carries it. Not yet run against a real Files: dev holds no logo to move, so
+  its read-back is a live upload (#25).
 - Wave 1, Catalogue's product images built 2026-11-09 (#24), the same way, 91 tests passing; its released PDFs and page
   PNGs stay in SQLite until a second Catalogue step.
 
@@ -53,7 +53,8 @@ code limits and local dev data; nothing read prod.
 ## Order
 
 - #7 waves, dev first, each through the Wheelhouse migration module (t9 #5):
-  1. Brand, then Catalogue (this repo). Brand's 3 logos pilot the path end to end. Catalogue holds the most pilot bytes
+  1. Brand, then Catalogue (this repo). Brand's logos pilot the path end to end; dev holds none, so there a live
+     upload does (#25). Catalogue holds the most pilot bytes
      (367 MiB locally), so "smallest" in Files `product.md` § Phases #4 holds for code surface, not bytes.
   2. Blog, Marketing and Studio (`ocharo-marketing`, `ocharo-studio`). Studio needs no migration job (#12).
   3. Desk (this repo), last: 5 `bytea` columns, the largest store, immutable rows.
@@ -197,7 +198,7 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
     also serves a run with `Files:BaseUrl` unset, and both leave at t9's retire step, once local runs use a Files too.
   - an unreachable Files at boot leaves ids unfilled and the boot running; an upload then answers `503`.
   - hosted settings: `Files:BaseUrl` is a required owner key on `brand`, typed as that same Uri.
-  - not run: a real Files round trip, the move of the 3 dev logos, Brand on dev.
+  - not run: a real Files round trip, Brand on dev; dev holds no logo to move (#25).
   - unverified: a consumer that `fetch()`es a Brand logo across origins now follows a redirect to the Files host, whose
     `/f` answer may carry no `Access-Control-Allow-Origin`; every caller seen uses `<img>` or a server-side download.
 - #24 Catalogue's product images, wave 1 (2026-11-09):
@@ -208,4 +209,19 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
     and of the same SHA-256, since Files hashed it on upload; a local one is hashed as before.
   - released PDFs and page PNGs keep `catalogue_release_assets` in SQLite: a second step moves them as app `catalogue`
     with reference `catalogue.release:{sha}`, behind the public asset route; the manifest already lists them (#20).
-  - not run: a real Files round trip, the move of the 160 dev images, Catalogue on dev.
+  - not run: a real Files round trip, Catalogue on dev; dev holds no image to move (#25).
+- #25 dev holds no media stored before Files (2026-11-09, the wheelhouse lane's `brand-media` plan):
+  - the seeds read only a machine's gitignored `appsettings.Local.json` (`Brand:SeedLogoRoot`, `Catalogue:SourceRoot`),
+    and neither image carries a seed folder; dev's Brand seeded a draft with no logo and published nothing, so
+    `/api/public/brand/logo/social` answers `404`, and dev's Catalogue seeded no product.
+  - `brand-data` and `catalogue-data` hold no `blobs/` folder, since the blob store makes it on the first local write, and
+    the Files-backed builds (`v0.1.29`, `v0.1.31`) never write one; the mover refuses a source folder that does not exist.
+  - the 3 logos and 160 images in #4 are this Mac's review runtime, not dev.
+  - so wave 1 moves nothing on dev: Wheelhouse runs no `brand-media` or `catalogue-media` job there, and
+    `catalogue-release-assets` waits for Catalogue's release-asset step (#24).
+  - the manifest stays as written, for a target that stored blobs before Files.
+  - wave 1's dev read-back (#8) is a live upload instead, by a signed-in Ocharo owner:
+    - Brand: upload a master logo and publish. Anonymous `GET {brand}/api/public/brand/logo/social` answers `302` to the
+      Files host, since `social` falls back to `master`; the link serves the uploaded file's SHA-256.
+    - Catalogue: add a product image. A member's `GET {catalogue}/api/catalogue/media/{sha}` answers `302`; the link
+      serves the same SHA-256.
