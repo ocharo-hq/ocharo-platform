@@ -34,8 +34,8 @@ public sealed class CatalogueApiTests
         await using var factory = Host(root, source);
         using var client = CatalogueSignIn.CreateClient(factory, CatalogueSignIn.Owner);
 
-        var list = await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products");
-        var detail = await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products/abaya-v01");
+        var list = (await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products")).GetProperty("data");
+        var detail = (await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products/abaya-v01")).GetProperty("data");
         var document = detail.GetProperty("document");
         var preview = await client.GetAsync(detail.GetProperty("media")[0].GetProperty("previewUrl").GetString());
         var edit = JsonSerializer.Deserialize<Dictionary<string, object?>>(document.GetRawText())!;
@@ -92,7 +92,7 @@ public sealed class CatalogueApiTests
         await using var factory = Host(root, null);
         using var client = CatalogueSignIn.CreateClient(factory, CatalogueSignIn.Owner);
         var created = await client.PostAsJsonAsync("/api/catalogue/products", new { garmentType = "korset" });
-        var id = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("document").GetProperty("id").GetString();
+        var id = (await created.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").GetProperty("document").GetProperty("id").GetString();
         using var form = new MultipartFormDataContent();
         var file = new ByteArrayContent(CatalogueHarness.Png(200));
         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
@@ -101,7 +101,7 @@ public sealed class CatalogueApiTests
         form.Add(new StringContent("1"), "expectedRevision");
 
         var uploaded = await client.PostAsync($"/api/catalogue/products/{id}/media", form);
-        var body = await uploaded.Content.ReadFromJsonAsync<JsonElement>();
+        var body = (await uploaded.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
 
         Assert.Equal(HttpStatusCode.OK, uploaded.StatusCode);
         Assert.Equal(2, body.GetProperty("revision").GetInt32());
@@ -118,7 +118,7 @@ public sealed class CatalogueApiTests
         await using var factory = Host(root, source);
         using var client = CatalogueSignIn.CreateClient(factory, CatalogueSignIn.Owner);
 
-        var products = await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products");
+        var products = (await client.GetFromJsonAsync<JsonElement>("/api/catalogue/products")).GetProperty("data");
         var feed = await client.GetFromJsonAsync<JsonElement>("/api/public/catalogue");
 
         Assert.True(products.GetArrayLength() >= 30, $"imported {products.GetArrayLength()}");

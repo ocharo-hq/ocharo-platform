@@ -1,6 +1,6 @@
 # ventures.ocharo-catalogue — Architecture
 
-*Last updated: 2026-10-24*
+*Last updated: 2026-11-09*
 
 > Retained local-pilot architecture. Canonical authenticated authoring and named web/PDF editions
 > are documented in [Catalogue authoring and outputs](../catalogue-outputs.md). The pilot remains
@@ -19,15 +19,16 @@ flowchart LR
 
 | Project | Responsibility |
 |---|---|
-| `OcharoCatalogue.Api` | Controllers, local-pilot boundary (loopback on a local run, public when deployed; no cross-origin writes), ProblemDetails mapping, seed-on-empty |
-| `OcharoCatalogue.Application` | `ProductService` (validation, revisions, bulk status/prices), `CollectionService`, `SettingsService`, `PublicCatalogueService`, `CatalogueExportService` |
+| `OcharoCatalogue.Api` | Controllers that dispatch through `ISender` only, one per resource under `Catalogue/{Products,Collections,Settings,Media,Designs,Publishing,Importing,Exporting}/`; local-pilot boundary (no cross-origin writes); `CatalogueErrorHttpStatusCodeMapper`; seed-on-empty |
+| `OcharoCatalogue.Application` | Contracts only: commands, queries and models per subdomain (`Catalogue/Products/`, `Collections/`, `Settings/`, `Media/`, `Designs/`, `Publishing/`, `Importing/`, `Exporting/`), with `Core/` holding `CatalogueErrors`, the stored-JSON options and the repository contracts |
 | `OcharoCatalogue.Domain` | `ProductDocument` (locales, pricing tiers, media, review issues, provenance), `CollectionDocument`, `CatalogueSettings`, records |
-| `OcharoCatalogue.Infrastructure` | `MediaStore` (kit `IBlobRepository`, SkiaSharp WebP previews), `WorkspaceCatalogueImporter` |
-| `OcharoCatalogue.Persistence` | EF Core SQLite; saves check the expected revision inside a transaction and write a snapshot |
+| `OcharoCatalogue.Infrastructure` | The mediator handlers (`CommandHandlers/`, `QueryHandlers/`) and the foundation services, mappers, policies and validators they share, per subdomain; `MediaStore` and `FilesMediaStore`, the release asset stores, `WorkspaceImportService` |
+| `OcharoCatalogue.Persistence` | EF Core SQLite; saves check the expected revision inside a transaction and write a snapshot; `SqliteBusyExceptionMappingRule` |
 
 ## Contracts
 
-- `GET /api/public/catalogue?locale=uz|ru|en` — `{ brand, currency, locale, generatedAt, priceNote, garmentTypes, collections[], products[] }`; products carry copy for the requested locale plus all locales, pricing tiers, and image URLs (`/api/catalogue/media/{sha}` + `/preview`).
+- `GET /api/public/catalogue?locale=uz|ru|en` — `{ brand, currency, locale, generatedAt, priceNote, garmentTypes, collections[], products[] }`; products carry copy for the requested locale plus all locales, pricing tiers, and image URLs (`/api/catalogue/media/{sha}` + `/preview`). This feed keeps its frozen wire shape — unenveloped, null fields written (`PublicFeedJson`) — because Marketing's catalogue sync reads `pricing` and `retail` without checking they exist; Blog reads it too.
+- Every other JSON endpoint answers the SDK wire: the success payload under `{ data }` (`ApiResponse<T>`), SDK JSON (camelCase, null fields left out), and failures as SDK problem details from `AppErrorProblemDetailsFactory` (`type` `urn:wow-two:error:{Type}`, `code`, `detail`, trace ids). Dictionary keys stay as stored (size labels, language codes, runtime-config names). An upload too large answers 413, one in an unaccepted format 415, a call WoW2 Files refused 502; a busy SQLite store 409.
 - Media URLs are content-addressed and immutable (1-year cache).
 - Editing API under `/api/catalogue/*` is revision-checked (`expectedRevision`, 409 on conflict) and loopback-only on a local
   run; a deployed host serves it publicly without sign-in until the identity server lands (`Catalogue:PublicAccess`,
@@ -52,5 +53,5 @@ flowchart LR
 
 ## SDK usage and extraction candidates
 
-- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.71-beta` (blob storage, mediator registration) and `@wow-two-beta/fe 0.0.31` (HTTP client, router, config, colour mode, Ocharo theme and glass, app shell, app switcher, account menu and link rows, sidebar and bottom navigation, error boundary, icons).
+- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.106-beta` (blob storage, mediator with `AppResult` and its exception-to-result interceptor, problem details, SDK JSON) and `@wow-two-beta/fe 0.0.31` (HTTP client, router, config, colour mode, Ocharo theme and glass, app shell, app switcher, account menu and link rows, sidebar and bottom navigation, error boundary, icons).
 - Product-local candidates for later SDK extraction: revisioned document store (document row + snapshot + expected-revision save), content-addressed media store with previews, local-pilot boundary middleware, CSV formula-safe writer, lazily resolved SQLite/blob paths.

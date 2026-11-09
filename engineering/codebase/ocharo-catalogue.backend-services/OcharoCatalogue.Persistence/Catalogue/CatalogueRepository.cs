@@ -1,24 +1,39 @@
 using Microsoft.EntityFrameworkCore;
-using OcharoCatalogue.Application.Catalogue;
-using OcharoCatalogue.Application.Catalogue.Repositories;
+using OcharoCatalogue.Application.Catalogue.Core.Constants;
+using OcharoCatalogue.Application.Catalogue.Core.Errors;
+using OcharoCatalogue.Application.Catalogue.Core.Repositories;
 using OcharoCatalogue.Domain.Catalogue.Entities;
 
 namespace OcharoCatalogue.Persistence.Catalogue;
 
-/// <summary>SQLite-backed catalogue state with revision checks enforced inside one transaction.</summary>
+/// <summary>Stores catalogue state in SQLite, with revision checks enforced inside one transaction; a stale revision
+/// fails as a conflict.</summary>
 public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogueRepository
 {
-    public async Task<IReadOnlyList<ProductRecord>> GetProductsAsync(CancellationToken ct) =>
-        await db.Products.AsNoTracking().ToListAsync(ct);
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ProductRecord>> GetProductsAsync(CancellationToken ct)
+    {
+        return await db.Products.AsNoTracking().ToListAsync(ct);
+    }
 
-    public Task<ProductRecord?> FindProductAsync(string id, CancellationToken ct) =>
-        db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id, ct);
+    /// <inheritdoc />
+    public Task<ProductRecord?> FindProductAsync(string id, CancellationToken ct)
+    {
+        return db.Products.AsNoTracking().FirstOrDefaultAsync(product => product.Id == id, ct);
+    }
 
-    public async Task<ProductRecord> InsertProductAsync(ProductRecord record, string summary, CancellationToken ct)
+    /// <inheritdoc />
+    public async Task<ProductRecord> InsertProductAsync(
+        ProductRecord record,
+        string summary,
+        CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        if (await db.Products.AnyAsync(p => p.Id == record.Id, ct))
-            throw CatalogueException.Conflict($"A product with id '{record.Id}' already exists.");
+        if (await db.Products.AnyAsync(product => product.Id == record.Id, ct))
+        {
+            throw Conflict($"A product with id '{record.Id}' already exists.");
+        }
+
         db.Products.Add(record);
         db.ProductRevisions.Add(Snapshot(record, summary));
         await db.SaveChangesAsync(ct);
@@ -27,13 +42,21 @@ public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogu
         return record;
     }
 
-    public async Task<ProductRecord> UpdateProductAsync(ProductRecord record, int expectedRevision, string summary, CancellationToken ct)
+    /// <inheritdoc />
+    public async Task<ProductRecord> UpdateProductAsync(
+        ProductRecord record,
+        int expectedRevision,
+        string summary,
+        CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        var current = await db.Products.FirstOrDefaultAsync(p => p.Id == record.Id, ct)
-            ?? throw CatalogueException.NotFound("Product");
+        var current = await db.Products.FirstOrDefaultAsync(product => product.Id == record.Id, ct)
+            ?? throw CatalogueErrors.NotFound("Product").ToException();
         if (current.Revision != expectedRevision)
-            throw CatalogueException.Conflict($"The product was saved elsewhere (now revision {current.Revision}). Reload before saving.");
+        {
+            throw Conflict($"The product was saved elsewhere (now revision {current.Revision}). Reload before saving.");
+        }
+
         current.GarmentType = record.GarmentType;
         current.Status = record.Status;
         current.SortOrder = record.SortOrder;
@@ -47,33 +70,65 @@ public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogu
         return current;
     }
 
-    public async Task<IReadOnlyList<ProductRevisionRecord>> GetRevisionsAsync(string productId, CancellationToken ct) =>
-        await db.ProductRevisions.AsNoTracking().Where(r => r.ProductId == productId).ToListAsync(ct);
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ProductRevisionRecord>> GetRevisionsAsync(string productId, CancellationToken ct)
+    {
+        return await db.ProductRevisions.AsNoTracking().Where(revision => revision.ProductId == productId).ToListAsync(
+            ct);
+    }
 
-    public Task<ProductRevisionRecord?> FindRevisionAsync(string productId, int revision, CancellationToken ct) =>
-        db.ProductRevisions.AsNoTracking().FirstOrDefaultAsync(r => r.ProductId == productId && r.Revision == revision, ct);
+    /// <inheritdoc />
+    public Task<ProductRevisionRecord?> FindRevisionAsync(
+        string productId,
+        int revision,
+        CancellationToken ct)
+    {
+        return db.ProductRevisions.AsNoTracking()
+            .FirstOrDefaultAsync(saved => saved.ProductId == productId && saved.Revision == revision, ct);
+    }
 
-    public async Task<IReadOnlyList<CollectionRecord>> GetCollectionsAsync(CancellationToken ct) =>
-        await db.Collections.AsNoTracking().ToListAsync(ct);
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CollectionRecord>> GetCollectionsAsync(CancellationToken ct)
+    {
+        return await db.Collections.AsNoTracking().ToListAsync(ct);
+    }
 
-    public Task<CollectionRecord?> FindCollectionAsync(string id, CancellationToken ct) =>
-        db.Collections.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id, ct);
+    /// <inheritdoc />
+    public Task<CollectionRecord?> FindCollectionAsync(string id, CancellationToken ct)
+    {
+        return db.Collections.AsNoTracking().FirstOrDefaultAsync(collection => collection.Id == id, ct);
+    }
 
-    public async Task<CollectionRecord> SaveCollectionAsync(CollectionRecord record, int? expectedRevision, CancellationToken ct)
+    /// <inheritdoc />
+    public async Task<CollectionRecord> SaveCollectionAsync(
+        CollectionRecord record,
+        int? expectedRevision,
+        CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        var current = await db.Collections.FirstOrDefaultAsync(c => c.Id == record.Id, ct);
+        var current = await db.Collections.FirstOrDefaultAsync(collection => collection.Id == record.Id, ct);
         if (expectedRevision is null)
         {
-            if (current is not null) throw CatalogueException.Conflict($"Collection '{record.Id}' already exists.");
+            if (current is not null)
+            {
+                throw Conflict($"Collection '{record.Id}' already exists.");
+            }
+
             record.Revision = 1;
             db.Collections.Add(record);
         }
         else
         {
-            if (current is null) throw CatalogueException.NotFound("Collection");
+            if (current is null)
+            {
+                throw CatalogueErrors.NotFound("Collection").ToException();
+            }
+
             if (current.Revision != expectedRevision)
-                throw CatalogueException.Conflict("The collection was saved elsewhere. Reload before saving.");
+            {
+                throw Conflict("The collection was saved elsewhere. Reload before saving.");
+            }
+
             current.SortOrder = record.SortOrder;
             current.Revision = expectedRevision.Value + 1;
             current.UpdatedAt = record.UpdatedAt;
@@ -87,45 +142,80 @@ public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogu
         return record;
     }
 
-    public async Task DeleteCollectionAsync(string id, CancellationToken ct) =>
-        await db.Collections.Where(c => c.Id == id).ExecuteDeleteAsync(ct);
+    /// <inheritdoc />
+    public async Task DeleteCollectionAsync(string id, CancellationToken ct)
+    {
+        await db.Collections.Where(collection => collection.Id == id).ExecuteDeleteAsync(ct);
+    }
 
-    public Task<MediaBlobRecord?> FindMediaAsync(string sha256, CancellationToken ct) =>
-        db.MediaBlobs.AsNoTracking().FirstOrDefaultAsync(m => m.Sha256 == sha256, ct);
+    /// <inheritdoc />
+    public Task<MediaBlobRecord?> FindMediaAsync(string sha256, CancellationToken ct)
+    {
+        return db.MediaBlobs.AsNoTracking().FirstOrDefaultAsync(media => media.Sha256 == sha256, ct);
+    }
 
+    /// <inheritdoc />
     public async Task SaveMediaAsync(MediaBlobRecord record, CancellationToken ct)
     {
-        if (await db.MediaBlobs.AnyAsync(m => m.Sha256 == record.Sha256, ct)) return;
+        if (await db.MediaBlobs.AnyAsync(media => media.Sha256 == record.Sha256, ct))
+        {
+            return;
+        }
+
         db.MediaBlobs.Add(record);
         await db.SaveChangesAsync(ct);
         db.ChangeTracker.Clear();
     }
 
-    public async Task<IReadOnlyList<MediaBlobRecord>> GetMediaWithoutFileAsync(CancellationToken ct) =>
-        await db.MediaBlobs.AsNoTracking().Where(m => m.FileId == null).ToListAsync(ct);
-
-    public async Task SetMediaFileAsync(string sha256, string fileId, CancellationToken ct)
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<MediaBlobRecord>> GetMediaWithoutFileAsync(CancellationToken ct)
     {
-        await db.MediaBlobs.Where(m => m.Sha256 == sha256).ExecuteUpdateAsync(set => set.SetProperty(m => m.FileId, fileId), ct);
+        return await db.MediaBlobs.AsNoTracking().Where(media => media.FileId == null).ToListAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public async Task SetMediaFileAsync(
+        string sha256,
+        string fileId,
+        CancellationToken ct)
+    {
+        await db.MediaBlobs
+            .Where(media => media.Sha256 == sha256)
+            .ExecuteUpdateAsync(set => set.SetProperty(media => media.FileId, fileId), ct);
         db.ChangeTracker.Clear();
     }
 
-    public Task<SettingsRecord?> FindSettingsAsync(CancellationToken ct) =>
-        db.Settings.AsNoTracking().FirstOrDefaultAsync(s => s.Id == Application.Catalogue.Services.SettingsService.SettingsId, ct);
+    /// <inheritdoc />
+    public Task<SettingsRecord?> FindSettingsAsync(CancellationToken ct)
+    {
+        return db.Settings.AsNoTracking().FirstOrDefaultAsync(settings => settings.Id == CatalogueKeys.SettingsId, ct);
+    }
 
-    public async Task<SettingsRecord> SaveSettingsAsync(SettingsRecord record, int? expectedRevision, CancellationToken ct)
+    /// <inheritdoc />
+    public async Task<SettingsRecord> SaveSettingsAsync(
+        SettingsRecord record,
+        int? expectedRevision,
+        CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        var current = await db.Settings.FirstOrDefaultAsync(s => s.Id == record.Id, ct);
+        var current = await db.Settings.FirstOrDefaultAsync(settings => settings.Id == record.Id, ct);
         if (current is null)
         {
-            if (expectedRevision is not null) throw CatalogueException.Conflict("Settings were not saved before. Reload.");
+            if (expectedRevision is not null)
+            {
+                throw Conflict("Settings were not saved before. Reload.");
+            }
+
             record.Revision = 1;
             db.Settings.Add(record);
         }
         else
         {
-            if (current.Revision != expectedRevision) throw CatalogueException.Conflict("Settings were saved elsewhere. Reload before saving.");
+            if (current.Revision != expectedRevision)
+            {
+                throw Conflict("Settings were saved elsewhere. Reload before saving.");
+            }
+
             current.Revision += 1;
             current.Json = record.Json;
             record = current;
@@ -137,13 +227,21 @@ public sealed class CatalogueRepository(OcharoCatalogueDbContext db) : ICatalogu
         return record;
     }
 
-    private static ProductRevisionRecord Snapshot(ProductRecord record, string summary) => new()
+    private static ProductRevisionRecord Snapshot(ProductRecord record, string summary)
     {
-        Id = Guid.NewGuid(),
-        ProductId = record.Id,
-        Revision = record.Revision,
-        SavedAt = record.UpdatedAt,
-        Summary = summary,
-        Json = record.Json,
-    };
+        return new ProductRevisionRecord
+        {
+            Id = Guid.NewGuid(),
+            ProductId = record.Id,
+            Revision = record.Revision,
+            SavedAt = record.UpdatedAt,
+            Summary = summary,
+            Json = record.Json,
+        };
+    }
+
+    private static Exception Conflict(string message)
+    {
+        return CatalogueErrors.Conflict(message).ToException();
+    }
 }

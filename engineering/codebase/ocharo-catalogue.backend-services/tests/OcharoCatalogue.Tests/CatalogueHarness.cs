@@ -50,6 +50,16 @@ public sealed class CatalogueHarness : IAsyncDisposable
 
     public T Get<T>() where T : notnull => Services.CreateScope().ServiceProvider.GetRequiredService<T>();
 
+    public CatalogueClient Client => new(Services);
+    public TestProducts Products => new(Client);
+    public TestCollections Collections => new(Client);
+    public TestSettings Settings => new(Client);
+    public TestFeed Feed => new(Client);
+    public TestDesigns Designs => new(Client);
+    public TestReleases Releases => new(Client);
+    public TestExports Exports => new(Client);
+    public TestImporter Importer => new(Client);
+
     public async ValueTask DisposeAsync()
     {
         await Services.DisposeAsync();

@@ -8,9 +8,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OcharoCatalogue.Api.Configurations;
-using OcharoCatalogue.Application.Catalogue.Repositories;
-using OcharoCatalogue.Application.Catalogue.Services;
-using OcharoCatalogue.Infrastructure.Catalogue;
 using OcharoCatalogue.Persistence;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
@@ -18,6 +15,15 @@ using WoW.Two.Sdk.Beta.Be.Files.References;
 using WoW.Two.Sdk.Beta.Be.Files.Store;
 using WoW.Two.Sdk.Beta.Be.Files.Uploads;
 using WoW.Two.Sdk.Beta.Be.Files.Urls;
+using OcharoCatalogue.Application.Catalogue.Core.Repositories;
+using OcharoCatalogue.Application.Catalogue.Publishing.Models;
+using OcharoCatalogue.Application.Catalogue.Publishing.Services;
+using OcharoCatalogue.Application.Catalogue.Media.Services;
+using OcharoCatalogue.Application.Catalogue.Media.Enums;
+using OcharoCatalogue.Infrastructure.Catalogue.Media.Mappers;
+using OcharoCatalogue.Infrastructure.Catalogue.Media.FoundationServices;
+using OcharoCatalogue.Infrastructure.Catalogue.Media.Stores;
+using WoW.Two.Sdk.Beta.Be.Mediator;
 
 namespace OcharoCatalogue.Tests;
 
@@ -86,7 +92,7 @@ public sealed class FilesMediaTests : IAsyncDisposable
         var migrated = new TestFiles();
         var moved = migrated.Add(bytes, "catalogue", new FileReference("catalogue.media", sha));
         var after = await ServicesAsync(migrated);
-        await Scope(after).GetRequiredService<FilesMediaBackfill>().RunAsync(default);
+        await Scope(after).GetRequiredService<FilesMediaBackfillService>().RunAsync(default);
         var opened = await Scope(after).GetRequiredService<IMediaStore>().OpenAsync(sha, false, default);
         var record = await Scope(after).GetRequiredService<ICatalogueRepository>().FindMediaAsync(sha, default);
 
@@ -151,7 +157,7 @@ public sealed class FilesMediaTests : IAsyncDisposable
         var migrated = new TestFiles();
         var moved = migrated.Add(bytes, "catalogue", new FileReference("catalogue.release", sha));
         var after = await ServicesAsync(migrated);
-        await Scope(after).GetRequiredService<FilesMediaBackfill>().RunAsync(default);
+        await Scope(after).GetRequiredService<FilesMediaBackfillService>().RunAsync(default);
         var designs = Scope(after).GetRequiredService<IDesignRepository>();
         var link = await Scope(after).GetRequiredService<IReleaseAssetStore>().LinkAsync(sha, default);
         var file = await designs.ReleaseFileAsync(sha, default);

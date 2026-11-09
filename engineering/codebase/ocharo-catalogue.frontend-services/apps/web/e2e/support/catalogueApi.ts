@@ -2,6 +2,7 @@ import { expect, type APIRequestContext } from '@playwright/test';
 import type { ProductDetail } from '../../src/domain/catalogue/CatalogueModels';
 import type { DesignSource } from '../../src/domain/design/CatalogueDesign';
 import type { DesignDocument, DesignSnapshot, DesignSummary } from '../../src/domain/design/EditorModels';
+import { catalogueSettings, productDetail } from '../../src/integration/catalogue/CatalogueWire';
 import { syntheticPhoto, type Rgb } from './images';
 
 /** Short, slug-safe token that keeps each test's products and catalogues apart in a shared store. */
@@ -50,9 +51,10 @@ function locale(seed?: LocaleSeed) {
     : empty;
 }
 
+/** Reads the payload of the API's `{ data }` success envelope; a failure throws with its status and problem body. */
 async function json<T>(response: Awaited<ReturnType<APIRequestContext['get']>>, action: string): Promise<T> {
   if (!response.ok()) throw new Error(`${action} failed: ${response.status()} ${await response.text()}`);
-  return (await response.json()) as T;
+  return ((await response.json()) as { data: T }).data;
 }
 
 /** Creates an active product through the public product API, uploads its images and sets their groups. */
@@ -141,8 +143,14 @@ export async function editProductCopy(
   );
 }
 
-export const designSource = async (request: APIRequestContext) =>
-  json<DesignSource>(await request.get('/api/catalogue/design-source'), 'Read design source');
+/** Reads the design source as the designers receive it, the null fields the API's JSON leaves out restored. */
+export async function designSource(request: APIRequestContext): Promise<DesignSource> {
+  const source = await json<DesignSource>(await request.get('/api/catalogue/design-source'), 'Read design source');
+  return {
+    products: source.products.map((product) => productDetail(product)),
+    settings: catalogueSettings(source.settings),
+  };
+}
 
 export const listDesigns = async (request: APIRequestContext, archived = false) =>
   json<DesignSummary[]>(await request.get(`/api/catalogue/designs?archived=${archived}`), 'List catalogues');

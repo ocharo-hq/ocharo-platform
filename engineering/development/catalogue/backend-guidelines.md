@@ -1,6 +1,11 @@
 # ventures.ocharo-catalogue — Backend Development Guidelines
 
-Defer to wow-two-ws/conventions/development/backend/. Repo deltas: application services (not mediator verticals) for the document-style catalogue, `CatalogueException` → ProblemDetails, revision-checked saves, lazily resolved paths (connection string and blob root) so hosts/tests can override them.
+Defer to wow-two-ws/conventions/development/backend/. Requests dispatch through the SDK mediator: Application holds the
+commands, queries and models, Infrastructure the handlers, which return `AppResult` failures from `CatalogueErrors`;
+deep validation (product input, design snapshots, artifacts) throws `AppException` and the SDK's exception-to-result
+interceptor returns it as the failure. Repo deltas: revision-checked saves, lazily resolved paths (connection string and
+blob root) so hosts/tests can override them, data-keyed dictionaries serialized with their keys as stored, and the
+public feed's frozen wire shape (`Publishing/Serializers/PublicFeedJson.cs`).
 
 Local run: the `https` launch profile sets `LOCAL_SETTINGS=true`, so the be sdk reads a gitignored
 `OcharoCatalogue.Api/appsettings.Local.json` holding this machine's `Catalogue:SourceRoot`; without it, Import reports no

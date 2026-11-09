@@ -1,7 +1,9 @@
-using OcharoCatalogue.Application.Catalogue.Models;
-using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
-using OcharoCatalogue.Infrastructure.Catalogue;
+using OcharoCatalogue.Application.Catalogue.Products.Models;
+using OcharoCatalogue.Application.Catalogue.Collections.Models;
+using OcharoCatalogue.Application.Catalogue.Importing.Models;
+using OcharoCatalogue.Infrastructure.Catalogue.Exporting.Mappers;
+using WoW.Two.Sdk.Beta.Be.Mediator;
 
 namespace OcharoCatalogue.Tests;
 
@@ -15,11 +17,11 @@ public sealed class ImportExportTests
         CatalogueHarness.WriteWorkspaceProduct(source, "baska-v02", "baska", 180_000, 130_000, 40);
         Directory.CreateDirectory(Path.Combine(source, "review"));
         await using var harness = await CatalogueHarness.CreateAsync(source);
-        var importer = harness.Get<WorkspaceCatalogueImporter>();
+        var importer = harness.Importer;
 
         var report = await importer.ImportAsync(new ImportInput(null), CancellationToken.None);
         var again = await importer.ImportAsync(new ImportInput(null), CancellationToken.None);
-        var product = await harness.Get<ProductService>().GetAsync("nimcha-v06", CancellationToken.None);
+        var product = await harness.Products.GetAsync("nimcha-v06", CancellationToken.None);
 
         Assert.Equal(2, report.Scanned);
         Assert.Equal(2, report.Created);
@@ -44,8 +46,8 @@ public sealed class ImportExportTests
         var source = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-source", Guid.NewGuid().ToString("N"));
         CatalogueHarness.WriteWorkspaceProduct(source, "nimcha-v06", "nimcha", 110_000, 60_000, 60);
         await using var harness = await CatalogueHarness.CreateAsync(source);
-        await harness.Get<WorkspaceCatalogueImporter>().ImportAsync(new ImportInput(null), CancellationToken.None);
-        var products = harness.Get<ProductService>();
+        await harness.Importer.ImportAsync(new ImportInput(null), CancellationToken.None);
+        var products = harness.Products;
         var imported = await products.GetAsync("nimcha-v06", CancellationToken.None);
         await products.UpdateAsync(imported.Document.Id, new ProductInput
         {
@@ -56,12 +58,12 @@ public sealed class ImportExportTests
             Issues = imported.Document.Issues.Select(issue => issue with { Status = IssueStatus.Resolved }).ToList(),
         }, CancellationToken.None);
         var draft = await products.CreateAsync(new ProductInput { GarmentType = "korset" }, CancellationToken.None);
-        var collections = harness.Get<CollectionService>();
+        var collections = harness.Collections;
         await collections.SaveAsync(null, new CollectionInput(null, "kuz-2026", new CollectionNames("Kuz 2026", "Осень 2026", null), null,
             ["nimcha-v06", draft.Document.Id], true, 0), CancellationToken.None);
         await collections.SaveAsync(null, new CollectionInput(null, "hidden", new CollectionNames("Yashirin", null, null), null, [], false, 1), CancellationToken.None);
 
-        var feed = await harness.Get<PublicCatalogueService>().BuildAsync("ru", CancellationToken.None);
+        var feed = await harness.Feed.BuildAsync("ru", CancellationToken.None);
 
         var product = Assert.Single(feed.Products);
         Assert.Equal("nimcha-v06", product.Id);
@@ -81,11 +83,11 @@ public sealed class ImportExportTests
         var source = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-source", Guid.NewGuid().ToString("N"));
         CatalogueHarness.WriteWorkspaceProduct(source, "kostyum-v01", "kostyum", 250_000, 180_000, 80);
         await using var harness = await CatalogueHarness.CreateAsync(source);
-        await harness.Get<WorkspaceCatalogueImporter>().ImportAsync(new ImportInput(null), CancellationToken.None);
-        var product = await harness.Get<ProductService>().GetAsync("kostyum-v01", CancellationToken.None);
+        await harness.Importer.ImportAsync(new ImportInput(null), CancellationToken.None);
+        var product = await harness.Products.GetAsync("kostyum-v01", CancellationToken.None);
 
-        var json = CatalogueExportService.ToWorkspaceSchema(product.Document, product.UpdatedAt);
-        var csv = System.Text.Encoding.UTF8.GetString(await harness.Get<CatalogueExportService>().CsvAsync(CancellationToken.None));
+        var json = WorkspaceSchemaMapper.ToWorkspaceSchema(product.Document, product.UpdatedAt);
+        var csv = System.Text.Encoding.UTF8.GetString(await harness.Exports.CsvAsync(CancellationToken.None));
 
         Assert.Equal("user_confirmed", json["pricing"]!["status"]!.GetValue<string>());
         Assert.Equal(250_000, json["pricing"]!["tiers"]![0]!["unit_price"]!.GetValue<long>());
@@ -99,13 +101,13 @@ public sealed class ImportExportTests
     public async Task Csv_neutralizes_formula_cells()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        await harness.Get<ProductService>().CreateAsync(new ProductInput
+        await harness.Products.CreateAsync(new ProductInput
         {
             GarmentType = "abaya",
             Locales = new ProductLocales(new ProductLocale(LocaleStatus.Draft, "=HYPERLINK(1)", null, null, null), ProductLocale.Empty(), ProductLocale.Empty()),
         }, CancellationToken.None);
 
-        var csv = System.Text.Encoding.UTF8.GetString(await harness.Get<CatalogueExportService>().CsvAsync(CancellationToken.None));
+        var csv = System.Text.Encoding.UTF8.GetString(await harness.Exports.CsvAsync(CancellationToken.None));
 
         Assert.Contains("'=HYPERLINK(1)", csv);
     }

@@ -7,10 +7,12 @@ using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using OcharoCatalogue.Application.Catalogue.Repositories;
-using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
 using static OcharoCatalogue.Tests.CatalogueSignIn;
+using OcharoCatalogue.Application.Catalogue.Core.Repositories;
+using OcharoCatalogue.Application.Catalogue.Media.Services;
+using OcharoCatalogue.Infrastructure.Catalogue.Products.Mappers;
+using WoW.Two.Sdk.Beta.Be.Mediator;
 
 namespace OcharoCatalogue.Tests;
 
@@ -155,7 +157,7 @@ public sealed class CatalogueAccessTests
                 Media = [new("front", MediaRole.Cutout, "front.png", "image/png", blob.ByteLength, blob.Sha256, blob.Width, blob.Height, true, "Front", null, active)],
                 Issues = review ? [new("review", "fabric", IssueStatus.Open, "Confirm fabric")] : []
             };
-            await repository.InsertProductAsync(ProductService.ToRecord(product, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), "Fixture", default);
+            await repository.InsertProductAsync(ProductProjections.ToRecord(product, 1, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow), "Fixture", default);
             return blob.Sha256;
         }
         var publicHash = await Seed(1, ProductStatus.Active, true);

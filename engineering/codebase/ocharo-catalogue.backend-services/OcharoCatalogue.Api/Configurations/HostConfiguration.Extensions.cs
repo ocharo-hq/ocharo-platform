@@ -1,27 +1,49 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using OcharoCatalogue.Api.Catalogue;
+using OcharoCatalogue.Api.Catalogue.Core.Mappers;
+using OcharoCatalogue.Api.Catalogue.Core.Middlewares;
+using OcharoCatalogue.Api.Catalogue.Core.Services;
 using OcharoCatalogue.Api.RuntimeConfig.Settings;
-using OcharoCatalogue.Application;
-using OcharoCatalogue.Application.Catalogue.Models;
-using OcharoCatalogue.Application.Catalogue.Repositories;
-using OcharoCatalogue.Application.Catalogue.Services;
-using OcharoCatalogue.Infrastructure.Catalogue;
+using OcharoCatalogue.Application.Catalogue.Core.Repositories;
+using OcharoCatalogue.Application.Catalogue.Core.Services;
+using OcharoCatalogue.Application.Catalogue.Importing.Models;
+using OcharoCatalogue.Application.Catalogue.Media.Services;
+using OcharoCatalogue.Application.Catalogue.Publishing.Services;
+using OcharoCatalogue.Infrastructure;
+using OcharoCatalogue.Infrastructure.Catalogue.Collections.FoundationServices;
+using OcharoCatalogue.Infrastructure.Catalogue.Core.Options;
+using OcharoCatalogue.Infrastructure.Catalogue.Designs.FoundationServices;
+using OcharoCatalogue.Infrastructure.Catalogue.Importing.FoundationServices;
+using OcharoCatalogue.Infrastructure.Catalogue.Media.FoundationServices;
+using OcharoCatalogue.Infrastructure.Catalogue.Media.Stores;
+using OcharoCatalogue.Infrastructure.Catalogue.Products.FoundationServices;
+using OcharoCatalogue.Infrastructure.Catalogue.Publishing.FoundationServices;
+using OcharoCatalogue.Infrastructure.Catalogue.Publishing.Stores;
+using OcharoCatalogue.Infrastructure.Catalogue.Publishing.Validators;
+using OcharoCatalogue.Infrastructure.Catalogue.Settings.FoundationServices;
 using OcharoCatalogue.Persistence;
 using OcharoCatalogue.Persistence.Catalogue;
+using WoW.Two.Sdk.Beta.Be.Files.Client;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Observability.HealthChecks;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
+using WoW.Two.Sdk.Beta.Be.Web.ErrorMapping;
+using WoW.Two.Sdk.Beta.Be.Web.Json;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
-using WoW.Two.Sdk.Beta.Be.Files.Client;
 
 namespace OcharoCatalogue.Api.Configurations;
 
 public static partial class HostConfiguration
 {
+    /// <summary>Holds the root URL of the WoW2 Files instance Catalogue stores its product images and release artifacts
+    /// in;
+    /// unset, they stay in the local blob folder and SQLite.</summary>
+    private const string FilesBaseUrlKey = "Files:BaseUrl";
+
     /// <summary>Registers the SQLite catalogue context with lazy host configuration, and its readiness check on
     /// <c>/health</c>.</summary>
     private static WebApplicationBuilder AddSqliteDatabase(this WebApplicationBuilder builder)
@@ -42,7 +64,8 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Registers catalogue settings, repositories, media, import and authoring services.</summary>
+    /// <summary>Registers catalogue settings, repositories, media, import and the foundation services the handlers
+    /// share.</summary>
     private static WebApplicationBuilder AddCatalogue(this WebApplicationBuilder builder)
     {
         builder.Services.AddOptions<CatalogueOptions>()
@@ -58,27 +81,31 @@ public static partial class HostConfiguration
         builder.Services.AddScoped<ICatalogueRepository, CatalogueRepository>();
         builder.Services.AddScoped<IDesignRepository, CatalogueDesignRepository>();
         builder.AddCatalogueFiles();
-        builder.Services.AddScoped<WorkspaceCatalogueImporter>();
         builder.Services.AddSingleton<IDesignArtifactValidator, DesignArtifactValidator>();
-        builder.Services.AddScoped<SettingsService>();
-        builder.Services.AddScoped<ProductService>();
-        builder.Services.AddScoped<CollectionService>();
-        builder.Services.AddScoped<PublicCatalogueService>();
-        builder.Services.AddScoped<CatalogueMediaAccessService>();
-        builder.Services.AddScoped<CatalogueExportService>();
-        builder.Services.AddScoped<CatalogueDesignService>();
-        builder.Services.AddScoped<CatalogueReleaseService>();
+        builder.Services.AddScoped<ICatalogueCaller, HttpCatalogueCaller>();
+        builder.Services.AddScoped<CatalogueSettingsService>();
+        builder.Services.AddScoped<ProductDetailService>();
+        builder.Services.AddScoped<CollectionSaveService>();
+        builder.Services.AddScoped<DesignSaveService>();
+        builder.Services.AddScoped<MediaAccessService>();
+        builder.Services.AddScoped<MediaVerificationService>();
+        builder.Services.AddScoped<ReleasePreparationService>();
+        builder.Services.AddScoped<WorkspaceImportService>();
         return builder;
     }
 
-    /// <summary>Registers the mediator with the explicit catalogue handler assembly.</summary>
+    /// <summary>Registers the mediator over the handler-bearing Infrastructure assembly; the SDK installs its
+    /// exception-to-result converter first, and a busy SQLite store maps to the catalogue's busy conflict.</summary>
     private static WebApplicationBuilder AddMediator(this WebApplicationBuilder builder)
     {
-        builder.Services.AddMediator(typeof(ApplicationAssembly).Assembly);
+        builder.Services.AddMediator(typeof(InfrastructureAssembly).Assembly);
+        builder.Services.AddExceptionMappingRule<SqliteBusyExceptionMappingRule>();
         return builder;
     }
 
-    /// <summary>Registers the public runtime settings the SPA reads at startup: the Ocharo app and site addresses.</summary>
+    /// <summary>
+    /// Registers the public runtime settings the SPA reads at startup: the Ocharo app and site addresses.
+    /// </summary>
     private static WebApplicationBuilder AddRuntimeConfig(this WebApplicationBuilder builder)
     {
         // Every address is optional, and a malformed one is left out rather than failing the host over a menu link.
@@ -94,25 +121,31 @@ public static partial class HostConfiguration
             app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
     }
 
-    /// <summary>Registers the HTTP error boundary (problem details for every client, <c>no-store</c> errors) and controllers.</summary>
+    /// <summary>Registers the HTTP error boundary (problem details for every client, <c>no-store</c> errors), the
+    /// catalogue's
+    /// error statuses and controllers on the SDK wire contract.</summary>
+    /// <remarks>Dictionary keys stay as stored: every catalogue dictionary is keyed by data (size labels such as
+    /// <c>XL</c>,
+    /// language codes, artifact names, runtime-config names), which the preset's camelCase key policy would
+    /// rewrite.</remarks>
     private static WebApplicationBuilder AddControllers(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpProblemDetails();
-        builder.Services.AddControllers();
+        builder.Services.AddSingleton<IErrorHttpStatusCodeMapper, CatalogueErrorHttpStatusCodeMapper>();
+        builder.Services.AddControllersWithSdkJson()
+            .AddJsonOptions(options => options.JsonSerializerOptions.DictionaryKeyPolicy = null);
         return builder;
     }
 
-    /// <summary>Configures Catalogue's own HTTP boundary ahead of sign-in: rejected commands as problem details, response
-    /// headers and the cross-origin write refusal.</summary>
-    private static IApplicationBuilder UseCatalogueBoundary(this IApplicationBuilder app) => app
-        .UseMiddleware<CatalogueExceptionMiddleware>()
-        .UseMiddleware<CatalogueHttpBoundaryMiddleware>();
+    /// <summary>Configures Catalogue's own HTTP boundary ahead of sign-in: response headers and the cross-origin write
+    /// refusal.</summary>
+    private static IApplicationBuilder UseCatalogueBoundary(this IApplicationBuilder app)
+    {
+        return app.UseMiddleware<CatalogueHttpBoundaryMiddleware>();
+    }
 
-    /// <summary>Holds the root URL of the WoW2 Files instance Catalogue stores its product images and release artifacts in;
-    /// unset, they stay in the local blob folder and SQLite.</summary>
-    private const string FilesBaseUrlKey = "Files:BaseUrl";
-
-    /// <summary>Registers the media and release-artifact stores: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is
+    /// <summary>Registers the media and release-artifact stores: WoW2 Files over HTTP when <see
+    /// cref="FilesBaseUrlKey"/> is
     /// set, by tokens of Catalogue's own Identity client (a person's exchanged within their session, Catalogue's own
     /// otherwise), else the local blob folder and SQLite. Both read at resolve time, so a test host's settings decide
     /// (planning/files-adoption.md #24, #26).</summary>
@@ -135,7 +168,7 @@ public static partial class HostConfiguration
         });
         builder.Services.AddScoped<MediaStore>();
         builder.Services.AddScoped<FilesMediaStore>();
-        builder.Services.AddScoped<FilesMediaBackfill>();
+        builder.Services.AddScoped<FilesMediaBackfillService>();
         builder.Services.AddScoped<IMediaStore>(provider => UsesFiles(provider)
             ? provider.GetRequiredService<FilesMediaStore>()
             : provider.GetRequiredService<MediaStore>());
@@ -151,12 +184,14 @@ public static partial class HostConfiguration
     private static bool UsesFiles(IServiceProvider provider) =>
         provider.GetRequiredService<IConfiguration>()[FilesBaseUrlKey] is { Length: > 0 };
 
-    /// <summary>Fills the file ids the migration made; an unreachable Files leaves those files on local bytes, never the boot.</summary>
+    /// <summary>
+    /// Fills the file ids the migration made; an unreachable Files leaves those files on local bytes, never the boot.
+    /// </summary>
     private static async Task BackfillFileIdsAsync(this IServiceProvider services, ILogger logger)
     {
         try
         {
-            await services.GetRequiredService<FilesMediaBackfill>().RunAsync(CancellationToken.None);
+            await services.GetRequiredService<FilesMediaBackfillService>().RunAsync(CancellationToken.None);
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or InvalidOperationException)
         {
@@ -178,9 +213,20 @@ public static partial class HostConfiguration
         var repository = scope.ServiceProvider.GetRequiredService<ICatalogueRepository>();
         if ((await repository.GetProductsAsync(CancellationToken.None)).Count > 0) return;
 
-        var report = await scope.ServiceProvider.GetRequiredService<WorkspaceCatalogueImporter>()
+        var imported = await scope.ServiceProvider.GetRequiredService<WorkspaceImportService>()
             .ImportAsync(new ImportInput(null), CancellationToken.None);
-        app.Logger.LogInformation("Seeded catalogue from {Root}: {Created} products, {Images} images, {Warnings} warnings",
-            report.SourceRoot, report.Created, report.ImagesStored, report.Warnings.Count);
+        imported.Match(
+            success =>
+            {
+                var report = success.Data;
+                app.Logger.LogInformation("Seeded catalogue from {Root}: {Created} products, {Images} images, {Warnings} warnings",
+                    report.SourceRoot, report.Created, report.ImagesStored, report.Warnings.Count);
+                return true;
+            },
+            failure =>
+            {
+                app.Logger.LogWarning("Catalogue was not seeded: {Message}", failure.Error.Message);
+                return false;
+            });
     }
 }

@@ -62,11 +62,26 @@ describe('published catalogue boundary', () => {
       expect(decodePublishedCatalogue(source, 'woven-days', 'en')).toBeNull();
     }
   });
+  it('reads omitted null fields as null, so an open-ended price band stays open-ended', () => {
+    const source = fixture() as unknown as { products: Record<string, unknown>[] };
+    const product = source.products[0]!;
+    delete product.decoration;
+    const pricing = product.pricing as { tiers: Record<string, unknown>[]; wording?: unknown };
+    delete pricing.wording;
+    delete pricing.tiers[1]!.maximumQuantity;
+    const decoded = decodePublishedCatalogue(source, 'woven-days', 'en');
+    expect(decoded?.products[0]?.decoration).toBeNull();
+    expect(decoded?.products[0]?.pricing?.wording).toBeNull();
+    expect(decoded?.products[0]?.pricing?.tiers[1]?.maximumQuantity).toBeNull();
+  });
   it('uses only the read-only edition endpoint and validates the received locale', async () => {
     const calls: string[] = [];
     const api = createPublishedCatalogueApi(async (input) => {
       calls.push(String(input));
-      return new Response(JSON.stringify(fixture()), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ data: fixture() }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
     });
     const success = await api.read('woven-days', 'en', releaseId);
     expect(success.ok).toBe(true);

@@ -1,9 +1,12 @@
 using System.Text.Json.Nodes;
-using OcharoCatalogue.Application.Catalogue;
-using OcharoCatalogue.Application.Catalogue.Models;
-using OcharoCatalogue.Application.Catalogue.Repositories;
-using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
+using OcharoCatalogue.Application.Catalogue.Core.Repositories;
+using OcharoCatalogue.Application.Catalogue.Core.Serializers;
+using OcharoCatalogue.Application.Catalogue.Products.Models;
+using OcharoCatalogue.Infrastructure.Catalogue.Core.Policies;
+using OcharoCatalogue.Infrastructure.Catalogue.Products.Mappers;
+using OcharoCatalogue.Infrastructure.Catalogue.Publishing.Mappers;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 
 namespace OcharoCatalogue.Tests;
 
@@ -28,7 +31,7 @@ public sealed class ProductPublicationTests
         Media = product.Media.Select(image => new MediaInput(image.Id, image.Role, image.Alt, image.IsActive, image.Group)).ToList(),
     };
     private static async Task Seed(CatalogueHarness harness, ProductDocument product) =>
-        await harness.Get<ICatalogueRepository>().InsertProductAsync(ProductService.ToRecord(product, 1, harness.Clock.GetUtcNow(), harness.Clock.GetUtcNow()), "Test fixture", default);
+        await harness.Get<ICatalogueRepository>().InsertProductAsync(ProductProjections.ToRecord(product, 1, harness.Clock.GetUtcNow(), harness.Clock.GetUtcNow()), "Test fixture", default);
 
     [Fact]
     public void Legacy_json_stays_readable_and_additional_languages_round_trip_without_fallback()
@@ -69,7 +72,7 @@ public sealed class ProductPublicationTests
         if (condition == "missing-language") locale = "de";
         if (condition == "unapproved-language") locale = "en";
         Assert.False(ProductPublicationEligibility.Eligible(product, locale));
-        Assert.Throws<CatalogueException>(() => PublicCatalogueService.ToPublic(product, 1, DateTimeOffset.UtcNow, locale, new Dictionary<string, GarmentTypeDefinition>()));
+        Assert.Throws<AppException>(() => PublicProductMapper.ToPublic(product, 1, DateTimeOffset.UtcNow, locale, new Dictionary<string, GarmentTypeDefinition>()));
     }
 
     [Fact]
@@ -78,7 +81,7 @@ public sealed class ProductPublicationTests
         await using var harness = await CatalogueHarness.CreateAsync();
         var ready = Ready() with { Media = [Ready().Media[0] with { IsActive = false }, Ready().Media[0] with { Id = "model", Sha256 = new string('b', 64), Role = MediaRole.Model, Group = "detail" }] };
         await Seed(harness, ready);
-        var service = harness.Get<PublicCatalogueService>();
+        var service = harness.Feed;
         var published = Assert.Single((await service.BuildAsync("fr", default)).Products);
         Assert.Equal("Gilet", published.Name);
         Assert.Equal("detail", Assert.Single(published.Images).Group);
@@ -89,7 +92,7 @@ public sealed class ProductPublicationTests
         Assert.Equal(2, published.Pricing!.Tiers.Count);
         Assert.Empty((await service.BuildAsync("de", default)).Products);
         Assert.Empty((await service.BuildAsync("en", default)).Products);
-        await Assert.ThrowsAsync<CatalogueException>(() => service.BuildAsync("invalid", default));
+        await Assert.ThrowsAsync<CatalogueRejection>(() => service.BuildAsync("invalid", default));
     }
 
     [Fact]
@@ -97,7 +100,7 @@ public sealed class ProductPublicationTests
     {
         foreach (var pricing in new[] { Prices(PricingStatus.Draft), Prices() with { Currency = "USD" }, Prices() with { Tiers = [new(1, null, 130_000), new(10, null, 100_000)] } })
         {
-            var product = PublicCatalogueService.ToPublic(Ready() with { Pricing = pricing }, 1, DateTimeOffset.UtcNow, "fr", new Dictionary<string, GarmentTypeDefinition>());
+            var product = PublicProductMapper.ToPublic(Ready() with { Pricing = pricing }, 1, DateTimeOffset.UtcNow, "fr", new Dictionary<string, GarmentTypeDefinition>());
             Assert.Null(product.Pricing);
         }
     }
@@ -106,10 +109,10 @@ public sealed class ProductPublicationTests
     public async Task Active_product_cannot_remove_or_disable_its_final_image_but_draft_can()
     {
         await using var harness = await CatalogueHarness.CreateAsync(); await Seed(harness, Ready());
-        var service = harness.Get<ProductService>();
+        var service = harness.Products;
         var input = Input(Ready(), 1);
-        var removed = await Assert.ThrowsAsync<CatalogueException>(() => service.UpdateAsync("nimcha-v01", input with { Media = [] }, default));
-        var disabled = await Assert.ThrowsAsync<CatalogueException>(() => service.UpdateAsync("nimcha-v01", input with { Media = [new("front", MediaRole.Cutout, null, false)] }, default));
+        var removed = await Assert.ThrowsAsync<CatalogueRejection>(() => service.UpdateAsync("nimcha-v01", input with { Media = [] }, default));
+        var disabled = await Assert.ThrowsAsync<CatalogueRejection>(() => service.UpdateAsync("nimcha-v01", input with { Media = [new("front", MediaRole.Cutout, null, false)] }, default));
         Assert.Contains("active image", removed.Message); Assert.Contains("active image", disabled.Message);
         Assert.Equal(1, (await service.GetAsync("nimcha-v01", default)).Revision);
         var draft = await service.UpdateAsync("nimcha-v01", input with { Status = ProductStatus.Draft, Media = [] }, default);
@@ -123,16 +126,16 @@ public sealed class ProductPublicationTests
         await using var harness = await CatalogueHarness.CreateAsync();
         var ready = Ready() with { Media = [Ready().Media[0] with { IsActive = false, Group = "fabric" }, Ready().Media[0] with { Id = "model", Sha256 = new string('b', 64), Role = MediaRole.Model }] };
         await Seed(harness, ready);
-        var result = await harness.Get<ProductService>().UpdateAsync(ready.Id, Input(ready, 1) with
+        var result = await harness.Products.UpdateAsync(ready.Id, Input(ready, 1) with
         { Media = [new("front", MediaRole.Cutout, "Legacy update"), new("model", MediaRole.Model, null)] }, default);
         Assert.False(result.Document.Media[0].IsActive); Assert.Equal("fabric", result.Document.Media[0].Group);
-        Assert.Equal("model", ProductService.PrimaryImage(result.Document)!.Id);
+        Assert.Equal("model", ProductProjections.PrimaryImage(result.Document)!.Id);
     }
 
     [Fact]
     public async Task Additional_copy_is_validated_duplicated_as_draft_and_preserved_by_legacy_editors()
     {
-        await using var harness = await CatalogueHarness.CreateAsync(); await Seed(harness, Ready()); var service = harness.Get<ProductService>();
+        await using var harness = await CatalogueHarness.CreateAsync(); await Seed(harness, Ready()); var service = harness.Products;
         var legacy = new ProductLocales(Approved("Nimcha updated"), ProductLocale.Empty(), ProductLocale.Empty());
         var saved = await service.UpdateCopyAsync("nimcha-v01", new(1, legacy), default);
         Assert.Equal("Gilet", saved.Locales.For("fr").Name);
@@ -144,7 +147,7 @@ public sealed class ProductPublicationTests
             legacy with { Additional = new Dictionary<string, ProductLocale> { ["fr"] = Approved("") } },
             legacy with { Additional = new Dictionary<string, ProductLocale> { ["xx"] = Approved("Unknown") } },
             legacy with { Additional = new Dictionary<string, ProductLocale> { ["uz"] = Approved("Duplicate") } },
-        }) await Assert.ThrowsAsync<CatalogueException>(() => service.UpdateCopyAsync("nimcha-v01", new(2, invalid), default));
+        }) await Assert.ThrowsAsync<CatalogueRejection>(() => service.UpdateCopyAsync("nimcha-v01", new(2, invalid), default));
     }
 
     [Theory]
@@ -155,7 +158,7 @@ public sealed class ProductPublicationTests
     {
         await using var harness = await CatalogueHarness.CreateAsync();
         var input = new ProductInput { GarmentType = "nimcha", Pricing = Prices() with { Tiers = [new(1, retailMaximum, 100), new(wholesaleMinimum, wholesaleMaximum, 50)] } };
-        var error = await Assert.ThrowsAsync<CatalogueException>(() => harness.Get<ProductService>().CreateAsync(input, default));
+        var error = await Assert.ThrowsAsync<CatalogueRejection>(() => harness.Products.CreateAsync(input, default));
         Assert.Contains("two price bands", error.Message);
     }
 
@@ -164,11 +167,11 @@ public sealed class ProductPublicationTests
     {
         await using var harness = await CatalogueHarness.CreateAsync();
         var ready = Ready() with { Pricing = Prices() with { Tiers = [new(1, 1, 130_000), new(10, null, 100_000)] } }; await Seed(harness, ready);
-        var service = harness.Get<ProductService>();
+        var service = harness.Products;
         var updated = await service.UpdateAsync(ready.Id, Input(ready, 1) with { Notes = "Text-only edit" }, default);
         Assert.Equal(1, updated.Document.Pricing!.Tiers[0].MaximumQuantity);
-        Assert.Equal(130_000, Assert.Single((await harness.Get<PublicCatalogueService>().BuildAsync("fr", default)).Products).Pricing!.Retail);
-        await Assert.ThrowsAsync<CatalogueException>(() => service.UpdateAsync(ready.Id, Input(updated.Document, 2) with
+        Assert.Equal(130_000, Assert.Single((await harness.Feed.BuildAsync("fr", default)).Products).Pricing!.Retail);
+        await Assert.ThrowsAsync<CatalogueRejection>(() => service.UpdateAsync(ready.Id, Input(updated.Document, 2) with
         { Pricing = ready.Pricing with { Tiers = [new(1, 1, 150_000), new(10, null, 100_000)] } }, default));
         var bulk = await service.AdjustPricesAsync(new([ready.Id], "percent", 10), default);
         Assert.Equal(0, bulk.Changed); Assert.Single(bulk.Skipped);
@@ -179,8 +182,8 @@ public sealed class ProductPublicationTests
     {
         await using var harness = await CatalogueHarness.CreateAsync();
         var ready = Ready() with { Locales = Ready().Locales with { Additional = new Dictionary<string, ProductLocale> { ["fr"] = Approved("Gilet"), ["de"] = ProductLocale.Empty() } } }; await Seed(harness, ready);
-        await harness.Get<CollectionService>().SaveAsync(null, new(null, "spring", new("Bahor", null, null), null, [ready.Id], false, 0), default);
-        var summary = Assert.Single(await harness.Get<ProductService>().ListAsync(new("Gilet", null, null, null, null), default));
+        await harness.Collections.SaveAsync(null, new(null, "spring", new("Bahor", null, null), null, [ready.Id], false, 0), default);
+        var summary = Assert.Single(await harness.Products.ListAsync(new("Gilet", null, null, null, null), default));
         Assert.Equal(4, summary.LanguagesTotal); Assert.Equal(2, summary.LocalesApproved); Assert.Equal(2, summary.UnconfirmedTranslations);
         Assert.Equal(["spring"], summary.CollectionIds);
     }

@@ -80,13 +80,65 @@ describe('catalogue api', () => {
   });
   it('rejects a non-array product list as a protocol failure', async () => {
     const api = createCatalogueApi((async () =>
-      reply(200, { unexpected: true })) as unknown as typeof globalThis.fetch);
+      reply(200, { data: { unexpected: true } })) as unknown as typeof globalThis.fetch);
     const result = await api.listProducts({});
     expect(result.ok).toBe(false);
   });
 
+  it('reads a product from the success envelope with its omitted null fields restored', async () => {
+    const locale = { status: 'draft' };
+    const api = createCatalogueApi((async () =>
+      reply(200, {
+        data: {
+          document: {
+            id: 'nimcha-v01',
+            garmentType: 'nimcha',
+            variantCode: 'v01',
+            status: 'draft',
+            sortOrder: 0,
+            sizes: ['S', 'XL'],
+            fabricCodes: [],
+            decorationCodes: [],
+            tags: [],
+            locales: { uz: { ...locale, name: 'Nimcha' }, ru: locale, en: locale, additional: {} },
+            pricing: { currency: 'UZS', status: 'draft', tiers: [{ minimumQuantity: 10, unitPrice: 1 }] },
+            media: [],
+            issues: [],
+            stock: { XL: 2, S: 0 },
+            madeToOrder: false,
+            availability: 'in-stock',
+            availableSizes: ['XL'],
+          },
+          revision: 1,
+          createdAt: '2026-11-09T00:00:00Z',
+          updatedAt: '2026-11-09T00:00:00Z',
+          media: [],
+          collectionIds: [],
+        },
+      })) as unknown as typeof globalThis.fetch);
+    const result = await api.getProduct('nimcha-v01');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const document = result.value.document;
+      expect(document.designId).toBeNull();
+      expect(document.notes).toBeNull();
+      expect(document.source).toBeNull();
+      expect(document.locales.ru.name).toBeNull();
+      expect(document.pricing?.wording).toBeNull();
+      expect(document.pricing?.tiers[0]?.maximumQuantity).toBeNull();
+      expect(document.stock).toEqual({ XL: 2, S: 0 });
+    }
+  });
+
+  it('reads the public feed unenveloped, as Marketing and Blog do', async () => {
+    const api = createCatalogueApi((async () =>
+      reply(200, { brand: 'Ocharo', products: [], collections: [] })) as unknown as typeof globalThis.fetch);
+    const result = await api.publicCatalogue('uz');
+    expect(result.ok && result.value.brand).toBe('Ocharo');
+  });
+
   it('sends filters as query parameters', async () => {
-    const fetch = vi.fn(async (input: RequestInfo | URL) => (void input, reply(200, [])));
+    const fetch = vi.fn(async (input: RequestInfo | URL) => (void input, reply(200, { data: [] })));
     const api = createCatalogueApi(fetch as unknown as typeof globalThis.fetch);
     await api.listProducts({ q: 'nimcha', status: 'active' });
     const url = String(fetch.mock.calls[0]?.[0]);

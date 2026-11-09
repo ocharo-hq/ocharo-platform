@@ -1,7 +1,6 @@
-using OcharoCatalogue.Application.Catalogue;
-using OcharoCatalogue.Application.Catalogue.Models;
-using OcharoCatalogue.Application.Catalogue.Services;
 using OcharoCatalogue.Domain.Catalogue.Models;
+using OcharoCatalogue.Application.Catalogue.Products.Models;
+using WoW.Two.Sdk.Beta.Be.Mediator;
 
 namespace OcharoCatalogue.Tests;
 
@@ -19,7 +18,7 @@ public sealed class ProductServiceTests
     public async Task Create_assigns_next_variant_and_normalizes_lists()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
 
         var first = await products.CreateAsync(Draft(), CancellationToken.None);
         var second = await products.CreateAsync(Draft(), CancellationToken.None);
@@ -34,11 +33,11 @@ public sealed class ProductServiceTests
     public async Task Update_requires_the_current_revision_and_records_history()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
         var created = await products.CreateAsync(Draft(), CancellationToken.None);
 
         var edited = await products.UpdateAsync(created.Document.Id, Draft() with { ExpectedRevision = 1, Tags = ["yangi"] }, CancellationToken.None);
-        var stale = await Assert.ThrowsAsync<CatalogueException>(() =>
+        var stale = await Assert.ThrowsAsync<CatalogueRejection>(() =>
             products.UpdateAsync(created.Document.Id, Draft() with { ExpectedRevision = 1 }, CancellationToken.None));
         var history = await products.RevisionsAsync(created.Document.Id, CancellationToken.None);
 
@@ -52,9 +51,9 @@ public sealed class ProductServiceTests
     public async Task Activation_needs_a_name_and_an_active_image()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
 
-        var rejected = await Assert.ThrowsAsync<CatalogueException>(() =>
+        var rejected = await Assert.ThrowsAsync<CatalogueRejection>(() =>
             products.CreateAsync(Draft() with { Status = ProductStatus.Active }, CancellationToken.None));
         var created = await products.CreateAsync(Draft(), CancellationToken.None);
         var withImage = await products.AddMediaAsync(created.Document.Id, CatalogueHarness.Png(10), "front.png", MediaRole.Cutout, 1, CancellationToken.None);
@@ -70,13 +69,13 @@ public sealed class ProductServiceTests
     public async Task Overlapping_price_tiers_are_rejected()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
         var input = Draft() with
         {
             Pricing = new ProductPricing("UZS", PricingStatus.Draft, [new PriceTier(1, null, 130_000), new PriceTier(10, null, 100_000)], null),
         };
 
-        var error = await Assert.ThrowsAsync<CatalogueException>(() => products.CreateAsync(input, CancellationToken.None));
+        var error = await Assert.ThrowsAsync<CatalogueRejection>(() => products.CreateAsync(input, CancellationToken.None));
 
         Assert.Contains("overlap", error.Message);
     }
@@ -85,7 +84,7 @@ public sealed class ProductServiceTests
     public async Task Duplicate_creates_a_draft_next_variant_with_draft_copy()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
         var created = await products.CreateAsync(Draft() with
         {
             Locales = new ProductLocales(new ProductLocale(LocaleStatus.Approved, "Nimcha", null, null, null), ProductLocale.Empty(), ProductLocale.Empty()),
@@ -103,7 +102,7 @@ public sealed class ProductServiceTests
     public async Task Restore_saves_an_old_snapshot_as_a_new_revision()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
         var created = await products.CreateAsync(Draft(), CancellationToken.None);
         await products.UpdateAsync(created.Document.Id, Draft() with { ExpectedRevision = 1, Notes = "changed" }, CancellationToken.None);
 
@@ -117,7 +116,7 @@ public sealed class ProductServiceTests
     public async Task Bulk_pricing_rounds_and_marks_prices_draft()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
         var created = await products.CreateAsync(Draft() with
         {
             Pricing = new ProductPricing("UZS", PricingStatus.Confirmed, [new PriceTier(1, 9, 130_000), new PriceTier(10, null, 100_000)], null),
@@ -137,7 +136,7 @@ public sealed class ProductServiceTests
     public async Task Bulk_status_skips_products_that_cannot_be_activated()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
         var created = await products.CreateAsync(Draft(), CancellationToken.None);
 
         var result = await products.SetStatusAsync(new BulkStatusInput([created.Document.Id], ProductStatus.Active), CancellationToken.None);
@@ -150,15 +149,15 @@ public sealed class ProductServiceTests
     public async Task Copy_grid_saves_only_copy_and_checks_revision_and_approval_rules()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
         var created = await products.CreateAsync(Draft() with { Tags = ["kuz"] }, CancellationToken.None);
         var copy = new ProductLocales(new ProductLocale(LocaleStatus.Approved, "Nimcha", "Atlas", null, null),
             new ProductLocale(LocaleStatus.Draft, "Жилет", "Атлас", null, null), new ProductLocale(LocaleStatus.Draft, "Vest", null, null, null));
 
         var rows = await products.CopyRowsAsync(CancellationToken.None);
         var saved = await products.UpdateCopyAsync(created.Document.Id, new CopyInput(1, copy), CancellationToken.None);
-        var stale = await Assert.ThrowsAsync<CatalogueException>(() => products.UpdateCopyAsync(created.Document.Id, new CopyInput(1, copy), CancellationToken.None));
-        var invalid = await Assert.ThrowsAsync<CatalogueException>(() => products.UpdateCopyAsync(created.Document.Id,
+        var stale = await Assert.ThrowsAsync<CatalogueRejection>(() => products.UpdateCopyAsync(created.Document.Id, new CopyInput(1, copy), CancellationToken.None));
+        var invalid = await Assert.ThrowsAsync<CatalogueRejection>(() => products.UpdateCopyAsync(created.Document.Id,
             new CopyInput(2, copy with { Ru = new ProductLocale(LocaleStatus.Approved, null, null, null, null) }), CancellationToken.None));
         var after = await products.GetAsync(created.Document.Id, CancellationToken.None);
 
@@ -175,16 +174,16 @@ public sealed class ProductServiceTests
     public async Task Stock_tracks_sizes_and_drives_public_availability()
     {
         await using var harness = await CatalogueHarness.CreateAsync();
-        var products = harness.Get<ProductService>();
+        var products = harness.Products;
         var created = await products.CreateAsync(Draft(), CancellationToken.None);
         var withImage = await products.AddMediaAsync(created.Document.Id, CatalogueHarness.Png(33), "f.png", MediaRole.Cutout, 1, CancellationToken.None);
         await products.UpdateAsync(created.Document.Id, Draft() with { ExpectedRevision = withImage.Revision, Status = ProductStatus.Active, Locales = new ProductLocales(new ProductLocale(LocaleStatus.Approved, "Nimcha", "Atlas", null, null), ProductLocale.Empty(), ProductLocale.Empty()) }, CancellationToken.None);
 
-        var untracked = (await harness.Get<PublicCatalogueService>().BuildAsync("uz", CancellationToken.None)).Products.Single();
+        var untracked = (await harness.Feed.BuildAsync("uz", CancellationToken.None)).Products.Single();
         var tracked = await products.UpdateStockAsync(created.Document.Id, new StockInput(3, new Dictionary<string, int> { ["S"] = 2, ["L"] = 0 }, false), CancellationToken.None);
-        var unknownSize = await Assert.ThrowsAsync<CatalogueException>(() =>
+        var unknownSize = await Assert.ThrowsAsync<CatalogueRejection>(() =>
             products.UpdateStockAsync(created.Document.Id, new StockInput(4, new Dictionary<string, int> { ["XXL"] = 1 }, false), CancellationToken.None));
-        var feed = (await harness.Get<PublicCatalogueService>().BuildAsync("uz", CancellationToken.None)).Products.Single();
+        var feed = (await harness.Feed.BuildAsync("uz", CancellationToken.None)).Products.Single();
         var soldOut = await products.UpdateStockAsync(created.Document.Id, new StockInput(4, new Dictionary<string, int>(), false), CancellationToken.None);
         var madeToOrder = await products.UpdateStockAsync(created.Document.Id, new StockInput(5, null, true), CancellationToken.None);
         var summary = (await products.ListAsync(new ProductFilter(null, null, null, null, null), CancellationToken.None)).Single();

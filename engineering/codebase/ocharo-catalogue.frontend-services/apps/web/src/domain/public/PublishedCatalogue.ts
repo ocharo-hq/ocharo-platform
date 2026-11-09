@@ -57,6 +57,10 @@ const record = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+/** The API's JSON leaves a null field out; the reader keeps reading `null` for "none". */
+const orNull = (value: unknown): unknown => (value === undefined ? null : value);
+const withNulls = (value: Record<string, unknown>, keys: readonly string[]): Record<string, unknown> =>
+  Object.fromEntries([...Object.entries(value), ...keys.map((key) => [key, orNull(value[key])])]);
 export const catalogueLanguageSupported = (value: string): boolean =>
   catalogueLanguages.some((language) => language.code === value);
 export const validPublishedSlug = (value: string): boolean =>
@@ -81,6 +85,14 @@ function asset(value: unknown, slug: string, locale: string, release: string, fi
     return false;
   }
 }
+/** Restores the null fields of a valid price sheet the API's JSON left out. */
+function publishedPricing(value: NonNullable<PublishedProduct['pricing']>): NonNullable<PublishedProduct['pricing']> {
+  const pricing = withNulls(value as unknown as Record<string, unknown>, ['retail', 'wholesale', 'wording']);
+  return {
+    ...(pricing as unknown as NonNullable<PublishedProduct['pricing']>),
+    tiers: value.tiers.map((tier) => ({ ...tier, maximumQuantity: tier.maximumQuantity ?? null })),
+  };
+}
 function validPricing(value: unknown): value is NonNullable<PublishedProduct['pricing']> {
   if (
     !record(value) ||
@@ -102,12 +114,12 @@ function validPricing(value: unknown): value is NonNullable<PublishedProduct['pr
       !Number.isSafeInteger(tier.unitPrice) ||
       (tier.unitPrice as number) < 0 ||
       (tier.unitPrice as number) > 1_000_000_000 ||
-      (tier.maximumQuantity !== null &&
+      (orNull(tier.maximumQuantity) !== null &&
         (!Number.isSafeInteger(tier.maximumQuantity) ||
           (tier.maximumQuantity as number) < (tier.minimumQuantity as number)))
     )
       return false;
-    prior = tier.maximumQuantity as number | null;
+    prior = orNull(tier.maximumQuantity) as number | null;
   }
   return true;
 }
@@ -147,10 +159,10 @@ export function decodePublishedCatalogue(
     .map(
       (product) =>
         ({
-          ...product,
+          ...withNulls(product, ['fabric', 'decoration', 'description', 'availableSizes']),
           sizes: strings(product.sizes),
           tags: strings(product.tags),
-          pricing: validPricing(product.pricing) ? product.pricing : null,
+          pricing: validPricing(product.pricing) ? publishedPricing(product.pricing) : null,
           images: (product.images as unknown[])
             .filter(record)
             .filter(
@@ -160,7 +172,7 @@ export function decodePublishedCatalogue(
                 hash.test(image.sha256) &&
                 image.url === `/api/catalogue/media/${image.sha256}`,
             )
-            .map((image) => ({ ...image, previewUrl: null })),
+            .map((image) => ({ ...withNulls(image, ['width', 'height', 'alt', 'group']), previewUrl: null })),
         }) as unknown as PublishedProduct,
     )
     .filter((product) => product.images.length > 0);

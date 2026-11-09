@@ -1,13 +1,8 @@
 import { identityClient } from '../common/IdentitySessionClient';
-import {
-  ApiFailureFactory,
-  createApiClient,
-  rawEnvelope,
-  type ApiFailure,
-  type ResponseEnvelope,
-} from '@wow-two-beta/fe/foundation/http';
+import { ApiFailureFactory, createApiClient, wowTwoEnvelope, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { describeFailure } from '../catalogue/CatalogueApi';
+import { catalogueSettings, productDetail } from '../catalogue/CatalogueWire';
 import type { DesignSource } from '../../domain/design/CatalogueDesign';
 import {
   validateSnapshot,
@@ -56,12 +51,26 @@ export class DesignRequestError extends Error {
   }
 }
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
-const envelope: ResponseEnvelope = {
-  unwrap: rawEnvelope.unwrap,
-  toFailure: (parsed, response) => ApiFailureFactory.create('http', response, object(parsed) ? parsed : null),
-};
-function decode<T>(value: unknown, check: (v: unknown) => boolean) {
-  return check(value) ? ResultExtensions.ok(value as T) : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
+/** Checks the `data` of the API's success envelope and maps it to the app's model; anything else is a protocol failure. */
+function decode<T>(value: unknown, check: (v: unknown) => boolean, map: (v: never) => T = (v) => v as T) {
+  return check(value)
+    ? ResultExtensions.ok(map(value as never))
+    : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
+}
+/** The API's JSON leaves a null field out; a release keeps reading `null` for a time it never reached. */
+function releaseSummary(raw: Record<string, unknown>): ReleaseSummary {
+  return {
+    ...(raw as unknown as ReleaseSummary),
+    publishedAtUtc: (raw.publishedAtUtc as string | undefined) ?? null,
+    withdrawnAtUtc: (raw.withdrawnAtUtc as string | undefined) ?? null,
+  };
+}
+/** Maps the designer's source: every product with its null fields restored, and the settings. */
+function designSource(raw: Record<string, unknown>): DesignSource {
+  return {
+    products: (raw.products as never[]).map(productDetail),
+    settings: catalogueSettings(raw.settings as never),
+  };
 }
 function validDocument(v: unknown) {
   if (!object(v) || typeof v.id !== 'string' || typeof v.title !== 'string' || !Number.isSafeInteger(v.revision))
@@ -73,9 +82,12 @@ function validDocument(v: unknown) {
     return false;
   }
 }
-/** The retained Catalogue API is the sole writer; all requests remain same-origin and local. */
+/**
+ * The retained Catalogue API is the sole writer; all requests remain same-origin and local. Payloads arrive in the API's
+ * `{ data }` envelope and failures as ProblemDetails.
+ */
 export function createDesignApi(fetchImplementation: typeof fetch = globalThis.fetch) {
-  const client = createApiClient({ envelope, retry: false, fetch: fetchImplementation }),
+  const client = createApiClient({ envelope: wowTwoEnvelope, retry: false, fetch: fetchImplementation }),
     root = '/api/catalogue/designs',
     path = (id: string) => `${root}/${encodeURIComponent(id)}`;
   async function unwrap<T>(
@@ -94,7 +106,7 @@ export function createDesignApi(fetchImplementation: typeof fetch = globalThis.f
       unwrap(
         client.get<DesignSource>('/api/catalogue/design-source', {
           signal,
-          decode: (v) => decode(v, (v) => object(v) && Array.isArray(v.products) && object(v.settings)),
+          decode: (v) => decode(v, (v) => object(v) && Array.isArray(v.products) && object(v.settings), designSource),
         }),
       ),
     save: (id: string | null, title: string, snapshot: DesignSnapshot, expectedRevision?: number) => {
@@ -114,7 +126,11 @@ export function createDesignApi(fetchImplementation: typeof fetch = globalThis.f
     archive: (id: string, revision: number) =>
       unwrap(client.delete(`${path(id)}?expectedRevision=${revision}`, { response: 'empty' })),
     releases: (id: string) =>
-      unwrap(client.get<ReleaseSummary[]>(`${path(id)}/releases`, { decode: (v) => decode(v, Array.isArray) })),
+      unwrap(
+        client.get<ReleaseSummary[]>(`${path(id)}/releases`, {
+          decode: (v) => decode(v, Array.isArray, (list: Record<string, unknown>[]) => list.map(releaseSummary)),
+        }),
+      ),
     withdraw: (id: string, revision: number) =>
       unwrap(client.post(`${path(id)}/withdraw`, { body: { expectedRevision: revision }, response: 'empty' })),
     revisions: (id: string) =>
@@ -162,9 +178,9 @@ export function createDesignApi(fetchImplementation: typeof fetch = globalThis.f
       } catch {
         throw new Error('Unable to connect to the catalogue service.');
       }
-      const value: unknown = await response.json().catch(() => null);
-      if (!response.ok)
-        throw new DesignRequestError(ApiFailureFactory.create('http', response, object(value) ? value : null));
+      const parsed: unknown = await response.json().catch(() => null);
+      if (!response.ok) throw new DesignRequestError(wowTwoEnvelope.toFailure(parsed, response));
+      const value = object(parsed) ? parsed.data : undefined;
       if (!object(value) || typeof value.id !== 'string')
         throw new Error('The catalogue service returned an invalid release.');
       return value as unknown as PreparedRelease;

@@ -9,7 +9,7 @@ const reply = (status: number, value: unknown) =>
 describe('native catalogue design API', () => {
   it('uses the local catalogue endpoint and optimistic revision', async () => {
     const value = documentFixture(),
-      fetch = vi.fn(async () => reply(200, value)),
+      fetch = vi.fn(async () => reply(200, { data: value })),
       api = createDesignApi(fetch as typeof globalThis.fetch);
     await api.save(value.id, value.title, value.snapshot, 2);
     const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
@@ -27,7 +27,7 @@ describe('native catalogue design API', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
   it('sends fingerprint and exact page artifact filenames', async () => {
-    const fetch = vi.fn(async () => reply(200, { id: 'release' })),
+    const fetch = vi.fn(async () => reply(200, { data: { id: 'release' } })),
       api = createDesignApi(fetch as typeof globalThis.fetch);
     await api.prepare(
       'design',
@@ -44,14 +44,14 @@ describe('native catalogue design API', () => {
     ]);
   });
   it('sends metadata without files for a web-only edition', async () => {
-    const fetch = vi.fn(async () => reply(200, { id: 'release' })),
+    const fetch = vi.fn(async () => reply(200, { data: { id: 'release' } })),
       api = createDesignApi(fetch as typeof globalThis.fetch);
     await api.prepare('design', { expectedRevision: 2, fingerprint: 'abc' });
     const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
     expect(JSON.parse(String(init.body))).toEqual({ expectedRevision: 2, fingerprint: 'abc' });
   });
   it('rejects malformed snapshots received from the service', async () => {
-    const fetch = vi.fn(async () => reply(200, { ...documentFixture(), snapshot: { kind: 'catalogue' } }));
+    const fetch = vi.fn(async () => reply(200, { data: { ...documentFixture(), snapshot: { kind: 'catalogue' } } }));
     await expect(createDesignApi(fetch as typeof globalThis.fetch).get('design')).rejects.toThrow();
   });
 });

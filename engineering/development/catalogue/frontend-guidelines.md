@@ -9,7 +9,9 @@ Defer to `wow-two-ws/conventions/development/frontend/`.
 - Runtime: Node `24.11.0` from `.nvmrc`; package manager: `pnpm@10.33.2`.
 - Shared packages use `packages/*` only when there is shared code; no runtime federation is configured.
 - App source uses `bootstrap`, `presentation`, `application`, `domain`, and `integration` layers.
-- The greeting endpoint returns plain `{ message }`; the SDK client uses `rawEnvelope` and validates that wire shape.
+- API clients use the SDK's `wowTwoEnvelope`: payloads arrive under `{ data }`, failures as ProblemDetails. The API's
+  JSON leaves null fields out, so `integration/catalogue/CatalogueWire.ts` (and the edition decoder) restore them as
+  `null` for the app's models. The public feed (`/api/public/catalogue`) alone stays unenveloped (`unwrap: false`).
 
 ## Frame and configuration
 

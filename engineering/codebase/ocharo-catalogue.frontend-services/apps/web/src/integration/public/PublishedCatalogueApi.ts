@@ -1,10 +1,10 @@
-import { ApiFailureFactory, createApiClient, rawEnvelope } from '@wow-two-beta/fe/foundation/http';
+import { ApiFailureFactory, createApiClient, wowTwoEnvelope } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { decodePublishedCatalogue, type PublishedCatalogue } from '../../domain/public/PublishedCatalogue';
 
-/** Read-only, exact-language published editions. No operator or draft endpoint is used. */
+/** Read-only, exact-language published editions, in the API's `{ data }` envelope. No operator or draft endpoint is used. */
 export function createPublishedCatalogueApi(fetchImplementation: typeof fetch = globalThis.fetch) {
-  const client = createApiClient({ envelope: rawEnvelope, retry: false, fetch: fetchImplementation });
+  const client = createApiClient({ envelope: wowTwoEnvelope, retry: false, fetch: fetchImplementation });
   return {
     read(slug: string, locale: string, release?: string, signal?: AbortSignal) {
       return client.get<PublishedCatalogue>(`/api/public/catalogue/editions/${encodeURIComponent(slug)}`, {
