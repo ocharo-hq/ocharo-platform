@@ -26,7 +26,6 @@ namespace OcharoCatalogue.Tests;
 /// the migration fills its id. Files itself is <see cref="TestFiles"/>, an in-memory broker set.</summary>
 public sealed class FilesMediaTests : IAsyncDisposable
 {
-    private const string FilesUrl = "https://files.example.test/";
     private readonly string root = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-files-tests", Guid.NewGuid().ToString("N"));
     private readonly List<IAsyncDisposable> hosts = [];
 
@@ -112,7 +111,7 @@ public sealed class FilesMediaTests : IAsyncDisposable
                 ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(root, "web.db")};Pooling=False",
                 ["Catalogue:DataRoot"] = Path.Combine(root, "web"),
                 ["Catalogue:SourceRoot"] = null,
-                ["Files:BaseUrl"] = FilesUrl,
+                ["Files:BaseUrl"] = TestFiles.Url,
                 ["DataProtection:KeysPath"] = Path.Combine(root, "web", "keys"),
             }));
             builder.ConfigureTestServices(services => Use(services, files));
@@ -131,6 +130,41 @@ public sealed class FilesMediaTests : IAsyncDisposable
         Assert.Equal(HttpStatusCode.NotFound, hidden.StatusCode);
     }
 
+    [Fact]
+    public async Task A_release_artifact_prepared_before_files_reads_from_sqlite_until_the_migration_fills_its_id()
+    {
+        var bytes = CatalogueHarness.Png(85);
+        var sha = Sha(bytes);
+        var local = await ServicesAsync(null);
+        var stored = await Scope(local).GetRequiredService<IReleaseAssetStore>()
+            .StoreAsync([new ReleaseArtifact(sha, "image/png", "ocharo-spring-1.png", bytes)], default);
+        await using (var scope = local.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<OcharoCatalogueDbContext>();
+            db.CatalogueReleaseAssets.AddRange(stored.Rows);
+            await db.SaveChangesAsync();
+        }
+
+        var unmigrated = await ServicesAsync(new TestFiles());
+        var before = await Scope(unmigrated).GetRequiredService<IReleaseAssetStore>().LinkAsync(sha, default);
+
+        var migrated = new TestFiles();
+        var moved = migrated.Add(bytes, "catalogue", new FileReference("catalogue.release", sha));
+        var after = await ServicesAsync(migrated);
+        await Scope(after).GetRequiredService<FilesMediaBackfill>().RunAsync(default);
+        var designs = Scope(after).GetRequiredService<IDesignRepository>();
+        var link = await Scope(after).GetRequiredService<IReleaseAssetStore>().LinkAsync(sha, default);
+        var file = await designs.ReleaseFileAsync(sha, default);
+
+        Assert.Single(stored.Rows);
+        Assert.Empty(stored.Files);
+        Assert.Null(before);
+        Assert.Equal(moved.Id.ToString(), file?.FileId);
+        Assert.Equal("image/png", file?.ContentType);
+        Assert.Equal(TestFiles.Link(moved.Id, null, FileDisposition.Attachment), link);
+        Assert.NotNull(await designs.AssetAsync(sha, default));
+    }
+
     private async Task<ServiceProvider> ServicesAsync(TestFiles? files)
     {
         Directory.CreateDirectory(root);
@@ -138,7 +172,7 @@ public sealed class FilesMediaTests : IAsyncDisposable
         {
             ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(root, "catalogue.db")};Pooling=False",
             ["Catalogue:DataRoot"] = Path.Combine(root, "data"),
-            ["Files:BaseUrl"] = files is null ? null : FilesUrl,
+            ["Files:BaseUrl"] = files is null ? null : TestFiles.Url,
         };
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -159,110 +193,7 @@ public sealed class FilesMediaTests : IAsyncDisposable
 
     private static IServiceProvider Scope(IServiceProvider services) => services.CreateScope().ServiceProvider;
 
-    private static void Use(IServiceCollection services, TestFiles files)
-    {
-        services.AddSingleton(files);
-        services.AddSingleton<IFileUploadsBroker>(files);
-        services.AddSingleton<IFileStoreBroker>(files);
-        services.AddSingleton<IFileReferencesBroker>(files);
-        services.AddSingleton<IFileUrlsBroker>(files);
-    }
+    private static void Use(IServiceCollection services, TestFiles files) => files.Register(services);
 
     private static string Sha(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
-
-    /// <summary>An in-memory Files tenant: uploads keep their bytes, idempotency key and app; references attach; links
-    /// name the file and the asked width; a file can be corrupted or removed to exercise the release check.</summary>
-    private sealed class TestFiles : IFileUploadsBroker, IFileStoreBroker, IFileReferencesBroker, IFileUrlsBroker
-    {
-        private readonly ConcurrentDictionary<FileId, FileModel> files = new();
-        private readonly ConcurrentDictionary<string, FileId> keys = new(StringComparer.Ordinal);
-        private readonly ConcurrentDictionary<FileId, ConcurrentBag<FileReference>> references = new();
-
-        public int Uploads { get; private set; }
-
-        public static Uri Link(FileId id, int? width) => new($"{FilesUrl}f/{id}?w={width}");
-
-        public FileModel Model(string id) => files[FileId.TryParse(id, out var parsed) ? parsed : default];
-
-        public IReadOnlyCollection<FileReference> ReferencesOf(FileId id) => references.TryGetValue(id, out var bag) ? bag : [];
-
-        public void Corrupt(string sha)
-        {
-            var file = files.Values.Single(model => model.Sha256 == sha);
-            files[file.Id] = file with { Sha256 = new string('0', 64) };
-        }
-
-        public void Remove(string sha) => files.TryRemove(files.Values.Single(model => model.Sha256 == new string('0', 64) || model.Sha256 == sha).Id, out _);
-
-        /// <summary>Holds a file as the migration would leave it: moved, with its reference attached.</summary>
-        public FileModel Add(byte[] bytes, string appId, FileReference reference)
-        {
-            var file = NewModel(bytes, $"{appId}-moved", appId);
-            files[file.Id] = file;
-            references.GetOrAdd(file.Id, _ => []).Add(reference);
-            return file;
-        }
-
-        public async Task<Result<FileModel>> UploadAsync(Stream content, UploadSpec spec, CancellationToken cancellationToken = default)
-        {
-            if (spec.IdempotencyKey is { } key && keys.TryGetValue(key, out var first))
-                return Result<FileModel>.Ok(files[first]);
-            using var buffer = new MemoryStream();
-            await content.CopyToAsync(buffer, cancellationToken);
-            var file = NewModel(buffer.ToArray(), spec.Name, spec.AppId);
-            files[file.Id] = file;
-            Uploads++;
-            if (spec.IdempotencyKey is { } idempotency)
-                keys[idempotency] = file.Id;
-            return Result<FileModel>.Ok(file);
-        }
-
-        public Task<Result> AttachAsync(FileId id, FileReference reference, CancellationToken cancellationToken = default)
-        {
-            references.GetOrAdd(id, _ => []).Add(reference);
-            return Task.FromResult(Result.Ok());
-        }
-
-        public Task<Result<SignedFileUrl>> IssueAsync(FileId id, UrlSpec spec, CancellationToken cancellationToken = default) =>
-            Task.FromResult(files.ContainsKey(id)
-                ? Result<SignedFileUrl>.Ok(new SignedFileUrl(Link(id, spec.Width), DateTimeOffset.UtcNow + spec.Lifetime))
-                : Result<SignedFileUrl>.Fail(AppErrorFactory.NotFound("No such file.")));
-
-        public Task<Result<FileModel>> GetAsync(FileId id, CancellationToken cancellationToken = default) =>
-            Task.FromResult(files.TryGetValue(id, out var file)
-                ? Result<FileModel>.Ok(file)
-                : Result<FileModel>.Fail(AppErrorFactory.NotFound("No such file.")));
-
-        public Task<Result<FilePage>> ListAsync(FileQuery query, CancellationToken cancellationToken = default) =>
-            Task.FromResult(Result<FilePage>.Ok(new FilePage(files.Values.Where(file => query.AppId is null || file.AppId == query.AppId).ToList(), null)));
-
-        public Task<Result<FileContent>> OpenReadAsync(FileId id, ByteRange? range = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-        public Task<Result<FileModel>> UpdateAsync(FileId id, FilePatch patch, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-        public Task<Result<FileModel>> DeleteAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-        public Task<Result<FileModel>> RestoreAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-        public Task<Result> DetachAsync(FileId id, FileReference reference, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-        public Task<Result<IReadOnlyList<FileReference>>> ListAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-        public Task<Result<Uri>> GetPublicUrlAsync(FileId id, int? width = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-        private static FileModel NewModel(byte[] bytes, string name, string? appId) => new()
-        {
-            Id = FileId.New(),
-            TenantId = "ocharo",
-            AppId = appId,
-            Name = name,
-            ContentType = "image/png",
-            Kind = FileKind.Image,
-            Size = bytes.LongLength,
-            Sha256 = Sha(bytes),
-            Visibility = FileVisibility.Private,
-            State = FileState.Ready,
-            CreatedAtUtc = DateTimeOffset.UtcNow,
-        };
-    }
 }

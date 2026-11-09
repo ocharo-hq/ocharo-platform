@@ -18,6 +18,7 @@ public sealed class OcharoCatalogueDbContext(DbContextOptions<OcharoCatalogueDbC
     public DbSet<CatalogueReleaseRecord> CatalogueReleases => Set<CatalogueReleaseRecord>();
     public DbSet<CataloguePublicationRecord> CataloguePublications => Set<CataloguePublicationRecord>();
     public DbSet<CatalogueReleaseAssetRecord> CatalogueReleaseAssets => Set<CatalogueReleaseAssetRecord>();
+    public DbSet<CatalogueReleaseFileRecord> CatalogueReleaseFiles => Set<CatalogueReleaseFileRecord>();
 
     /// <inheritdoc />
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
@@ -34,6 +35,7 @@ public sealed class OcharoCatalogueDbContext(DbContextOptions<OcharoCatalogueDbC
         modelBuilder.Entity<CatalogueReleaseRecord>(e => { e.ToTable("catalogue_releases"); e.HasKey(x=>x.Id); e.HasIndex(x=>new{x.DesignId,x.CreatedAtUtc}); });
         modelBuilder.Entity<CataloguePublicationRecord>(e => { e.ToTable("catalogue_publications"); e.HasKey(x=>x.Key); });
         modelBuilder.Entity<CatalogueReleaseAssetRecord>(e => { e.ToTable("catalogue_release_assets"); e.HasKey(x=>x.Sha256); });
+        modelBuilder.Entity<CatalogueReleaseFileRecord>(e => { e.ToTable("catalogue_release_files"); e.HasKey(x=>x.Sha256); });
         modelBuilder.Entity<ProductRecord>(e =>
         {
             e.ToTable("products");

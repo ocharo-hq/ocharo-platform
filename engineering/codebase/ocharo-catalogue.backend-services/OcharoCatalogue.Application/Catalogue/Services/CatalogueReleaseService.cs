@@ -8,7 +8,7 @@ using OcharoCatalogue.Domain.Catalogue.Models;
 namespace OcharoCatalogue.Application.Catalogue.Services;
 
 /// <summary>Prepares immutable catalogue outputs from saved local designs and reviewed product revisions.</summary>
-public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogueRepository repository,SettingsService settings,IDesignArtifactValidator artifacts,IMediaStore media,IClock clock)
+public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogueRepository repository,SettingsService settings,IDesignArtifactValidator artifacts,IMediaStore media,IReleaseAssetStore releaseAssets,IClock clock)
 {
     public const int MaximumTotalBytes=256*1024*1024;
     private sealed record Preparation(CatalogueDesignRecord Design,JsonElement Snapshot,CatalogueDefinition Definition,IReadOnlyList<ProductRecord> Rows,IReadOnlyDictionary<string,ProductDocument> Products,IReadOnlyList<string> References,string Fingerprint);
@@ -44,12 +44,12 @@ public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogue
     {
         var p=await ReadAsync(id,expected,ct);if(p.Fingerprint!=fingerprint)throw CatalogueException.Conflict("Product information changed while rendering. Review and render again.");
         CatalogueDesignValidation.Require(files.Values.Sum(v=>(long)v.Length)<=MaximumTotalBytes,"Catalogue artifacts exceed 256 MiB.");
-        var expectedFiles=new HashSet<string>(StringComparer.Ordinal);var assets=new List<CatalogueReleaseAssetRecord>();var links=new Dictionary<string,string>(StringComparer.Ordinal);var pages=new List<CatalogueReleasePage>();
+        var expectedFiles=new HashSet<string>(StringComparer.Ordinal);var stored=new List<(string Name,string Sha256,string Type,byte[] Bytes)>();var links=new Dictionary<string,string>(StringComparer.Ordinal);var pages=new List<CatalogueReleasePage>();
         void Add(string name,string type,int max,double? ratio=null,IReadOnlyList<CataloguePdfPageSize>? pdfPages=null)
         {
             expectedFiles.Add(name);CatalogueDesignValidation.Require(files.TryGetValue(name,out var bytes)&&bytes.Length>0&&bytes.Length<=max,$"Missing or oversized catalogue artifact: {name}.");
             if(type=="application/pdf")artifacts.ValidatePdf(bytes!,pdfPages!);else artifacts.ValidatePng(bytes!,ratio!.Value);
-            var hash=Convert.ToHexStringLower(SHA256.HashData(bytes!));assets.Add(new(){Sha256=hash,ContentType=type,Bytes=bytes!});links[name]=hash;
+            var hash=Convert.ToHexStringLower(SHA256.HashData(bytes!));stored.Add((name,hash,type,bytes!));links[name]=hash;
         }
         foreach(var page in PdfPages(p))
         {
@@ -66,7 +66,10 @@ public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogue
         var publicProducts=productIds.Select(productId=>{var row=p.Rows.Single(r=>r.Id==productId);return PublicCatalogueService.ToPublic(p.Products[productId],row.Revision,row.UpdatedAt,p.Design.Locale,garments);}).ToArray();
         JsonElement? web=webPages.Length>0?BuildWeb(p,webPages,publicProducts):null;
         var release=new CataloguePreparedRelease(Guid.NewGuid(),p.Design.Id,p.Design.Revision,p.Definition.Slug,p.Design.Title,p.Definition.Description,p.Design.Locale,clock.UtcNow,web,publicProducts,pages,pdf,links);
-        await designs.PrepareAsync(new(){Id=release.Id,DesignId=id,DesignRevision=expected,Slug=release.Slug,Locale=release.Locale,CreatedAtUtc=release.CreatedAtUtc,Fingerprint=p.Fingerprint,ProductIdsJson=CatalogueJson.Write(p.References),Json=CatalogueJson.Write(release)},assets,ct);return release;
+        // The artifacts reach their store before the release's transaction, which records where they went; a refused
+        // transaction leaves them stored, and preparing again finds them by SHA-256.
+        var storage=await releaseAssets.StoreAsync(stored.Select(a=>new ReleaseArtifact(a.Sha256,a.Type,DownloadName(release,a.Name),a.Bytes)).DistinctBy(a=>a.Sha256).ToArray(),ct);
+        await designs.PrepareAsync(new(){Id=release.Id,DesignId=id,DesignRevision=expected,Slug=release.Slug,Locale=release.Locale,CreatedAtUtc=release.CreatedAtUtc,Fingerprint=p.Fingerprint,ProductIdsJson=CatalogueJson.Write(p.References),Json=CatalogueJson.Write(release)},storage.Rows,storage.Files,ct);return release;
     }
     public async Task<CatalogueReleaseSummary> PublishAsync(Guid designId,Guid releaseId,int expected,CancellationToken ct)
     {
@@ -106,8 +109,10 @@ public sealed class CatalogueReleaseService(IDesignRepository designs,ICatalogue
     public async Task<CataloguePublicAsset> PublicAssetAsync(string slug,string locale,Guid releaseId,string asset,CancellationToken ct)
     {
         var record=await designs.PublishedAsync(slug,locale,releaseId,ct)??throw CatalogueException.NotFound("Published catalogue");var release=CatalogueJson.Read<CataloguePreparedRelease>(record.Json);
-        if(!release.Assets.TryGetValue(asset,out var hash))throw CatalogueException.NotFound("Catalogue artifact");var stored=await designs.AssetAsync(hash,ct)??throw CatalogueException.NotFound("Catalogue artifact");
-        return new(DownloadName(release,asset),stored.Sha256,stored.ContentType,stored.Bytes);
+        if(!release.Assets.TryGetValue(asset,out var hash))throw CatalogueException.NotFound("Catalogue artifact");var name=DownloadName(release,asset);
+        if(await releaseAssets.LinkAsync(hash,ct) is {} link)return new(name,hash,Path.GetExtension(asset)==".pdf"?"application/pdf":"image/png",null,link);
+        var stored=await designs.AssetAsync(hash,ct)??throw CatalogueException.NotFound("Catalogue artifact");
+        return new(name,stored.Sha256,stored.ContentType,stored.Bytes);
     }
     /// <summary>The file name the public reader offers: the whole edition by language, a single page by its number.</summary>
     private static string DownloadName(CataloguePreparedRelease release,string asset)

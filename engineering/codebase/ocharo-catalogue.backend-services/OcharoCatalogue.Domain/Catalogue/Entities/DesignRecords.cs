@@ -44,9 +44,19 @@ public sealed class CataloguePublicationRecord
     public Guid DesignId { get; set; }
     public Guid ReleaseId { get; set; }
 }
+/// <summary>A release artifact whose bytes SQLite holds: every artifact a run without WoW2 Files prepared, and those
+/// prepared before Files until the migration moves them.</summary>
 public sealed class CatalogueReleaseAssetRecord
 {
     public string Sha256 { get; set; } = "";
     public string ContentType { get; set; } = "";
     public byte[] Bytes { get; set; } = [];
+}
+
+/// <summary>A release artifact held in WoW2 Files, by SHA-256: prepared there, or moved there and filled at boot.</summary>
+public sealed class CatalogueReleaseFileRecord
+{
+    public string Sha256 { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public string FileId { get; set; } = "";
 }

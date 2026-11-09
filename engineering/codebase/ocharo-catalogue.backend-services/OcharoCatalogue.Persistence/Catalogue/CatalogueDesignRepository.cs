@@ -32,11 +32,12 @@ public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db):IDesi
     public Task<CatalogueDesignRevisionRecord?> RevisionAsync(Guid id,int revision,CancellationToken ct)=>db.CatalogueDesignRevisions.AsNoTracking().FirstOrDefaultAsync(x=>x.DesignId==id&&x.Revision==revision,ct);
     public async Task<IReadOnlyList<CatalogueReleaseRecord>> ReleasesAsync(Guid id,CancellationToken ct)=>await db.CatalogueReleases.AsNoTracking().Where(x=>x.DesignId==id).OrderByDescending(x=>x.CreatedAtUtc).ToArrayAsync(ct);
     public Task<CatalogueReleaseRecord?> ReleaseAsync(Guid id,CancellationToken ct)=>db.CatalogueReleases.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==id,ct);
-    public async Task PrepareAsync(CatalogueReleaseRecord release,IReadOnlyList<CatalogueReleaseAssetRecord> assets,CancellationToken ct)
+    public async Task PrepareAsync(CatalogueReleaseRecord release,IReadOnlyList<CatalogueReleaseAssetRecord> assets,IReadOnlyList<CatalogueReleaseFileRecord> files,CancellationToken ct)
     {
         await using var tx=await db.Database.BeginTransactionAsync(ct);Check(await db.CatalogueDesigns.AsNoTracking().FirstOrDefaultAsync(x=>x.Id==release.DesignId,ct),release.DesignRevision);
         await CheckFingerprint(release,ct);
         foreach(var asset in assets.DistinctBy(a=>a.Sha256))if(!await db.CatalogueReleaseAssets.AnyAsync(x=>x.Sha256==asset.Sha256,ct))db.CatalogueReleaseAssets.Add(asset);
+        foreach(var file in files.DistinctBy(f=>f.Sha256))if(!await db.CatalogueReleaseFiles.AnyAsync(x=>x.Sha256==file.Sha256,ct))db.CatalogueReleaseFiles.Add(file);
         db.CatalogueReleases.Add(release);await db.SaveChangesAsync(ct);await tx.CommitAsync(ct);db.ChangeTracker.Clear();
     }
     public async Task<CatalogueReleaseRecord> PublishAsync(Guid designId,Guid releaseId,int expectedRevision,DateTimeOffset now,CancellationToken ct)
@@ -75,6 +76,14 @@ public sealed class CatalogueDesignRepository(OcharoCatalogueDbContext db):IDesi
             .ToArrayAsync(ct);
     }
     public Task<CatalogueReleaseAssetRecord?> AssetAsync(string hash,CancellationToken ct)=>db.CatalogueReleaseAssets.AsNoTracking().FirstOrDefaultAsync(x=>x.Sha256==hash,ct);
+    public Task<CatalogueReleaseFileRecord?> ReleaseFileAsync(string hash,CancellationToken ct)=>db.CatalogueReleaseFiles.AsNoTracking().FirstOrDefaultAsync(x=>x.Sha256==hash,ct);
+    public async Task<IReadOnlyDictionary<string,string>> AssetsWithoutFileAsync(CancellationToken ct)=>
+        await db.CatalogueReleaseAssets.AsNoTracking().Where(a=>!db.CatalogueReleaseFiles.Any(f=>f.Sha256==a.Sha256)).Select(a=>new {a.Sha256,a.ContentType}).ToDictionaryAsync(a=>a.Sha256,a=>a.ContentType,StringComparer.Ordinal,ct);
+    public async Task SaveReleaseFileAsync(CatalogueReleaseFileRecord file,CancellationToken ct)
+    {
+        if(await db.CatalogueReleaseFiles.AnyAsync(x=>x.Sha256==file.Sha256,ct))return;
+        db.CatalogueReleaseFiles.Add(file);await db.SaveChangesAsync(ct);db.ChangeTracker.Clear();
+    }
     private static void Check(CatalogueDesignRecord? current,int revision){if(current is null)throw CatalogueException.NotFound("Catalogue design");if(current.Archived)throw CatalogueException.Conflict("This catalogue is archived.");if(revision<1||revision==int.MaxValue||current.Revision!=revision)throw CatalogueException.Conflict("The catalogue changed. Reload before saving.");}
     private async Task CheckFingerprint(CatalogueReleaseRecord release,CancellationToken ct)
     {

@@ -404,8 +404,9 @@ services:
         Identity:Client:SignalUrl: { from: Identity:Server:Clients:2:SignalUrl }
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         Catalogue:OrganizationId: { required: true }         # Ocharo's organization id in that environment's Identity
-        # Product images live in WoW2 Files like Brand's media, typed as the same Uri (Identity:Server:Resources:2);
-        # released PDFs and page PNGs stay in SQLite for now (planning/files-adoption.md #24).
+        # Product images and released PDFs and page PNGs live in WoW2 Files like Brand's media, typed as the same Uri
+        # (Identity:Server:Resources:2); those stored before Files read from this volume until the migration
+        # (planning/files-adoption.md #24, #26).
         Files:BaseUrl: { type: url, required: true }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }

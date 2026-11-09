@@ -14,7 +14,8 @@ public static class CatalogueDesignSchema
             "CREATE TABLE IF NOT EXISTS catalogue_releases (Id TEXT NOT NULL PRIMARY KEY, DesignId TEXT NOT NULL, DesignRevision INTEGER NOT NULL, Slug TEXT NOT NULL, Locale TEXT NOT NULL, CreatedAtUtc INTEGER NOT NULL, PublishedAtUtc INTEGER NULL, WithdrawnAtUtc INTEGER NULL, Fingerprint TEXT NOT NULL, ProductIdsJson TEXT NOT NULL, Json TEXT NOT NULL)",
             "CREATE INDEX IF NOT EXISTS IX_catalogue_releases_DesignId_CreatedAtUtc ON catalogue_releases(DesignId,CreatedAtUtc)",
             "CREATE TABLE IF NOT EXISTS catalogue_publications (Key TEXT NOT NULL PRIMARY KEY, DesignId TEXT NOT NULL, ReleaseId TEXT NOT NULL)",
-            "CREATE TABLE IF NOT EXISTS catalogue_release_assets (Sha256 TEXT NOT NULL PRIMARY KEY, ContentType TEXT NOT NULL, Bytes BLOB NOT NULL)"
+            "CREATE TABLE IF NOT EXISTS catalogue_release_assets (Sha256 TEXT NOT NULL PRIMARY KEY, ContentType TEXT NOT NULL, Bytes BLOB NOT NULL)",
+            "CREATE TABLE IF NOT EXISTS catalogue_release_files (Sha256 TEXT NOT NULL PRIMARY KEY, ContentType TEXT NOT NULL, FileId TEXT NOT NULL)"
         ];
         await using var tx=await db.Database.BeginTransactionAsync(ct);
         foreach(var sql in statements)await db.Database.ExecuteSqlRawAsync(sql,ct);

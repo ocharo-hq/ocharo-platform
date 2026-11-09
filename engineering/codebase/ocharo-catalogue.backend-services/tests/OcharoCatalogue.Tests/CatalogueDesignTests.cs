@@ -2,6 +2,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using SkiaSharp;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OcharoCatalogue.Application.Catalogue;
 using OcharoCatalogue.Application.Catalogue.Models;
@@ -11,6 +13,9 @@ using OcharoCatalogue.Domain.Catalogue.Entities;
 using OcharoCatalogue.Domain.Catalogue.Models;
 using OcharoCatalogue.Persistence;
 using OcharoCatalogue.Persistence.Catalogue;
+using OcharoCatalogue.Api.Catalogue.Controllers;
+using WoW.Two.Sdk.Beta.Be.Files.References;
+using WoW.Two.Sdk.Beta.Be.Files.Urls;
 namespace OcharoCatalogue.Tests;
 
 public sealed class CatalogueDesignTests
@@ -193,5 +198,29 @@ public sealed class CatalogueDesignTests
         n["catalogueSettings"]=JsonSerializer.SerializeToNode(new {mediaGroup="model",priceDisplay=new {show=true,showCurrency=false,showQuantity=true,showRetail=false,showWholesale=true},copyByLocale=new Dictionary<string,object>{{"en",CatalogueDesignValidation.CopyFields.ToDictionary(key=>key,key=>key=="header"?"Spring atelier":key)}}},CatalogueJson.Options);
         var d=await h.Get<CatalogueDesignService>().SaveAsync(null,new("Spring",Json(n)),Ct);var rs=h.Get<CatalogueReleaseService>();var r=await rs.PrepareAsync(d.Id,1,await Fingerprint(rs,d.Id),new Dictionary<string,byte[]>(),Ct);
         Assert.Equal("Spring atelier",r.Web!.Value.GetProperty("copy").GetProperty("header").GetString());Assert.False(r.Web.Value.GetProperty("priceDisplay").GetProperty("showRetail").GetBoolean());Assert.Single(r.Web.Value.GetProperty("productMedia").GetProperty("nimcha-v01").EnumerateArray());
+    }
+    [Fact] public async Task Release_artifacts_on_files_land_there_once_and_the_public_route_redirects_while_published()
+    {
+        var files=new TestFiles();await using var h=await CatalogueHarness.CreateAsync(files:files);await Seed(h);
+        var n=JsonNode.Parse(Snapshot(web:true,pdf:true,ids:["nimcha-v01"]).GetRawText())!;
+        n["pages"]=JsonSerializer.SerializeToNode(new[]{Page("cover",[]),Page("good",["nimcha-v01"])},CatalogueJson.Options);
+        var ds=h.Get<CatalogueDesignService>();var rs=h.Get<CatalogueReleaseService>();var designs=h.Get<IDesignRepository>();var d=await ds.SaveAsync(null,new("PDF",Json(n)),Ct);var fingerprint=await Fingerprint(rs,d.Id);
+        var upload=new Dictionary<string,byte[]>{["catalogue.pdf"]=Pdf(2),["page-cover.pdf"]=Pdf(1),["page-good.pdf"]=Pdf(1),["page-cover.png"]=CatalogueHarness.Png(83,420,594),["page-good.png"]=CatalogueHarness.Png(84,420,594)};
+        var imagesBefore=files.Uploads;var prepared=await rs.PrepareAsync(d.Id,1,fingerprint,upload,Ct);var uploaded=files.Uploads-imagesBefore;
+        await rs.PrepareAsync(d.Id,1,fingerprint,upload,Ct);Assert.Equal(imagesBefore+uploaded,files.Uploads);
+        Assert.Equal(prepared.Assets.Values.Distinct().Count(),uploaded);
+        await rs.PublishAsync(d.Id,prepared.Id,1,Ct);
+        var pdfSha=prepared.Assets["catalogue.pdf"];var record=await designs.ReleaseFileAsync(pdfSha,Ct);
+        Assert.NotNull(record);Assert.Null(await designs.AssetAsync(pdfSha,Ct));Assert.Empty(await designs.AssetsWithoutFileAsync(Ct));
+        var model=files.Model(record!.FileId);Assert.Equal("ocharo-spring-en.pdf",model.Name);Assert.Equal("catalogue",model.AppId);Assert.Equal("application/pdf",model.ContentType);
+        Assert.Contains(new FileReference("catalogue.release",pdfSha),files.ReferencesOf(model.Id));
+        var served=await rs.PublicAssetAsync("spring","en",prepared.Id,"catalogue.pdf",Ct);
+        Assert.Null(served.Bytes);Assert.Equal(TestFiles.Link(model.Id,null,FileDisposition.Attachment),served.Location);Assert.Equal("ocharo-spring-en.pdf",served.FileName);
+        var controller=new PublishedDesignsController(rs){ControllerContext=new(){HttpContext=new DefaultHttpContext()}};
+        var redirect=Assert.IsType<RedirectResult>(await controller.Asset("spring","page-good.png","en",prepared.Id,Ct));
+        var png=files.Model((await designs.ReleaseFileAsync(prepared.Assets["page-good.png"],Ct))!.FileId);
+        Assert.Equal(TestFiles.Link(png.Id,null,FileDisposition.Attachment).AbsoluteUri,redirect.Url);Assert.Equal("ocharo-spring-2.png",png.Name);
+        Assert.Equal("no-store",controller.Response.Headers.CacheControl.ToString());
+        await rs.WithdrawAsync(d.Id,1,Ct);await Assert.ThrowsAsync<CatalogueException>(()=>rs.PublicAssetAsync("spring","en",prepared.Id,"catalogue.pdf",Ct));
     }
 }

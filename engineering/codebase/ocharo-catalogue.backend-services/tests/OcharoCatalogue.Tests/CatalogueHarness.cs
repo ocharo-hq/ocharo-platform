@@ -9,14 +9,14 @@ using SkiaSharp;
 
 namespace OcharoCatalogue.Tests;
 
-/// <summary>A real SQLite file + real blob folder per test, wired exactly like the host.</summary>
+/// <summary>A real SQLite file + real blob folder per test, wired exactly like the host; optionally on an in-memory WoW2 Files.</summary>
 public sealed class CatalogueHarness : IAsyncDisposable
 {
     public string Root { get; } = Path.Combine(Path.GetTempPath(), "ocharo-catalogue-tests", Guid.NewGuid().ToString("N"));
     public ServiceProvider Services { get; }
     public FixedClock Clock { get; } = new();
 
-    private CatalogueHarness(string? sourceRoot)
+    private CatalogueHarness(string? sourceRoot, TestFiles? files)
     {
         Directory.CreateDirectory(Root);
         var settings = new Dictionary<string, string?>
@@ -24,6 +24,7 @@ public sealed class CatalogueHarness : IAsyncDisposable
             ["ConnectionStrings:OcharoCatalogue"] = $"Data Source={Path.Combine(Root, "catalogue.db")};Pooling=False",
             ["Catalogue:DataRoot"] = Path.Combine(Root, "data"),
             ["Catalogue:SourceRoot"] = sourceRoot,
+            ["Files:BaseUrl"] = files is null ? null : TestFiles.Url,
         };
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
@@ -35,12 +36,14 @@ public sealed class CatalogueHarness : IAsyncDisposable
         builder.Configuration.AddInMemoryCollection(settings);
         builder.Configure();
         builder.Services.AddSingleton<IClock>(Clock);
+        files?.Register(builder.Services);
         Services = builder.Services.BuildServiceProvider();
     }
 
-    public static async Task<CatalogueHarness> CreateAsync(string? sourceRoot = null)
+    /// <summary>Creates a harness; with <paramref name="files"/>, Catalogue stores in that in-memory WoW2 Files.</summary>
+    public static async Task<CatalogueHarness> CreateAsync(string? sourceRoot = null, TestFiles? files = null)
     {
-        var harness = new CatalogueHarness(sourceRoot);
+        var harness = new CatalogueHarness(sourceRoot, files);
         await harness.Services.InitializeDatabaseAsync();
         return harness;
     }

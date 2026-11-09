@@ -24,6 +24,10 @@ public static class CatalogueFiles
 
     /// <summary>The record type of the reference that keeps a stored file alive; its record id is the SHA-256.</summary>
     public const string MediaReference = "catalogue.media";
+
+    /// <summary>The record type of a release artifact's reference, the same the manifest's <c>catalogue-release-assets</c>
+    /// gives; its record id is the SHA-256.</summary>
+    public const string ReleaseReference = "catalogue.release";
 }
 
 /// <summary>Stores originals in WoW2 Files once per SHA-256, and links to them for <see cref="MediaContent.LinkLifetime"/>;
@@ -118,7 +122,7 @@ public sealed class FilesMediaStore(
     /// <summary>Returns a Files call's value, or refuses the Catalogue request with the status its failure maps to.</summary>
     internal static T Unwrap<T>(Result<T> result) where T : notnull => result.Match(value => value, error => throw Refusal(error));
 
-    private static void Unwrap(Result result) => result.Match(() => true, error => throw Refusal(error));
+    internal static void Unwrap(Result result) => result.Match(() => true, error => throw Refusal(error));
 
     private static CatalogueException Refusal(AppError error) => error.Type switch
     {
@@ -129,15 +133,16 @@ public sealed class FilesMediaStore(
     };
 }
 
-/// <summary>Fills the file id of each file stored before Files from the files the migration moved: every Catalogue file in
-/// Files, matched by SHA-256 (Files t9 #5 step 6). Runs at boot as Catalogue itself; a file the migration has not moved yet
-/// keeps reading from the local blob folder.</summary>
-public sealed class FilesMediaBackfill(ICatalogueRepository repository, IFileStoreBroker files, ILogger<FilesMediaBackfill> logger)
+/// <summary>Fills the file id of each image and release artifact stored before Files from the files the migration moved:
+/// every Catalogue file in Files, matched by SHA-256 (Files t9 #5 step 6). Runs at boot as Catalogue itself; a file the
+/// migration has not moved yet keeps reading from the local blob folder or SQLite.</summary>
+public sealed class FilesMediaBackfill(ICatalogueRepository repository, IDesignRepository designs, IFileStoreBroker files, ILogger<FilesMediaBackfill> logger)
 {
     public async Task RunAsync(CancellationToken ct)
     {
         var waiting = (await repository.GetMediaWithoutFileAsync(ct)).Select(record => record.Sha256).ToHashSet(StringComparer.Ordinal);
-        if (waiting.Count == 0) return;
+        var artifacts = new Dictionary<string, string>(await designs.AssetsWithoutFileAsync(ct), StringComparer.Ordinal);
+        if (waiting.Count == 0 && artifacts.Count == 0) return;
 
         var filled = 0;
         string? cursor = null;
@@ -150,16 +155,24 @@ public sealed class FilesMediaBackfill(ICatalogueRepository repository, IFileSto
                 return;
             }
             var (items, next) = page is Result<FilePage>.Success success ? (success.Value.Items, success.Value.NextCursor) : ([], null);
-            foreach (var file in items.Where(file => waiting.Remove(file.Sha256)))
+            foreach (var file in items)
             {
-                await repository.SetMediaFileAsync(file.Sha256, file.Id.ToString(), ct);
-                filled++;
+                if (waiting.Remove(file.Sha256))
+                {
+                    await repository.SetMediaFileAsync(file.Sha256, file.Id.ToString(), ct);
+                    filled++;
+                }
+                if (artifacts.Remove(file.Sha256, out var contentType))
+                {
+                    await designs.SaveReleaseFileAsync(new CatalogueReleaseFileRecord { Sha256 = file.Sha256, ContentType = contentType, FileId = file.Id.ToString() }, ct);
+                    filled++;
+                }
             }
             cursor = next;
         }
-        while (cursor is not null && waiting.Count > 0);
+        while (cursor is not null && (waiting.Count > 0 || artifacts.Count > 0));
 
-        if (filled > 0 || waiting.Count > 0)
-            logger.LogInformation("Catalogue filled {Filled} file ids from WoW2 Files; {Waiting} still read from the local blob folder.", filled, waiting.Count);
+        if (filled > 0 || waiting.Count > 0 || artifacts.Count > 0)
+            logger.LogInformation("Catalogue filled {Filled} file ids from WoW2 Files; {Waiting} images still read from the local blob folder, {Artifacts} release artifacts from SQLite.", filled, waiting.Count, artifacts.Count);
     }
 }

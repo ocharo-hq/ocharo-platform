@@ -13,5 +13,7 @@ public sealed record CatalogueReleasePage(string Id, string Title, double WidthM
 public sealed record CataloguePreparedRelease(Guid Id, Guid DesignId, int DesignRevision, string Slug, string Title, string Description, string Locale,
     DateTimeOffset CreatedAtUtc, JsonElement? Web, IReadOnlyList<PublicProduct> Products, IReadOnlyList<CatalogueReleasePage> Pages,
     string? PdfAsset, IReadOnlyDictionary<string,string> Assets);
-public sealed record CataloguePublicAsset(string FileName, string Sha256, string ContentType, byte[] Bytes);
+/// <summary>A published artifact to serve: a short-lived WoW2 Files link to redirect to (<paramref name="Location"/>), or
+/// the bytes SQLite holds (<paramref name="Bytes"/>).</summary>
+public sealed record CataloguePublicAsset(string FileName, string Sha256, string ContentType, byte[]? Bytes, Uri? Location = null);
 public sealed record CatalogueReleaseSummary(Guid Id, Guid DesignId, int DesignRevision, string Slug, string Locale, DateTimeOffset CreatedAtUtc, DateTimeOffset? PublishedAtUtc, DateTimeOffset? WithdrawnAtUtc);

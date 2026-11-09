@@ -19,7 +19,8 @@ sources:
     volume: catalogue-data
     path: blobs/media
     reference: "catalogue.media:{sha256}"
-  # Catalogue's release PDFs and page PNGs sit in SQLite, a kind t9 lists after P1; they wait for it (files-adoption #20).
+  # Catalogue's release PDFs and page PNGs prepared before Files sit in SQLite; Catalogue stores new ones in Files and
+  # reads these from SQLite until its boot fills their ids from this source's moves (files-adoption #26).
   - id: catalogue-release-assets
     wave: 1
     kind: sqlite-column

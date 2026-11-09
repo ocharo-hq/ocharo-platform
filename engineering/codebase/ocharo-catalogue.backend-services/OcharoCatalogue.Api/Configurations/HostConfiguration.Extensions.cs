@@ -117,13 +117,14 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Holds the root URL of the WoW2 Files instance Catalogue stores its product images in; unset, they stay in
-    /// the local blob folder.</summary>
+    /// <summary>Holds the root URL of the WoW2 Files instance Catalogue stores its product images and release artifacts in;
+    /// unset, they stay in the local blob folder and SQLite.</summary>
     private const string FilesBaseUrlKey = "Files:BaseUrl";
 
-    /// <summary>Registers the media store: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is set, by tokens of
-    /// Catalogue's own Identity client (a person's exchanged within their session, Catalogue's own otherwise), else the
-    /// local blob folder. Both read at resolve time, so a test host's settings decide (planning/files-adoption.md #24).</summary>
+    /// <summary>Registers the media and release-artifact stores: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is
+    /// set, by tokens of Catalogue's own Identity client (a person's exchanged within their session, Catalogue's own
+    /// otherwise), else the local blob folder and SQLite. Both read at resolve time, so a test host's settings decide
+    /// (planning/files-adoption.md #24, #26).</summary>
     private static WebApplicationBuilder AddCatalogueFiles(this WebApplicationBuilder builder)
     {
         builder.Services.AddFilesClient(_ => { });
@@ -147,10 +148,15 @@ public static partial class HostConfiguration
         builder.Services.AddScoped<IMediaStore>(provider => UsesFiles(provider)
             ? provider.GetRequiredService<FilesMediaStore>()
             : provider.GetRequiredService<MediaStore>());
+        builder.Services.AddScoped<LocalReleaseAssetStore>();
+        builder.Services.AddScoped<FilesReleaseAssetStore>();
+        builder.Services.AddScoped<IReleaseAssetStore>(provider => UsesFiles(provider)
+            ? provider.GetRequiredService<FilesReleaseAssetStore>()
+            : provider.GetRequiredService<LocalReleaseAssetStore>());
         return builder;
     }
 
-    /// <summary>Tells whether this run stores product images in WoW2 Files.</summary>
+    /// <summary>Tells whether this run stores product images and release artifacts in WoW2 Files.</summary>
     private static bool UsesFiles(IServiceProvider provider) =>
         provider.GetRequiredService<IConfiguration>()[FilesBaseUrlKey] is { Length: > 0 };
 

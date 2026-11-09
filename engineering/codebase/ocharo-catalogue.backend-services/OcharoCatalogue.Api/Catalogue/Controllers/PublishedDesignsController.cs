@@ -4,7 +4,8 @@ using OcharoCatalogue.Application.Catalogue.Services;
 
 namespace OcharoCatalogue.Api.Catalogue.Controllers;
 
-/// <summary>Read-only, explicitly published local catalogue releases and frozen PDF artifacts.</summary>
+/// <summary>Read-only, explicitly published local catalogue releases and frozen PDF artifacts; an artifact held in WoW2
+/// Files answers a redirect to a short-lived Files link.</summary>
 [ApiController]
 [AllowAnonymous]
 [Route("api/public/catalogue/editions")]
@@ -44,10 +45,13 @@ public sealed class PublishedDesignsController(CatalogueReleaseService releases)
             release,
             asset,
             ct);
+        // Never cached, a redirect included: each request asks whether the release is still published.
         Response.Headers.CacheControl = "no-store";
+        if (result.Location is { } location)
+            return Redirect(location.AbsoluteUri);
         Response.Headers.ETag = $"\"{result.Sha256}\"";
         return File(
-            result.Bytes,
+            result.Bytes!,
             result.ContentType,
             result.FileName);
     }

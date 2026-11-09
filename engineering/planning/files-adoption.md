@@ -20,8 +20,9 @@ code limits and local dev data; nothing read prod.
 - Wave 1, Brand built 2026-11-09 (#23): it stores in Files and redirects to Files links, with 49 tests passing on an
   in-memory broker set; platform `v0.1.29` carries it. Not yet run against a real Files: dev holds no logo to move, so
   its read-back is a live upload (#25).
-- Wave 1, Catalogue's product images built 2026-11-09 (#24), the same way, 91 tests passing; its released PDFs and page
-  PNGs stay in SQLite until a second Catalogue step.
+- Wave 1, Catalogue's product images built 2026-11-09 (#24), the same way, 91 tests passing.
+- Wave 1 read back on dev 2026-11-09 by live uploads, since dev held no media to move (#25).
+- Wave 1, Catalogue's released PDFs and page PNGs built 2026-11-09 (#26), 93 tests passing; it closes wave 1's code.
 
 ## Instance
 
@@ -207,8 +208,7 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
     so a redirect is asked again each time and the route keeps deciding visibility.
   - the release check (`CatalogueReleaseService.VerifyMediaAsync`) asks the store: a Files image must be there, `Ready`
     and of the same SHA-256, since Files hashed it on upload; a local one is hashed as before.
-  - released PDFs and page PNGs keep `catalogue_release_assets` in SQLite: a second step moves them as app `catalogue`
-    with reference `catalogue.release:{sha}`, behind the public asset route; the manifest already lists them (#20).
+  - released PDFs and page PNGs stayed in `catalogue_release_assets` in SQLite; #26 moves them.
   - not run: a real Files round trip, Catalogue on dev; dev holds no image to move (#25).
 - #25 dev holds no media stored before Files (2026-11-09, the wheelhouse lane's `brand-media` plan):
   - the seeds read only a machine's gitignored `appsettings.Local.json` (`Brand:SeedLogoRoot`, `Catalogue:SourceRoot`),
@@ -225,3 +225,26 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
       Files host, since `social` falls back to `master`; the link serves the uploaded file's SHA-256.
     - Catalogue: add a product image. A member's `GET {catalogue}/api/catalogue/media/{sha}` answers `302`; the link
       serves the same SHA-256.
+  - passed on dev 2026-11-09 (orchestrator; Files track doc `81c0b1d`):
+    - Brand: the owner uploaded a master logo and published release 1. Anonymous `logo/social` and `logo/master` answer
+      `302` to the dev Files host, and the link serves the uploaded SHA-256.
+    - Catalogue: test product `nimcha-v01` with one image (144803 B, 1600×1200). A member's `media/{sha}` answers `302`
+      to Files, and the link serves the uploaded bytes.
+    - fixed outside this repo on the way: the trailing `/` of Files' trusted issuer (wheelhouse), and Files `v0.1.15`'s
+      dev settings, which signed links for localhost.
+- #26 Catalogue's released PDFs and page PNGs, wave 1 (2026-11-09):
+  - preparing a release stores each artifact in Files once per SHA-256, as app `catalogue` with idempotency key and
+    reference `catalogue.release:{sha}`, named as a download saves it (`ocharo-{slug}-{locale}.pdf`,
+    `ocharo-{slug}-{page}.png`); the first release with those bytes names the file.
+  - SQLite keeps only the file id, in a new `catalogue_release_files` table; `catalogue_release_assets` keeps the bytes of
+    artifacts prepared before Files, and of every artifact in a run with `Files:BaseUrl` unset.
+  - the uploads run before the release's transaction, as the member preparing it. A refused transaction leaves them in
+    Files, still referenced, and preparing again reuses them.
+  - the public asset route still decides each time, with `no-store`: while the release is published, it redirects to a
+    Files link valid 15 minutes, saved under the file's name; Files answers it with `Cross-Origin-Resource-Policy:
+    cross-origin`, so the reader's `<img>` pages load under Catalogue's `require-corp`.
+  - an artifact prepared before Files reads its SQLite bytes until boot fills its id from the files the migration moved,
+    in the same pass as product images; the `catalogue-release-assets` manifest source reads only those rows.
+  - not run: a release prepared on dev. Read-back: a member prepares and publishes a PDF catalogue, then an anonymous
+    `GET {catalogue}/api/public/catalogue/editions/{slug}/assets/catalogue.pdf?locale=en&release={id}` answers `302` to
+    Files, and the link serves the uploaded SHA-256.
