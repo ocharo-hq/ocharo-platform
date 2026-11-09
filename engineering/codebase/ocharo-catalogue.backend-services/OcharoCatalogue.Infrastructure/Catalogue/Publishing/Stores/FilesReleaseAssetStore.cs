@@ -15,7 +15,7 @@ namespace OcharoCatalogue.Infrastructure.Catalogue.Publishing.Stores;
 /// <summary>Stores release artifacts in WoW2 Files once per SHA-256, as app <c>catalogue</c> with reference
 /// <c>catalogue.release:{sha}</c>, and links to them saved under their name; SQLite keeps only their file ids. An
 /// artifact
-/// prepared before Files reads its SQLite bytes until the migration fills its id (planning/files-adoption.md
+/// prepared before Files reads its SQLite bytes until the migration fills its id (research/files-adoption.md
 /// #26).</summary>
 /// <remarks>Preparing is a member's request, so the upload goes with their exchanged token; the anonymous public route
 /// links with Catalogue's own.</remarks>

@@ -20,7 +20,7 @@ namespace BrandWorkspace.Persistence.Preparation.Repositories;
 
 /// <summary>
 /// Accesses organization-qualified brands, images, drafts and exports, with serialized draft transitions. With WoW2
-/// Files, images and export ZIPs keep their bytes there (planning/files-adoption.md #13): a row stores the file id, and
+/// Files, images and export ZIPs keep their bytes there (research/files-adoption.md #13): a row stores the file id, and
 /// a row stored before Files reads its bytes until the boot backfill records its moved file in <c>media_files</c> or
 /// <c>export_files</c>, since both tables reject updates.
 /// </summary>

@@ -16,7 +16,7 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Infrastructure.Files.Services;
 
-/// <summary>Desk's media in WoW2 Files, through the be sdk's Files brokers (planning/files-adoption.md #13).</summary>
+/// <summary>Desk's media in WoW2 Files, through the be sdk's Files brokers (research/files-adoption.md #13).</summary>
 public sealed class FilesDeskStore(
     IFileUploadsBroker uploads,
     IFileReferencesBroker references,

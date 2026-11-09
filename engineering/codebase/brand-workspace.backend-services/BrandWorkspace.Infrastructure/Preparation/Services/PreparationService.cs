@@ -151,7 +151,7 @@ public sealed class PreparationService(
 
     /// <summary>
     /// Opens an export for its download route: a link to the private Files file, saved under its name, or the ZIP bytes
-    /// of an export stored before Files that the backfill has not reached (planning/files-adoption.md #9, #13).
+    /// of an export stored before Files that the backfill has not reached (research/files-adoption.md #9, #13).
     /// </summary>
     public async Task<Result<StoredContent>> OpenExportAsync(
         OrganizationAccess access,

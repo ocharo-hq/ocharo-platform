@@ -14,7 +14,7 @@ namespace BrandWorkspace.Infrastructure.Sourcing.Services;
 /// <summary>
 /// Enforces membership roles and validation for suppliers, contacts and shared media. With WoW2 Files, an original
 /// lands there once per organization and SHA-256 before its row is stored, and its 480 px variant serves as the
-/// thumbnail (planning/files-adoption.md #10, #13).
+/// thumbnail (research/files-adoption.md #10, #13).
 /// </summary>
 public sealed class SourcingService(
     ISourcingRepository repository,

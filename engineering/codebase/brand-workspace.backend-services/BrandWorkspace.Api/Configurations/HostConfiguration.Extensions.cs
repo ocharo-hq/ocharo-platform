@@ -270,7 +270,7 @@ public static partial class HostConfiguration
     /// Registers Desk's file store: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is set, by tokens of Desk's
     /// own Identity client <c>desk</c> (a person's exchanged within their BFF session, Desk's own client credentials
     /// for the import CLI, the boot backfill and anonymous routes), else none. Both read at resolve time, so a test
-    /// host's settings decide (planning/files-adoption.md #13, #15).
+    /// host's settings decide (research/files-adoption.md #13, #15).
     /// </summary>
     /// <remarks>
     /// The BFF registered by <see cref="AddAccess"/> supplies the person's token: its subject-token source reads the

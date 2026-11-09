@@ -5,7 +5,7 @@ namespace OcharoCatalogue.Application.Catalogue.Publishing.Services;
 
 /// <summary>Defines where a release's frozen PDFs and page PNGs live: SQLite rows in a run without WoW2 Files, WoW2
 /// Files
-/// otherwise, behind the public asset route (planning/files-adoption.md #26).</summary>
+/// otherwise, behind the public asset route (research/files-adoption.md #26).</summary>
 public interface IReleaseAssetStore
 {
     /// <summary>Stores a prepared release's artifacts once per SHA-256; the result names what SQLite keeps and what

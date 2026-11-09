@@ -13,7 +13,7 @@ namespace OcharoBrand.Infrastructure.Brand;
 
 /// <summary>Stores originals once per SHA-256 and a WebP preview (alpha preserved) for fast grids, in the local blob
 /// folder. It serves a run with no WoW2 Files (<c>Files:BaseUrl</c> unset), and <see cref="FilesMediaStore"/> reads
-/// through it the files stored before Files until the migration fills their ids (planning/files-adoption.md #23).</summary>
+/// through it the files stored before Files until the migration fills their ids (research/files-adoption.md #23).</summary>
 public sealed class MediaStore(IBrandRepository repository, IBlobRepository blobs, IOptions<BrandOptions> options, TimeProvider time) : IMediaStore
 {
     public async Task<Result<MediaBlobRecord>> StoreAsync(byte[] bytes, CancellationToken ct)

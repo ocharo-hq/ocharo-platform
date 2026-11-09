@@ -87,7 +87,7 @@ services:
         # Media, exports, edition files and sourcing files live in WoW2 Files, tenant `ocharo` on the shared files host, reached
         # with client 0: an operator's exchanged token within their session, Desk's own for the sourcing import, the boot
         # backfill and public routes; linked to the Uri this descriptor types for its Files resource. Rows stored before
-        # Files keep their bytes until the migration and boot fill their ids (planning/files-adoption.md #13, #32).
+        # Files keep their bytes until the migration and boot fill their ids (research/files-adoption.md #13, #32).
         Files:BaseUrl: { from: Identity:Server:Resources:2:Uri }
         # Background removal: the private image worker, a sibling on the platform network. Its address is an owner key
         # typed per environment as `http://ocharo-<environment>-image-worker:8080`, its platform name: the bare service
@@ -298,7 +298,7 @@ services:
         Identity:Server:Clients:6:Resources:0: { default: editorial }
         Identity:Server:Clients:6:Scopes:0: { default: editorial.export }
         # Client 7, assets-release: ocharo-assets' release workflow uploads the garment release to Files as public files
-        # (planning/files-adoption.md #14, #33). Its secret is typed, not generated, since the same value is that
+        # (research/files-adoption.md #14, #33). Its secret is typed, not generated, since the same value is that
         # repository's GitHub Actions secret OCHARO_ASSETS_CLIENT_SECRET; it signs in only as itself.
         Identity:Server:Clients:7:ClientId: { default: assets-release }
         Identity:Server:Clients:7:DisplayName: { default: Ocharo assets release }
@@ -306,7 +306,7 @@ services:
         Identity:Server:Clients:7:Grants:0: { default: client_credentials }
         Identity:Server:Clients:7:Resources:0: { default: files }
         Identity:Server:Clients:7:Scopes:0: { default: files.write }
-        # Files (planning/files-adoption.md #15–#18): each app reaches `files` for a person by token exchange, and as
+        # Files (research/files-adoption.md #15–#18): each app reaches `files` for a person by token exchange, and as
         # itself by client credentials for its seeds, jobs and public-media redirects; Studio only for a person. A Grants
         # list replaces "empty means the code flow alone", so authorization_code comes first. Clients 0–5 reuse their
         # secrets; public-build reads no file, since published media is public.
@@ -436,7 +436,7 @@ services:
         Catalogue:OrganizationId: { required: true }         # Ocharo's organization id in that environment's Identity
         # Product images and released PDFs and page PNGs live in WoW2 Files like Brand's media, typed as the same Uri
         # (Identity:Server:Resources:2); those stored before Files read from this volume until the migration
-        # (planning/files-adoption.md #24, #26).
+        # (research/files-adoption.md #24, #26).
         Files:BaseUrl: { type: url, required: true }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
         OcharoApps:Desk: { type: url }

@@ -143,7 +143,7 @@ public static partial class HostConfiguration
     /// cref="FilesBaseUrlKey"/> is
     /// set, by tokens of Catalogue's own Identity client (a person's exchanged within their session, Catalogue's own
     /// otherwise), else the local blob folder and SQLite. Both read at resolve time, so a test host's settings decide
-    /// (planning/files-adoption.md #24, #26).</summary>
+    /// (research/files-adoption.md #24, #26).</summary>
     private static WebApplicationBuilder AddCatalogueFiles(this WebApplicationBuilder builder)
     {
         builder.Services.AddFilesClient(_ => { });

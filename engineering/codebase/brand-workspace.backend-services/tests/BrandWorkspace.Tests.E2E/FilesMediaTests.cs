@@ -29,7 +29,7 @@ using Xunit;
 namespace BrandWorkspace.Tests.E2E;
 
 /// <summary>
-/// Desk on WoW2 Files (<c>Files:BaseUrl</c> set, planning/files-adoption.md #9–#15): each of the 4 kinds lands in Files
+/// Desk on WoW2 Files (<c>Files:BaseUrl</c> set, research/files-adoption.md #9–#15): each of the 4 kinds lands in Files
 /// once under its manifest reference, routes redirect to links or keep answering bytes as decided, rows stored before
 /// Files read their PostgreSQL bytes until the boot backfill fills their ids, and the commerce attach references the
 /// preparation file. Files itself is <see cref="TestFiles"/>; the database is real PostgreSQL. Files off is every other

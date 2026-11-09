@@ -13,7 +13,7 @@ namespace BrandWorkspace.Infrastructure.Commerce.Services;
 
 /// <summary>
 /// Puts a brand's media in WoW2 Files before the draft's transaction stores their rows, and serves them back
-/// (planning/files-adoption.md #9, #11, #13). Each file carries <c>desk.commerce-media:{brand_id}/{sha256}</c>; a
+/// (research/files-adoption.md #9, #11, #13). Each file carries <c>desk.commerce-media:{brand_id}/{sha256}</c>; a
 /// refused transaction leaves it in Files, still referenced, and the next attempt reuses it. Without Files every blob
 /// keeps its bytes for PostgreSQL, as before.
 /// </summary>

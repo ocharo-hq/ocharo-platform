@@ -17,7 +17,7 @@ namespace OcharoBrand.Infrastructure.Brand;
 
 /// <summary>Stores originals in WoW2 Files once per SHA-256, and links to them for <see cref="MediaContent.LinkLifetime"/>;
 /// Files makes the WebP previews as variants. A file stored before Files reads from the local blob folder through
-/// <see cref="MediaStore"/> until the migration fills its id (planning/files-adoption.md #23).</summary>
+/// <see cref="MediaStore"/> until the migration fills its id (research/files-adoption.md #23).</summary>
 /// <remarks>A person's request calls Files with their exchanged token, any other call with Brand's own; the Files
 /// client picks by whether the request has a signed-in session.</remarks>
 public sealed class FilesMediaStore(

@@ -3,7 +3,7 @@ namespace BrandWorkspace.Application.Files.Constants;
 /// <summary>
 /// The names Desk's files carry in WoW2 Files: the same app and references the migration manifest
 /// (<c>engineering/deployment/files-migration.yml</c>, wave 3) gives the files it moves, so imports and new uploads
-/// share one policy and the boot backfill finds both (planning/files-adoption.md #13, #20, #21).
+/// share one policy and the boot backfill finds both (research/files-adoption.md #13, #20, #21).
 /// </summary>
 public static class DeskFiles
 {
@@ -33,7 +33,7 @@ public static class DeskFiles
     /// <summary>How long a Files link stays valid.</summary>
     public static readonly TimeSpan LinkLifetime = TimeSpan.FromMinutes(15);
 
-    /// <summary>The width of a sourcing thumbnail, now a Files variant (planning/files-adoption.md #10).</summary>
+    /// <summary>The width of a sourcing thumbnail, now a Files variant (research/files-adoption.md #10).</summary>
     public const int SourcingThumbnailWidth = 480;
 
     /// <summary>The name a file carries in Files: its hash and the extension Files checks against its bytes.</summary>

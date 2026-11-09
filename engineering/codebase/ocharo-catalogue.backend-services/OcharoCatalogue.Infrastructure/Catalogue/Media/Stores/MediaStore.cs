@@ -14,7 +14,7 @@ namespace OcharoCatalogue.Infrastructure.Catalogue.Media.Stores;
 
 /// <summary>Stores originals once per SHA-256 and a WebP preview (alpha preserved) for fast grids, in the local blob
 /// folder. It serves a run with no WoW2 Files (<c>Files:BaseUrl</c> unset), and <see cref="FilesMediaStore"/> reads
-/// through it the files stored before Files until the migration fills their ids (planning/files-adoption.md
+/// through it the files stored before Files until the migration fills their ids (research/files-adoption.md
 /// #24).</summary>
 public sealed class MediaStore(
     ICatalogueRepository repository,

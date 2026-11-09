@@ -78,7 +78,7 @@ public static partial class HostConfiguration
 
     /// <summary>Registers the media store: WoW2 Files over HTTP when <see cref="FilesBaseUrlKey"/> is set, by tokens of
     /// Brand's own Identity client (a person's exchanged within their session, Brand's own otherwise), else the local blob
-    /// folder. Both read at resolve time, so a test host's settings decide (planning/files-adoption.md #23).</summary>
+    /// folder. Both read at resolve time, so a test host's settings decide (research/files-adoption.md #23).</summary>
     private static WebApplicationBuilder AddBrandFiles(this WebApplicationBuilder builder)
     {
         builder.Services.AddFilesClient(_ => { });
