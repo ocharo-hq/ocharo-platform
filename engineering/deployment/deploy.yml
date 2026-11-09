@@ -95,13 +95,15 @@ services:
         # for the environment. Required, because an unset address reads unavailable with no error.
         ImageProcessing:WorkerBaseUrl: { type: url, required: true }
         ImageProcessing:WorkerKey: { from: ImageWorker:Key }
-        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
-        OcharoApps:Desk: { type: url }
-        OcharoApps:Catalogue: { type: url }
+        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out. This
+        # repository's own sites link, so nobody types them; Studio, Marketing and Blog link across repositories once
+        # the pinned pipelines release carries cross-repository `from`, and stay typed until then.
+        OcharoApps:Desk: { from: Sites:desk:Url }
+        OcharoApps:Catalogue: { from: Sites:catalogue:Url }
         OcharoApps:Studio: { type: url }
         OcharoApps:Marketing: { type: url }
         OcharoApps:Editorial: { type: url }
-        OcharoApps:Brand: { type: url }
+        OcharoApps:Brand: { from: Sites:brand:Url }
         OcharoApps:Atlas: { type: url }
         OcharoApps:Wear: { type: url }
         OcharoApps:Blog: { type: url }
@@ -396,13 +398,15 @@ services:
         # Identity:Server:Resources:2; the shared host is no site of this
         # descriptor, so no `from:` reaches it. Files stored before it read from the blobs below until the migration.
         Files:BaseUrl: { type: url, required: true }
-        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
-        OcharoApps:Desk: { type: url }
-        OcharoApps:Catalogue: { type: url }
+        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out. This
+        # repository's own sites link, so nobody types them; Studio, Marketing and Blog link across repositories once
+        # the pinned pipelines release carries cross-repository `from`, and stay typed until then.
+        OcharoApps:Desk: { from: Sites:desk:Url }
+        OcharoApps:Catalogue: { from: Sites:catalogue:Url }
         OcharoApps:Studio: { type: url }
         OcharoApps:Marketing: { type: url }
         OcharoApps:Editorial: { type: url }
-        OcharoApps:Brand: { type: url }
+        OcharoApps:Brand: { from: Sites:brand:Url }
         OcharoApps:Atlas: { type: url }
         OcharoApps:Wear: { type: url }
         OcharoApps:Blog: { type: url }
@@ -438,13 +442,15 @@ services:
         # (Identity:Server:Resources:2); those stored before Files read from this volume until the migration
         # (research/files-adoption.md #24, #26).
         Files:BaseUrl: { type: url, required: true }
-        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out.
-        OcharoApps:Desk: { type: url }
-        OcharoApps:Catalogue: { type: url }
+        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out. This
+        # repository's own sites link, so nobody types them; Studio, Marketing and Blog link across repositories once
+        # the pinned pipelines release carries cross-repository `from`, and stay typed until then.
+        OcharoApps:Desk: { from: Sites:desk:Url }
+        OcharoApps:Catalogue: { from: Sites:catalogue:Url }
         OcharoApps:Studio: { type: url }
         OcharoApps:Marketing: { type: url }
         OcharoApps:Editorial: { type: url }
-        OcharoApps:Brand: { type: url }
+        OcharoApps:Brand: { from: Sites:brand:Url }
         OcharoApps:Atlas: { type: url }
         OcharoApps:Wear: { type: url }
         OcharoApps:Blog: { type: url }
