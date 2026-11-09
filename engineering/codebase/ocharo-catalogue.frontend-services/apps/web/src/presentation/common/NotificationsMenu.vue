@@ -3,6 +3,7 @@ import { onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { Bell } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { NotificationCenterGroup } from '@wow-two-beta/fe/presentation/display';
 import { Popover, PopoverContent, PopoverTrigger } from '@wow-two-beta/fe/presentation/overlays';
 import { feedbackBus } from '../../application/common/UseFeedback';
@@ -23,11 +24,14 @@ watch(
 <template>
   <Popover v-model:open="open" placement="bottom-end">
     <PopoverTrigger as-child>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        tone="neutral"
+        shape="square"
+        size="lg"
         :aria-label="t('Notifications')"
         :title="t('Notifications')"
-        class="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        class="relative min-h-11 min-w-11 overflow-visible text-muted-foreground hover:text-foreground"
       >
         <Icon :icon="Bell" :size="20" />
         <span
@@ -36,7 +40,7 @@ watch(
           :aria-label="t('{count} notifications', { count })"
           >{{ count }}</span
         >
-      </button>
+      </Button>
     </PopoverTrigger>
     <PopoverContent variant="glass-menu" class="no-print w-[min(24rem,calc(100vw-2rem))] rounded-2xl p-0">
       <NotificationCenterGroup

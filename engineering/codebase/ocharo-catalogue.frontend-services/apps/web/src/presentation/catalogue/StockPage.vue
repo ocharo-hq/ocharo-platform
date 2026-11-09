@@ -11,6 +11,9 @@ import { computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Save } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge, Card, type BadgeVariant } from '@wow-two-beta/fe/presentation/display';
+import { CheckboxInput, NumberInput } from '@wow-two-beta/fe/presentation/forms';
 import { useStockSheet } from '../../application/catalogue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 
@@ -41,11 +44,11 @@ const allSizes = computed(() => {
   return [...sizes].sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99) || a.localeCompare(b));
 });
 const stockColumns = computed(() => (allSizes.value.length ? allSizes.value : ['S', 'M', 'L']));
-const tone: Record<string, string> = {
-  'in-stock': 'bg-success-soft text-success-soft-foreground',
-  'sold-out': 'bg-destructive-soft text-destructive-soft-foreground',
-  'made-to-order': 'bg-primary-soft text-primary-soft-foreground',
-  unknown: 'bg-muted text-muted-foreground',
+const tone: Record<string, BadgeVariant> = {
+  'in-stock': 'success',
+  'sold-out': 'danger',
+  'made-to-order': 'brand',
+  unknown: 'neutral',
 };
 onMounted(() => sheet.load());
 </script>
@@ -69,14 +72,14 @@ onMounted(() => sheet.load());
           :disabled="sheet.busy.value || sheet.rows.value.some((item) => item.saving)"
           @refresh="refresh"
         />
-        <button
-          class="btn-primary"
-          :disabled="!sessionCanEdit || sheet.dirtyCount.value === 0 || sheet.busy.value || resultBusy"
-          :aria-busy="sheet.busy.value"
+        <Button
+          :is-disabled="!sessionCanEdit || sheet.dirtyCount.value === 0 || resultBusy"
+          :is-loading="sheet.busy.value"
           @click="sheet.saveAll()"
         >
-          <Icon :icon="Save" :size="15" />{{ t('Save changes ({count})', { count: sheet.dirtyCount.value }) }}
-        </button>
+          <template #leading><Icon :icon="Save" :size="15" /></template>
+          {{ t('Save changes ({count})', { count: sheet.dirtyCount.value }) }}
+        </Button>
       </div>
     </div>
     <div class="catalogue-result-region">
@@ -85,13 +88,13 @@ onMounted(() => sheet.load());
           v-if="!sheet.rows.value.length && (sheet.loaded.value || !resultBusy)"
           :label="sheet.loaded.value ? t('No products found.') : t('Content unavailable')"
         />
-        <div v-else class="panel overflow-x-auto p-0">
+        <Card v-else radius="2xl" class="overflow-x-auto">
           <table class="w-full min-w-[900px] text-sm">
             <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th class="px-4 py-3 font-semibold">{{ t('Product') }}</th>
                 <th class="px-2 py-3 font-semibold">{{ t('Tracking') }}</th>
-                <th v-for="size in stockColumns" :key="size" class="w-20 px-1 py-3 text-center font-semibold">
+                <th v-for="size in stockColumns" :key="size" class="w-28 px-1 py-3 text-center font-semibold">
                   {{ size }}
                 </th>
                 <th class="px-4 py-3 font-semibold">{{ t('Status') }}</th>
@@ -126,57 +129,59 @@ onMounted(() => sheet.load());
                 <td class="px-2 py-2 text-xs">
                   <label class="flex items-center gap-1.5"
                     ><SkeletonStateSlot class="catalogue-value"
-                      ><input
-                        type="checkbox"
-                        :checked="item.row.stock !== null"
-                        :disabled="!sessionCanEdit || item.saving || resultBusy"
-                        @change="sheet.track(item, ($event.target as HTMLInputElement).checked)" /></SkeletonStateSlot
+                      ><CheckboxInput
+                        size="sm"
+                        :model-value="item.row.stock !== null"
+                        :is-disabled="!sessionCanEdit || item.saving || resultBusy"
+                        @update:model-value="sheet.track(item, $event)" /></SkeletonStateSlot
                     >{{ t('Track quantities') }}</label
                   >
                   <label class="mt-1 flex items-center gap-1.5"
                     ><SkeletonStateSlot class="catalogue-value"
-                      ><input
+                      ><CheckboxInput
                         v-model="item.row.madeToOrder"
-                        :disabled="!sessionCanEdit || item.saving || resultBusy"
-                        type="checkbox" /></SkeletonStateSlot
+                        size="sm"
+                        :is-disabled="!sessionCanEdit || item.saving || resultBusy" /></SkeletonStateSlot
                     >{{ t('Made to order') }}</label
                   >
                 </td>
                 <td v-for="size in stockColumns" :key="size" class="px-1 py-2 text-center">
                   <SkeletonStateSlot class="catalogue-value" :is-block="true">
-                    <input
+                    <NumberInput
                       v-if="item.row.sizes.includes(size)"
-                      :value="item.row.stock?.[size] ?? ''"
-                      type="number"
+                      :model-value="item.row.stock?.[size] ?? null"
                       min="0"
-                      class="field w-16 px-2 text-center"
-                      :disabled="!sessionCanEdit || item.row.stock === null || item.saving || resultBusy"
+                      size="sm"
+                      class="mx-auto w-24"
+                      :is-disabled="!sessionCanEdit || item.row.stock === null || item.saving || resultBusy"
                       :aria-label="t('Quantity for {product}, size {size}', { product: item.row.id, size })"
-                      @input="sheet.setQuantity(item, size, Number(($event.target as HTMLInputElement).value))"
+                      @update:model-value="sheet.setQuantity(item, size, $event ?? 0)"
                     />
                     <span v-else class="text-muted-foreground">—</span>
                   </SkeletonStateSlot>
                 </td>
                 <td class="px-4 py-2">
                   <SkeletonStateSlot class="catalogue-value" :is-block="true">
-                    <span :class="['chip', tone[item.row.availability]]">{{
+                    <Badge :variant="tone[item.row.availability]" size="sm">{{
                       availabilityLabels[item.row.availability]
-                    }}</span>
+                    }}</Badge>
                   </SkeletonStateSlot>
                 </td>
                 <td class="px-4 py-2 text-right">
-                  <button
-                    class="btn-outline"
-                    :disabled="!sessionCanEdit || !sheet.isDirty(item) || item.saving || resultBusy"
+                  <Button
+                    variant="outline"
+                    tone="neutral"
+                    :is-disabled="!sessionCanEdit || !sheet.isDirty(item) || resultBusy"
+                    :is-loading="item.saving"
                     @click="sheet.save(item)"
                   >
                     {{ item.saving ? t('Saving…') : t('Save') }}
-                  </button>
+                  </Button>
                 </td>
               </tr>
             </tbody>
           </table>
-        </div>
+        </Card>
       </SkeletonStateGroup>
     </div>
   </section>

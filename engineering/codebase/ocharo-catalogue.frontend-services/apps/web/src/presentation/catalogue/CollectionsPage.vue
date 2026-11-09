@@ -14,6 +14,9 @@ import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/o
 import CatalogueSelect from '../common/CatalogueSelect.vue';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { LabelText } from '@wow-two-beta/fe/presentation/display';
+import { CheckboxField, NumberInput, TextAreaInput, TextInput } from '@wow-two-beta/fe/presentation/forms';
 import { useCollections, useProductList, type CollectionDraft } from '../../application/catalogue';
 
 /** Ordered product selections: seasons, lookbooks, merchant sheets. */
@@ -89,13 +92,13 @@ onMounted(async () => {
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
-        <RefreshButton :busy="resultBusy" :disabled="collections.busy.value" @refresh="refresh" /><button
-          :disabled="!sessionCanEdit"
-          class="btn-primary"
+        <RefreshButton :busy="resultBusy" :disabled="collections.busy.value" @refresh="refresh" /><Button
+          :is-disabled="!sessionCanEdit"
           @click="edit(collections.blank())"
         >
-          <Icon :icon="Plus" :size="15" />{{ t('New collection') }}
-        </button>
+          <template #leading><Icon :icon="Plus" :size="15" /></template>
+          {{ t('New collection') }}
+        </Button>
       </div>
     </div>
     <div class="catalogue-result-region">
@@ -112,13 +115,13 @@ onMounted(async () => {
         />
         <ul v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <li v-for="c in collections.collections.value" :key="c.document.id">
-            <button
-              :class="[
-                'w-full rounded-xl border p-4 text-left transition',
-                draft?.id === c.document.id
-                  ? 'border-primary bg-primary-soft/50'
-                  : 'border-border bg-card hover:bg-muted',
-              ]"
+            <Button
+              :variant="draft?.id === c.document.id ? 'soft' : 'outline'"
+              :tone="draft?.id === c.document.id ? 'primary' : 'neutral'"
+              is-full-width
+              is-multiline
+              class="h-auto flex-col items-start rounded-xl p-4 text-left font-normal text-foreground"
+              :aria-pressed="draft?.id === c.document.id"
               @click="edit(collections.edit(c))"
             >
               <p class="font-editorial text-lg">{{ c.document.names.uz }}</p>
@@ -128,7 +131,7 @@ onMounted(async () => {
                   {{ t(c.document.isPublished ? 'Published' : 'Internal') }}
                 </p></SkeletonStateSlot
               >
-            </button>
+            </Button>
           </li>
         </ul>
       </SkeletonStateGroup>
@@ -152,38 +155,56 @@ onMounted(async () => {
           <ModalTitle class="font-editorial text-2xl">
             {{ draft.expectedRevision === null ? t('New collection') : draft.names.uz }}
           </ModalTitle>
-          <button class="btn-ghost" :disabled="collections.busy.value" :aria-label="t('Close')" @click="close">
+          <Button
+            variant="ghost"
+            tone="neutral"
+            shape="square"
+            :is-disabled="collections.busy.value"
+            :aria-label="t('Close')"
+            @click="close"
+          >
             <Icon :icon="X" :size="16" />
-          </button>
+          </Button>
         </div>
         <fieldset :disabled="!sessionCanEdit || collections.busy.value" class="min-w-0 border-0 p-0">
           <div class="mt-4 grid gap-4 sm:grid-cols-3">
             <div>
-              <label class="label" for="c-uz">{{ t('Name (uz)') }}</label
-              ><input id="c-uz" v-model="draft.names.uz" class="field" />
+              <LabelText for="c-uz" class="mb-1.5 block">{{ t('Name (uz)') }}</LabelText>
+              <TextInput id="c-uz" v-model="draft.names.uz" />
             </div>
             <div>
-              <label class="label" for="c-ru">{{ t('Name (ru)') }}</label
-              ><input id="c-ru" v-model="draft.names.ru" class="field" />
+              <LabelText for="c-ru" class="mb-1.5 block">{{ t('Name (ru)') }}</LabelText>
+              <TextInput id="c-ru" :model-value="draft.names.ru ?? ''" @update:model-value="draft.names.ru = $event" />
             </div>
             <div>
-              <label class="label" for="c-en">{{ t('Name (en)') }}</label
-              ><input id="c-en" v-model="draft.names.en" class="field" />
+              <LabelText for="c-en" class="mb-1.5 block">{{ t('Name (en)') }}</LabelText>
+              <TextInput id="c-en" :model-value="draft.names.en ?? ''" @update:model-value="draft.names.en = $event" />
             </div>
           </div>
           <div class="mt-4 grid gap-4 sm:grid-cols-[1fr_140px]">
             <div>
-              <label class="label" for="c-desc">{{ t('Description') }}</label
-              ><textarea id="c-desc" v-model="draft.description" rows="2" class="field" />
+              <LabelText for="c-desc" class="mb-1.5 block">{{ t('Description') }}</LabelText>
+              <TextAreaInput
+                id="c-desc"
+                :rows="2"
+                :model-value="draft.description ?? ''"
+                @update:model-value="draft.description = $event"
+              />
             </div>
             <div>
-              <label class="label" for="c-order">{{ t('Order') }}</label
-              ><input id="c-order" v-model.number="draft.sortOrder" type="number" class="field" />
+              <LabelText for="c-order" class="mb-1.5 block">{{ t('Order') }}</LabelText>
+              <NumberInput
+                id="c-order"
+                :model-value="draft.sortOrder"
+                @update:model-value="draft.sortOrder = $event ?? 0"
+              />
             </div>
           </div>
-          <label class="mt-4 flex items-center gap-2 text-sm"
-            ><input v-model="draft.isPublished" type="checkbox" />{{ t('Show in the public catalogue feed') }}</label
-          >
+          <CheckboxField
+            v-model="draft.isPublished"
+            wrapper-class-name="mt-4"
+            :label="t('Show in the public catalogue feed')"
+          />
 
           <h3 class="mt-6 text-sm font-semibold">{{ t('Product order') }}</h3>
           <div class="mt-2 flex gap-2">
@@ -195,7 +216,7 @@ onMounted(async () => {
                 ...available.map((p) => ({ value: p.id, label: (p.nameUz ?? p.id) + ' — ' + p.id })),
               ]"
             />
-            <button class="btn-outline" :disabled="!pick" @click="add">{{ t('Add') }}</button>
+            <Button variant="outline" tone="neutral" :is-disabled="!pick" @click="add">{{ t('Add') }}</Button>
           </div>
           <ol class="mt-3 space-y-2">
             <li
@@ -213,38 +234,57 @@ onMounted(async () => {
               <span class="flex-1 text-sm"
                 >{{ byId.get(id)?.nameUz ?? id }} <span class="text-xs text-muted-foreground">{{ id }}</span></span
               >
-              <button class="btn-ghost px-1.5" :aria-label="t('Move up')" @click="move(index, -1)">
+              <Button
+                variant="ghost"
+                tone="neutral"
+                shape="square"
+                size="sm"
+                :aria-label="t('Move up')"
+                @click="move(index, -1)"
+              >
                 <Icon :icon="ArrowUp" :size="13" />
-              </button>
-              <button class="btn-ghost px-1.5" :aria-label="t('Move down')" @click="move(index, 1)">
+              </Button>
+              <Button
+                variant="ghost"
+                tone="neutral"
+                shape="square"
+                size="sm"
+                :aria-label="t('Move down')"
+                @click="move(index, 1)"
+              >
                 <Icon :icon="ArrowDown" :size="13" />
-              </button>
-              <button
-                class="btn-ghost px-1.5 text-destructive"
+              </Button>
+              <Button
+                variant="ghost"
+                tone="danger"
+                shape="square"
+                size="sm"
                 :aria-label="t('Remove product')"
                 @click="draft.productIds.splice(index, 1)"
               >
                 <Icon :icon="X" :size="13" />
-              </button>
+              </Button>
             </li>
           </ol>
           <div class="mt-6 flex items-center gap-3">
-            <button
-              class="btn-primary"
-              :disabled="!sessionCanEdit || collections.busy.value || !draft.names.uz.trim()"
+            <Button
+              :is-disabled="!sessionCanEdit || !draft.names.uz.trim()"
+              :is-loading="collections.busy.value"
               @click="save"
             >
               {{ collections.busy.value ? t('Saving…') : t('Save') }}
-            </button>
-            <button
+            </Button>
+            <Button
               v-if="draft.expectedRevision !== null && draft.id"
-              class="btn-ghost ml-auto text-destructive"
-              :disabled="!sessionCanEdit || collections.busy.value"
-              :aria-busy="collections.busy.value"
+              variant="ghost"
+              tone="danger"
+              class="ml-auto"
+              :is-disabled="!sessionCanEdit || collections.busy.value"
               @click="remove(draft.id)"
             >
-              <Icon :icon="Trash2" :size="14" />{{ t('Delete') }}
-            </button>
+              <template #leading><Icon :icon="Trash2" :size="14" /></template>
+              {{ t('Delete') }}
+            </Button>
           </div>
         </fieldset>
       </ModalContent></Modal

@@ -1,6 +1,6 @@
 # Catalogue browser suite
 
-*Last updated: 2026-11-02*
+*Last updated: 2026-11-09*
 
 Playwright tests that drive the gallery, the Web designer, the PDF designer and the public reader in Chromium
 against a real `OcharoCatalogue.Api`. Findings and results: the
@@ -18,6 +18,11 @@ pnpm e2e -g "PDF designer"    # by title
 
 `pnpm e2e` type-checks the suite (`tsconfig.e2e.json`) before running it; the app's `typecheck` and `build` leave it out,
 because the container build copies only the application sources.
+
+Since Catalogue signs in through Ocharo's Identity (2026-11-03), the API starts only with `Catalogue:OrganizationId`
+and `Identity:Client` configured and answers every authoring route only to a signed-in session. The suite neither
+configures Identity nor signs in yet, so it does not run as it stands; it needs a session for its page and its API
+seeding first.
 
 Requirements: the .NET 10 SDK, the workspace's Node and pnpm, and Playwright's Chromium
 (`pnpm --filter @ocharocatalogue/web exec playwright install chromium` when it is missing).

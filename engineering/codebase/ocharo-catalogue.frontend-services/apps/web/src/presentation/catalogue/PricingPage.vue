@@ -8,14 +8,16 @@ import TableSkeletonRows from '../common/TableSkeletonRows.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
-import { useCatalogueStore, usePriceSheet, useProductList } from '../../application/catalogue';
+import { Badge, Card } from '@wow-two-beta/fe/presentation/display';
+import { NumberInput } from '@wow-two-beta/fe/presentation/forms';
+import { useCatalogueSettings, usePriceSheet, useProductList } from '../../application/catalogue';
 import { formatUzs } from '../../domain/catalogue/CatalogueRules';
 import StatusBadge from './components/StatusBadge.vue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 
 /** Every price on one sheet; edits save per cell with revision checks. */
 defineOptions({ name: 'PricingPage' });
-const store = useCatalogueStore();
+const settings = useCatalogueSettings();
 const list = useProductList();
 const sheet = usePriceSheet();
 const { t } = useUiLocale();
@@ -46,7 +48,7 @@ onMounted(() => list.load());
           v-if="!list.products.value.length && (list.loaded.value || !resultBusy)"
           :label="list.loaded.value ? t('No products found.') : t('Content unavailable')"
         />
-        <div v-else class="panel overflow-x-auto p-0">
+        <Card v-else radius="2xl" class="overflow-x-auto">
           <table class="w-full min-w-[760px] text-sm">
             <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
@@ -81,7 +83,7 @@ onMounted(() => list.load());
                 </td>
                 <td class="px-4 py-2">
                   <SkeletonStateSlot class="catalogue-value" :is-block="true">{{
-                    store.garmentName(p.garmentType)
+                    settings.garmentName(p.garmentType)
                   }}</SkeletonStateSlot>
                 </td>
                 <td class="px-4 py-2">
@@ -91,44 +93,36 @@ onMounted(() => list.load());
                 </td>
                 <td class="px-4 py-2">
                   <SkeletonStateSlot class="catalogue-value" :is-block="true">
-                    <input
-                      :value="p.retailPrice ?? ''"
-                      type="number"
+                    <NumberInput
+                      :model-value="p.retailPrice"
                       min="0"
-                      step="1000"
-                      class="field w-36"
+                      :step="1000"
+                      class="w-36"
                       :aria-label="t('Retail price for {product}', { product: p.id })"
-                      :disabled="!sessionCanEdit || sheet.saving.value !== null || resultBusy"
+                      :is-disabled="!sessionCanEdit || sheet.saving.value !== null || resultBusy"
                       @change="commit(p.id, 'retail', $event, p.retailPrice)"
                     />
                   </SkeletonStateSlot>
                 </td>
                 <td class="px-4 py-2">
                   <SkeletonStateSlot class="catalogue-value" :is-block="true">
-                    <input
-                      :value="p.wholesalePrice !== p.retailPrice ? (p.wholesalePrice ?? '') : ''"
-                      type="number"
+                    <NumberInput
+                      :model-value="p.wholesalePrice !== p.retailPrice ? p.wholesalePrice : null"
                       min="0"
-                      step="1000"
-                      class="field w-36"
+                      :step="1000"
+                      class="w-36"
                       :aria-label="t('Wholesale price for {product}', { product: p.id })"
-                      :disabled="!sessionCanEdit || sheet.saving.value !== null || resultBusy"
+                      :is-disabled="!sessionCanEdit || sheet.saving.value !== null || resultBusy"
                       @change="commit(p.id, 'wholesale', $event, p.wholesalePrice)"
                     />
                   </SkeletonStateSlot>
                 </td>
                 <td class="px-4 py-2 text-xs">
                   <SkeletonStateSlot class="catalogue-value" :is-block="true">
-                    <span
-                      v-if="p.pricingStatus === 'confirmed'"
-                      class="chip bg-success-soft text-success-soft-foreground"
-                      >{{ t('Confirmed') }}</span
-                    >
-                    <span
-                      v-else-if="p.pricingStatus === 'draft'"
-                      class="chip bg-warning-soft text-warning-soft-foreground"
-                      >{{ t('Draft') }}</span
-                    >
+                    <Badge v-if="p.pricingStatus === 'confirmed'" variant="success" size="sm">{{
+                      t('Confirmed')
+                    }}</Badge>
+                    <Badge v-else-if="p.pricingStatus === 'draft'" variant="warning" size="sm">{{ t('Draft') }}</Badge>
                     <span v-else class="text-muted-foreground">{{ t('No price') }}</span>
                     <span class="ml-2 text-muted-foreground">{{ formatUzs(p.retailPrice) }}</span>
                   </SkeletonStateSlot>
@@ -136,7 +130,7 @@ onMounted(() => list.load());
               </tr>
             </tbody>
           </table>
-        </div>
+        </Card>
       </SkeletonStateGroup>
     </div>
   </section>

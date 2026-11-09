@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+
 /** Opens canonical catalogue authoring without replacing this retained pilot or its unsaved fields. */
 defineOptions({ name: 'CatalogueDeskEntry' });
 defineProps<{ deskUrl: string | null }>();
@@ -14,9 +16,9 @@ defineProps<{ deskUrl: string | null }>();
           yerdagi saqlanmagan o‘zgarishlarni yopmaydi.
         </p>
       </div>
-      <a v-if="deskUrl" :href="deskUrl" target="_blank" rel="noopener noreferrer" class="btn-primary min-h-11"
-        >Katalog dizaynerini ochish ↗</a
-      >
+      <Button v-if="deskUrl" as-child class="min-h-11">
+        <a :href="deskUrl" target="_blank" rel="noopener noreferrer">Katalog dizaynerini ochish ↗</a>
+      </Button>
       <p v-else class="text-sm text-muted-foreground">Ocharo Desk havolasi sozlanmagan.</p>
     </div>
   </section>

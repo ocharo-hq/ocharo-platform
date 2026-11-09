@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuSection } from '@wow-two-beta/fe/presentation/nav';
 
 import { useUiLocale } from '../../application/shared/UseUiLocale';
@@ -72,10 +73,12 @@ const toggleLabel = computed(() => t(props.collapsed ? 'Expand sidebar' : 'Colla
       </template>
     </SidebarMenu>
     <div v-if="props.canToggle" class="border-t border-glass-edge p-2">
-      <button
-        type="button"
-        class="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        :class="{ 'justify-center': props.collapsed }"
+      <Button
+        variant="ghost"
+        tone="neutral"
+        is-full-width
+        class="gap-2.5 px-2.5 font-normal text-muted-foreground hover:text-foreground"
+        :class="props.collapsed ? 'justify-center' : 'justify-start'"
         :aria-label="toggleLabel"
         :aria-expanded="!props.collapsed"
         :title="props.collapsed ? toggleLabel : undefined"
@@ -83,7 +86,7 @@ const toggleLabel = computed(() => t(props.collapsed ? 'Expand sidebar' : 'Colla
       >
         <component :is="props.collapsed ? PanelLeftOpen : PanelLeftClose" :size="17" aria-hidden="true" />
         <span v-if="!props.collapsed">{{ toggleLabel }}</span>
-      </button>
+      </Button>
     </div>
   </div>
 </template>

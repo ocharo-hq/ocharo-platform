@@ -1,6 +1,15 @@
 import type { UiMessageTable } from './UiMessages';
 
 export const catalogueInterfaceUiMessages: UiMessageTable = {
+  Increase: { uz: 'Oshirish', ru: 'Увеличить' },
+  Decrease: { uz: 'Kamaytirish', ru: 'Уменьшить' },
+  'Copy field': { uz: 'Matn maydoni', ru: 'Поле текста' },
+  'Clear search': { uz: 'Qidiruvni tozalash', ru: 'Очистить поиск' },
+  'Color picker': { uz: 'Rang tanlash', ru: 'Выбор цвета' },
+  'Hex color': { uz: 'Hex rang', ru: 'Цвет в HEX' },
+  Hue: { uz: 'Rang tusi', ru: 'Оттенок' },
+  Saturation: { uz: 'To‘yinganlik', ru: 'Насыщенность' },
+  Brightness: { uz: 'Yorqinlik', ru: 'Яркость' },
   'Check the form fields and try again.': {
     uz: 'Forma maydonlarini tekshiring va qayta urinib ko‘ring.',
     ru: 'Проверьте поля формы и повторите попытку.',

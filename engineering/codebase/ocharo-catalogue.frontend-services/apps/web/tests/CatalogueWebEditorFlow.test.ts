@@ -3,6 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import CatalogueWebDesignerPage from '../src/presentation/design/CatalogueWebDesignerPage.vue';
 import CatalogueWebPreview from '../src/presentation/design/CatalogueWebPreview.vue';
+import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { designApi } from '../src/integration/design/DesignApi';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
 import { documentFixture, sourceFixture } from './NativeDesignFixture';
@@ -36,8 +37,8 @@ beforeEach(() => {
       productIds: [source.products[0]!.document.id],
     },
   ];
-  vi.mocked(designApi.get).mockResolvedValue(doc);
-  vi.mocked(designApi.source).mockResolvedValue(source);
+  vi.mocked(designApi.get).mockResolvedValue(ResultExtensions.ok(doc));
+  vi.mocked(designApi.source).mockResolvedValue(ResultExtensions.ok(source));
 });
 afterEach(() => {
   dispose?.();

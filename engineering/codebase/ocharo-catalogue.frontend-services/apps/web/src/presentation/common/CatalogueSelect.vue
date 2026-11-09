@@ -26,21 +26,11 @@ const emit = defineEmits<{ 'update:modelValue': [value: string] }>();
       }
     "
   >
-    <SelectPickerTrigger
-      v-bind="{ ...$attrs, id, 'aria-label': label }"
-      class="field flex min-w-0 items-center justify-between gap-2"
+    <SelectPickerTrigger v-bind="{ ...$attrs, id, 'aria-label': label }" class="w-full min-w-0"
       ><SelectPickerValue
     /></SelectPickerTrigger>
-    <SelectPickerContent
-      class="z-[100] max-h-80 overflow-auto rounded-xl border border-border bg-card p-1 text-foreground shadow-xl"
-    >
-      <SelectPickerItem
-        v-for="option in options"
-        :key="option.value"
-        :item-key="option.value"
-        :label="option.label"
-        class="rounded-lg px-3 py-2 text-sm"
-      />
+    <SelectPickerContent variant="glass-outline" class="z-[100] max-h-80 overflow-auto">
+      <SelectPickerItem v-for="option in options" :key="option.value" :item-key="option.value" :label="option.label" />
     </SelectPickerContent>
   </SelectPicker>
 </template>

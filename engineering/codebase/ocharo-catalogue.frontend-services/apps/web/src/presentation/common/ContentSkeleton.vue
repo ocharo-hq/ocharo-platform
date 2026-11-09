@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Card } from '@wow-two-beta/fe/presentation/display';
 import { SkeletonState, SkeletonStateGroup } from '@wow-two-beta/fe/presentation/feedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 const { t } = useUiLocale();
@@ -15,28 +16,28 @@ withDefaults(
   <SkeletonStateGroup :is-loading="true" :label="label ?? t('Loading…')" class="catalogue-content-skeleton">
     <div v-if="variant === 'product-form'" class="catalogue-skeleton-product-form" aria-hidden="true">
       <SkeletonState class="h-5 w-28" /><SkeletonState class="mt-6 h-10 w-64" />
-      <div class="catalogue-skeleton-review panel mt-5 flex flex-wrap gap-3 p-4">
+      <Card radius="2xl" padding="lg" class="catalogue-skeleton-review mt-5 flex flex-wrap gap-3">
         <SkeletonState v-for="index in 3" :key="index" class="h-9 w-28" />
-      </div>
+      </Card>
       <div class="catalogue-skeleton-form-grid mt-6">
         <div class="space-y-5">
-          <div v-for="section in 3" :key="section" class="panel p-6">
+          <Card v-for="section in 3" :key="section" radius="2xl" padding="xl">
             <SkeletonState class="h-7 w-32" />
             <div class="catalogue-skeleton-fields mt-4">
               <div v-for="field in 6" :key="field" class="space-y-2">
                 <SkeletonState class="h-3 w-24" /><SkeletonState class="h-11 w-full" />
               </div>
             </div>
-          </div>
+          </Card>
         </div>
-        <aside class="panel self-start p-6">
+        <Card radius="2xl" padding="xl" class="self-start">
           <div class="flex items-center justify-between gap-3">
             <SkeletonState class="h-7 w-24" /><SkeletonState class="h-11 w-28" />
           </div>
           <div class="mt-4 grid grid-cols-2 gap-3">
             <SkeletonState v-for="index in 2" :key="index" class="aspect-[3/4] w-full" />
           </div>
-        </aside>
+        </Card>
       </div>
     </div>
     <div
@@ -58,7 +59,7 @@ withDefaults(
         <SkeletonState v-for="index in 4" :key="index" class="h-11 w-40" />
       </div>
       <div :class="`catalogue-skeleton-${variant}-grid`">
-        <aside class="catalogue-skeleton-page-rail panel">
+        <Card radius="2xl" class="catalogue-skeleton-page-rail">
           <SkeletonState class="catalogue-skeleton-rail-heading h-7 w-28" />
           <div class="catalogue-skeleton-rail-list space-y-2">
             <SkeletonState v-for="index in 3" :key="index" class="h-11 w-full" />
@@ -66,7 +67,7 @@ withDefaults(
           <div v-for="index in 3" :key="index" class="space-y-2">
             <SkeletonState class="h-3 w-24" /><SkeletonState class="h-11 w-full" />
           </div>
-        </aside>
+        </Card>
         <div class="catalogue-skeleton-preview-panel">
           <div class="mb-3 flex flex-wrap gap-3">
             <SkeletonState class="h-11 w-40" /><SkeletonState class="h-11 w-40" />
@@ -86,12 +87,12 @@ withDefaults(
             </div>
           </div>
         </div>
-        <aside v-if="variant === 'designer-pdf'" class="catalogue-skeleton-inspector panel">
+        <Card v-if="variant === 'designer-pdf'" radius="2xl" class="catalogue-skeleton-inspector">
           <SkeletonState class="h-7 w-32" />
           <div v-for="index in 6" :key="index" class="space-y-2">
             <SkeletonState class="h-3 w-24" /><SkeletonState class="h-11 w-full" />
           </div>
-        </aside>
+        </Card>
       </div>
     </div>
     <div v-else class="catalogue-skeleton-grid" :class="`catalogue-skeleton-${variant}`" aria-hidden="true">

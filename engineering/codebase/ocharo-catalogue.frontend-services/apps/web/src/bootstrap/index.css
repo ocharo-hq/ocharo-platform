@@ -6,7 +6,8 @@
 @import '@wow-two-beta/fe/themes.css';
 @source '../../node_modules/@wow-two-beta/fe/dist';
 
-/* Type and paper depth are Catalogue's own; every colour comes from the theme. */
+/* Type and the print sheet's paper depth are Catalogue's own; every interface colour, surface and control comes from
+   the theme and the SDK. */
 @theme {
   --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
   --font-editorial: Georgia, 'Times New Roman', serif;
@@ -45,33 +46,6 @@
   }
 }
 
-/* Operator form/button vocabulary as Tailwind v4 utilities (composable with @apply). */
-@utility field {
-  @apply w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15;
-  border-color: var(--color-input);
-}
-@utility label {
-  @apply mb-1 block text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground;
-}
-@utility panel {
-  @apply rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-paper)];
-}
-@utility chip {
-  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold;
-}
-@utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
-}
-@utility btn-primary {
-  @apply btn bg-primary text-primary-foreground hover:bg-primary/90;
-}
-@utility btn-ghost {
-  @apply btn text-muted-foreground hover:bg-muted hover:text-foreground;
-}
-@utility btn-outline {
-  @apply btn border border-border bg-card hover:bg-muted;
-  border-color: var(--color-input);
-}
 @media print {
   .no-print {
     display: none !important;

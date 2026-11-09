@@ -3,6 +3,8 @@ import { computed } from 'vue';
 import type { ProductPricing } from '../../../domain/catalogue/CatalogueModels';
 import { formatUzs } from '../../../domain/catalogue/CatalogueRules';
 import { useUiLocale } from '../../../application/shared/UseUiLocale';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { CheckboxField, Field, NumberInput, TextInput } from '@wow-two-beta/fe/presentation/forms';
 defineOptions({ name: 'PriceTiersEditor' });
 const pricing = defineModel<ProductPricing | null>({ required: true });
 const { t } = useUiLocale();
@@ -15,7 +17,7 @@ const legacy = computed(
       pricing.value.tiers[0]?.maximumQuantity !== 9 ||
       pricing.value.tiers[1]?.minimumQuantity !== 10),
 );
-function setPrice(band: 'retail' | 'wholesale', value: string) {
+function setPrice(band: 'retail' | 'wholesale', value: number | string | null) {
   if (!pricing.value) return;
   pricing.value = {
     ...pricing.value,
@@ -47,54 +49,35 @@ function confirm(value: boolean) {
 <template>
   <div v-if="!pricing" class="rounded-xl border border-dashed border-border p-5 text-sm text-muted-foreground">
     {{ t('No price entered.') }}
-    <button type="button" class="btn-outline ml-3" @click="enable">{{ t('Add prices') }}</button>
+    <Button variant="outline" tone="neutral" class="ml-3" @click="enable">{{ t('Add prices') }}</Button>
   </div>
   <div v-else class="space-y-4">
     <div class="grid gap-4 sm:grid-cols-2">
-      <label
-        ><span class="label">{{ t('1–9 pieces · UZS per piece') }}</span
-        ><input
-          :value="retail"
-          type="number"
-          min="0"
-          step="1"
-          class="field"
-          @input="setPrice('retail', ($event.target as HTMLInputElement).value)"
-        /><span class="mt-1 block text-xs text-muted-foreground">{{ formatUzs(retail) }}</span></label
-      >
-      <label
-        ><span class="label">{{ t('10+ pieces · UZS per piece') }}</span
-        ><input
-          :value="wholesale"
-          type="number"
-          min="0"
-          step="1"
-          class="field"
-          @input="setPrice('wholesale', ($event.target as HTMLInputElement).value)"
-        /><span class="mt-1 block text-xs text-muted-foreground">{{ formatUzs(wholesale) }}</span></label
-      >
+      <Field :label="t('1–9 pieces · UZS per piece')" :helper="formatUzs(retail)">
+        <NumberInput :model-value="retail" min="0" @update:model-value="setPrice('retail', $event ?? 0)" />
+      </Field>
+      <Field :label="t('10+ pieces · UZS per piece')" :helper="formatUzs(wholesale)">
+        <NumberInput :model-value="wholesale" min="0" @update:model-value="setPrice('wholesale', $event ?? 0)" />
+      </Field>
     </div>
     <p v-if="legacy" class="text-sm text-warning">
       {{ t('Editing or confirming prices applies the 1–9 and 10+ quantity bands.') }}
     </p>
     <div class="flex flex-wrap items-center gap-3">
-      <label class="flex items-center gap-2 text-sm"
-        ><input
-          type="checkbox"
-          :checked="pricing.status === 'confirmed'"
-          @change="confirm(($event.target as HTMLInputElement).checked)"
-        />{{ t('Prices confirmed by the owner') }}</label
-      >
-      <button type="button" class="btn-ghost ml-auto text-destructive" @click="pricing = null">
+      <CheckboxField
+        :model-value="pricing.status === 'confirmed'"
+        :label="t('Prices confirmed by the owner')"
+        @update:model-value="confirm"
+      />
+      <Button variant="ghost" tone="danger" class="ml-auto" @click="pricing = null">
         {{ t('Remove prices') }}
-      </button>
+      </Button>
     </div>
     <p class="text-xs text-muted-foreground">
       {{ t('Changing a price resets its confirmation. Only confirmed prices appear publicly.') }}
     </p>
-    <label
-      ><span class="label">{{ t('Price note') }}</span
-      ><input v-model="pricing.wording" class="field"
-    /></label>
+    <Field :label="t('Price note')">
+      <TextInput :model-value="pricing.wording ?? ''" @update:model-value="pricing.wording = $event" />
+    </Field>
   </div>
 </template>

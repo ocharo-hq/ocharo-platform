@@ -1,61 +1,69 @@
 import { computed, shallowRef } from 'vue';
+import { AuthStatus, BffSessionExtensions, useBffAuth } from '@wow-two-beta/fe/auth';
 import {
-  canApprove as sessionCanApprove,
-  canEdit as sessionCanEdit,
-  identityClient,
-  signInPath,
-} from '../../integration/common/IdentitySessionClient';
+  CataloguePermission,
+  identityBridge,
+  identityStrategy,
+  SignInErrorParameter,
+} from '../../integration/common/IdentitySession';
 import { useUiLocale } from '../shared/UseUiLocale';
 import { notifyError } from './UseFeedback';
 
-export type { IdentitySession } from '../../integration/common/IdentitySessionClient';
-
-/** The query parameter the BFF adds to the return address when a sign-in callback failed. */
-const SignInErrorParameter = 'signInError';
-
-const session = shallowRef(identityClient.current);
-identityClient.subscribe((value) => {
-  session.value = value;
+// The session as the bridge publishes it: the app root's provider settles it, every reader follows it.
+const session = shallowRef(identityBridge.getSession());
+identityBridge.subscribeSession((next) => {
+  session.value = next;
 });
-/** Edit and approval controls follow the session's `catalogue:edit` and `catalogue:approve` permissions. */
-const canEdit = computed(() => sessionCanEdit(session.value));
-const canApprove = computed(() => sessionCanApprove(session.value));
+const user = computed(() => (session.value.status === AuthStatus.Authenticated ? session.value.user : null));
+/** Edit controls follow `catalogue:edit`; publication needs `catalogue:approve` beside it. The API checks both again. */
+const canEdit = computed(() => BffSessionExtensions.hasPermission(user.value, CataloguePermission.Edit));
+const canApprove = computed(
+  () => canEdit.value && BffSessionExtensions.hasPermission(user.value, CataloguePermission.Approve),
+);
 const signingOut = shallowRef(false);
 
-/** Ends the Ocharo sign-in, then leaves for Identity's end-session page; a failure is reported and the tab stays. */
-async function signOut(): Promise<void> {
-  if (signingOut.value) return;
-  signingOut.value = true;
-  try {
-    if (!(await identityClient.signOut()))
-      notifyError(useUiLocale().t('Could not sign out. Try again.'), 'identity:sign-out');
-  } finally {
-    signingOut.value = false;
-  }
-}
-
-/** The sign-in address that returns to `returnUrl`, a local path. */
-export function signInUrl(returnUrl: string): string {
-  return signInPath(returnUrl.startsWith('/') && !returnUrl.startsWith('//') ? returnUrl : '/');
-}
-
-/** Whether `search` carries the BFF's mark of a failed sign-in callback. */
-export function hasSignInError(search: string): boolean {
-  return new URLSearchParams(search).has(SignInErrorParameter);
-}
-
 /**
- * Reads the session at startup; a browser the API answered as signed out goes to sign in and returns here, unless the
- * last sign-in failed moments ago or the API did not answer, when the app opens and offers sign-in instead. Resolves
- * `false` when the browser is leaving for sign-in.
+ * The Ocharo session as Catalogue's frame and pages read it: who is signed in and what they may do. It reads the
+ * session the app root's SDK `AuthProvider` resolves, through the bridge, so a page reads it the same way inside the
+ * frame and on its own.
  */
-export async function startSession(location: Pick<Location, 'pathname' | 'search' | 'replace'> = window.location) {
-  const value = await identityClient.initialize();
-  if (value.isAuthenticated || !value.reachable || hasSignInError(location.search)) return true;
-  location.replace(signInUrl(location.pathname + location.search));
-  return false;
+export function useIdentitySession() {
+  return {
+    isAuthenticated: computed(() => user.value !== null),
+    person: computed(() => user.value?.person ?? null),
+    canEdit,
+    canApprove,
+    /** The sign-in address that comes back to `returnUrl`, a local path; anything else comes back to `/`. */
+    signInHref: (returnUrl: string) => identityStrategy.signInUrl(returnUrl),
+    /** Whether this page is where a failed sign-in came back to (`signInError`). */
+    signInFailed: () => new URLSearchParams(globalThis.location.search).has(SignInErrorParameter),
+  };
 }
 
-export function useIdentitySession() {
-  return { session, canEdit, canApprove, signingOut, signOut, reconnect: () => identityClient.initialize(true) };
+/** The session's commands, for components under the app root's `AuthProvider`: sign out and read the session again. */
+export function useSessionActions() {
+  const auth = useBffAuth();
+  const { t } = useUiLocale();
+
+  /** Ends the Ocharo sign-in, then leaves for Identity's end-session page; a failure is reported and the session read again. */
+  async function signOut(): Promise<void> {
+    if (signingOut.value) return;
+    signingOut.value = true;
+    try {
+      const outcome = await auth.signOut();
+      if (!outcome.ok && outcome.failure.type !== 'cancelled') {
+        notifyError(t('Could not sign out. Try again.'), 'identity:sign-out');
+        await auth.refresh();
+      }
+    } finally {
+      signingOut.value = false;
+    }
+  }
+
+  return {
+    signingOut,
+    signOut,
+    /** Re-reads the session, as after signing in again in another tab. */
+    reconnect: () => auth.refresh(),
+  };
 }

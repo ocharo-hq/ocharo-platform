@@ -32,10 +32,10 @@ beforeEach(() => {
   sessionStorage.clear();
   localStorage.clear();
   useUiLocale().setUiLocale('en');
-  vi.mocked(designApi.get).mockResolvedValue(documentFixture());
-  vi.mocked(designApi.source).mockResolvedValue(sourceFixture());
-  vi.mocked(designApi.revisions).mockResolvedValue([]);
-  vi.mocked(designApi.releases).mockResolvedValue([]);
+  vi.mocked(designApi.get).mockResolvedValue(ResultExtensions.ok(documentFixture()));
+  vi.mocked(designApi.source).mockResolvedValue(ResultExtensions.ok(sourceFixture()));
+  vi.mocked(designApi.revisions).mockResolvedValue(ResultExtensions.ok([]));
+  vi.mocked(designApi.releases).mockResolvedValue(ResultExtensions.ok([]));
   vi.spyOn(catalogueApi, 'getSettings').mockResolvedValue(
     ResultExtensions.ok({
       settings: {

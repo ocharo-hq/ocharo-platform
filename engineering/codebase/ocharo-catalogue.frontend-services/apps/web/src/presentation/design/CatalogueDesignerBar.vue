@@ -7,6 +7,9 @@ import type { CatalogueDocumentControls } from '../../application/design/UseCata
 import { catalogueLanguages, type CatalogueLanguage } from '../../domain/catalogue/CatalogueLanguages';
 import { catalogueSettings, defaultCopy, refreshCatalogue } from '../../domain/design/CatalogueDesign';
 import { localizeOriginalCopy } from '../../domain/design/OriginalCatalogue';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Card } from '@wow-two-beta/fe/presentation/display';
+import { Field, TextInput } from '@wow-two-beta/fe/presentation/forms';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
 defineOptions({ name: 'CatalogueDesignerBar' });
 const props = defineProps<{ editor: CatalogueDocumentControls; mode: 'web' | 'pdf' }>(),
@@ -32,120 +35,146 @@ function locale(value: string) {
 </script>
 <template>
   <header class="designer-bar">
-    <RouterLink to="/catalogues" class="btn-outline">← {{ t('Your catalogues') }}</RouterLink>
-    <label class="title-field"
-      >{{ t('Name')
-      }}<input
-        :value="editor.title.value"
-        class="field"
+    <Button as-child variant="outline" tone="neutral">
+      <RouterLink to="/catalogues">← {{ t('Your catalogues') }}</RouterLink>
+    </Button>
+    <Field :label="t('Name')" class="title-field">
+      <TextInput
+        :model-value="editor.title.value"
         maxlength="160"
-        :disabled="editor.busy.value"
-        @input="editor.setTitle(($event.target as HTMLInputElement).value)"
-    /></label>
-    <label
-      >{{ t('Catalogue language')
-      }}<CatalogueSelect
+        :is-disabled="editor.busy.value"
+        @update:model-value="editor.setTitle"
+      />
+    </Field>
+    <Field :label="t('Catalogue language')">
+      <CatalogueSelect
         :model-value="editor.snapshot.value?.locale ?? 'uz'"
         :options="languages"
         :label="t('Catalogue language')"
         :disabled="editor.busy.value"
         @update:model-value="locale"
-    /></label>
+      />
+    </Field>
     <div class="actions">
-      <button class="btn-outline" :disabled="!editor.canUndo.value || editor.busy.value" @click="editor.undo">
-        {{ t('Undo') }}</button
-      ><button class="btn-outline" :disabled="!editor.canRedo.value || editor.busy.value" @click="editor.redo">
-        {{ t('Redo') }}</button
-      ><button
-        class="btn-primary"
-        :disabled="!sessionCanEdit || editor.busy.value || !editor.title.value.trim()"
-        @click="editor.save"
+      <Button
+        variant="outline"
+        tone="neutral"
+        :is-disabled="!editor.canUndo.value || editor.busy.value"
+        @click="editor.undo"
       >
+        {{ t('Undo') }}</Button
+      ><Button
+        variant="outline"
+        tone="neutral"
+        :is-disabled="!editor.canRedo.value || editor.busy.value"
+        @click="editor.redo"
+      >
+        {{ t('Redo') }}</Button
+      ><Button :is-disabled="!sessionCanEdit || editor.busy.value || !editor.title.value.trim()" @click="editor.save">
         {{ editor.busy.value ? t('Working…') : t('Save catalogue') }}
-      </button>
+      </Button>
     </div>
     <p class="status">
       {{ editor.dirty.value ? t('Unsaved changes') : t('Saved') }} · {{ t('Revision') }}
       {{ editor.document.value?.revision }}
     </p>
     <nav class="actions">
-      <RouterLink
+      <Button
         v-if="mode === 'web' && editor.snapshot.value?.catalogue?.outputs.pdf"
-        :to="`/catalogues/${editor.document.value?.id}/pdf`"
-        class="btn-outline"
-        >{{ t('PDF designer') }}</RouterLink
-      ><RouterLink
+        as-child
+        variant="outline"
+        tone="neutral"
+      >
+        <RouterLink :to="`/catalogues/${editor.document.value?.id}/pdf`">{{ t('PDF designer') }}</RouterLink></Button
+      ><Button
         v-if="mode === 'pdf' && editor.snapshot.value?.catalogue?.outputs.web"
-        :to="`/catalogues/${editor.document.value?.id}/web`"
-        class="btn-outline"
-        >{{ t('Web designer') }}</RouterLink
-      ><button class="btn-outline" :disabled="editor.busy.value" @click="editor.refresh">
+        as-child
+        variant="outline"
+        tone="neutral"
+      >
+        <RouterLink :to="`/catalogues/${editor.document.value?.id}/web`">{{ t('Web designer') }}</RouterLink></Button
+      ><Button variant="outline" tone="neutral" :is-disabled="editor.busy.value" @click="editor.refresh">
         {{ t('Refresh product fields') }}
-      </button>
+      </Button>
     </nav>
   </header>
-  <div v-if="editor.recovery.value" class="panel recovery">
+  <Card v-if="editor.recovery.value" radius="2xl" padding="xl" class="recovery">
     <p>{{ t('Unsaved changes from this browser tab are available.') }}</p>
-    <button class="btn-outline" @click="editor.restoreRecovery">{{ t('Restore recovery copy') }}</button
-    ><button class="btn-ghost" @click="editor.dismissRecovery">{{ t('Dismiss') }}</button>
-  </div>
+    <Button variant="outline" tone="neutral" @click="editor.restoreRecovery">{{ t('Restore recovery copy') }}</Button
+    ><Button variant="ghost" tone="neutral" @click="editor.dismissRecovery">{{ t('Dismiss') }}</Button>
+  </Card>
   <p v-if="editor.notice.value" role="status" class="notice">{{ editor.notice.value }}</p>
-  <details class="panel publication">
-    <summary>{{ t('Publication and saved history') }}</summary>
-    <p>
-      {{
-        t(
-          'Changes affect the working catalogue. Published editions change only after explicit preparation and publication.',
-        )
-      }}
-    </p>
-    <div class="actions">
-      <button class="btn-outline" :disabled="editor.busy.value || editor.dirty.value" @click="editor.prepare">
-        {{ t('Prepare release') }}</button
-      ><button
-        class="btn-primary"
-        :disabled="!sessionCanApprove || editor.busy.value || editor.dirty.value || !editor.prepared.value"
-        @click="editor.publish"
-      >
-        {{ t('Publish catalogue') }}</button
-      ><button
-        class="btn-outline"
-        :disabled="!sessionCanApprove || editor.busy.value || editor.dirty.value"
-        @click="editor.withdraw"
-      >
-        {{ t('Withdraw catalogue') }}</button
-      ><RouterLink v-if="link" :to="link" class="btn-outline">{{ t('Open public catalogue') }}</RouterLink
-      ><button class="btn-outline" :disabled="editor.busy.value" @click="editor.history">
-        {{ t('Load saved history') }}
-      </button>
-    </div>
-    <ol v-if="editor.revisions.value.length">
-      <li v-for="revision in editor.revisions.value" :key="revision.revision">
-        <span>{{ t('Revision') }} {{ revision.revision }} · {{ revision.title }}</span
-        ><button
-          class="btn-ghost"
-          :disabled="!sessionCanEdit || editor.busy.value"
-          @click="editor.restore(revision.revision)"
+  <Card radius="2xl" padding="xl" class="publication"
+    ><details>
+      <summary>{{ t('Publication and saved history') }}</summary>
+      <p>
+        {{
+          t(
+            'Changes affect the working catalogue. Published editions change only after explicit preparation and publication.',
+          )
+        }}
+      </p>
+      <div class="actions">
+        <Button
+          variant="outline"
+          tone="neutral"
+          :is-disabled="editor.busy.value || editor.dirty.value"
+          @click="editor.prepare"
         >
-          {{ t('Restore revision') }}
-        </button>
-      </li>
-    </ol>
-    <ul>
-      <li v-for="release in editor.releases.value" :key="release.id">
-        {{ t('Revision') }} {{ release.designRevision }} ·
-        {{ release.withdrawnAtUtc ? t('Withdrawn') : release.publishedAtUtc ? t('Published') : t('Prepared') }}
-      </li>
-    </ul>
-  </details>
-  <section v-if="editor.preflight.value?.issues.length" class="panel">
-    <h2>{{ t('Export check') }}</h2>
+          {{ t('Prepare release') }}</Button
+        ><Button
+          :is-disabled="!sessionCanApprove || editor.busy.value || editor.dirty.value || !editor.prepared.value"
+          @click="editor.publish"
+        >
+          {{ t('Publish catalogue') }}</Button
+        ><Button
+          variant="outline"
+          tone="neutral"
+          :is-disabled="!sessionCanApprove || editor.busy.value || editor.dirty.value"
+          @click="editor.withdraw"
+        >
+          {{ t('Withdraw catalogue') }}</Button
+        ><Button v-if="link" as-child variant="outline" tone="neutral">
+          <RouterLink :to="link">{{ t('Open public catalogue') }}</RouterLink></Button
+        ><Button variant="outline" tone="neutral" :is-disabled="editor.busy.value" @click="editor.history">
+          {{ t('Load saved history') }}
+        </Button>
+      </div>
+      <ol v-if="editor.revisions.value.length">
+        <li v-for="revision in editor.revisions.value" :key="revision.revision">
+          <span>{{ t('Revision') }} {{ revision.revision }} · {{ revision.title }}</span
+          ><Button
+            variant="ghost"
+            tone="neutral"
+            size="sm"
+            :is-disabled="!sessionCanEdit || editor.busy.value"
+            @click="editor.restore(revision.revision)"
+          >
+            {{ t('Restore revision') }}
+          </Button>
+        </li>
+      </ol>
+      <ul>
+        <li v-for="release in editor.releases.value" :key="release.id">
+          {{ t('Revision') }} {{ release.designRevision }} ·
+          {{ release.withdrawnAtUtc ? t('Withdrawn') : release.publishedAtUtc ? t('Published') : t('Prepared') }}
+        </li>
+      </ul>
+    </details></Card
+  >
+  <Card
+    v-if="editor.preflight.value?.issues.length"
+    v-bind="{ role: 'region', 'aria-labelledby': 'export-check-heading' }"
+    radius="2xl"
+    padding="xl"
+  >
+    <h2 id="export-check-heading">{{ t('Export check') }}</h2>
     <ul>
       <li v-for="(issue, index) in editor.preflight.value.issues" :key="index">
         {{ issue.pageTitle }} / {{ issue.elementLabel }}: {{ t(issue.message, issue.variables) }}
       </li>
     </ul>
-  </section>
+  </Card>
 </template>
 <style scoped>
 .designer-bar {
@@ -154,11 +183,6 @@ function locale(value: string) {
   flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 20px;
-}
-.designer-bar label {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
 }
 .title-field {
   flex: 1;

@@ -7,6 +7,10 @@ import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router';
 import { ArrowDownToLine, Bookmark, Check, Share2 } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { localStorageStorageBroker } from '@wow-two-beta/fe/foundation/storage';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { LabelText } from '@wow-two-beta/fe/presentation/display';
+import { SegmentedPicker, ToggleInput } from '@wow-two-beta/fe/presentation/forms';
 import { usePublishedCatalogue } from '../../application/public/UsePublishedCatalogue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 import { notifyError, useErrorToast } from '../../application/common/UseFeedback';
@@ -25,14 +29,13 @@ const edition = reader.edition,
   loading = reader.loading;
 const view = ref<'web' | 'pdf'>('web');
 const notice = ref('');
-const saved = ref<string[]>([]);
-const storageKey = 'ocharo.catalogue.saved-pieces';
-try {
-  const stored: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
-  if (Array.isArray(stored)) saved.value = stored.filter((id): id is string => typeof id === 'string').slice(0, 500);
-} catch {
-  /* Saving stays available for this tab. */
-}
+/** Where this browser keeps a guest's saved pieces: at most 500 piece IDs, as JSON through the SDK storage seam. */
+const SavedPiecesKey = 'ocharo.catalogue.saved-pieces';
+const MaxSavedPieces = 500;
+const stored = localStorageStorageBroker.read<unknown>(SavedPiecesKey);
+const saved = ref<string[]>(
+  Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string').slice(0, MaxSavedPieces) : [],
+);
 const contentLocale = computed(() => (typeof route.query.locale === 'string' ? route.query.locale : 'uz'));
 const releaseId = computed(() => (typeof route.query.release === 'string' ? route.query.release : undefined));
 const direction = computed(
@@ -60,6 +63,10 @@ function changeLanguage(locale: string) {
   delete query.release;
   void router.push({ path: route.path, query });
 }
+/** Shows the online reading or the PDF pages; the pressed segment stays selected. */
+function chooseView(value: string | readonly string[] | null) {
+  if (value === 'web' || value === 'pdf') view.value = value;
+}
 function amount(value: number) {
   return new Intl.NumberFormat(edition.value?.locale ?? 'uz', { maximumFractionDigits: 0 }).format(value);
 }
@@ -69,12 +76,9 @@ function quantity(tier: PriceTier) {
 function toggleSaved(id: string) {
   saved.value = saved.value.includes(id)
     ? saved.value.filter((value) => value !== id)
-    : [...saved.value, id].slice(-500);
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(saved.value));
-  } catch {
+    : [...saved.value, id].slice(-MaxSavedPieces);
+  if (!localStorageStorageBroker.write(SavedPiecesKey, saved.value))
     notifyError(t('Your saved pieces are available in this tab only.'));
-  }
 }
 async function share(section?: string) {
   if (!edition.value) return;
@@ -110,7 +114,7 @@ async function share(section?: string) {
         <section class="published-catalogue" :lang="edition.locale" :dir="direction">
           <div class="reader-tools no-print">
             <div class="reader-language">
-              <label class="label" for="catalogue-language">{{ t('Catalogue language') }}</label
+              <LabelText for="catalogue-language" class="mb-1.5 block">{{ t('Catalogue language') }}</LabelText
               ><CatalogueSelect
                 id="catalogue-language"
                 :model-value="edition.locale"
@@ -120,23 +124,24 @@ async function share(section?: string) {
               />
             </div>
             <div class="reader-actions">
-              <div v-if="edition.web && edition.pdf" class="reader-view" role="group" :aria-label="t('Catalogue view')">
-                <button type="button" :aria-pressed="view === 'web'" @click="view = 'web'">
-                  {{ t('Read online') }}</button
-                ><button type="button" :aria-pressed="view === 'pdf'" @click="view = 'pdf'">
-                  {{ t('PDF pages') }}
-                </button>
-              </div>
-              <a
-                v-if="edition.pdf"
-                :href="edition.pdf.pdfUrl"
-                :download="`ocharo-${edition.slug}-${edition.locale}.pdf`"
-                class="btn-primary"
-                ><Icon :icon="ArrowDownToLine" :size="17" />{{ t('Download catalogue PDF') }}</a
+              <SegmentedPicker
+                v-if="edition.web && edition.pdf"
+                :model-value="view"
+                :aria-label="t('Catalogue view')"
+                @update:model-value="chooseView"
               >
-              <button type="button" class="btn-outline" @click="share()">
-                <Icon :icon="Share2" :size="17" />{{ t('Share catalogue') }}
-              </button>
+                <ToggleInput value="web" class="min-h-11">{{ t('Read online') }}</ToggleInput>
+                <ToggleInput value="pdf" class="min-h-11">{{ t('PDF pages') }}</ToggleInput>
+              </SegmentedPicker>
+              <Button v-if="edition.pdf" as-child class="min-h-11">
+                <a :href="edition.pdf.pdfUrl" :download="`ocharo-${edition.slug}-${edition.locale}.pdf`"
+                  ><Icon :icon="ArrowDownToLine" :size="17" />{{ t('Download catalogue PDF') }}</a
+                >
+              </Button>
+              <Button variant="outline" tone="neutral" class="min-h-11" @click="share()">
+                <template #leading><Icon :icon="Share2" :size="17" /></template>
+                {{ t('Share catalogue') }}
+              </Button>
             </div>
             <p role="status" class="reader-notice">{{ notice }}</p>
           </div>
@@ -255,9 +260,11 @@ async function share(section?: string) {
                 ></SkeletonStateSlot>
                 <figcaption>
                   <span>{{ page.number }} · {{ page.title }}</span
-                  ><a :href="page.pdfUrl" :download="`ocharo-${edition.slug}-${page.number}.pdf`" class="btn-outline"
-                    ><Icon :icon="ArrowDownToLine" :size="16" />{{ t('Download page PDF') }}</a
-                  >
+                  ><Button as-child variant="outline" tone="neutral" class="min-h-11">
+                    <a :href="page.pdfUrl" :download="`ocharo-${edition.slug}-${page.number}.pdf`"
+                      ><Icon :icon="ArrowDownToLine" :size="16" />{{ t('Download page PDF') }}</a
+                    >
+                  </Button>
                 </figcaption>
               </figure>
             </div>
@@ -276,14 +283,13 @@ async function share(section?: string) {
   gap: 16px 24px;
   margin-bottom: 24px;
 }
-.reader-tools :deep(button),
-.reader-tools a,
-.pdf-grid a.btn-outline {
-  min-height: 44px;
-}
 .reader-language {
   width: 220px;
   max-width: 100%;
+}
+/* The language picker keeps the reader's 44px touch target beside the view switch and the downloads. */
+.reader-language :deep(button) {
+  min-height: 44px;
 }
 .reader-actions {
   display: flex;
@@ -291,22 +297,6 @@ async function share(section?: string) {
   align-items: center;
   gap: 12px;
   margin-inline-start: auto;
-}
-.reader-view {
-  display: flex;
-  padding: 4px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-card);
-}
-.reader-view button {
-  min-height: 44px;
-  padding: 8px 14px;
-  border-radius: 8px;
-}
-.reader-view button[aria-pressed='true'] {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
 }
 .reader-notice {
   width: 100%;

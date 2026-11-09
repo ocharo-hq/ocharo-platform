@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Ellipsis, X } from 'lucide-vue-next';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { BottomNavMenu, BottomNavMenuItem } from '@wow-two-beta/fe/presentation/nav';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 
@@ -54,14 +55,17 @@ const moreIsCurrent = computed(() => moreSections.some((section) => section.id =
     >
       <div class="flex items-center justify-between gap-3">
         <ModalTitle class="text-lg font-semibold">{{ t('More in Catalogue') }}</ModalTitle>
-        <button
-          type="button"
-          class="grid size-11 place-items-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        <Button
+          variant="ghost"
+          tone="neutral"
+          shape="square"
+          size="lg"
+          class="rounded-xl text-muted-foreground hover:text-foreground"
           :aria-label="t('Close')"
           @click="moreOpen = false"
         >
           <X :size="20" aria-hidden="true" />
-        </button>
+        </Button>
       </div>
       <nav :aria-label="t('More in Catalogue')">
         <ul role="list" class="flex flex-col gap-1">

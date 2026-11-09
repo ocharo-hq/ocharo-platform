@@ -23,6 +23,17 @@ import type { CatalogueBinding, DesignElement, DesignPage } from '../../domain/d
 import CatalogueDesignerBar from './CatalogueDesignerBar.vue';
 import CatalogueSharedSettings from './CatalogueSharedSettings.vue';
 import DesignCanvas from './DesignCanvas.vue';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Card } from '@wow-two-beta/fe/presentation/display';
+import {
+  CheckboxField,
+  ColorPicker,
+  Field,
+  NumberInput,
+  SliderInput,
+  TextAreaInput,
+  TextInput,
+} from '@wow-two-beta/fe/presentation/forms';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
 defineOptions({ name: 'CataloguePdfDesignerPage' });
@@ -283,63 +294,94 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
       <SkeletonStateGroup v-else :is-loading="resultBusy" :label="t('Loading catalogue')">
         <section class="native-designer">
           <CatalogueDesignerBar :editor="editor" mode="pdf" />
-          <p v-if="editor.snapshot.value.catalogue && !editor.snapshot.value.catalogue.outputs.pdf" class="panel">
-            {{ t('PDF output is disabled. Enable it in catalogue settings.') }}
-          </p>
+          <Card
+            v-if="editor.snapshot.value.catalogue && !editor.snapshot.value.catalogue.outputs.pdf"
+            radius="2xl"
+            padding="xl"
+            class="mb-4"
+          >
+            <p>{{ t('PDF output is disabled. Enable it in catalogue settings.') }}</p>
+          </Card>
           <CatalogueSharedSettings :editor="editor" />
           <div class="export-bar">
-            <button
-              class="btn-primary"
-              :disabled="editor.busy.value || !editor.exportable.value?.snapshot.pages.length"
+            <Button
+              :is-disabled="editor.busy.value || !editor.exportable.value?.snapshot.pages.length"
               @click="editor.download()"
             >
-              {{ t('Download PDF') }}</button
-            ><button class="btn-outline" :disabled="editor.busy.value || !page" @click="editor.download(page?.id)">
-              {{ t('Download page PDF') }}</button
-            ><button
-              class="btn-outline"
-              :disabled="editor.busy.value || !page"
+              {{ t('Download PDF') }}</Button
+            ><Button
+              variant="outline"
+              tone="neutral"
+              :is-disabled="editor.busy.value || !page"
+              @click="editor.download(page?.id)"
+            >
+              {{ t('Download page PDF') }}</Button
+            ><Button
+              variant="outline"
+              tone="neutral"
+              :is-disabled="editor.busy.value || !page"
               @click="editor.download(page?.id, 'png')"
             >
-              {{ t('Download page PNG') }}</button
-            ><button class="btn-outline" :disabled="editor.busy.value" @click="randomize(true)">
-              {{ t('Randomize catalogue images') }}</button
-            ><button
-              class="btn-ghost"
-              :disabled="editor.busy.value || !['uz', 'ru', 'en'].includes(editor.snapshot.value.locale)"
+              {{ t('Download page PNG') }}</Button
+            ><Button variant="outline" tone="neutral" :is-disabled="editor.busy.value" @click="randomize(true)">
+              {{ t('Randomize catalogue images') }}</Button
+            ><Button
+              variant="ghost"
+              tone="neutral"
+              :is-disabled="editor.busy.value || !['uz', 'ru', 'en'].includes(editor.snapshot.value.locale)"
               @click="original"
             >
               {{ t('Use original design') }}
-            </button>
+            </Button>
           </div>
-          <p v-if="editor.exportable.value?.excluded.length" class="panel excluded">
+          <Card v-if="editor.exportable.value?.excluded.length" radius="2xl" padding="xl" class="excluded">
             {{
               t('These pages are excluded from export because they are inactive or contain products awaiting review:')
             }}
             {{ editor.exportable.value.excluded.join(', ') }}
-          </p>
+          </Card>
           <div class="designer-grid">
-            <aside class="panel page-rail">
-              <h2>{{ t('PDF pages') }}</h2>
+            <Card
+              v-bind="{ role: 'complementary', 'aria-labelledby': 'pdf-pages-heading' }"
+              radius="2xl"
+              class="page-rail"
+            >
+              <h2 id="pdf-pages-heading">{{ t('PDF pages') }}</h2>
               <ol>
                 <li v-for="(item, index) in pages" :key="item.id" :class="{ selected: item.id === page?.id }">
-                  <button class="page-name" @click="select(item.id)">
+                  <Button
+                    variant="ghost"
+                    tone="neutral"
+                    size="sm"
+                    is-multiline
+                    class="page-name h-auto flex-col items-start gap-0 py-1 text-start font-normal"
+                    :aria-current="item.id === page?.id ? 'true' : undefined"
+                    @click="select(item.id)"
+                  >
                     {{ index + 1 }} · {{ item.title }}<small v-if="item.isActive === false">{{ t('Inactive') }}</small>
-                  </button>
+                  </Button>
                   <div class="actions">
-                    <button
-                      :disabled="index === 0 || editor.busy.value"
+                    <Button
+                      variant="ghost"
+                      tone="neutral"
+                      shape="square"
+                      size="sm"
+                      :is-disabled="index === 0 || editor.busy.value"
                       :aria-label="t('Move page up')"
                       @click="movePage(index, -1)"
                     >
-                      ↑</button
-                    ><button
-                      :disabled="index === pages.length - 1 || editor.busy.value"
+                      ↑</Button
+                    ><Button
+                      variant="ghost"
+                      tone="neutral"
+                      shape="square"
+                      size="sm"
+                      :is-disabled="index === pages.length - 1 || editor.busy.value"
                       :aria-label="t('Move page down')"
                       @click="movePage(index, 1)"
                     >
                       ↓
-                    </button>
+                    </Button>
                   </div>
                 </li>
               </ol>
@@ -347,94 +389,98 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                 v-model="chosenProduct"
                 :options="productOptions"
                 :label="t('Choose a product')"
-              /><CatalogueSelect v-model="layout" :options="layouts" :label="t('Page template')" /><button
-                class="btn-outline"
-                :disabled="editor.busy.value || pages.length >= 100"
+              /><CatalogueSelect v-model="layout" :options="layouts" :label="t('Page template')" /><Button
+                variant="outline"
+                tone="neutral"
+                :is-disabled="editor.busy.value || pages.length >= 100"
                 @click="addPage"
               >
-                + {{ chosenProduct ? t('Add product page') : t('Add cover page') }}</button
+                + {{ chosenProduct ? t('Add product page') : t('Add cover page') }}</Button
               ><template v-if="page"
-                ><label
-                  >{{ t('Page title')
-                  }}<input
-                    :value="page.title"
+                ><Field :label="t('Page title')">
+                  <TextInput
+                    :model-value="page.title"
                     maxlength="160"
-                    class="field"
-                    @change="editPage((item) => (item.title = ($event.target as HTMLInputElement).value))" /></label
-                ><label class="check"
-                  ><input
-                    type="checkbox"
-                    :checked="page.isActive !== false"
-                    @change="editPage((item) => (item.isActive = ($event.target as HTMLInputElement).checked))"
-                  />{{ t('Active page') }}</label
-                >
+                    @change="editPage((item) => (item.title = ($event.target as HTMLInputElement).value))"
+                  />
+                </Field>
+                <CheckboxField
+                  :model-value="page.isActive !== false"
+                  :label="t('Active page')"
+                  @update:model-value="(checked) => editPage((item) => (item.isActive = checked))"
+                />
                 <div class="actions">
-                  <button
-                    class="btn-outline"
-                    :disabled="editor.busy.value || pages.length >= 100"
+                  <Button
+                    variant="outline"
+                    tone="neutral"
+                    size="sm"
+                    :is-disabled="editor.busy.value || pages.length >= 100"
                     @click="duplicatePage"
                   >
-                    {{ t('Duplicate page') }}</button
-                  ><button class="btn-ghost" :disabled="editor.busy.value" @click="removePage">
+                    {{ t('Duplicate page') }}</Button
+                  ><Button variant="ghost" tone="danger" size="sm" :is-disabled="editor.busy.value" @click="removePage">
                     {{ t('Remove page') }}
-                  </button>
+                  </Button>
                 </div>
-                <button class="btn-outline" :disabled="editor.busy.value" @click="randomize()">
+                <Button variant="outline" tone="neutral" :is-disabled="editor.busy.value" @click="randomize()">
                   {{ t('Randomize page images') }}
-                </button>
+                </Button>
                 <p class="hint">
                   {{ t('Page dimensions') }}: {{ page.width.toFixed(1) }} × {{ page.height.toFixed(1) }} mm
                 </p>
                 <div class="numbers">
-                  <label
-                    >{{ t('Width')
-                    }}<input
-                      :value="page.width"
-                      type="number"
+                  <Field :label="t('Width')">
+                    <NumberInput
+                      :model-value="page.width"
                       min="10"
                       max="1000"
-                      step=".1"
-                      class="field"
-                      @change="
-                        editPage((item) => (item.width = Number(($event.target as HTMLInputElement).value)))
-                      " /></label
-                  ><label
-                    >{{ t('Height')
-                    }}<input
-                      :value="page.height"
-                      type="number"
+                      :step="0.1"
+                      @change="editPage((item) => (item.width = Number(($event.target as HTMLInputElement).value)))"
+                    />
+                  </Field>
+                  <Field :label="t('Height')">
+                    <NumberInput
+                      :model-value="page.height"
                       min="10"
                       max="1000"
-                      step=".1"
-                      class="field"
+                      :step="0.1"
                       @change="editPage((item) => (item.height = Number(($event.target as HTMLInputElement).value)))"
-                  /></label>
+                    />
+                  </Field>
                 </div>
-                <label
-                  >{{ t('Page background')
-                  }}<input
-                    type="color"
-                    :value="page.background"
-                    @input="editPage((item) => (item.background = ($event.target as HTMLInputElement).value))" /></label
-              ></template>
-            </aside>
+                <Field :label="t('Page background')">
+                  <ColorPicker
+                    :model-value="page.background"
+                    trigger-variant="swatch"
+                    @update:model-value="(color) => color && editPage((item) => (item.background = color))"
+                  />
+                </Field>
+              </template>
+            </Card>
             <div class="canvas-panel">
               <div class="canvas-toolbar">
-                <CatalogueSelect v-model="zoom" :options="zooms" :label="t('Zoom')" /><button
-                  class="btn-outline"
-                  :disabled="!page || editor.busy.value"
+                <CatalogueSelect v-model="zoom" :options="zooms" :label="t('Zoom')" /><Button
+                  variant="outline"
+                  tone="neutral"
+                  :is-disabled="!page || editor.busy.value"
                   @click="addElement('text')"
                 >
-                  + {{ t('Text') }}</button
-                ><button class="btn-outline" :disabled="!page || editor.busy.value" @click="addElement('shape')">
-                  + {{ t('Shape') }}</button
-                ><button
-                  class="btn-outline"
-                  :disabled="!page || !chosenProduct || editor.busy.value"
+                  + {{ t('Text') }}</Button
+                ><Button
+                  variant="outline"
+                  tone="neutral"
+                  :is-disabled="!page || editor.busy.value"
+                  @click="addElement('shape')"
+                >
+                  + {{ t('Shape') }}</Button
+                ><Button
+                  variant="outline"
+                  tone="neutral"
+                  :is-disabled="!page || !chosenProduct || editor.busy.value"
                   @click="addElement('image')"
                 >
                   + {{ t('Image') }}
-                </button>
+                </Button>
               </div>
               <div class="canvas-scroll">
                 <ResultEmpty v-if="!pages.length" :label="t('No pages yet. Add a page to start designing.')" />
@@ -453,73 +499,73 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                       @change="(elements) => editPage((item) => (item.elements = elements))"
                   /></SkeletonStateSlot>
                 </div>
-                <p v-else class="panel">{{ t('Add a page to begin designing your PDF.') }}</p>
+                <Card v-else radius="2xl" padding="xl">
+                  <p>{{ t('Add a page to begin designing your PDF.') }}</p>
+                </Card>
               </div>
               <p class="hint">
                 {{ t('Drag to move. Use the corner handle to resize. Arrow keys move 0.5 mm; Shift moves 5 mm.') }}
               </p>
             </div>
-            <aside class="panel inspector">
-              <h2>{{ t('Selected element') }}</h2>
+            <Card
+              v-bind="{ role: 'complementary', 'aria-labelledby': 'selected-element-heading' }"
+              radius="2xl"
+              class="inspector"
+            >
+              <h2 id="selected-element-heading">{{ t('Selected element') }}</h2>
               <p v-if="!element" class="hint">{{ t('Select text or an image on the page to edit it.') }}</p>
               <template v-else
-                ><label
-                  >{{ t('Label')
-                  }}<input
-                    :value="element.label"
+                ><Field :label="t('Label')">
+                  <TextInput
+                    :model-value="element.label"
                     maxlength="256"
-                    class="field"
-                    @change="editElement({ label: ($event.target as HTMLInputElement).value })" /></label
-                ><label class="check"
-                  ><input
-                    type="checkbox"
-                    :checked="element.locked"
-                    @change="editElement({ locked: ($event.target as HTMLInputElement).checked })"
-                  />{{ t('Lock element') }}</label
-                >
+                    @change="editElement({ label: ($event.target as HTMLInputElement).value })"
+                  />
+                </Field>
+                <CheckboxField
+                  :model-value="!!element.locked"
+                  :label="t('Lock element')"
+                  @update:model-value="(locked) => editElement({ locked })"
+                />
                 <div class="numbers">
-                  <label v-for="key in ['x', 'y', 'width', 'height'] as const" :key="key"
-                    >{{ t(key) }} (mm)<input
-                      :value="Number(element[key].toFixed(2))"
-                      type="number"
-                      step=".1"
+                  <Field v-for="key in ['x', 'y', 'width', 'height'] as const" :key="key" :label="`${t(key)} (mm)`">
+                    <NumberInput
+                      :model-value="Number(element[key].toFixed(2))"
+                      :step="0.1"
                       :min="key === 'width' || key === 'height' ? 0.1 : -1000"
                       max="2000"
-                      class="field"
                       @change="editElement({ [key]: Number(($event.target as HTMLInputElement).value) })"
-                  /></label>
+                    />
+                  </Field>
                 </div>
-                <label
-                  >{{ t('Rotation')
-                  }}<input
-                    :value="element.rotation ?? 0"
-                    type="range"
+                <Field :label="t('Rotation')">
+                  <SliderInput
+                    :model-value="element.rotation ?? 0"
                     min="-180"
                     max="180"
-                    step="1"
-                    @input="editElement({ rotation: Number(($event.target as HTMLInputElement).value) })" /></label
-                ><label
-                  >{{ t('Opacity')
-                  }}<input
-                    :value="element.opacity ?? 1"
-                    type="range"
+                    v-bind="{ step: '1' }"
+                    @update:model-value="(value) => editElement({ rotation: Number(value) })"
+                  />
+                </Field>
+                <Field :label="t('Opacity')">
+                  <SliderInput
+                    :model-value="element.opacity ?? 1"
                     min="0"
                     max="1"
-                    step=".05"
-                    @input="editElement({ opacity: Number(($event.target as HTMLInputElement).value) })"
-                /></label>
+                    v-bind="{ step: '.05' }"
+                    @update:model-value="(value) => editElement({ opacity: Number(value) })"
+                  />
+                </Field>
                 <template v-if="element.type === 'text'"
-                  ><label
-                    >{{ t('Text')
-                    }}<textarea
-                      :value="element.text"
-                      class="field"
-                      rows="5"
+                  ><Field :label="t('Text')">
+                    <TextAreaInput
+                      :model-value="element.text ?? ''"
+                      :rows="5"
                       maxlength="10000"
-                      :disabled="!!element.binding"
+                      :is-disabled="!!element.binding"
                       @change="editElement({ text: ($event.target as HTMLTextAreaElement).value })"
                     />
-                  </label>
+                  </Field>
                   <p v-if="element.binding" class="hint">
                     {{ t('This text is connected to catalogue or product fields.') }}
                     <RouterLink to="/">{{ t('Edit products') }}</RouterLink>
@@ -534,30 +580,27 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                     :options="alignments"
                     :label="t('Text alignment')"
                     @update:model-value="(value) => editElement({ align: value as 'left' | 'center' | 'right' })"
-                  /><label class="check"
-                    ><input
-                      type="checkbox"
-                      :checked="element.fontWeight === 'bold'"
-                      @change="
-                        editElement({ fontWeight: ($event.target as HTMLInputElement).checked ? 'bold' : 'normal' })
-                      "
-                    />{{ t('Bold') }}</label
-                  ><label
-                    >{{ t('Font size') }} (mm)<input
-                      :value="element.fontSize ?? 4"
-                      type="number"
+                  /><CheckboxField
+                    :model-value="element.fontWeight === 'bold'"
+                    :label="t('Bold')"
+                    @update:model-value="(bold) => editElement({ fontWeight: bold ? 'bold' : 'normal' })"
+                  />
+                  <Field :label="`${t('Font size')} (mm)`">
+                    <NumberInput
+                      :model-value="element.fontSize ?? 4"
                       min=".5"
                       max="200"
-                      step=".1"
-                      class="field"
-                      @change="editElement({ fontSize: Number(($event.target as HTMLInputElement).value) })" /></label
-                  ><label
-                    >{{ t('Text color')
-                    }}<input
-                      type="color"
-                      :value="element.color ?? '#302b25'"
-                      @input="editElement({ color: ($event.target as HTMLInputElement).value })"
-                  /></label>
+                      :step="0.1"
+                      @change="editElement({ fontSize: Number(($event.target as HTMLInputElement).value) })"
+                    />
+                  </Field>
+                  <Field :label="t('Text color')">
+                    <ColorPicker
+                      :model-value="element.color ?? '#302b25'"
+                      trigger-variant="swatch"
+                      @update:model-value="(color) => color && editElement({ color })"
+                    />
+                  </Field>
                   <details>
                     <summary>{{ t('Connect product field') }}</summary>
                     <CatalogueSelect
@@ -573,9 +616,9 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                       v-model="bindingIndex"
                       :options="bindingTiers"
                       :label="t('Price tier')"
-                    /><button class="btn-outline" :disabled="!bindingProduct" @click="bind">
-                      {{ t('Connect field') }}</button
-                    ><button
+                    /><Button variant="outline" tone="neutral" :is-disabled="!bindingProduct" @click="bind">
+                      {{ t('Connect field') }}</Button
+                    ><Button
                       v-if="
                         element.binding &&
                         !(
@@ -583,11 +626,12 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                           ['price', 'price-label', 'currency'].includes(element.binding.field)
                         )
                       "
-                      class="btn-ghost"
+                      variant="ghost"
+                      tone="neutral"
                       @click="unlink"
                     >
                       {{ t('Use independent text') }}
-                    </button>
+                    </Button>
                   </details></template
                 >
                 <template v-if="element.type === 'image'"
@@ -596,67 +640,74 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
                     :options="fits"
                     :label="t('Image fit')"
                     @update:model-value="(value) => editElement({ fit: value as 'cover' | 'contain' })"
-                  /><label
-                    >{{ t('Image zoom')
-                    }}<input
-                      :value="element.zoom ?? 1"
-                      type="range"
+                  />
+                  <Field :label="t('Image zoom')">
+                    <SliderInput
+                      :model-value="element.zoom ?? 1"
                       min="1"
                       max="5"
-                      step=".05"
-                      @input="editElement({ zoom: Number(($event.target as HTMLInputElement).value) })" /></label
-                  ><label
-                    >{{ t('Horizontal crop')
-                    }}<input
-                      :value="element.cropX ?? 50"
-                      type="range"
+                      v-bind="{ step: '.05' }"
+                      @update:model-value="(value) => editElement({ zoom: Number(value) })"
+                    />
+                  </Field>
+                  <Field :label="t('Horizontal crop')">
+                    <SliderInput
+                      :model-value="element.cropX ?? 50"
                       min="0"
                       max="100"
-                      @input="editElement({ cropX: Number(($event.target as HTMLInputElement).value) })" /></label
-                  ><label
-                    >{{ t('Vertical crop')
-                    }}<input
-                      :value="element.cropY ?? 50"
-                      type="range"
+                      @update:model-value="(value) => editElement({ cropX: Number(value) })"
+                    />
+                  </Field>
+                  <Field :label="t('Vertical crop')">
+                    <SliderInput
+                      :model-value="element.cropY ?? 50"
                       min="0"
                       max="100"
-                      @input="editElement({ cropY: Number(($event.target as HTMLInputElement).value) })" /></label
-                  ><CatalogueSelect
+                      @update:model-value="(value) => editElement({ cropY: Number(value) })"
+                    />
+                  </Field>
+                  <CatalogueSelect
                     :model-value="element.productId ?? ''"
                     :options="productOptions"
                     :label="t('Image product')"
                     @update:model-value="(value) => editElement({ productId: value || undefined })"
                   />
                   <div class="image-picker">
-                    <button
+                    <Button
                       v-for="image in availableImages"
                       :key="image.id"
-                      :class="{ chosen: element.src === mediaUrl(image) }"
+                      variant="outline"
+                      tone="neutral"
+                      size="sm"
+                      :class="['h-auto p-1', { chosen: element.src === mediaUrl(image) }]"
+                      :aria-pressed="element.src === mediaUrl(image)"
                       :title="image.alt || image.fileName"
                       @click="replace(image.sha256)"
                     >
                       <img :src="mediaUrl(image)" :alt="image.alt || image.fileName" />
-                    </button>
+                    </Button>
                   </div>
                   <p v-if="!availableImages.length" class="hint">
                     {{ t('No active images in this product group.') }}
                   </p></template
                 >
-                <label v-if="element.type === 'shape'"
-                  >{{ t('Fill color')
-                  }}<input
-                    type="color"
-                    :value="element.background ?? '#d1c3af'"
-                    @input="editElement({ background: ($event.target as HTMLInputElement).value })"
-                /></label>
+                <Field v-if="element.type === 'shape'" :label="t('Fill color')">
+                  <ColorPicker
+                    :model-value="element.background ?? '#d1c3af'"
+                    trigger-variant="swatch"
+                    @update:model-value="(color) => color && editElement({ background: color })"
+                  />
+                </Field>
                 <div class="actions">
-                  <button class="btn-outline" @click="duplicateElement">{{ t('Duplicate') }}</button
-                  ><button class="btn-ghost" @click="removeElement">{{ t('Remove') }}</button
-                  ><button class="btn-ghost" @click="layer(1)">{{ t('Bring forward') }}</button
-                  ><button class="btn-ghost" @click="layer(-1)">{{ t('Send backward') }}</button>
+                  <Button variant="outline" tone="neutral" size="sm" @click="duplicateElement">{{
+                    t('Duplicate')
+                  }}</Button
+                  ><Button variant="ghost" tone="danger" size="sm" @click="removeElement">{{ t('Remove') }}</Button
+                  ><Button variant="ghost" tone="neutral" size="sm" @click="layer(1)">{{ t('Bring forward') }}</Button
+                  ><Button variant="ghost" tone="neutral" size="sm" @click="layer(-1)">{{ t('Send backward') }}</Button>
                 </div>
               </template>
-            </aside>
+            </Card>
           </div>
         </section>
       </SkeletonStateGroup>
@@ -715,7 +766,6 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
   outline: 2px solid var(--color-primary);
 }
 .page-name {
-  text-align: start;
   flex: 1;
   font-size: 12px;
   overflow-wrap: anywhere;
@@ -727,9 +777,6 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
   display: flex;
   gap: 7px;
   flex-wrap: wrap;
-}
-.actions button {
-  font-size: 12px;
 }
 .canvas-panel {
   min-width: 0;
@@ -758,36 +805,17 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
   line-height: 1.6;
   color: var(--color-muted-foreground);
 }
-label {
-  display: grid;
-  gap: 5px;
-  font-size: 12px;
-}
-.check {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-}
 .numbers {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-}
-.numbers input {
-  width: 100%;
-  min-width: 0;
 }
 .image-picker {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
-.image-picker button {
-  border: 1px solid var(--color-border);
-  border-radius: 5px;
-  padding: 3px;
-}
-.image-picker button.chosen {
+.image-picker .chosen {
   outline: 2px solid var(--color-primary);
 }
 .image-picker img {
@@ -800,13 +828,6 @@ details {
 }
 details > * + * {
   margin-top: 9px;
-}
-input[type='color'] {
-  height: 30px;
-  width: 70px;
-}
-input[type='range'] {
-  width: 100%;
 }
 @media (max-width: 1250px) {
   .designer-grid {

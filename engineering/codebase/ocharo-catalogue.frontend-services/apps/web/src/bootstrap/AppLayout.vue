@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
 import { ChevronRight, X } from 'lucide-vue-next';
 import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Card } from '@wow-two-beta/fe/presentation/display';
 import {
   AppShell,
   AppShellContent,
@@ -22,9 +24,9 @@ import {
 } from '@wow-two-beta/fe/presentation/nav';
 import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
-import { useCatalogueStore } from '../application/catalogue';
+import { useCatalogueSettings, useCatalogueStore } from '../application/catalogue';
 import { useBuildIdentity } from '../application/common/UseBuildIdentity';
-import { useIdentitySession } from '../application/common/UseIdentitySession';
+import { useIdentitySession, useSessionActions } from '../application/common/UseIdentitySession';
 import { useOcharoApps } from '../application/shared/UseOcharoApps';
 import { useUiLocale } from '../application/shared/UseUiLocale';
 import { CatalogueGroupLabels, catalogueSection, readCatalogueSection } from '../domain/shared/CatalogueSections';
@@ -56,7 +58,10 @@ defineOptions({ name: 'AppLayout' });
 const { t, uiLocale, setUiLocale } = useUiLocale();
 const route = useRoute();
 const store = useCatalogueStore();
-const { session, signingOut, signOut } = useIdentitySession();
+// The frame reads the catalogue settings once for every place, from the session-bound query cache.
+useCatalogueSettings();
+const { isAuthenticated, person } = useIdentitySession();
+const { signingOut, signOut } = useSessionActions();
 const { backendVersion, refresh: refreshBackendVersion } = useBuildIdentity();
 const apps = useOcharoApps();
 const appVersion = __APP_VERSION__;
@@ -92,18 +97,17 @@ const crumbs = computed(() => {
 
 /** Who is signed in, and sign-out, exist only with an Ocharo session. */
 const accountOpen = ref(false);
-/** The person Identity names, their contact and picture; a session that names neither still says it is signed in. */
+/** The person Identity names and their contact; a session that names neither still says it is signed in. */
 const accountIdentity = computed(() => {
-  const { isAuthenticated, person } = session.value;
-  if (!isAuthenticated || !person) return {};
-  const { name, email, phoneNumber, picture } = person;
-  const contact = email ?? phoneNumber;
+  const signedIn = person.value;
+  if (!isAuthenticated.value || !signedIn) return {};
+  const name = signedIn.name?.trim() || null;
+  const contact = signedIn.email?.trim() || signedIn.phoneNumber?.trim() || null;
   if (!name && !contact) return { description: t('Signed in to Ocharo'), onSignOut: signOut };
   return {
     ...(name ? { name } : {}),
     // A person without a display name is named by their contact; it is not repeated under itself.
     ...(contact && contact !== name ? { description: contact } : {}),
-    ...(picture ? { avatarSrc: picture } : {}),
     onSignOut: signOut,
   };
 });
@@ -118,8 +122,6 @@ const versions = computed<AccountMenuVersion[]>(() => {
 watch(accountOpen, (open) => {
   if (open) void refreshBackendVersion();
 });
-
-onMounted(() => void store.loadSettings());
 </script>
 
 <template>
@@ -191,17 +193,32 @@ onMounted(() => void store.loadSettings());
           class="no-print mb-5 flex justify-between gap-4 rounded-xl border border-success/20 bg-success-soft px-5 py-3 text-sm text-success-soft-foreground"
         >
           <p>{{ store.notice.value }}</p>
-          <button :aria-label="t('Close')" @click="store.notice.value = null"><Icon :icon="X" :size="16" /></button>
+          <Button
+            variant="ghost"
+            tone="success"
+            shape="square"
+            size="sm"
+            class="shrink-0"
+            :aria-label="t('Close')"
+            @click="store.notice.value = null"
+          >
+            <Icon :icon="X" :size="16" />
+          </Button>
         </div>
         <SessionConnection />
         <AppErrorBoundary>
           <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
-          <template #fallback="{ reset }"
-            ><section class="panel p-10 text-center">
-              <h1 class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
-              <button class="btn-primary mt-5" @click="reset">{{ t('Retry') }}</button>
-            </section></template
-          >
+          <template #fallback="{ reset }">
+            <Card
+              v-bind="{ role: 'region', 'aria-labelledby': 'page-error-heading' }"
+              radius="2xl"
+              padding="2xl"
+              class="text-center"
+            >
+              <h1 id="page-error-heading" class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
+              <Button class="mt-5" @click="reset">{{ t('Retry') }}</Button>
+            </Card>
+          </template>
         </AppErrorBoundary>
       </AppShellContent>
     </AppShellMain>

@@ -1,14 +1,15 @@
 import { computed, onMounted, onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute } from 'vue-router';
+import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import { notifyCatalogueSaved, notifyError, requestConfirmation } from '../common/UseFeedback';
 import { useUiLocale } from '../shared/UseUiLocale';
 import {
   designApi,
-  DesignRequestError,
   type DesignRevision,
   type PreparedRelease,
   type ReleaseSummary,
 } from '../../integration/design/DesignApi';
+import { sessionStorageBroker } from '../../integration/common/SessionStorageBroker';
 import { inspectDesign } from '../../integration/design/DesignPreflight';
 import { describeFailure } from '../../integration/catalogue/CatalogueApi';
 import { uiMessages } from '../../domain/shared/UiMessages';
@@ -22,15 +23,23 @@ import {
 } from '../../domain/design/EditorModels';
 import { eligiblePdf, refreshCatalogue, type DesignSource } from '../../domain/design/CatalogueDesign';
 export { designApi } from '../../integration/design/DesignApi';
-/** Resolves request failures in the application while leaving server details unchanged. */
+
+/** Whether `cause` is a request failure the design API returned, rather than a local render or export error. */
+function isApiFailure(cause: unknown): cause is ApiFailure {
+  return typeof cause === 'object' && cause !== null && 'code' in cause && 'status' in cause && 'problem' in cause;
+}
+
+/**
+ * Resolves a failure's interface copy in the application while leaving server details unchanged: a design API failure
+ * through the catalogue's safe copy, a local export error by its message key, anything else as `fallback`.
+ */
 export function describeDesignFailure(
-  cause: unknown,
+  cause: ApiFailure | unknown,
   translate: (source: string, variables?: Record<string, string | number>) => string,
   fallback = 'Unable to save this catalogue.',
 ): string {
-  return cause instanceof DesignRequestError
-    ? describeFailure(cause.failure, translate)
-    : translate(cause instanceof Error && Object.hasOwn(uiMessages, cause.message) ? cause.message : fallback);
+  if (isApiFailure(cause)) return describeFailure(cause, translate);
+  return translate(cause instanceof Error && Object.hasOwn(uiMessages, cause.message) ? cause.message : fallback);
 }
 export function useCatalogueDocument() {
   const route = useRoute(),
@@ -57,8 +66,9 @@ export function useCatalogueDocument() {
   const serialize = () => JSON.stringify({ title: title.value, snapshot: snapshot.value }),
     dirty = computed(() => !!snapshot.value && serialize() !== baseline.value),
     id = () => String(route.params.id ?? '');
+  /** This tab's recovery copy of the open catalogue's unsaved edits, through the session-scoped storage seam. */
   const key = () => `ocharo-catalogue-design:${id()}`;
-  function fail(cause: unknown) {
+  function fail(cause: ApiFailure | unknown): void {
     error.value = describeDesignFailure(cause, t);
     notifyError(error.value);
   }
@@ -97,24 +107,20 @@ export function useCatalogueDocument() {
         designApi.source(controller.signal),
       ]);
       if (run !== generation || controller.signal.aborted) return;
-      accept(value);
+      if (!value.ok) return fail(value.failure);
+      if (!library.ok) return fail(library.failure);
+      accept(value.value);
       loadedIdentity = id();
-      source.value = library;
+      source.value = library.value;
       recovery.value = null;
-      let stored: string | null = null;
-      try {
-        stored = sessionStorage.getItem(key());
-      } catch {
-        /* Storage is optional. */
-      }
+      const stored = sessionStorageBroker.read<{ title: string; snapshot: unknown }>(key());
       if (stored)
         try {
-          const parsed = JSON.parse(stored) as { title: string; snapshot: unknown };
-          const checked = validateSnapshot(parsed.snapshot);
-          if (JSON.stringify({ title: parsed.title, snapshot: checked }) !== baseline.value)
-            recovery.value = { title: parsed.title, snapshot: checked };
+          const checked = validateSnapshot(stored.snapshot);
+          if (JSON.stringify({ title: stored.title, snapshot: checked }) !== baseline.value)
+            recovery.value = { title: stored.title, snapshot: checked };
         } catch {
-          sessionStorage.removeItem(key());
+          sessionStorageBroker.remove(key());
         }
     } catch (cause) {
       if (run === generation && !controller.signal.aborted) fail(cause);
@@ -184,19 +190,24 @@ export function useCatalogueDocument() {
       if (!document.value || !snapshot.value) return;
       const next = source.value ? refreshCatalogue(snapshot.value, source.value.products) : snapshot.value;
       const saved = await designApi.save(document.value.id, title.value.trim(), next, document.value.revision);
-      if (!controller.signal.aborted) notifyCatalogueSaved(saved, route.path.endsWith('/pdf') ? 'pdf' : 'web');
+      if (!saved.ok) return fail(saved.failure);
+      if (!controller.signal.aborted) notifyCatalogueSaved(saved.value, route.path.endsWith('/pdf') ? 'pdf' : 'web');
       // A successful write is durable even when its separate detail refresh fails.
-      document.value = { ...document.value, revision: saved.revision };
-      accept(await designApi.get(saved.id));
-      sessionStorage.removeItem(key());
+      document.value = { ...document.value, revision: saved.value.revision };
+      const detail = await designApi.get(saved.value.id);
+      if (!detail.ok) return fail(detail.failure);
+      accept(detail.value);
+      sessionStorageBroker.remove(key());
       recovery.value = null;
       notice.value = t('Catalogue saved.');
     });
   }
   async function refresh() {
     await run(async () => {
-      source.value = await designApi.source();
-      if (snapshot.value) replace(refreshCatalogue(snapshot.value, source.value.products));
+      const library = await designApi.source();
+      if (!library.ok) return fail(library.failure);
+      source.value = library.value;
+      if (snapshot.value) replace(refreshCatalogue(snapshot.value, library.value.products));
       notice.value = t('Product fields refreshed. Save to keep this version.');
     });
   }
@@ -206,8 +217,10 @@ export function useCatalogueDocument() {
   async function download(pageId?: string, format: 'pdf' | 'png' = 'pdf') {
     await run(async () => {
       if (snapshot.value) {
-        source.value = await designApi.source();
-        const refreshed = refreshCatalogue(snapshot.value, source.value.products);
+        const library = await designApi.source();
+        if (!library.ok) return fail(library.failure);
+        source.value = library.value;
+        const refreshed = refreshCatalogue(snapshot.value, library.value.products);
         if (JSON.stringify(refreshed) !== JSON.stringify(snapshot.value)) replace(refreshed);
       }
       const eligible = exportable.value?.snapshot;
@@ -236,7 +249,9 @@ export function useCatalogueDocument() {
     }
     await run(async () => {
       if (!document.value || !snapshot.value) return;
-      const token = await designApi.preparation(document.value.id);
+      const preparation = await designApi.preparation(document.value.id);
+      if (!preparation.ok) return fail(preparation.failure);
+      const token = preparation.value;
       if (token.designRevision !== document.value.revision)
         throw new Error('This catalogue changed. Reload before preparing.');
       const selected = cloneSnapshot(snapshot.value);
@@ -249,11 +264,13 @@ export function useCatalogueDocument() {
             (page, total) => (notice.value = t('Rendering {page} of {total}', { page, total })),
           )
         : undefined;
-      prepared.value = await designApi.prepare(
+      const release = await designApi.prepare(
         document.value.id,
         { expectedRevision: document.value.revision, fingerprint: token.fingerprint },
         bundle,
       );
+      if (!release.ok) return fail(release.failure);
+      prepared.value = release.value;
       notice.value = t('Prepared for review. Publish when ready.');
     });
   }
@@ -266,17 +283,22 @@ export function useCatalogueDocument() {
     )
       return;
     await run(async () => {
-      await designApi.publish(document.value!.id, prepared.value!.id, document.value!.revision);
+      const published = await designApi.publish(document.value!.id, prepared.value!.id, document.value!.revision);
+      if (!published.ok) return fail(published.failure);
       notice.value = t('Catalogue published.');
     });
   }
   async function history() {
     await run(async () => {
-      if (document.value)
-        [revisions.value, releases.value] = await Promise.all([
-          designApi.revisions(document.value.id),
-          designApi.releases(document.value.id),
-        ]);
+      if (!document.value) return;
+      const [saved, editions] = await Promise.all([
+        designApi.revisions(document.value.id),
+        designApi.releases(document.value.id),
+      ]);
+      if (!saved.ok) return fail(saved.failure);
+      if (!editions.ok) return fail(editions.failure);
+      revisions.value = saved.value;
+      releases.value = editions.value;
     });
   }
   async function withdraw() {
@@ -290,9 +312,12 @@ export function useCatalogueDocument() {
     )
       return;
     await run(async () => {
-      await designApi.withdraw(document.value!.id, document.value!.revision);
+      const withdrawn = await designApi.withdraw(document.value!.id, document.value!.revision);
+      if (!withdrawn.ok) return fail(withdrawn.failure);
       prepared.value = null;
-      releases.value = await designApi.releases(document.value!.id);
+      const editions = await designApi.releases(document.value!.id);
+      if (!editions.ok) return fail(editions.failure);
+      releases.value = editions.value;
       notice.value = t('Published catalogue withdrawn.');
     });
   }
@@ -323,8 +348,9 @@ export function useCatalogueDocument() {
       return;
     await run(async () => {
       const old = await designApi.revision(document.value!.id, revision);
-      replace(old.snapshot);
-      title.value = old.title;
+      if (!old.ok) return fail(old.failure);
+      replace(old.value.snapshot);
+      title.value = old.value.title;
       notice.value = t('Historical revision loaded. Save to create a new revision.');
     });
   }
@@ -347,12 +373,8 @@ export function useCatalogueDocument() {
   watch(
     [snapshot, title],
     () => {
-      if (dirty.value)
-        try {
-          sessionStorage.setItem(key(), serialize());
-        } catch {
-          /* Storage quota never blocks editing. */
-        }
+      // A full store never blocks editing: the broker reports the write as failed and the edit goes on.
+      if (dirty.value) sessionStorageBroker.write(key(), { title: title.value, snapshot: snapshot.value });
     },
     { deep: true },
   );
@@ -414,7 +436,7 @@ export function useCatalogueDocument() {
     },
     dismissRecovery() {
       recovery.value = null;
-      sessionStorage.removeItem(key());
+      sessionStorageBroker.remove(key());
     },
   };
 }

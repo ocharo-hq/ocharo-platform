@@ -52,9 +52,6 @@ beforeEach(() => {
   document.documentElement.classList.remove('dark');
   useUiLocale().setUiLocale('en');
   const store = useCatalogueStore();
-  store.settings.value = null;
-  store.settingsRevision.value = 0;
-  store.sourceRoot.value = null;
   store.error.value = null;
   store.notice.value = null;
   vi.spyOn(catalogueApi, 'getSettings').mockResolvedValue(
@@ -110,9 +107,9 @@ describe('Catalogue interface preferences', () => {
     expect(wrapper.get('#note').element).toHaveProperty('value', authoredDefaults.priceNote);
     await choose(wrapper, 'Тёмная');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem('ocharo.operator.locale')).toBe('ru');
+    expect(localStorage.getItem('ocharo.operator.locale')).toBe('"ru"');
     expect(localStorage.getItem(ThemeStorageKey)).toBe('dark');
-    expect(useCatalogueStore().settings.value).toEqual(authoredDefaults);
+    expect(wrapper.get('#brand').element).toHaveProperty('value', 'Unsaved authored name');
     expect(catalogueApi.saveSettings).not.toHaveBeenCalled();
     expect(catalogueApi.importWorkspace).not.toHaveBeenCalled();
   });
@@ -133,7 +130,7 @@ describe('Catalogue interface preferences', () => {
     const menu = await openAccountMenu(second);
     expect(row(menu, 'Русский').attributes('aria-checked')).toBe('true');
     expect(row(menu, 'Тёмная').attributes('aria-checked')).toBe('true');
-    expect(useCatalogueStore().settings.value).toEqual(authoredDefaults);
+    expect(second.get('#brand').element).toHaveProperty('value', authoredDefaults.brandName);
     expect(catalogueApi.saveSettings).not.toHaveBeenCalled();
     expect(catalogueApi.importWorkspace).not.toHaveBeenCalled();
   });

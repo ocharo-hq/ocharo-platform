@@ -128,5 +128,5 @@ test('switching the interface language leaves the catalogue language and draft u
   await expect(page.getByRole('heading', { level: 1, name: ru('Web designer') })).toBeVisible();
   await expect(designerStatus(page)).toContainText(ru('Unsaved changes'));
   expect((await getDesign(request, document.id)).snapshot.locale).toBe('en');
-  expect(await page.evaluate(() => localStorage.getItem('ocharo.operator.locale'))).toBe('ru');
+  expect(await page.evaluate(() => localStorage.getItem('ocharo.operator.locale'))).toBe('"ru"');
 });

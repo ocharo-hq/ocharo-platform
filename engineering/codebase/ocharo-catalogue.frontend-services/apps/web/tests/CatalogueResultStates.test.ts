@@ -304,8 +304,9 @@ describe('Catalogue result surfaces', () => {
     const query = screen.configure(pending);
     const wrapper = await open(screen.component);
     await wrapper.find(screen.selector).setValue(screen.draft);
-    const bulkSave = wrapper.find('button.btn-primary');
-    const rowSave = wrapper.find('tbody button.btn-outline');
+    // The page's bulk save sits in its toolbar; each row has its own Save.
+    const bulkSave = wrapper.findAll('button').find((button) => /^Save \S/.test(button.text().trim()))!;
+    const rowSave = wrapper.findAll('tbody button').find((button) => button.text().trim() === 'Save')!;
     expect(bulkSave.attributes('disabled')).toBeUndefined();
     expect(rowSave.attributes('disabled')).toBeUndefined();
     await wrapper.find('.catalogue-refresh').trigger('click');

@@ -7,6 +7,10 @@ import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, onMounted, onScopeDispose, ref } from 'vue';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
+import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge } from '@wow-two-beta/fe/presentation/display';
+import { CheckboxField, Field, SearchInput, TextAreaInput, TextInput } from '@wow-two-beta/fe/presentation/forms';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 import { designApi, describeDesignFailure } from '../../application/design/UseCatalogueDocument';
 import { notifyCatalogueSaved, notifyError, requestConfirmation } from '../../application/common/UseFeedback';
@@ -53,7 +57,7 @@ const visible = computed(() =>
       !item.archived && `${item.title} ${item.catalogue?.slug ?? ''}`.toLowerCase().includes(query.value.toLowerCase()),
   ),
 );
-function fail(cause: unknown) {
+function fail(cause: ApiFailure | unknown) {
   const message = describeDesignFailure(cause, t, 'Unable to load catalogues.');
   notifyError(message);
   return message;
@@ -65,13 +69,13 @@ async function load() {
   try {
     const next = await designApi.list(controller.signal);
     if (generation !== loadGeneration || controller.signal.aborted) return;
-    documents.value = next;
-    loaded.value = true;
-  } catch (cause) {
-    if (generation === loadGeneration && !controller.signal.aborted) {
+    if (!next.ok) {
       loadFailed.value = true;
-      fail(cause);
+      fail(next.failure);
+      return;
     }
+    documents.value = next.value;
+    loaded.value = true;
   } finally {
     if (generation === loadGeneration) loading.value = false;
   }
@@ -89,7 +93,11 @@ async function edit(item?: DesignSummary) {
   if (busy.value) return;
   busy.value = true;
   try {
-    selected.value = item ? await designApi.get(item.id) : null;
+    if (item) {
+      const detail = await designApi.get(item.id);
+      if (!detail.ok) return void fail(detail.failure);
+      selected.value = detail.value;
+    } else selected.value = null;
     name.value = selected.value?.title ?? '';
     locale.value = selected.value?.snapshot.locale ?? 'uz';
     metadata.value = selected.value?.snapshot.catalogue
@@ -98,8 +106,6 @@ async function edit(item?: DesignSummary) {
     slugError.value = '';
     baseline.value = serialize();
     dialogOpen.value = true;
-  } catch (cause) {
-    fail(cause);
   } finally {
     busy.value = false;
     pendingAction.value = '';
@@ -139,11 +145,13 @@ async function save() {
       snapshot,
       selected.value?.revision,
     );
+    if (!saved.ok) return void fail(saved.failure);
     if (!controller.signal.aborted)
-      notifyCatalogueSaved(saved, metadata.value.outputs.web ? 'web' : 'pdf', !selected.value);
+      notifyCatalogueSaved(saved.value, metadata.value.outputs.web ? 'web' : 'pdf', !selected.value);
     dialogOpen.value = false;
     await load();
   } catch (cause) {
+    // A snapshot the editor model refuses never leaves the browser; it is reported like a refused save.
     fail(cause);
   } finally {
     busy.value = false;
@@ -155,10 +163,9 @@ async function duplicate(item: DesignSummary) {
   busy.value = true;
   pendingAction.value = `duplicate:${item.id}`;
   try {
-    await designApi.duplicate(item.id);
+    const copy = await designApi.duplicate(item.id);
+    if (!copy.ok) return void fail(copy.failure);
     await load();
-  } catch (cause) {
-    fail(cause);
   } finally {
     busy.value = false;
     pendingAction.value = '';
@@ -170,11 +177,14 @@ async function activate(item: DesignSummary) {
   pendingAction.value = `activate:${item.id}`;
   try {
     const detail = await designApi.get(item.id);
-    const snapshot = cloneSnapshot(detail.snapshot);
+    if (!detail.ok) return void fail(detail.failure);
+    const snapshot = cloneSnapshot(detail.value.snapshot);
     snapshot.catalogue!.isActive = !snapshot.catalogue!.isActive;
-    await designApi.save(item.id, detail.title, snapshot, detail.revision);
+    const saved = await designApi.save(item.id, detail.value.title, snapshot, detail.value.revision);
+    if (!saved.ok) return void fail(saved.failure);
     await load();
   } catch (cause) {
+    // A snapshot the editor model refuses never leaves the browser; it is reported like a refused save.
     fail(cause);
   } finally {
     busy.value = false;
@@ -195,10 +205,9 @@ async function remove(item: DesignSummary) {
   busy.value = true;
   pendingAction.value = `remove:${item.id}`;
   try {
-    await designApi.archive(item.id, item.revision);
+    const archived = await designApi.archive(item.id, item.revision);
+    if (!archived.ok) return void fail(archived.failure);
     await load();
-  } catch (cause) {
-    fail(cause);
   } finally {
     busy.value = false;
     pendingAction.value = '';
@@ -234,17 +243,17 @@ onScopeDispose(() => {
         <p>{{ t('Create one catalogue and design its website, PDF, or both.') }}</p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
-        <RefreshButton :busy="resultBusy" :disabled="locked" @refresh="refresh" /><button
-          :disabled="!sessionCanEdit || locked"
+        <RefreshButton :busy="resultBusy" :disabled="locked" @refresh="refresh" /><Button
+          :is-disabled="!sessionCanEdit || locked"
           @click="edit()"
         >
           {{ t('New catalogue') }}
-        </button>
+        </Button>
       </div>
     </header>
-    <label class="search"
-      >{{ t('Find a catalogue') }}<input v-model="query" type="search" :placeholder="t('Name or slug')"
-    /></label>
+    <Field :label="t('Find a catalogue')" class="search">
+      <SearchInput v-model="query" :placeholder="t('Name or slug')" />
+    </Field>
     <div class="catalogue-result-region">
       <ContentSkeleton v-if="resultBusy && !loaded" :cards="3" variant="catalogue" :label="t('Loading catalogues')" />
       <SkeletonStateGroup v-else :is-loading="resultBusy" :label="t('Loading catalogues')">
@@ -268,9 +277,9 @@ onScopeDispose(() => {
               <div class="card-heading">
                 <h2>{{ item.title }}</h2>
                 <SkeletonStateSlot class="catalogue-value"
-                  ><span>{{
+                  ><Badge :variant="(item.catalogue?.isActive ?? true) ? 'success' : 'neutral'" size="sm">{{
                     (item.catalogue?.isActive ?? true) ? t('Active') : t('Inactive')
-                  }}</span></SkeletonStateSlot
+                  }}</Badge></SkeletonStateSlot
                 >
               </div>
               <p v-if="item.catalogue?.slug" class="slug">/{{ item.catalogue.slug }}</p>
@@ -284,20 +293,32 @@ onScopeDispose(() => {
                 }}</SkeletonStateSlot></small
               >
               <div class="designer-actions">
-                <button v-if="formats(item).web" @click="open(item.id, 'web')">{{ t('Web designer') }}</button
-                ><button v-if="formats(item).pdf" @click="open(item.id, 'pdf')">{{ t('PDF designer') }}</button>
+                <Button v-if="formats(item).web" variant="outline" tone="neutral" @click="open(item.id, 'web')">{{
+                  t('Web designer')
+                }}</Button
+                ><Button v-if="formats(item).pdf" variant="outline" tone="neutral" @click="open(item.id, 'pdf')">{{
+                  t('PDF designer')
+                }}</Button>
               </div>
               <div class="card-actions">
-                <button :disabled="locked" @click="edit(item)">{{ t('Settings') }}</button
-                ><button
-                  :disabled="!sessionCanEdit || locked"
-                  :aria-busy="pendingAction === `duplicate:${item.id}`"
+                <Button variant="ghost" tone="neutral" size="sm" :is-disabled="locked" @click="edit(item)">{{
+                  t('Settings')
+                }}</Button
+                ><Button
+                  variant="ghost"
+                  tone="neutral"
+                  size="sm"
+                  :is-disabled="!sessionCanEdit || (locked && pendingAction !== `duplicate:${item.id}`)"
+                  :is-loading="pendingAction === `duplicate:${item.id}`"
                   @click="duplicate(item)"
                 >
-                  {{ pendingAction === `duplicate:${item.id}` ? t('Working…') : t('Duplicate') }}</button
-                ><button
-                  :disabled="!sessionCanEdit || locked"
-                  :aria-busy="pendingAction === `activate:${item.id}`"
+                  {{ pendingAction === `duplicate:${item.id}` ? t('Working…') : t('Duplicate') }}</Button
+                ><Button
+                  variant="ghost"
+                  tone="neutral"
+                  size="sm"
+                  :is-disabled="!sessionCanEdit || (locked && pendingAction !== `activate:${item.id}`)"
+                  :is-loading="pendingAction === `activate:${item.id}`"
                   @click="activate(item)"
                 >
                   {{
@@ -306,14 +327,17 @@ onScopeDispose(() => {
                       : (item.catalogue?.isActive ?? true)
                         ? t('Deactivate')
                         : t('Activate')
-                  }}</button
-                ><button
-                  :disabled="!sessionCanEdit || locked"
-                  :aria-busy="pendingAction === `remove:${item.id}`"
+                  }}</Button
+                ><Button
+                  variant="ghost"
+                  tone="danger"
+                  size="sm"
+                  :is-disabled="!sessionCanEdit || (locked && pendingAction !== `remove:${item.id}`)"
+                  :is-loading="pendingAction === `remove:${item.id}`"
                   @click="remove(item)"
                 >
                   {{ pendingAction === `remove:${item.id}` ? t('Working…') : t('Remove') }}
-                </button>
+                </Button>
               </div>
             </div>
           </article>
@@ -340,38 +364,41 @@ onScopeDispose(() => {
         ><form @submit.prevent="save">
           <header>
             <ModalTitle>{{ selected ? t('Catalogue settings') : t('New catalogue') }}</ModalTitle
-            ><button type="button" :disabled="busy" @click="close()">{{ t('Close') }}</button>
+            ><Button variant="outline" tone="neutral" :is-disabled="busy" @click="close()">{{ t('Close') }}</Button>
           </header>
           <fieldset :disabled="!sessionCanEdit || busy">
-            <label>{{ t('Name') }}<input v-model="name" maxlength="160" required @input="nameChanged" /></label
-            ><label
-              >{{ t('Slug')
-              }}<input
-                v-model="metadata.slug"
-                maxlength="100"
-                pattern="[a-z0-9]+(-[a-z0-9]+)*"
-                :aria-invalid="!!slugError"
-                :aria-describedby="slugError ? 'slug-error' : undefined"
-                required
-              /><span v-if="slugError" id="slug-error" role="alert">{{ slugError }}</span></label
-            ><label>{{ t('Description') }}<textarea v-model="metadata.description" maxlength="2000" rows="3" /></label>
-            <label v-if="!selected"
-              >{{ t('Catalogue language')
-              }}<CatalogueSelect
+            <Field :label="t('Name')">
+              <TextInput v-model="name" maxlength="160" is-required @update:model-value="nameChanged" />
+            </Field>
+            <Field :label="t('Slug')" :error="slugError || undefined">
+              <TextInput v-model="metadata.slug" maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" is-required />
+            </Field>
+            <Field :label="t('Description')">
+              <TextAreaInput
+                :model-value="metadata.description ?? ''"
+                maxlength="2000"
+                :rows="3"
+                @update:model-value="metadata.description = $event"
+              />
+            </Field>
+            <Field v-if="!selected" :label="t('Catalogue language')">
+              <CatalogueSelect
                 :model-value="locale"
                 :options="languageOptions"
                 :label="t('Catalogue language')"
                 @update:model-value="(value) => (locale = value as CatalogueLanguage)"
-            /></label>
+              />
+            </Field>
             <div class="output-options">
-              <label><input v-model="metadata.outputs.web" type="checkbox" />{{ t('Web catalogue') }}</label
-              ><label><input v-model="metadata.outputs.pdf" type="checkbox" />{{ t('PDF catalogue') }}</label
-              ><label><input v-model="metadata.isActive" type="checkbox" />{{ t('Active') }}</label>
+              <CheckboxField v-model="metadata.outputs.web" :label="t('Web catalogue')" /><CheckboxField
+                v-model="metadata.outputs.pdf"
+                :label="t('PDF catalogue')"
+              /><CheckboxField v-model="metadata.isActive" :label="t('Active')" />
             </div>
           </fieldset>
-          <button type="submit" :disabled="!sessionCanEdit || busy" :aria-busy="pendingAction === 'save'">
+          <Button type="submit" :is-disabled="!sessionCanEdit" :is-loading="busy">
             {{ busy ? t('Saving…') : t('Save catalogue') }}
-          </button>
+          </Button>
         </form></ModalContent
       ></Modal
     >
@@ -404,7 +431,7 @@ h2 {
   font-size: 19px;
   margin: 0;
 }
-p {
+.catalogue-gallery p {
   font-size: 14px;
   line-height: 1.6;
 }
@@ -462,41 +489,8 @@ small,
   padding-top: 12px;
   justify-content: start;
 }
-.card-actions button {
-  font-size: 12px;
-  background: transparent;
-  padding: 6px;
-}
 .output-options {
   justify-content: start;
-}
-.output-options label {
-  display: flex;
-  gap: 7px;
-  align-items: center;
-}
-label {
-  display: grid;
-  gap: 7px;
-  font-size: 13px;
-}
-input,
-select,
-textarea,
-button {
-  font: inherit;
-  color: inherit;
-  border: 1px solid var(--color-border, #c9c1b1);
-  border-radius: 6px;
-  padding: 9px;
-  background: var(--color-card, #fffdf8);
-}
-button {
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 .catalogue-settings-modal {
   width: min(550px, calc(100vw - 32px));
@@ -516,13 +510,6 @@ fieldset {
 fieldset {
   border: 0;
   padding: 0;
-}
-input,
-textarea,
-select {
-  box-sizing: border-box;
-  max-width: 100%;
-  min-width: 0;
 }
 @media (max-width: 600px) {
   h1 {

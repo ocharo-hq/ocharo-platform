@@ -4,6 +4,8 @@ import { RouterLink, RouterView } from 'vue-router';
 import { Settings } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { useColorMode } from '@wow-two-beta/fe/foundation/primitives';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Card } from '@wow-two-beta/fe/presentation/display';
 import { AppShell, AppShellHeader, AppShellMain, Navbar } from '@wow-two-beta/fe/presentation/layout';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 import { AppErrorBoundary } from '@wow-two-beta/fe/router';
@@ -42,14 +44,15 @@ const wordmark = computed(() =>
           </RouterLink>
         </template>
         <template #end>
-          <button
-            type="button"
-            class="btn-outline min-h-11 min-w-11 rounded-full lg:min-h-0 lg:min-w-0"
+          <Button
+            variant="outline"
+            tone="neutral"
+            class="min-h-11 min-w-11 rounded-full lg:min-h-0 lg:min-w-0"
             :aria-label="t('Settings')"
             @click="preferences = true"
           >
             <Icon :icon="Settings" :size="18" /><span class="hidden xl:inline">{{ t('Settings') }}</span>
-          </button>
+          </Button>
         </template>
       </Navbar>
     </AppShellHeader>
@@ -57,12 +60,17 @@ const wordmark = computed(() =>
       <div class="mx-auto w-full max-w-[1800px] px-5 py-7 sm:px-8 xl:px-10 print:max-w-none print:p-0">
         <AppErrorBoundary>
           <RouterView v-slot="{ Component, route }"><component :is="Component" :key="route.fullPath" /></RouterView>
-          <template #fallback="{ reset }"
-            ><section class="panel p-10 text-center">
-              <h1 class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
-              <button class="btn-primary mt-5" @click="reset">{{ t('Retry') }}</button>
-            </section></template
-          >
+          <template #fallback="{ reset }">
+            <Card
+              v-bind="{ role: 'region', 'aria-labelledby': 'reader-error-heading' }"
+              radius="2xl"
+              padding="2xl"
+              class="text-center"
+            >
+              <h1 id="reader-error-heading" class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
+              <Button class="mt-5" @click="reset">{{ t('Retry') }}</Button>
+            </Card>
+          </template>
         </AppErrorBoundary>
       </div>
     </AppShellMain>
@@ -71,7 +79,7 @@ const wordmark = computed(() =>
         ><ModalTitle class="font-editorial text-2xl">{{ t('Settings') }}</ModalTitle>
         <div class="mt-6 space-y-5">
           <InterfacePreferences />
-          <button class="btn-primary w-full" @click="preferences = false">{{ t('Done') }}</button>
+          <Button is-full-width @click="preferences = false">{{ t('Done') }}</Button>
         </div>
       </ModalContent></Modal
     >

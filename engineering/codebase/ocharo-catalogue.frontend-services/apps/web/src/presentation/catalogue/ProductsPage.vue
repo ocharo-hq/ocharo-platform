@@ -7,9 +7,12 @@ import RefreshButton from '../common/RefreshButton.vue';
 import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, onMounted, ref } from 'vue';
 import { RouterLink, useRouter } from 'vue-router';
-import { CheckSquare, CirclePlus, Copy, ImageOff, Search, Square } from 'lucide-vue-next';
+import { CheckSquare, CirclePlus, Copy, ImageOff, Square } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
-import { useCatalogueStore, useProductList, useCollections } from '../../application/catalogue';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge, Card } from '@wow-two-beta/fe/presentation/display';
+import { NumberInput, SearchInput } from '@wow-two-beta/fe/presentation/forms';
+import { useCatalogueSettings, useProductList, useCollections } from '../../application/catalogue';
 import { formatUzs, statusLabels } from '../../domain/catalogue/CatalogueRules';
 import ContentSkeleton from '../common/ContentSkeleton.vue';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
@@ -18,7 +21,7 @@ import StatusBadge from './components/StatusBadge.vue';
 
 /** Product grid with filters, selection and bulk status/price actions. */
 defineOptions({ name: 'ProductsPage' });
-const store = useCatalogueStore();
+const settings = useCatalogueSettings();
 const { t, uiLocale } = useUiLocale();
 const router = useRouter();
 const collections = useCollections();
@@ -77,25 +80,25 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <RefreshButton :busy="resultBusy" :disabled="!!list.pending.value" @refresh="refresh" />
-        <RouterLink v-if="sessionCanEdit" to="/products/new" class="btn-primary">
-          <Icon :icon="CirclePlus" :size="16" />{{ t('New product') }}</RouterLink
-        >
+        <Button v-if="sessionCanEdit" as-child>
+          <RouterLink to="/products/new"><Icon :icon="CirclePlus" :size="16" />{{ t('New product') }}</RouterLink>
+        </Button>
       </div>
     </div>
 
-    <div class="panel mt-6 grid gap-3 p-4 md:grid-cols-[1fr_auto_auto_auto]">
-      <label class="relative">
-        <span class="sr-only">{{ t('Search') }}</span>
-        <Icon :icon="Search" :size="16" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input v-model="list.filter.q" class="field pl-9" :placeholder="t('Search by name, ID, fabric or tag')" />
-      </label>
+    <Card radius="2xl" padding="lg" class="mt-6 grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
+      <SearchInput
+        v-model="list.filter.q"
+        :aria-label="t('Search')"
+        :placeholder="t('Search by name, ID, fabric or tag')"
+      />
       <CatalogueSelect
         :model-value="list.filter.garmentType ?? ''"
         :label="t('Garment type')"
         class="md:w-44"
         :options="[
           { value: '', label: t('All types') },
-          ...store.garmentTypes.value.map((g) => ({ value: g.key, label: g[uiLocale] })),
+          ...settings.garmentTypes.value.map((g) => ({ value: g.key, label: g[uiLocale] })),
         ]"
         @update:model-value="list.filter.garmentType = $event"
       />
@@ -112,46 +115,62 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
         ]"
         @update:model-value="list.filter.status = $event"
       />
-      <button class="btn-outline" @click="list.selectedCount.value ? list.clearSelection() : list.selectAll()">
-        <Icon :icon="list.selectedCount.value ? CheckSquare : Square" :size="15" />
+      <Button
+        variant="outline"
+        tone="neutral"
+        @click="list.selectedCount.value ? list.clearSelection() : list.selectAll()"
+      >
+        <template #leading><Icon :icon="list.selectedCount.value ? CheckSquare : Square" :size="15" /></template>
         {{ list.selectedCount.value ? `${list.selectedCount.value} · ${t('Selected')}` : t('Select all') }}
-      </button>
-    </div>
+      </Button>
+    </Card>
 
-    <div
+    <Card
       v-if="list.selectedCount.value"
-      class="panel mt-3 flex flex-wrap items-center gap-3 border-primary/30 bg-primary-soft/40 p-4 text-sm"
+      variant="soft"
+      tone="primary"
+      radius="2xl"
+      padding="lg"
+      class="mt-3 flex flex-wrap items-center gap-3 text-sm"
     >
       <span class="font-semibold">{{ list.selectedCount.value }} · {{ t('Products') }}:</span>
-      <button
-        class="btn-outline"
-        :disabled="!sessionCanEdit || !!list.pending.value"
-        :aria-busy="list.pending.value === 'status:active'"
+      <Button
+        variant="outline"
+        tone="neutral"
+        :is-disabled="!sessionCanEdit || (!!list.pending.value && list.pending.value !== 'status:active')"
+        :is-loading="list.pending.value === 'status:active'"
         @click="list.setStatus('active')"
       >
         {{ list.pending.value === 'status:active' ? t('Working…') : t('Activate') }}
-      </button>
-      <button
-        class="btn-outline"
-        :disabled="!sessionCanEdit || !!list.pending.value"
-        :aria-busy="list.pending.value === 'status:draft'"
+      </Button>
+      <Button
+        variant="outline"
+        tone="neutral"
+        :is-disabled="!sessionCanEdit || (!!list.pending.value && list.pending.value !== 'status:draft')"
+        :is-loading="list.pending.value === 'status:draft'"
         @click="list.setStatus('draft')"
       >
         {{ list.pending.value === 'status:draft' ? t('Working…') : t('Move to drafts') }}
-      </button>
-      <button
-        class="btn-outline"
-        :disabled="!sessionCanEdit || !!list.pending.value"
-        :aria-busy="list.pending.value === 'status:archived'"
+      </Button>
+      <Button
+        variant="outline"
+        tone="neutral"
+        :is-disabled="!sessionCanEdit || (!!list.pending.value && list.pending.value !== 'status:archived')"
+        :is-loading="list.pending.value === 'status:archived'"
         @click="list.setStatus('archived')"
       >
         {{ list.pending.value === 'status:archived' ? t('Working…') : t('Archive') }}
-      </button>
+      </Button>
       <span class="mx-2 h-6 w-px bg-border" />
-      <label class="flex items-center gap-2"
-        >{{ t('Price')
-        }}<input v-model.number="percent" type="number" class="field w-20" :aria-label="t('Percentage')" />%
-      </label>
+      <span class="flex items-center gap-2"
+        >{{ t('Price') }}
+        <NumberInput
+          :model-value="percent"
+          class="w-28"
+          :aria-label="t('Percentage')"
+          @update:model-value="percent = $event ?? 0"
+        />%
+      </span>
       <CatalogueSelect
         v-model="tier"
         :label="t('Price')"
@@ -162,15 +181,14 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
           { value: 'wholesale', label: t('10+ pieces') },
         ]"
       />
-      <button
-        class="btn-primary"
-        :disabled="!sessionCanEdit || !!list.pending.value"
-        :aria-busy="list.pending.value === 'prices'"
+      <Button
+        :is-disabled="!sessionCanEdit || (!!list.pending.value && list.pending.value !== 'prices')"
+        :is-loading="list.pending.value === 'prices'"
         @click="list.adjustPrices('percent', percent, 1000, tier || null)"
       >
         {{ list.pending.value === 'prices' ? t('Working…') : t('Apply (round to 1,000)') }}
-      </button>
-    </div>
+      </Button>
+    </Card>
 
     <div class="catalogue-result-region">
       <ContentSkeleton
@@ -197,24 +215,33 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
               list.selected.value.has(product.id) ? 'border-primary ring-2 ring-primary/20' : 'border-border',
             ]"
           >
-            <button
-              class="catalogue-image-action absolute left-3 top-3 z-10 flex size-11 items-center justify-center rounded-xl border border-border text-foreground shadow-sm transition hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:size-9"
+            <Button
+              variant="outline"
+              tone="neutral"
+              shape="square"
+              class="catalogue-image-action absolute left-3 top-3 z-10 size-11 rounded-xl shadow-sm sm:size-9"
               :aria-pressed="list.selected.value.has(product.id)"
               :aria-label="`${t('Select')} ${product.id}`"
               @click="list.toggle(product.id)"
             >
               <Icon :icon="list.selected.value.has(product.id) ? CheckSquare : Square" :size="16" />
-            </button>
-            <button
-              class="absolute right-3 top-3 z-10 rounded-md bg-card/90 p-1 text-muted-foreground opacity-0 shadow-sm transition group-hover:opacity-100 hover:text-primary focus:opacity-100"
+            </Button>
+            <Button
+              variant="outline"
+              tone="neutral"
+              shape="square"
+              size="sm"
+              class="catalogue-image-action absolute right-3 top-3 z-10 opacity-0 shadow-sm group-hover:opacity-100 focus-visible:opacity-100"
               :aria-label="`${t('Duplicate')} ${product.id}`"
               :title="t('Duplicate as a new variant')"
-              :disabled="!sessionCanEdit || !!list.pending.value"
-              :aria-busy="list.pending.value === `duplicate:${product.id}`"
+              :is-disabled="
+                !sessionCanEdit || (!!list.pending.value && list.pending.value !== `duplicate:${product.id}`)
+              "
+              :is-loading="list.pending.value === `duplicate:${product.id}`"
               @click="duplicate(product.id)"
             >
               <Icon :icon="Copy" :size="16" />
-            </button>
+            </Button>
             <RouterLink :to="`/products/${product.id}`" class="block">
               <SkeletonStateSlot class="catalogue-value" :is-block="true"
                 ><div
@@ -235,7 +262,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
                   <p class="font-editorial text-lg leading-tight">
                     {{
                       (uiLocale === 'ru' ? product.nameRu : uiLocale === 'en' ? product.nameEn : product.nameUz) ??
-                      store.garmentName(product.garmentType, uiLocale)
+                      settings.garmentName(product.garmentType, uiLocale)
                     }}
                   </p>
                   <SkeletonStateSlot class="catalogue-value"
@@ -243,7 +270,7 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
                   /></SkeletonStateSlot>
                 </div>
                 <p class="mt-1 text-xs text-muted-foreground">
-                  {{ product.id }} · {{ store.garmentName(product.garmentType, uiLocale) }}
+                  {{ product.id }} · {{ settings.garmentName(product.garmentType, uiLocale) }}
                 </p>
                 <SkeletonStateSlot class="catalogue-value" :is-block="true"
                   ><div class="mt-3 flex items-baseline justify-between text-sm">
@@ -260,38 +287,28 @@ onMounted(() => Promise.all([list.load(), collections.load()]));
                   class="mt-2 flex flex-wrap gap-1"
                   :aria-label="t('Collections')"
                 >
-                  <span
-                    v-for="id in product.collectionIds.slice(0, 2)"
-                    :key="id"
-                    class="chip bg-muted text-muted-foreground"
-                    >{{ collectionNames.get(id) ?? id }}</span
-                  ><span v-if="product.collectionIds.length > 2" class="chip bg-muted text-muted-foreground"
-                    >+{{ product.collectionIds.length - 2 }}</span
+                  <Badge v-for="id in product.collectionIds.slice(0, 2)" :key="id" size="sm">{{
+                    collectionNames.get(id) ?? id
+                  }}</Badge
+                  ><Badge v-if="product.collectionIds.length > 2" size="sm"
+                    >+{{ product.collectionIds.length - 2 }}</Badge
                   >
                 </div>
                 <SkeletonStateSlot class="catalogue-value" :is-block="true"
                   ><div class="mt-3 flex flex-wrap gap-1.5 text-[10px]">
-                    <span
-                      :class="[
-                        'chip',
-                        product.localesApproved < (product.languagesTotal ?? 3)
-                          ? 'bg-warning-soft text-warning-soft-foreground'
-                          : 'bg-success-soft text-success-soft-foreground',
-                      ]"
+                    <Badge
+                      size="sm"
+                      :variant="product.localesApproved < (product.languagesTotal ?? 3) ? 'warning' : 'success'"
                       >{{ product.localesApproved }}/{{ product.languagesTotal ?? 3 }}
-                      {{ t('languages confirmed') }}</span
+                      {{ t('languages confirmed') }}</Badge
                     >
-                    <span v-if="product.openIssues" class="chip bg-warning-soft text-warning-soft-foreground"
-                      >{{ product.openIssues }} {{ t('open questions') }}</span
+                    <Badge v-if="product.openIssues" size="sm" variant="warning"
+                      >{{ product.openIssues }} {{ t('open questions') }}</Badge
                     >
-                    <span v-if="product.pricingStatus === 'draft'" class="chip bg-muted text-muted-foreground">{{
-                      t('Draft price')
-                    }}</span>
-                    <span
-                      v-if="product.availability !== 'unknown'"
-                      class="chip bg-primary-soft text-primary-soft-foreground"
-                      >{{ t(availabilityNames[product.availability] ?? product.availability) }}</span
-                    >
+                    <Badge v-if="product.pricingStatus === 'draft'" size="sm">{{ t('Draft price') }}</Badge>
+                    <Badge v-if="product.availability !== 'unknown'" size="sm" variant="brand">{{
+                      t(availabilityNames[product.availability] ?? product.availability)
+                    }}</Badge>
                   </div>
                 </SkeletonStateSlot>
               </div>

@@ -11,6 +11,8 @@ import {
   refreshCatalogue,
 } from '../../domain/design/CatalogueDesign';
 import type { CatalogueCopy, CatalogueMediaGroup, CatalogueSettings } from '../../domain/design/EditorModels';
+import { Card } from '@wow-two-beta/fe/presentation/display';
+import { CheckboxField, Field, TextAreaInput } from '@wow-two-beta/fe/presentation/forms';
 import CatalogueSelect from '../common/CatalogueSelect.vue';
 defineOptions({ name: 'CatalogueSharedSettings' });
 const props = defineProps<{ editor: CatalogueDocumentControls }>(),
@@ -76,46 +78,47 @@ function group(value: string) {
 }
 </script>
 <template>
-  <details class="panel shared-settings">
-    <summary>{{ t('Catalogue copy and price display') }}</summary>
-    <p>
-      {{
-        t('These labels belong to the catalogue language. Product names, materials and prices are edited in Products.')
-      }}
-    </p>
-    <label
-      >{{ t('Image group for all products')
-      }}<CatalogueSelect
-        :model-value="settings.mediaGroup"
-        :options="groups"
-        :label="t('Image group for all products')"
-        :disabled="editor.busy.value"
-        @update:model-value="group"
-    /></label>
-    <div class="price-options">
-      <label v-for="flag in prices" :key="flag.key"
-        ><input
-          type="checkbox"
-          :checked="settings.priceDisplay[flag.key]"
+  <Card radius="2xl" padding="xl" class="shared-settings"
+    ><details>
+      <summary>{{ t('Catalogue copy and price display') }}</summary>
+      <p>
+        {{
+          t(
+            'These labels belong to the catalogue language. Product names, materials and prices are edited in Products.',
+          )
+        }}
+      </p>
+      <Field :label="t('Image group for all products')">
+        <CatalogueSelect
+          :model-value="settings.mediaGroup"
+          :options="groups"
+          :label="t('Image group for all products')"
           :disabled="editor.busy.value"
-          @change="price(flag.key, ($event.target as HTMLInputElement).checked)"
-        />{{ t(flag.label) }}</label
-      >
-    </div>
-    <div class="copy-fields">
-      <label v-for="field in copyFields" :key="field"
-        >{{ t(labels[field])
-        }}<textarea
-          :value="copy?.[field] ?? ''"
-          :rows="field === 'coverNote' || field === 'footer' ? 2 : 1"
-          maxlength="1000"
-          class="field"
-          :disabled="editor.busy.value"
-          @change="setCopy(field, ($event.target as HTMLTextAreaElement).value)"
+          @update:model-value="group"
         />
-      </label>
-    </div>
-  </details>
+      </Field>
+      <div class="price-options">
+        <CheckboxField
+          v-for="flag in prices"
+          :key="flag.key"
+          :model-value="settings.priceDisplay[flag.key]"
+          :is-disabled="editor.busy.value"
+          :label="t(flag.label)"
+          @update:model-value="(checked) => price(flag.key, checked)"
+        />
+      </div>
+      <div class="copy-fields">
+        <Field v-for="field in copyFields" :key="field" :label="t(labels[field])">
+          <TextAreaInput
+            :model-value="copy?.[field] ?? ''"
+            :rows="field === 'coverNote' || field === 'footer' ? 2 : 1"
+            maxlength="1000"
+            :is-disabled="editor.busy.value"
+            @change="setCopy(field, ($event.target as HTMLTextAreaElement).value)"
+          />
+        </Field>
+      </div></details
+  ></Card>
 </template>
 <style scoped>
 .shared-settings {
@@ -131,11 +134,6 @@ function group(value: string) {
   margin: 12px 0;
   color: var(--color-muted-foreground);
 }
-.shared-settings label {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-}
 .copy-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -147,10 +145,5 @@ function group(value: string) {
   flex-wrap: wrap;
   gap: 16px;
   margin: 16px 0;
-}
-.price-options label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 </style>

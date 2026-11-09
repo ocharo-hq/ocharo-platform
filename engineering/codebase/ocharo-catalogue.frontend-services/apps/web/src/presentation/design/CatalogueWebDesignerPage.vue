@@ -8,7 +8,16 @@ import ResultEmpty from '../common/ResultEmpty.vue';
 import { computed, ref } from 'vue';
 import { Columns2, Images, LayoutGrid } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
-import { SegmentedPicker, ToggleInput } from '@wow-two-beta/fe/presentation/forms';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Card } from '@wow-two-beta/fe/presentation/display';
+import {
+  CheckboxField,
+  Field,
+  SearchInput,
+  SegmentedPicker,
+  TextInput,
+  ToggleInput,
+} from '@wow-two-beta/fe/presentation/forms';
 import { useCatalogueDocument } from '../../application/design/UseCatalogueDocument';
 import { requestConfirmation } from '../../application/common/UseFeedback';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
@@ -129,103 +138,144 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
       <SkeletonStateGroup v-else :is-loading="resultBusy" :label="t('Loading catalogue')">
         <section class="native-designer">
           <CatalogueDesignerBar :editor="editor" mode="web" />
-          <p v-if="!editor.snapshot.value.catalogue?.outputs.web" class="panel">
-            {{ t('Web output is disabled. Enable it in catalogue settings.') }}
-          </p>
+          <Card v-if="!editor.snapshot.value.catalogue?.outputs.web" radius="2xl" padding="xl" class="mb-4">
+            <p>{{ t('Web output is disabled. Enable it in catalogue settings.') }}</p>
+          </Card>
           <CatalogueSharedSettings :editor="editor" />
           <div class="designer-grid">
-            <aside class="panel page-panel">
-              <h2>{{ t('Web pages') }}</h2>
-              <button class="btn-outline" :disabled="editor.busy.value || pages.length >= 100" @click="add">
+            <Card
+              v-bind="{ role: 'complementary', 'aria-labelledby': 'web-pages-heading' }"
+              radius="2xl"
+              class="page-panel"
+            >
+              <h2 id="web-pages-heading">{{ t('Web pages') }}</h2>
+              <Button
+                variant="outline"
+                tone="neutral"
+                :is-disabled="editor.busy.value || pages.length >= 100"
+                @click="add"
+              >
                 + {{ t('Add page') }}
-              </button>
+              </Button>
               <ol class="pages">
                 <li v-for="(item, index) in pages" :key="item.id" :class="{ selected: page?.id === item.id }">
-                  <button class="page-name" @click="selected = item.id">
+                  <Button
+                    variant="ghost"
+                    tone="neutral"
+                    size="sm"
+                    is-multiline
+                    class="page-name h-auto flex-col items-start gap-0 py-1 text-start font-normal"
+                    :aria-current="page?.id === item.id ? 'true' : undefined"
+                    @click="selected = item.id"
+                  >
                     {{ index + 1 }} · {{ item.title }}
                     <small class="text-muted-foreground">{{
                       t('{count} products', { count: item.productIds.length })
                     }}</small>
                     <small v-if="!item.isActive">{{ t('Inactive') }}</small>
-                  </button>
+                  </Button>
                   <div class="actions">
-                    <button
-                      :disabled="index === 0 || editor.busy.value"
+                    <Button
+                      variant="ghost"
+                      tone="neutral"
+                      shape="square"
+                      size="sm"
+                      :is-disabled="index === 0 || editor.busy.value"
                       :aria-label="t('Move page up')"
                       @click="move(index, -1)"
                     >
-                      ↑</button
-                    ><button
-                      :disabled="index === pages.length - 1 || editor.busy.value"
+                      ↑</Button
+                    ><Button
+                      variant="ghost"
+                      tone="neutral"
+                      shape="square"
+                      size="sm"
+                      :is-disabled="index === pages.length - 1 || editor.busy.value"
                       :aria-label="t('Move page down')"
                       @click="move(index, 1)"
                     >
                       ↓
-                    </button>
+                    </Button>
                   </div>
                 </li>
               </ol>
               <template v-if="page"
-                ><label
-                  >{{ t('Page title')
-                  }}<input
-                    :value="page.title"
-                    class="field"
+                ><Field :label="t('Page title')">
+                  <TextInput
+                    :model-value="page.title"
                     maxlength="160"
-                    @change="edit((item) => (item.title = ($event.target as HTMLInputElement).value))" /></label
-                ><label class="check"
-                  ><input
-                    type="checkbox"
-                    :checked="page.isActive"
-                    @change="edit((item) => (item.isActive = ($event.target as HTMLInputElement).checked))"
-                  />{{ t('Active page') }}</label
-                >
+                    @change="edit((item) => (item.title = ($event.target as HTMLInputElement).value))"
+                  />
+                </Field>
+                <CheckboxField
+                  :model-value="page.isActive"
+                  :label="t('Active page')"
+                  @update:model-value="(checked) => edit((item) => (item.isActive = checked))"
+                />
                 <div class="actions">
-                  <button class="btn-outline" :disabled="pages.length >= 100 || editor.busy.value" @click="duplicate">
-                    {{ t('Duplicate page') }}</button
-                  ><button class="btn-ghost" :disabled="!sessionCanEdit || editor.busy.value" @click="remove">
+                  <Button
+                    variant="outline"
+                    tone="neutral"
+                    size="sm"
+                    :is-disabled="pages.length >= 100 || editor.busy.value"
+                    @click="duplicate"
+                  >
+                    {{ t('Duplicate page') }}</Button
+                  ><Button
+                    variant="ghost"
+                    tone="danger"
+                    size="sm"
+                    :is-disabled="!sessionCanEdit || editor.busy.value"
+                    @click="remove"
+                  >
                     {{ t('Remove page') }}
-                  </button>
+                  </Button>
                 </div>
                 <h3>{{ t('Products on this page') }}</h3>
                 <p class="hint">
                   {{ t('Selected products stay visible while you design. Review is required before publication.') }}
                 </p>
-                <input v-model="search" type="search" class="field" :placeholder="t('Find a product')" />
+                <SearchInput v-model="search" :placeholder="t('Find a product')" :aria-label="t('Find a product')" />
                 <div class="products">
-                  <label v-for="product in products" :key="product.document.id" class="check"
-                    ><input
-                      type="checkbox"
-                      :checked="page.productIds.includes(product.document.id)"
-                      @change="toggle(product.document.id, ($event.target as HTMLInputElement).checked)"
-                    /><span
-                      >{{ productName(product, editor.snapshot.value.locale)
-                      }}<small v-if="!productEligible(product, editor.snapshot.value.locale)">{{
-                        t('Needs review')
-                      }}</small></span
-                    ></label
-                  >
+                  <CheckboxField
+                    v-for="product in products"
+                    :key="product.document.id"
+                    :model-value="page.productIds.includes(product.document.id)"
+                    :label="productName(product, editor.snapshot.value.locale)"
+                    :description="
+                      productEligible(product, editor.snapshot.value.locale) ? undefined : t('Needs review')
+                    "
+                    @update:model-value="(checked) => toggle(product.document.id, checked)"
+                  />
                 </div>
                 <ol class="product-order">
                   <li v-for="(id, index) in page.productIds" :key="id">
                     <span>{{ id }}</span
-                    ><button
-                      :disabled="index === 0"
+                    ><Button
+                      variant="ghost"
+                      tone="neutral"
+                      shape="square"
+                      size="sm"
+                      :is-disabled="index === 0"
                       :aria-label="t('Move product up')"
                       @click="reorderProduct(index, -1)"
                     >
-                      ↑</button
-                    ><button
-                      :disabled="index === page.productIds.length - 1"
+                      ↑</Button
+                    ><Button
+                      variant="ghost"
+                      tone="neutral"
+                      shape="square"
+                      size="sm"
+                      :is-disabled="index === page.productIds.length - 1"
                       :aria-label="t('Move product down')"
                       @click="reorderProduct(index, 1)"
                     >
                       ↓
-                    </button>
+                    </Button>
                   </li>
                 </ol>
               </template>
-            </aside>
+            </Card>
             <div class="preview-panel">
               <div class="preview-toolbar">
                 <h2 class="w-full">{{ t('Draft preview') }}</h2>
@@ -307,24 +357,6 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
     24px Georgia,
     serif;
 }
-.page-panel label {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-}
-.page-panel .check {
-  display: flex;
-  gap: 8px;
-  align-items: start;
-}
-.check input {
-  margin-top: 4px;
-}
-.check small {
-  display: block;
-  color: var(--color-muted-foreground);
-  font-size: 11px;
-}
 .pages {
   display: grid;
   gap: 8px;
@@ -340,7 +372,6 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
   outline: 2px solid var(--color-primary);
 }
 .page-name {
-  text-align: start;
   flex: 1;
   font-size: 13px;
 }
@@ -351,9 +382,6 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-}
-.actions button {
-  font-size: 12px;
 }
 .products {
   display: grid;

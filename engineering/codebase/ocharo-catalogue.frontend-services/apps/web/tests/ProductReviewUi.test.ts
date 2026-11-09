@@ -5,7 +5,6 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { catalogueApi } from '../src/integration/catalogue';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
-import { useCatalogueStore } from '../src/application/catalogue/CatalogueStore';
 import { orderProductSizes } from '../src/domain/catalogue/ProductSizes';
 import { productReviewFieldLabel } from '../src/domain/catalogue/ProductReviewFields';
 import type { ProductSummary } from '../src/domain/catalogue/CatalogueModels';
@@ -16,6 +15,10 @@ import ProductStatusPicker from '../src/presentation/catalogue/components/Produc
 import { productFixture, sourceFixture } from './NativeDesignFixture';
 
 const wrappers: VueWrapper[] = [];
+/** The committed tags of every SDK tags field in `wrapper`, in display order. */
+function tagTexts(wrapper: VueWrapper) {
+  return wrapper.findAll('[role="group"] > span').map((tag) => tag.text().trim());
+}
 const SelectStub = {
   props: ['modelValue', 'options', 'label'],
   emits: ['update:modelValue'],
@@ -50,7 +53,13 @@ async function open(component: typeof ProductEditorPage | typeof ProductsPage, p
 
 beforeEach(() => {
   useUiLocale().setUiLocale('en');
-  useCatalogueStore().settings.value = { ...sourceFixture().settings, sizePreset: ['S', 'M', 'L', 'XL'] };
+  vi.spyOn(catalogueApi, 'getSettings').mockResolvedValue(
+    ResultExtensions.ok({
+      settings: { ...sourceFixture().settings, sizePreset: ['S', 'M', 'L', 'XL'] },
+      revision: 1,
+      sourceRoot: null,
+    }),
+  );
   vi.spyOn(catalogueApi, 'listProducts').mockResolvedValue(ResultExtensions.ok([]));
   vi.spyOn(catalogueApi, 'listCollections').mockResolvedValue(ResultExtensions.ok([]));
   vi.spyOn(catalogueApi, 'revisions').mockResolvedValue(ResultExtensions.ok([]));
@@ -69,18 +78,20 @@ describe('Product review interactions', () => {
     });
     const wrapper = mount(host);
     wrappers.push(wrapper);
-    await wrapper.get('button[aria-label="Remove M"]').trigger('click');
+    // The size's tag closes through the SDK tag's own Remove button.
+    const sizeTag = wrapper.findAll('[role="group"] > *').find((tag) => tag.text().trim() === 'M')!;
+    await sizeTag.get('button').trigger('click');
     await wrapper
       .findAll('button')
       .find((button) => button.text() === '+ M')!
       .trigger('click');
-    expect(wrapper.findAll('.chip').map((chip) => chip.text())).toEqual(['S', 'M', 'L']);
+    expect(tagTexts(wrapper)).toEqual(['S', 'M', 'L']);
     expect(wrapper.getComponent(TagInput).props('modelValue')).toEqual(['S', 'M', 'L']);
     expect(orderProductSizes(['L', 'S', 'M', 'S'], ['M', 'S', 'L'])).toEqual(['M', 'S', 'L']);
     expect(orderProductSizes(['42', '10', '8', 'XS', 'M', 'XL'])).toEqual(['XS', 'M', 'XL', '8', '10', '42']);
     const tags = mount(TagInput, { props: { modelValue: ['z', 'a'], label: 'Tags' } });
     wrappers.push(tags);
-    expect(tags.findAll('.chip').map((chip) => chip.text())).toEqual(['z', 'a']);
+    expect(tagTexts(tags)).toEqual(['z', 'a']);
   });
 
   it('keeps one required status with tooltips and only the selected label visible', async () => {
@@ -113,7 +124,7 @@ describe('Product review interactions', () => {
     expect(body.text()).not.toContain('assets.product_reference_images');
     expect(body.text()).toContain('I confirm the translation');
     expect(body.text()).toContain('English');
-    const copy = body.get('section[aria-labelledby="copy-heading"]');
+    const copy = body.get('[aria-labelledby="copy-heading"]');
     await copy.get('input[type="checkbox"]').setValue(false);
     await wrapper
       .findAll('button')
@@ -161,9 +172,11 @@ describe('Product review interactions', () => {
     vi.mocked(catalogueApi.listProducts).mockResolvedValue(ResultExtensions.ok([product]));
     const wrapper = await open(ProductsPage);
     const card = wrapper.get('.catalogue-products-grid > li');
-    expect(card.findAll('.chip').filter((chip) => chip.text().includes('languages confirmed'))).toHaveLength(1);
+    const badges = card.findAll('span').filter((badge) => badge.text().includes('languages confirmed'));
+    expect(badges).toHaveLength(1);
     expect(card.text()).not.toContain('unconfirmed translations');
-    expect(card.findAll('.chip.bg-warning-soft').some((chip) => chip.text().includes('0/3'))).toBe(true);
+    expect(badges[0]!.text()).toContain('0/3');
+    expect(badges[0]!.classes()).toContain('bg-warning-soft');
     const selection = card.get('button[aria-label="Select nimcha-v01"]');
     expect(selection.classes()).toContain('catalogue-image-action');
     await selection.trigger('click');

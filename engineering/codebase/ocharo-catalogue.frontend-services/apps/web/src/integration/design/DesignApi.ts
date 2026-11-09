@@ -1,8 +1,7 @@
-import { identityClient } from '../common/IdentitySessionClient';
-import { ApiFailureFactory, createApiClient, wowTwoEnvelope, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
-import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
-import { describeFailure } from '../catalogue/CatalogueApi';
+import { ApiFailureFactory, type ApiClient, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
 import { catalogueSettings, productDetail } from '../catalogue/CatalogueWire';
+import { catalogueHttp } from '../common/IdentitySession';
 import type { DesignSource } from '../../domain/design/CatalogueDesign';
 import {
   validateSnapshot,
@@ -43,13 +42,6 @@ export interface DesignRevision {
   createdAtUtc?: string;
   updatedAtUtc?: string;
 }
-/** Retains request details until the application resolves its interface-language message. */
-export class DesignRequestError extends Error {
-  constructor(readonly failure: ApiFailure) {
-    super(describeFailure(failure));
-    this.name = 'DesignRequestError';
-  }
-}
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 /** Checks the `data` of the API's success envelope and maps it to the app's model; anything else is a protocol failure. */
 function decode<T>(value: unknown, check: (v: unknown) => boolean, map: (v: never) => T = (v) => v as T) {
@@ -83,88 +75,90 @@ function validDocument(v: unknown) {
   }
 }
 /**
- * The retained Catalogue API is the sole writer; all requests remain same-origin and local. Payloads arrive in the API's
- * `{ data }` envelope and failures as ProblemDetails.
+ * The retained Catalogue API is the sole writer; all requests remain same-origin and local, over `client`, by default the
+ * session's {@link catalogueHttp}. Payloads arrive in the API's `{ data }` envelope and failures as ProblemDetails; every
+ * endpoint returns a `Result`, so an expected failure never throws.
  */
-export function createDesignApi(fetchImplementation: typeof fetch = globalThis.fetch) {
-  const client = createApiClient({ envelope: wowTwoEnvelope, retry: false, fetch: fetchImplementation }),
-    root = '/api/catalogue/designs',
+export function createDesignApi(client: ApiClient = catalogueHttp) {
+  const root = '/api/catalogue/designs',
     path = (id: string) => `${root}/${encodeURIComponent(id)}`;
-  async function unwrap<T>(
-    promise: Promise<{ ok: true; value: T } | { ok: false; failure: Parameters<typeof describeFailure>[0] }>,
-  ): Promise<T> {
-    const result = await promise;
-    if (!result.ok) throw new DesignRequestError(result.failure);
-    return result.value;
-  }
+  const isRelease = (v: unknown) => object(v) && typeof v.id === 'string';
   return {
-    list: (signal?: AbortSignal) =>
-      unwrap(client.get<DesignSummary[]>(root, { signal, decode: (v) => decode(v, Array.isArray) })),
-    get: (id: string, signal?: AbortSignal) =>
-      unwrap(client.get<DesignDocument>(path(id), { signal, decode: (v) => decode(v, validDocument) })),
-    source: (signal?: AbortSignal) =>
-      unwrap(
-        client.get<DesignSource>('/api/catalogue/design-source', {
-          signal,
-          decode: (v) => decode(v, (v) => object(v) && Array.isArray(v.products) && object(v.settings), designSource),
-        }),
-      ),
-    save: (id: string | null, title: string, snapshot: DesignSnapshot, expectedRevision?: number) => {
+    /** `GET /api/catalogue/designs`: every saved catalogue, newest first. */
+    list: (signal?: AbortSignal): Promise<Result<DesignSummary[], ApiFailure>> =>
+      client.get<DesignSummary[]>(root, { signal, decode: (v) => decode(v, Array.isArray) }),
+    /** `GET /api/catalogue/designs/{id}`: one catalogue with its validated snapshot. */
+    get: (id: string, signal?: AbortSignal): Promise<Result<DesignDocument, ApiFailure>> =>
+      client.get<DesignDocument>(path(id), { signal, decode: (v) => decode(v, validDocument) }),
+    /** `GET /api/catalogue/design-source`: every product and the settings the designers place. */
+    source: (signal?: AbortSignal): Promise<Result<DesignSource, ApiFailure>> =>
+      client.get<DesignSource>('/api/catalogue/design-source', {
+        signal,
+        decode: (v) => decode(v, (v) => object(v) && Array.isArray(v.products) && object(v.settings), designSource),
+      }),
+    /** `POST /api/catalogue/designs` creates a catalogue; `PUT /api/catalogue/designs/{id}` saves one at a revision. */
+    save: (
+      id: string | null,
+      title: string,
+      snapshot: DesignSnapshot,
+      expectedRevision?: number,
+    ): Promise<Result<DesignDocument, ApiFailure>> => {
       const body = {
         title,
         snapshot: validateSnapshot(snapshot),
         ...(expectedRevision !== undefined ? { expectedRevision } : {}),
       };
       return id
-        ? unwrap(client.put<DesignDocument>(path(id), { body, decode: (v) => decode(v, validDocument) }))
-        : unwrap(client.post<DesignDocument>(root, { body, decode: (v) => decode(v, validDocument) }));
+        ? client.put<DesignDocument>(path(id), { body, decode: (v) => decode(v, validDocument) })
+        : client.post<DesignDocument>(root, { body, decode: (v) => decode(v, validDocument) });
     },
-    duplicate: (id: string) =>
-      unwrap(
-        client.post<DesignDocument>(`${path(id)}/duplicate`, { body: {}, decode: (v) => decode(v, validDocument) }),
-      ),
-    archive: (id: string, revision: number) =>
-      unwrap(client.delete(`${path(id)}?expectedRevision=${revision}`, { response: 'empty' })),
-    releases: (id: string) =>
-      unwrap(
-        client.get<ReleaseSummary[]>(`${path(id)}/releases`, {
-          decode: (v) => decode(v, Array.isArray, (list: Record<string, unknown>[]) => list.map(releaseSummary)),
-        }),
-      ),
-    withdraw: (id: string, revision: number) =>
-      unwrap(client.post(`${path(id)}/withdraw`, { body: { expectedRevision: revision }, response: 'empty' })),
-    revisions: (id: string) =>
-      unwrap(client.get<DesignRevision[]>(`${path(id)}/revisions`, { decode: (v) => decode(v, Array.isArray) })),
-    revision: (id: string, revision: number) =>
-      unwrap(
-        client.get<DesignDocument>(`${path(id)}/revisions/${revision}`, { decode: (v) => decode(v, validDocument) }),
-      ),
-    preparation: (id: string) =>
-      unwrap(
-        client.get<Preparation>(`${path(id)}/preparation`, {
-          decode: (v) =>
-            decode(
-              v,
-              (v) =>
-                object(v) &&
-                typeof v.fingerprint === 'string' &&
-                Number.isSafeInteger(v.designRevision) &&
-                Array.isArray(v.pdfPageIds),
-            ),
-        }),
-      ),
-    async prepare(
+    /** `POST /api/catalogue/designs/{id}/duplicate`: copies a catalogue. */
+    duplicate: (id: string): Promise<Result<DesignDocument, ApiFailure>> =>
+      client.post<DesignDocument>(`${path(id)}/duplicate`, { body: {}, decode: (v) => decode(v, validDocument) }),
+    /** `DELETE /api/catalogue/designs/{id}?expectedRevision=`: archives a catalogue at its revision. */
+    archive: (id: string, revision: number): Promise<Result<void, ApiFailure>> =>
+      client.delete(`${path(id)}?expectedRevision=${revision}`, { response: 'empty' }),
+    /** `GET /api/catalogue/designs/{id}/releases`: the catalogue's prepared and published editions. */
+    releases: (id: string): Promise<Result<ReleaseSummary[], ApiFailure>> =>
+      client.get<ReleaseSummary[]>(`${path(id)}/releases`, {
+        decode: (v) => decode(v, Array.isArray, (list: Record<string, unknown>[]) => list.map(releaseSummary)),
+      }),
+    /** `POST /api/catalogue/designs/{id}/withdraw`: withdraws every published edition. */
+    withdraw: (id: string, revision: number): Promise<Result<void, ApiFailure>> =>
+      client.post(`${path(id)}/withdraw`, { body: { expectedRevision: revision }, response: 'empty' }),
+    /** `GET /api/catalogue/designs/{id}/revisions`: the catalogue's saved revisions. */
+    revisions: (id: string): Promise<Result<DesignRevision[], ApiFailure>> =>
+      client.get<DesignRevision[]>(`${path(id)}/revisions`, { decode: (v) => decode(v, Array.isArray) }),
+    /** `GET /api/catalogue/designs/{id}/revisions/{revision}`: one saved revision's document. */
+    revision: (id: string, revision: number): Promise<Result<DesignDocument, ApiFailure>> =>
+      client.get<DesignDocument>(`${path(id)}/revisions/${revision}`, { decode: (v) => decode(v, validDocument) }),
+    /** `GET /api/catalogue/designs/{id}/preparation`: the revision, fingerprint and PDF pages a release must carry. */
+    preparation: (id: string): Promise<Result<Preparation, ApiFailure>> =>
+      client.get<Preparation>(`${path(id)}/preparation`, {
+        decode: (v) =>
+          decode(
+            v,
+            (v) =>
+              object(v) &&
+              typeof v.fingerprint === 'string' &&
+              Number.isSafeInteger(v.designRevision) &&
+              Array.isArray(v.pdfPageIds),
+          ),
+      }),
+    /**
+     * `POST /api/catalogue/designs/{id}/prepare`: prepares a release. A web-only edition sends the metadata as JSON; one
+     * with a PDF sends it as multipart, with the whole PDF and each page's PDF and PNG, the browser setting the boundary.
+     */
+    prepare(
       id: string,
       metadata: { expectedRevision: number; fingerprint: string },
       bundle?: CatalogueRenderBundle,
-    ): Promise<PreparedRelease> {
+    ): Promise<Result<PreparedRelease, ApiFailure>> {
       if (!bundle)
-        return unwrap(
-          client.post<PreparedRelease>(`${path(id)}/prepare`, {
-            body: metadata,
-            decode: (v) => decode(v, (v) => object(v) && typeof v.id === 'string'),
-          }),
-        );
+        return client.post<PreparedRelease>(`${path(id)}/prepare`, {
+          body: metadata,
+          decode: (v) => decode(v, isRelease),
+        });
       const form = new FormData();
       form.append('metadata', JSON.stringify(metadata));
       form.append('files', new File([bundle.pdf], 'catalogue.pdf', { type: 'application/pdf' }));
@@ -172,26 +166,15 @@ export function createDesignApi(fetchImplementation: typeof fetch = globalThis.f
         form.append('files', new File([page.pdf], `page-${page.id}.pdf`, { type: 'application/pdf' }));
         form.append('files', new File([page.png], `page-${page.id}.png`, { type: 'image/png' }));
       }
-      let response: Response;
-      try {
-        response = await fetchImplementation(`${path(id)}/prepare`, { method: 'POST', body: form });
-      } catch {
-        throw new Error('Unable to connect to the catalogue service.');
-      }
-      const parsed: unknown = await response.json().catch(() => null);
-      if (!response.ok) throw new DesignRequestError(wowTwoEnvelope.toFailure(parsed, response));
-      const value = object(parsed) ? parsed.data : undefined;
-      if (!object(value) || typeof value.id !== 'string')
-        throw new Error('The catalogue service returned an invalid release.');
-      return value as unknown as PreparedRelease;
+      return client.post<PreparedRelease>(`${path(id)}/prepare`, { body: form, decode: (v) => decode(v, isRelease) });
     },
-    publish: (id: string, release: string, revision: number) =>
-      unwrap(
-        client.post<PreparedRelease>(`${path(id)}/releases/${encodeURIComponent(release)}/publish`, {
-          body: { expectedRevision: revision },
-          decode: (v) => decode(v, object),
-        }),
-      ),
+    /** `POST /api/catalogue/designs/{id}/releases/{release}/publish`: publishes a prepared release. */
+    publish: (id: string, release: string, revision: number): Promise<Result<PreparedRelease, ApiFailure>> =>
+      client.post<PreparedRelease>(`${path(id)}/releases/${encodeURIComponent(release)}/publish`, {
+        body: { expectedRevision: revision },
+        decode: (v) => decode(v, object),
+      }),
   };
 }
-export const designApi = createDesignApi(identityClient.fetch);
+export type DesignApi = ReturnType<typeof createDesignApi>;
+export const designApi = createDesignApi();

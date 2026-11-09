@@ -1,12 +1,29 @@
-import { createAppRouter, type RouteConfig, type RouteHandle } from '@wow-two-beta/fe/router';
+import {
+  createAppRouter,
+  type GuardDecision,
+  type RouteConfig,
+  type RouteGuard,
+  type RouteHandle,
+} from '@wow-two-beta/fe/router';
 
 import { useUiLocale } from '../application/shared/UseUiLocale';
 import type { CatalogueSection } from '../domain/shared/CatalogueSections';
+import {
+  ensureSession,
+  identityStrategy,
+  sessionReachable,
+  SignInErrorParameter,
+} from '../integration/common/IdentitySession';
 import AppLayout from './AppLayout.vue';
 import PublicReaderLayout from './PublicReaderLayout.vue';
 
 /** The app name after each place's title in the document title. */
 export const DocumentTitleSuffix = 'Ocharo Catalogue';
+
+/** Whether `pathname` is the published reader (`/c/{slug}`): anonymous, with no operator session or app menu. */
+export function isPublicReaderPath(pathname: string): boolean {
+  return pathname.startsWith('/c/');
+}
 
 const { t } = useUiLocale();
 
@@ -17,6 +34,19 @@ const { t } = useUiLocale();
 function place(label: string, section: CatalogueSection | null): RouteHandle {
   return { label, section, title: () => t(label) };
 }
+
+/**
+ * Lets a signed-in person into the operator frame once the session settles. Without a session it leaves for sign-in at
+ * Ocharo's Identity, replacing this address, and holds the navigation while the browser leaves, so the splash stays
+ * up. A failed sign-in's return (`signInError`) and a session read the API did not answer open the frame instead, which
+ * offers sign-in; a misconfigured client never loops. The published reader is outside this guard.
+ */
+export const requireCatalogueSession: RouteGuard = async ({ to }): Promise<GuardDecision> => {
+  if (await ensureSession()) return true;
+  if (SignInErrorParameter in to.query || !sessionReachable()) return true;
+  globalThis.location.replace(identityStrategy.signInUrl(to.fullPath));
+  return new Promise<never>(() => {});
+};
 
 /**
  * Code-split, directly addressable places. Every authoring place renders inside the operator frame; the published
@@ -37,6 +67,7 @@ export const catalogueRoutes: RouteConfig = [
   },
   {
     layout: AppLayout,
+    guard: requireCatalogueSession,
     children: [
       {
         index: true,

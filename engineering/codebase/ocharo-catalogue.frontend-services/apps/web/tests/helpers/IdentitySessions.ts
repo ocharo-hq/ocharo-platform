@@ -1,4 +1,5 @@
-import type { IdentitySession } from '../../src/integration/common/IdentitySessionClient';
+import { AuthStatus, type BffUser } from '@wow-two-beta/fe/auth';
+import { identityBridge } from '../../src/integration/common/IdentitySession';
 
 /** What `GET /api/identity/session` answers for an owner of the catalogue's organization, who edits and approves. */
 export const OwnerSessionData = {
@@ -7,19 +8,26 @@ export const OwnerSessionData = {
   organization: { id: 'b8c672a6-c2e4-4516-82ad-5b178e71ace1', name: 'Ocharo', role: 'owner', slug: 'ocharo' },
   permissions: ['catalogue:edit', 'catalogue:approve'],
   csrfToken: 'csrf-token',
-  expiresAt: '2026-11-04T08:00:00Z',
+  expiresAt: '2099-01-01T00:00:00Z',
 } as const;
 
-/** The owner's session as the app reads it: every test starts signed in with it (`tests/setup.ts`). */
-export const OwnerSession: IdentitySession = {
-  reachable: true,
-  isAuthenticated: true,
-  person: { ...OwnerSessionData.person },
-  organization: { ...OwnerSessionData.organization },
+/** The session route's answer without a session. */
+export const SignedOutSessionData = { isAuthenticated: false } as const;
+
+/** The owner's session as the SDK strategy decodes it: every test starts signed in with it (`tests/setup.ts`). */
+export const OwnerUser: BffUser = {
+  person: { sub: OwnerSessionData.person.sub, name: null, email: null, phoneNumber: null },
+  organization: { id: OwnerSessionData.organization.id, role: OwnerSessionData.organization.role },
   permissions: [...OwnerSessionData.permissions],
-  csrfToken: OwnerSessionData.csrfToken,
   expiresAt: OwnerSessionData.expiresAt,
 };
 
-/** The addresses the app's session client sent the browser to, oldest first; `tests/setup.ts` clears it per test. */
+/** Publishes `user` (signed out for `null`) as the settled session, the way the app root's provider does once it resolves. */
+export function publishSession(user: BffUser | null): void {
+  identityBridge.publishSession(
+    user ? { status: AuthStatus.Authenticated, user } : { status: AuthStatus.Anonymous, user: null },
+  );
+}
+
+/** The addresses the app sent the browser to, oldest first; `tests/setup.ts` records them and clears it per test. */
 export const navigations: string[] = [];

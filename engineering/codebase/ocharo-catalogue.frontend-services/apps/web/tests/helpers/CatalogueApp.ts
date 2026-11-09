@@ -5,7 +5,7 @@ import { RouterHistoryMode } from '@wow-two-beta/fe/router';
 
 import { loadOcharoApps, ocharoAppsPlugin } from '../../src/application/shared/UseOcharoApps';
 import AppRoot from '../../src/bootstrap/AppRoot.vue';
-import { createCatalogueRouter } from '../../src/bootstrap/CatalogueRouter';
+import { createCatalogueRouter, isPublicReaderPath } from '../../src/bootstrap/CatalogueRouter';
 import { OwnerSessionData } from './IdentitySessions';
 
 /** The Identity end-session address the stubbed `/api/identity/sign-out` answers. */
@@ -36,23 +36,16 @@ export function stubViewport(width: number): void {
   }));
 }
 
-export interface CatalogueAppOptions {
-  /** The viewport width; default a 1440px desktop. */
-  readonly width?: number;
+export interface CatalogueHostOptions {
   /** When given, `/api/runtime-config` serves it and the app menu resolves it the way startup does. */
   readonly runtimeConfig?: Record<string, string>;
   /** The session `/api/identity/session` serves; default an owner's. `/api/identity/sign-out` answers
-   * {@link EndSessionUrl}. The app reads it once a test initializes the session client again. */
+   * {@link EndSessionUrl}. */
   readonly session?: Record<string, unknown>;
-  readonly stubs?: Record<string, Component>;
 }
 
-/** Mounts the whole app — the real route table, layouts and pages — at `path`. Catalogue reads are mocked by callers. */
-export async function mountCatalogue(
-  path: string,
-  options: CatalogueAppOptions = {},
-): Promise<{ wrapper: VueWrapper; router: ReturnType<typeof createCatalogueRouter> }> {
-  stubViewport(options.width ?? 1440);
+/** Stubs the host's own routes: runtime settings, status, the session and sign-out. Catalogue reads are mocked by callers. */
+export function stubCatalogueHost(options: CatalogueHostOptions = {}): void {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
@@ -68,12 +61,34 @@ export async function mountCatalogue(
       return Promise.resolve(Response.json({ title: 'Not found' }, { status: 404 }));
     }),
   );
+}
+
+export interface CatalogueAppOptions extends CatalogueHostOptions {
+  /** The viewport width; default a 1440px desktop. */
+  readonly width?: number;
+  readonly stubs?: Record<string, Component>;
+}
+
+/**
+ * Mounts the whole app — the root with its session provider, the real route table, layouts and pages — then opens
+ * `path` once mounted, as startup does: the frame's guard waits for the session. Catalogue reads are mocked by callers.
+ */
+export async function mountCatalogue(
+  path: string,
+  options: CatalogueAppOptions = {},
+): Promise<{ wrapper: VueWrapper; router: ReturnType<typeof createCatalogueRouter> }> {
+  stubViewport(options.width ?? 1440);
+  stubCatalogueHost(options);
   const router = createCatalogueRouter({ history: RouterHistoryMode.Memory });
-  await router.push(path);
-  await router.isReady();
   const plugins: Plugin[] = [router];
   if (options.runtimeConfig) plugins.push(ocharoAppsPlugin(await loadOcharoApps()));
-  const wrapper = mount(AppRoot, { attachTo: document.body, global: { plugins, stubs: options.stubs ?? {} } });
+  const wrapper = mount(AppRoot, {
+    attachTo: document.body,
+    props: { opensOnReader: isPublicReaderPath(path) },
+    global: { plugins, stubs: options.stubs ?? {} },
+  });
+  await router.replace(path);
+  await router.isReady();
   await flushPromises();
   return { wrapper, router };
 }

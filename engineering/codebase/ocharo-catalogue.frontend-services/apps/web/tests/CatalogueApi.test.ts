@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { translateUi } from '../src/domain/shared/UiMessages';
 import { createCatalogueApi, describeFailure } from '../src/integration/catalogue';
+import { httpOver } from './helpers/TestHttp';
 
 function reply(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -18,7 +19,7 @@ describe('catalogue api', () => {
         detail: 'The product was saved elsewhere (now revision 3). Reload before saving.',
       }),
     );
-    const api = createCatalogueApi(fetch as unknown as typeof globalThis.fetch);
+    const api = createCatalogueApi(httpOver(fetch as unknown as typeof globalThis.fetch));
     const result = await api.updateProduct('nimcha-v06', {
       garmentType: 'nimcha',
       status: 'draft',
@@ -79,43 +80,46 @@ describe('catalogue api', () => {
     expect(describeFailure(failure)).toBe('The catalogue service returned error 500.');
   });
   it('rejects a non-array product list as a protocol failure', async () => {
-    const api = createCatalogueApi((async () =>
-      reply(200, { data: { unexpected: true } })) as unknown as typeof globalThis.fetch);
+    const api = createCatalogueApi(
+      httpOver((async () => reply(200, { data: { unexpected: true } })) as unknown as typeof globalThis.fetch),
+    );
     const result = await api.listProducts({});
     expect(result.ok).toBe(false);
   });
 
   it('reads a product from the success envelope with its omitted null fields restored', async () => {
     const locale = { status: 'draft' };
-    const api = createCatalogueApi((async () =>
-      reply(200, {
-        data: {
-          document: {
-            id: 'nimcha-v01',
-            garmentType: 'nimcha',
-            variantCode: 'v01',
-            status: 'draft',
-            sortOrder: 0,
-            sizes: ['S', 'XL'],
-            fabricCodes: [],
-            decorationCodes: [],
-            tags: [],
-            locales: { uz: { ...locale, name: 'Nimcha' }, ru: locale, en: locale, additional: {} },
-            pricing: { currency: 'UZS', status: 'draft', tiers: [{ minimumQuantity: 10, unitPrice: 1 }] },
+    const api = createCatalogueApi(
+      httpOver((async () =>
+        reply(200, {
+          data: {
+            document: {
+              id: 'nimcha-v01',
+              garmentType: 'nimcha',
+              variantCode: 'v01',
+              status: 'draft',
+              sortOrder: 0,
+              sizes: ['S', 'XL'],
+              fabricCodes: [],
+              decorationCodes: [],
+              tags: [],
+              locales: { uz: { ...locale, name: 'Nimcha' }, ru: locale, en: locale, additional: {} },
+              pricing: { currency: 'UZS', status: 'draft', tiers: [{ minimumQuantity: 10, unitPrice: 1 }] },
+              media: [],
+              issues: [],
+              stock: { XL: 2, S: 0 },
+              madeToOrder: false,
+              availability: 'in-stock',
+              availableSizes: ['XL'],
+            },
+            revision: 1,
+            createdAt: '2026-11-09T00:00:00Z',
+            updatedAt: '2026-11-09T00:00:00Z',
             media: [],
-            issues: [],
-            stock: { XL: 2, S: 0 },
-            madeToOrder: false,
-            availability: 'in-stock',
-            availableSizes: ['XL'],
+            collectionIds: [],
           },
-          revision: 1,
-          createdAt: '2026-11-09T00:00:00Z',
-          updatedAt: '2026-11-09T00:00:00Z',
-          media: [],
-          collectionIds: [],
-        },
-      })) as unknown as typeof globalThis.fetch);
+        })) as unknown as typeof globalThis.fetch),
+    );
     const result = await api.getProduct('nimcha-v01');
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -131,15 +135,17 @@ describe('catalogue api', () => {
   });
 
   it('reads the public feed unenveloped, as Marketing and Blog do', async () => {
-    const api = createCatalogueApi((async () =>
-      reply(200, { brand: 'Ocharo', products: [], collections: [] })) as unknown as typeof globalThis.fetch);
+    const api = createCatalogueApi(
+      httpOver((async () =>
+        reply(200, { brand: 'Ocharo', products: [], collections: [] })) as unknown as typeof globalThis.fetch),
+    );
     const result = await api.publicCatalogue('uz');
     expect(result.ok && result.value.brand).toBe('Ocharo');
   });
 
   it('sends filters as query parameters', async () => {
     const fetch = vi.fn(async (input: RequestInfo | URL) => (void input, reply(200, { data: [] })));
-    const api = createCatalogueApi(fetch as unknown as typeof globalThis.fetch);
+    const api = createCatalogueApi(httpOver(fetch as unknown as typeof globalThis.fetch));
     await api.listProducts({ q: 'nimcha', status: 'active' });
     const url = String(fetch.mock.calls[0]?.[0]);
     expect(url).toContain('q=nimcha');

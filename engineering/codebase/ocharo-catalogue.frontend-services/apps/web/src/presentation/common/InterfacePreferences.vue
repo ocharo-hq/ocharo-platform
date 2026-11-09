@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { LabelText } from '@wow-two-beta/fe/presentation/display';
 import { computed } from 'vue';
 import { useColorMode } from '@wow-two-beta/fe/foundation/primitives';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
@@ -23,7 +24,7 @@ function setAppearance(value: string): void {
     </p>
     <div class="grid gap-5 sm:grid-cols-2">
       <div>
-        <label class="label" for="interface-language">{{ t('Interface language') }}</label>
+        <LabelText for="interface-language" class="mb-1.5 block">{{ t('Interface language') }}</LabelText>
         <CatalogueSelect
           id="interface-language"
           :model-value="uiLocale"
@@ -37,7 +38,7 @@ function setAppearance(value: string): void {
         />
       </div>
       <div>
-        <label class="label" for="interface-appearance">{{ t('Appearance') }}</label>
+        <LabelText for="interface-appearance" class="mb-1.5 block">{{ t('Appearance') }}</LabelText>
         <CatalogueSelect
           id="interface-appearance"
           :model-value="appearance"

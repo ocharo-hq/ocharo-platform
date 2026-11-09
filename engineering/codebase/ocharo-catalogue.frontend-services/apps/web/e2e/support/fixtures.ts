@@ -37,7 +37,9 @@ export const test = base.extend<CatalogueFixtures>({
       };
       await context.addInitScript((locale) => {
         try {
-          if (!localStorage.getItem('ocharo.operator.locale')) localStorage.setItem('ocharo.operator.locale', locale);
+          // The app stores the choice as JSON through the SDK storage seam.
+          if (!localStorage.getItem('ocharo.operator.locale'))
+            localStorage.setItem('ocharo.operator.locale', JSON.stringify(locale));
         } catch {
           /* about:blank analysis pages have no storage. */
         }

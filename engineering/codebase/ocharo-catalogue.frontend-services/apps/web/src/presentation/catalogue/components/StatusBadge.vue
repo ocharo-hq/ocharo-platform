@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { Badge, type BadgeVariant } from '@wow-two-beta/fe/presentation/display';
 import type { ProductStatus } from '../../../domain/catalogue/CatalogueModels';
 import { useUiLocale } from '../../../application/shared/UseUiLocale';
 const { t } = useUiLocale();
@@ -7,18 +7,16 @@ const { t } = useUiLocale();
 /** Product lifecycle chip. */
 defineOptions({ name: 'StatusBadge' });
 const props = defineProps<{ status: ProductStatus }>();
-const tone = computed(
-  () =>
-    ({
-      draft: 'bg-warning-soft text-warning-soft-foreground',
-      active: 'bg-success-soft text-success-soft-foreground',
-      archived: 'bg-muted text-muted-foreground',
-    })[props.status],
-);
+/** The badge tone of each status. @internal */
+const StatusTones: Readonly<Record<ProductStatus, BadgeVariant>> = {
+  draft: 'warning',
+  active: 'success',
+  archived: 'neutral',
+};
 </script>
 
 <template>
-  <span :class="['chip', tone]">{{
+  <Badge :variant="StatusTones[props.status]" size="sm">{{
     t(props.status === 'active' ? 'Active' : props.status === 'draft' ? 'Draft' : 'Archived')
-  }}</span>
+  }}</Badge>
 </template>

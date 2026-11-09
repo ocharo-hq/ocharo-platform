@@ -1,4 +1,6 @@
 export { useCatalogueStore } from './CatalogueStore';
+export { useCatalogueSettings } from './UseCatalogueSettings';
+export { CatalogueQueryKeys } from './CatalogueQueryKeys';
 export { useProductList } from './UseProductList';
 export { useProductEditor } from './UseProductEditor';
 export { useCollections, type CollectionDraft } from './UseCollections';

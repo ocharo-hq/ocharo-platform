@@ -1,5 +1,4 @@
-import { identityClient } from '../common/IdentitySessionClient';
-import { ApiFailureFactory, createApiClient, wowTwoEnvelope, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ApiFailureFactory, type ApiClient, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import type {
   BulkResult,
@@ -28,6 +27,7 @@ import {
   settingsEnvelope,
   stockRow,
 } from './CatalogueWire';
+import { catalogueHttp } from '../common/IdentitySession';
 
 /**
  * Structural guard over the `data` of the API's success envelope: accepts the expected shape and maps it to the app's
@@ -70,14 +70,15 @@ export function describeFailure(
 }
 
 /**
- * Same-origin catalogue endpoints; mutations are never retried automatically. Payloads arrive in the API's `{ data }`
- * envelope and failures as ProblemDetails; the public feed alone keeps its unenveloped shape.
+ * Same-origin catalogue endpoints over `client`, by default the session's {@link catalogueHttp}; mutations are never
+ * retried automatically. Payloads arrive in the API's `{ data }` envelope and failures as ProblemDetails; the public feed
+ * alone keeps its unenveloped shape. Reads take the caller's cancellation signal.
  */
-export function createCatalogueApi(fetchImplementation: typeof fetch = globalThis.fetch) {
-  const client = createApiClient({ envelope: wowTwoEnvelope, retry: false, fetch: fetchImplementation });
+export function createCatalogueApi(client: ApiClient = catalogueHttp) {
   const root = '/api/catalogue';
   const id = (value: string) => encodeURIComponent(value);
   return {
+    /** `GET /api/catalogue/products`: the product grid for a filter. */
     listProducts(filter: ProductFilter, signal?: AbortSignal) {
       return client.get<ProductSummary[]>(`${root}/products`, {
         query: { ...filter },
@@ -85,71 +86,84 @@ export function createCatalogueApi(fetchImplementation: typeof fetch = globalThi
         decode: shape(isArray, list(productSummary)),
       });
     },
+    /** `GET /api/catalogue/products/{id}`: one product with its document and revision. */
     getProduct(productId: string, signal?: AbortSignal) {
       return client.get<ProductDetail>(`${root}/products/${id(productId)}`, {
         signal,
         decode: shape(hasDocument, productDetail),
       });
     },
+    /** `POST /api/catalogue/products`: creates a product. */
     createProduct(input: ProductInput) {
       return client.post<ProductDetail>(`${root}/products`, { body: input, decode: shape(hasDocument, productDetail) });
     },
+    /** `PUT /api/catalogue/products/{id}`: saves a product against the revision it was edited from. */
     updateProduct(productId: string, input: ProductInput) {
       return client.put<ProductDetail>(`${root}/products/${id(productId)}`, {
         body: input,
         decode: shape(hasDocument, productDetail),
       });
     },
+    /** `POST /api/catalogue/products/{id}/duplicate`: copies a product as a draft. */
     duplicateProduct(productId: string) {
       return client.post<ProductDetail>(`${root}/products/${id(productId)}/duplicate`, {
         body: {},
         decode: shape(hasDocument, productDetail),
       });
     },
+    /** `GET /api/catalogue/products/stock`: every product's stock row. */
     stockRows(signal?: AbortSignal) {
       return client.get<StockRow[]>(`${root}/products/stock`, { signal, decode: shape(isArray, list(stockRow)) });
     },
+    /** `PUT /api/catalogue/products/{id}/stock`: saves one product's stock. */
     saveStock(productId: string, expectedRevision: number, stock: Record<string, number> | null, madeToOrder: boolean) {
       return client.put<StockRow>(`${root}/products/${id(productId)}/stock`, {
         body: { expectedRevision, stock, madeToOrder },
         decode: shape(isObject, stockRow),
       });
     },
+    /** `GET /api/catalogue/products/copy`: every product's copy row. */
     copyRows(signal?: AbortSignal) {
       return client.get<ProductCopyRow[]>(`${root}/products/copy`, {
         signal,
         decode: shape(isArray, list(productCopyRow)),
       });
     },
+    /** `PUT /api/catalogue/products/{id}/copy`: saves one product's copy in every language. */
     saveCopy(productId: string, expectedRevision: number, locales: ProductLocales) {
       return client.put<ProductCopyRow>(`${root}/products/${id(productId)}/copy`, {
         body: { expectedRevision, locales },
         decode: shape(isObject, productCopyRow),
       });
     },
+    /** `GET /api/catalogue/products/{id}/revisions`: a product's saved revisions. */
     revisions(productId: string, signal?: AbortSignal) {
       return client.get<RevisionSummary[]>(`${root}/products/${id(productId)}/revisions`, {
         signal,
         decode: shape(isArray),
       });
     },
+    /** `GET /api/catalogue/products/{id}/revisions/{revision}`: one saved revision's document. */
     revision(productId: string, revision: number) {
       return client.get<ProductDocument>(`${root}/products/${id(productId)}/revisions/${revision}`, {
         decode: shape(isObject, productDocument),
       });
     },
+    /** `POST /api/catalogue/products/{id}/revisions/{revision}/restore`: restores a revision as the next one. */
     restore(productId: string, revision: number, expectedRevision: number) {
       return client.post<ProductDetail>(`${root}/products/${id(productId)}/revisions/${revision}/restore`, {
         body: { expectedRevision },
         decode: shape(hasDocument, productDetail),
       });
     },
+    /** `POST /api/catalogue/products/bulk/status`: sets the status of a selection. */
     bulkStatus(productIds: string[], status: string) {
       return client.post<BulkResult>(`${root}/products/bulk/status`, {
         body: { productIds, status },
         decode: shape(isObject),
       });
     },
+    /** `POST /api/catalogue/products/bulk/pricing`: adjusts the prices of a selection. */
     bulkPricing(
       productIds: string[],
       mode: 'percent' | 'add',
@@ -162,33 +176,28 @@ export function createCatalogueApi(fetchImplementation: typeof fetch = globalThi
         decode: shape(isObject),
       });
     },
-    /** Multipart upload stays on fetch: the JSON client serializes bodies. */
-    async uploadImage(productId: string, file: File, role: string, expectedRevision: number) {
+    /**
+     * `POST /api/catalogue/products/{id}/media`: a multipart image upload; the client sends `FormData` as it is, with the
+     * browser's boundary.
+     */
+    uploadImage(productId: string, file: File, role: string, expectedRevision: number) {
       const form = new FormData();
       form.append('file', file);
       form.append('role', role);
       form.append('expectedRevision', String(expectedRevision));
-      try {
-        const response = await fetchImplementation(`${root}/products/${id(productId)}/media`, {
-          method: 'POST',
-          body: form,
-        });
-        const parsed: unknown = await response.json().catch(() => null);
-        if (!response.ok) return ResultExtensions.fail(wowTwoEnvelope.toFailure(parsed, response));
-        const data = isObject(parsed) ? (parsed as { data?: unknown }).data : undefined;
-        return hasDocument(data)
-          ? ResultExtensions.ok(productDetail(data as never))
-          : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
-      } catch {
-        return ResultExtensions.fail(ApiFailureFactory.create('transport'));
-      }
+      return client.post<ProductDetail>(`${root}/products/${id(productId)}/media`, {
+        body: form,
+        decode: shape(hasDocument, productDetail),
+      });
     },
+    /** `GET /api/catalogue/collections`: every collection. */
     listCollections(signal?: AbortSignal) {
       return client.get<CollectionDetail[]>(`${root}/collections`, {
         signal,
         decode: shape(isArray, list(collectionDetail)),
       });
     },
+    /** `POST /api/catalogue/collections` creates a collection; `PUT /api/catalogue/collections/{id}` saves one. */
     saveCollection(
       collectionId: string | null,
       body: {
@@ -208,24 +217,29 @@ export function createCatalogueApi(fetchImplementation: typeof fetch = globalThi
           })
         : client.post<CollectionDetail>(`${root}/collections`, { body, decode: shape(hasDocument, collectionDetail) });
     },
+    /** `DELETE /api/catalogue/collections/{id}`: deletes a collection; its products remain. */
     deleteCollection(collectionId: string) {
       return client.delete(`${root}/collections/${id(collectionId)}`, { response: 'empty' });
     },
+    /** `GET /api/catalogue/settings`: the catalogue settings, their revision and the import source. */
     getSettings(signal?: AbortSignal) {
       return client.get<SettingsEnvelope>(`${root}/settings`, { signal, decode: shape(isObject, settingsEnvelope) });
     },
+    /** `PUT /api/catalogue/settings`: saves the settings against the revision they were edited from. */
     saveSettings(settings: CatalogueSettings, expectedRevision: number) {
       return client.put<SettingsEnvelope>(`${root}/settings`, {
         body: { settings, expectedRevision },
         decode: shape(isObject, settingsEnvelope),
       });
     },
+    /** `POST /api/catalogue/import/workspace`: imports the configured products folder. */
     importWorkspace(updateExisting: boolean, includeReferenceImages: boolean) {
       return client.post<ImportReport>(`${root}/import/workspace`, {
         body: { sourceRoot: null, updateExisting, includeReferenceImages },
         decode: shape(isObject),
       });
     },
+    /** `GET /api/public/catalogue`: the public feed, unenveloped, as Marketing and Blog read it. */
     publicCatalogue(locale: string, signal?: AbortSignal) {
       // The public feed keeps the unenveloped shape, with null fields written, that Marketing and Blog read.
       return client.get<PublicCatalogue>('/api/public/catalogue', {
@@ -240,7 +254,7 @@ export function createCatalogueApi(fetchImplementation: typeof fetch = globalThi
 
 export type CatalogueApi = ReturnType<typeof createCatalogueApi>;
 
-export const catalogueApi = createCatalogueApi(identityClient.fetch);
+export const catalogueApi = createCatalogueApi();
 
 export const catalogueExports = {
   json: '/api/catalogue/export/catalogue.json',

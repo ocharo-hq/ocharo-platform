@@ -4,13 +4,20 @@ import { createMemoryHistory, createRouter } from 'vue-router';
 import CatalogueGalleryPage from '../src/presentation/design/CatalogueGalleryPage.vue';
 import CatalogueWebDesignerPage from '../src/presentation/design/CatalogueWebDesignerPage.vue';
 import CatalogueWebPreview from '../src/presentation/design/CatalogueWebPreview.vue';
-import { designApi, DesignRequestError } from '../src/integration/design/DesignApi';
-import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
+import { designApi } from '../src/integration/design/DesignApi';
+import { ApiFailureFactory, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
+import type { DesignDocument } from '../src/domain/design/EditorModels';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
 import { confirmation, feedbackBus, resolveConfirmation } from '../src/application/common/UseFeedback';
 let messages: string[] = [];
 let unsubscribe = () => {};
 let notificationClock = Date.now();
+/** A design API outcome that failed to reach the catalogue service. */
+const unreachable = () => ResultExtensions.fail(ApiFailureFactory.create('transport'));
+/** The interface copy for {@link unreachable}. */
+const UnreachableCopy = 'Could not connect to the catalogue service. Check that it is running.';
+type DocumentOutcome = Result<DesignDocument, ApiFailure>;
 afterEach(() => {
   resolveConfirmation(false);
   unsubscribe();
@@ -65,26 +72,30 @@ beforeEach(() => {
   sessionStorage.clear();
   useUiLocale().setUiLocale('en');
   const doc = documentFixture();
-  vi.mocked(designApi.list).mockResolvedValue([
-    {
-      ...doc,
-      locale: 'en',
-      catalogue: { ...doc.snapshot.catalogue!, web: { theme: 'editorial', pageCount: 0 }, pdfPageCount: 1 },
-    },
-  ]);
-  vi.mocked(designApi.get).mockResolvedValue(doc);
-  vi.mocked(designApi.source).mockResolvedValue(sourceFixture());
-  vi.mocked(designApi.save).mockImplementation(async (id, title, snapshot, revision) => ({
-    ...documentFixture(),
-    id: id ?? 'new',
-    title,
-    snapshot,
-    revision: (revision ?? 0) + 1,
-  }));
+  vi.mocked(designApi.list).mockResolvedValue(
+    ResultExtensions.ok([
+      {
+        ...doc,
+        locale: 'en',
+        catalogue: { ...doc.snapshot.catalogue!, web: { theme: 'editorial', pageCount: 0 }, pdfPageCount: 1 },
+      },
+    ]),
+  );
+  vi.mocked(designApi.get).mockResolvedValue(ResultExtensions.ok(doc));
+  vi.mocked(designApi.source).mockResolvedValue(ResultExtensions.ok(sourceFixture()));
+  vi.mocked(designApi.save).mockImplementation(async (id, title, snapshot, revision) =>
+    ResultExtensions.ok({
+      ...documentFixture(),
+      id: id ?? 'new',
+      title,
+      snapshot,
+      revision: (revision ?? 0) + 1,
+    }),
+  );
 });
 describe('native catalogue screens', () => {
   it('retains a created catalogue only after the write acknowledgement, even when the grid read fails', async () => {
-    let resolve!: (value: ReturnType<typeof documentFixture>) => void;
+    let resolve!: (value: DocumentOutcome) => void;
     vi.mocked(designApi.save).mockReturnValue(
       new Promise((success) => {
         resolve = success;
@@ -105,16 +116,16 @@ describe('native catalogue screens', () => {
     await flushPromises();
     expect(feedbackBus.retained()).toEqual([]);
     expect(designApi.list).toHaveBeenCalledTimes(1);
-    vi.mocked(designApi.list).mockRejectedValue(new Error('Refresh unavailable'));
-    resolve({ ...documentFixture(), id: 'new-season', revision: 1, title: 'New season' });
+    vi.mocked(designApi.list).mockResolvedValue(unreachable());
+    resolve(ResultExtensions.ok({ ...documentFixture(), id: 'new-season', revision: 1, title: 'New season' }));
     await flushPromises();
     expect(feedbackBus.retained()).toMatchObject([{ title: 'Catalogue created.', description: 'New season' }]);
     expect(designApi.list).toHaveBeenCalledTimes(2);
-    expect(messages).toContain('Unable to load catalogues.');
+    expect(messages).toContain(UnreachableCopy);
     wrapper.unmount();
   });
   it('retains a designer save only after acknowledgement and preserves it through a failed document reread', async () => {
-    let resolve!: (value: ReturnType<typeof documentFixture>) => void;
+    let resolve!: (value: DocumentOutcome) => void;
     const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
     vi.mocked(designApi.save).mockReturnValue(
       new Promise((success) => {
@@ -127,15 +138,15 @@ describe('native catalogue screens', () => {
       .find((button) => button.text() === 'Save catalogue')!
       .trigger('click');
     expect(feedbackBus.retained()).toEqual([]);
-    vi.mocked(designApi.get).mockRejectedValue(new Error('Read unavailable'));
-    resolve({ ...documentFixture(), title: 'Changed catalogue', revision: 3 });
+    vi.mocked(designApi.get).mockResolvedValue(unreachable());
+    resolve(ResultExtensions.ok({ ...documentFixture(), title: 'Changed catalogue', revision: 3 }));
     await flushPromises();
     expect(feedbackBus.retained()).toMatchObject([{ title: 'Catalogue saved.', description: 'Changed catalogue' }]);
     wrapper.unmount();
   });
   it('keeps failed designer writes out of retained notification history', async () => {
     const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
-    vi.mocked(designApi.save).mockRejectedValue(new Error('Write rejected'));
+    vi.mocked(designApi.save).mockResolvedValue(unreachable());
     await wrapper.find('input[maxlength="160"]').setValue('Rejected catalogue');
     await wrapper
       .findAll('button')
@@ -143,11 +154,11 @@ describe('native catalogue screens', () => {
       .trigger('click');
     await flushPromises();
     expect(feedbackBus.retained()).toEqual([]);
-    expect(messages).toContain('Unable to save this catalogue.');
+    expect(messages).toContain(UnreachableCopy);
     wrapper.unmount();
   });
   it('does not republish a late designer acknowledgement after its owner unmounts', async () => {
-    let resolve!: (value: ReturnType<typeof documentFixture>) => void;
+    let resolve!: (value: DocumentOutcome) => void;
     const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
     vi.mocked(designApi.save).mockReturnValue(
       new Promise((success) => {
@@ -160,15 +171,15 @@ describe('native catalogue screens', () => {
       .find((button) => button.text() === 'Save catalogue')!
       .trigger('click');
     wrapper.unmount();
-    resolve({ ...documentFixture(), title: 'Late save', revision: 3 });
+    resolve(ResultExtensions.ok({ ...documentFixture(), title: 'Late save', revision: 3 }));
     await flushPromises();
     expect(feedbackBus.retained()).toEqual([]);
   });
   it('keeps the last catalogue grid while a failed duplicate is pending', async () => {
-    let reject!: (cause: Error) => void;
+    let refuse!: (outcome: DocumentOutcome) => void;
     vi.mocked(designApi.duplicate).mockReturnValue(
-      new Promise((_resolve, failure) => {
-        reject = failure;
+      new Promise((outcome) => {
+        refuse = outcome;
       }),
     );
     const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
@@ -177,16 +188,16 @@ describe('native catalogue screens', () => {
     expect(button.attributes('aria-busy')).toBe('true');
     expect(wrapper.findAll('.catalogue-grid article')).toHaveLength(1);
     expect(designApi.list).toHaveBeenCalledTimes(1);
-    reject(new Error('Duplicate rejected'));
+    refuse(unreachable());
     await flushPromises();
     expect(wrapper.findAll('.catalogue-grid article')).toHaveLength(1);
     expect(designApi.list).toHaveBeenCalledTimes(1);
-    expect(button.attributes('aria-busy')).toBe('false');
-    expect(messages).toContain('Unable to load catalogues.');
+    expect(button.attributes('aria-busy')).not.toBe('true');
+    expect(messages).toContain(UnreachableCopy);
     wrapper.unmount();
   });
   it('refreshes the gallery only after a successful duplicate acknowledgement', async () => {
-    let resolve!: (value: ReturnType<typeof documentFixture>) => void;
+    let resolve!: (value: DocumentOutcome) => void;
     vi.mocked(designApi.duplicate).mockReturnValue(
       new Promise((success) => {
         resolve = success;
@@ -198,7 +209,7 @@ describe('native catalogue screens', () => {
       .find((item) => item.text() === 'Duplicate')!
       .trigger('click');
     expect(designApi.list).toHaveBeenCalledTimes(1);
-    resolve(documentFixture());
+    resolve(ResultExtensions.ok(documentFixture()));
     await flushPromises();
     expect(designApi.list).toHaveBeenCalledTimes(2);
     wrapper.unmount();
@@ -206,8 +217,8 @@ describe('native catalogue screens', () => {
   it('finishes a failed toolbar refresh without permanent skeletons and retains the last grid', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
-    vi.mocked(designApi.duplicate).mockResolvedValue(documentFixture());
-    vi.mocked(designApi.list).mockRejectedValue(new Error('Refresh unavailable'));
+    vi.mocked(designApi.duplicate).mockResolvedValue(ResultExtensions.ok(documentFixture()));
+    vi.mocked(designApi.list).mockResolvedValue(unreachable());
     await wrapper
       .findAll('button')
       .find((item) => item.text() === 'Duplicate')!
@@ -224,14 +235,14 @@ describe('native catalogue screens', () => {
     await vi.advanceTimersByTimeAsync(400);
     await flushPromises();
     expect(wrapper.find('[aria-busy="true"]').exists()).toBe(false);
-    expect(messages.filter((item) => item === 'Unable to load catalogues.')).toHaveLength(1);
+    expect(messages.filter((item) => item === UnreachableCopy)).toHaveLength(1);
     wrapper.unmount();
   });
   it('retains the same catalogue document after a failed designer toolbar refresh', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
     const title = wrapper.find('input[maxlength="160"]').element;
-    vi.mocked(designApi.get).mockRejectedValue(new Error('Unsafe upstream details'));
+    vi.mocked(designApi.get).mockResolvedValue(unreachable());
     await wrapper.find('.catalogue-refresh').trigger('click');
     await flushPromises();
     expect(wrapper.find('input[maxlength="160"]').element).toBe(title);
@@ -253,12 +264,12 @@ describe('native catalogue screens', () => {
     wrapper.unmount();
   });
   it('keeps failed gallery loading distinct from an empty catalogue', async () => {
-    vi.mocked(designApi.list).mockRejectedValue(new Error('Service unavailable'));
+    vi.mocked(designApi.list).mockResolvedValue(unreachable());
     const { wrapper } = await open(CatalogueGalleryPage, '/catalogues');
     expect(wrapper.text()).not.toContain('Service unavailable');
     expect(wrapper.text()).toContain('Content unavailable');
     expect(wrapper.find('[aria-busy="true"]').exists()).toBe(false);
-    expect(messages).toContain('Unable to load catalogues.');
+    expect(messages).toContain(UnreachableCopy);
     expect(wrapper.find('.catalogue-refresh').text()).toContain('Refresh');
     expect(wrapper.text()).not.toContain('Create your first catalogue.');
     wrapper.unmount();
@@ -268,9 +279,9 @@ describe('native catalogue screens', () => {
     { locale: 'ru' as const, expected: 'Служба каталога вернула ошибку 503.' },
   ])('localizes numeric request failures in the $locale gallery and designer', async ({ locale, expected }) => {
     useUiLocale().setUiLocale(locale);
-    const failure = new DesignRequestError(ApiFailureFactory.create('http', new Response(null, { status: 503 })));
-    vi.mocked(designApi.list).mockRejectedValue(failure);
-    vi.mocked(designApi.get).mockRejectedValue(failure);
+    const failure = ResultExtensions.fail(ApiFailureFactory.create('http', new Response(null, { status: 503 })));
+    vi.mocked(designApi.list).mockResolvedValue(failure);
+    vi.mocked(designApi.get).mockResolvedValue(failure);
     const gallery = await open(CatalogueGalleryPage, '/catalogues');
     expect(gallery.wrapper.text()).not.toContain(expected);
     expect(messages).toContain(expected);
@@ -361,7 +372,7 @@ describe('native catalogue screens', () => {
       'ocharo-catalogue-design:' + first.id,
       JSON.stringify({ title: 'First recovery', snapshot: first.snapshot }),
     );
-    vi.mocked(designApi.get).mockImplementation(async (id) => (id === first.id ? first : second));
+    vi.mocked(designApi.get).mockImplementation(async (id) => ResultExtensions.ok(id === first.id ? first : second));
     const { wrapper, router } = await open(CatalogueWebDesignerPage, '/catalogues/' + first.id + '/web');
     expect(wrapper.text()).toContain('Restore recovery copy');
     await router.push('/catalogues/' + second.id + '/web');
@@ -372,15 +383,14 @@ describe('native catalogue screens', () => {
   });
   it('does not keep catalogue A editable under a failed catalogue B route', async () => {
     const first = documentFixture();
-    vi.mocked(designApi.get).mockImplementation(async (id) => {
-      if (id !== first.id) throw new Error('Catalogue B unavailable');
-      return first;
-    });
+    vi.mocked(designApi.get).mockImplementation(async (id) =>
+      id === first.id ? ResultExtensions.ok(first) : unreachable(),
+    );
     const { wrapper, router } = await open(CatalogueWebDesignerPage, '/catalogues/' + first.id + '/web');
     await router.push('/catalogues/22222222-2222-2222-2222-222222222222/web');
     await flushPromises();
-    expect(wrapper.text()).not.toContain('Catalogue B unavailable');
-    expect(messages).toContain('Unable to save this catalogue.');
+    expect(wrapper.text()).not.toContain(UnreachableCopy);
+    expect(messages).toContain(UnreachableCopy);
     expect(wrapper.text()).not.toContain('Save catalogue');
     expect(wrapper.find('input[maxlength="160"]').exists()).toBe(false);
     wrapper.unmount();

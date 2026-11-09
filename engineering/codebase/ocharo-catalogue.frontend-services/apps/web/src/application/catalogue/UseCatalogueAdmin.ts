@@ -7,11 +7,13 @@ import type {
 } from '../../domain/catalogue/CatalogueModels';
 import { catalogueApi, catalogueExports, describeFailure } from '../../integration/catalogue';
 import { useCatalogueStore } from './CatalogueStore';
+import { useCatalogueSettings } from './UseCatalogueSettings';
 import { useUiLocale } from '../shared/UseUiLocale';
 
 /** Settings, workspace import and exports. */
 export function useCatalogueAdmin() {
   const store = useCatalogueStore();
+  const catalogueSettings = useCatalogueSettings();
   const { t } = useUiLocale();
   const busy = ref(false);
   const report = shallowRef<ImportReport | null>(null);
@@ -23,12 +25,11 @@ export function useCatalogueAdmin() {
       if (busy.value) return;
       busy.value = true;
       try {
-        const result = await catalogueApi.saveSettings(settings, store.settingsRevision.value);
+        const result = await catalogueApi.saveSettings(settings, catalogueSettings.settingsRevision.value);
         if (!result.ok) return store.fail(describeFailure(result.failure, t));
-        store.settings.value = result.value.settings;
-        store.settingsRevision.value = result.value.revision;
+        catalogueSettings.accept(result.value);
         store.succeed(t('Settings saved.'));
-        await store.loadSettings(true);
+        await catalogueSettings.reload();
       } finally {
         busy.value = false;
       }

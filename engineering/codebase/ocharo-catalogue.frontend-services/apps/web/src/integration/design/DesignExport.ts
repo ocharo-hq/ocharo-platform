@@ -1,3 +1,5 @@
+import { ApiFailureFactory, type ApiClient, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
 import { selectDesignPages } from '../../domain/design/DesignPageSelection';
 import {
   isSafeDesignSource,
@@ -6,17 +8,47 @@ import {
   type DesignSnapshot,
 } from '../../domain/design/EditorModels';
 
+import { catalogueHttp } from '../common/IdentitySession';
 import { layoutDesignText } from './DesignTextLayout';
-/** Loads only bundled or organization-protected image routes; never remote URLs. */
-export async function loadDesignImage(src: string, signal?: AbortSignal): Promise<HTMLImageElement> {
-  if (!isSafeDesignSource(src)) throw new Error('This image source cannot be exported.');
-  const response = await fetch(src, {
-    credentials: 'same-origin',
-    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000),
+
+/** How long an export waits for one image before calling it unavailable. */
+export const DesignImageTimeoutMs = 30_000;
+
+/** The image types an export draws; anything else in a design is refused. */
+const DesignImageType = /^image\/(png|jpeg|svg\+xml|webp)/;
+
+/**
+ * `GET {src}` over the session's client, for a bundled template image or an organization-protected media route only,
+ * never a remote URL: the image's bytes, with cancellation and a bounded wait. A refused source and an image of another
+ * type are `validation` and `protocol` failures.
+ */
+export async function fetchDesignImage(
+  src: string,
+  signal?: AbortSignal,
+  client: ApiClient = catalogueHttp,
+): Promise<Result<Blob, ApiFailure>> {
+  if (!isSafeDesignSource(src)) return ResultExtensions.fail(ApiFailureFactory.create('validation'));
+  const timeout = AbortSignal.timeout(DesignImageTimeoutMs);
+  const image = await client.get(src, {
+    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+    response: 'blob',
   });
-  if (!response.ok) throw new Error('An image is unavailable. Refresh the product library and retry the export.');
-  const blob = await response.blob();
-  if (!/^image\/(png|jpeg|svg\+xml|webp)/.test(blob.type)) throw new Error('Unsupported image in design.');
+  if (!image.ok || DesignImageType.test(image.value.type)) return image;
+  return ResultExtensions.fail(ApiFailureFactory.create('protocol'));
+}
+
+/**
+ * Decodes a design image for the canvas. A failed read stops the export with the designer's copy for it: a refused
+ * source, an unsupported type or an unavailable image.
+ */
+export async function loadDesignImage(src: string, signal?: AbortSignal): Promise<HTMLImageElement> {
+  const read = await fetchDesignImage(src, signal);
+  if (!read.ok) {
+    if (read.failure.code === 'validation') throw new Error('This image source cannot be exported.');
+    if (read.failure.code === 'protocol') throw new Error('Unsupported image in design.');
+    throw new Error('An image is unavailable. Refresh the product library and retry the export.');
+  }
+  const blob = read.value;
   const url = URL.createObjectURL(blob);
   try {
     const image = new Image();

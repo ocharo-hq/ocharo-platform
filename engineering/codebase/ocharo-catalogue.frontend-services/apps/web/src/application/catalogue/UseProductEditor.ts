@@ -83,7 +83,8 @@ export function useProductEditor() {
       await loadHistory();
       return true;
     },
-    startNew(garmentType: string) {
+    /** Opens a blank draft of `garmentType`, sized by the catalogue's size preset. */
+    startNew(garmentType: string, sizePreset: readonly string[] = []) {
       detail.value = null;
       history.value = [];
       isNew.value = true;
@@ -91,7 +92,7 @@ export function useProductEditor() {
         garmentType,
         status: 'draft',
         sortOrder: 0,
-        sizes: [...(store.settings.value?.sizePreset ?? [])],
+        sizes: [...sizePreset],
         fabricCodes: [],
         decorationCodes: [],
         tags: [],

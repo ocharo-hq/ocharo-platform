@@ -11,7 +11,16 @@ import { computed, onMounted, ref } from 'vue';
 import { RouterLink } from 'vue-router';
 import { Check, Save } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
-import { useCatalogueStore, useCopyGrid } from '../../application/catalogue';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Card } from '@wow-two-beta/fe/presentation/display';
+import {
+  CheckboxField,
+  SegmentedPicker,
+  TextAreaInput,
+  TextInput,
+  ToggleInput,
+} from '@wow-two-beta/fe/presentation/forms';
+import { useCatalogueSettings, useCopyGrid } from '../../application/catalogue';
 import type { LocaleCode } from '../../domain/catalogue/CatalogueModels';
 import { locales } from '../../domain/catalogue/CatalogueRules';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
@@ -20,7 +29,7 @@ import StatusBadge from './components/StatusBadge.vue';
 /** Fill and approve uz/ru/en copy for every product in one grid. */
 defineOptions({ name: 'CopyPage' });
 type Field = 'name' | 'fabric' | 'decoration' | 'description';
-const store = useCatalogueStore();
+const settings = useCatalogueSettings();
 const grid = useCopyGrid();
 const { t } = useUiLocale();
 const { refresh: refreshRows, refreshing } = useRefresh(() => grid.load());
@@ -61,6 +70,11 @@ const approved = computed(() =>
 function setValue(code: LocaleCode, item: (typeof grid.rows.value)[number], value: string) {
   item.row.locales[code][field.value] = value.trim() === '' ? null : value;
 }
+/** Shows another copy field; the segment already pressed stays selected. */
+function chooseField(value: string | readonly string[] | null) {
+  const next = fields.value.find((f) => f.key === value);
+  if (next) field.value = next.key;
+}
 function toggleApproved(code: LocaleCode, item: (typeof grid.rows.value)[number]) {
   const locale = item.row.locales[code];
   locale.status = locale.status === 'approved' ? 'draft' : 'approved';
@@ -85,43 +99,29 @@ onMounted(() => grid.load());
           :disabled="grid.busy.value || grid.rows.value.some((item) => item.saving)"
           @refresh="refresh"
         />
-        <button
-          class="btn-primary"
-          :disabled="!sessionCanEdit || grid.dirtyCount.value === 0 || grid.busy.value || resultBusy"
-          :aria-busy="grid.busy.value"
+        <Button
+          :is-disabled="!sessionCanEdit || grid.dirtyCount.value === 0 || resultBusy"
+          :is-loading="grid.busy.value"
           @click="grid.saveAll()"
         >
-          <Icon :icon="Save" :size="15" />{{ t('Save {count} changes', { count: grid.dirtyCount.value }) }}
-        </button>
+          <template #leading><Icon :icon="Save" :size="15" /></template>
+          {{ t('Save {count} changes', { count: grid.dirtyCount.value }) }}
+        </Button>
       </div>
     </div>
-    <div class="panel mt-6 flex flex-wrap items-center gap-3 p-4">
-      <div role="tablist" class="flex rounded-lg bg-muted p-1 text-sm">
-        <button
-          v-for="f in fields"
-          :key="f.key"
-          role="tab"
-          :aria-selected="field === f.key"
-          :class="[
-            'rounded-md px-3 py-1.5',
-            field === f.key ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground',
-          ]"
-          @click="field = f.key"
-        >
-          {{ f.label }}
-        </button>
-      </div>
-      <label class="flex items-center gap-2 text-sm"
-        ><input v-model="onlyMissing" type="checkbox" />{{ t('Only missing or unapproved') }}</label
-      >
-    </div>
+    <Card radius="2xl" padding="lg" class="mt-6 flex flex-wrap items-center gap-3">
+      <SegmentedPicker :model-value="field" :aria-label="t('Copy field')" @update:model-value="chooseField">
+        <ToggleInput v-for="f in fields" :key="f.key" :value="f.key">{{ f.label }}</ToggleInput>
+      </SegmentedPicker>
+      <CheckboxField v-model="onlyMissing" :label="t('Only missing or unapproved')" />
+    </Card>
     <div class="catalogue-result-region">
       <SkeletonStateGroup :is-loading="resultBusy" :label="t('Loading product copy')">
         <ResultEmpty
           v-if="!visible.length && (grid.loaded.value || !resultBusy)"
           :label="grid.loaded.value ? t('No products found.') : t('Content unavailable')"
         />
-        <div v-else class="panel overflow-x-auto p-0">
+        <Card v-else radius="2xl" class="overflow-x-auto">
           <table class="w-full min-w-[980px] text-sm">
             <thead class="bg-muted/60 text-left text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
@@ -152,7 +152,7 @@ onMounted(() => grid.load());
                     <span>
                       <span class="block font-semibold">{{ item.row.locales.uz.name ?? item.row.id }}</span>
                       <span class="block text-xs text-muted-foreground"
-                        >{{ item.row.id }} · {{ store.garmentName(item.row.garmentType) }}</span
+                        >{{ item.row.id }} · {{ settings.garmentName(item.row.garmentType) }}</span
                       >
                     </span>
                   </RouterLink>
@@ -160,51 +160,51 @@ onMounted(() => grid.load());
                 </td>
                 <td v-for="code in locales" :key="code" class="px-2 py-3">
                   <SkeletonStateSlot class="catalogue-value" :is-block="true">
-                    <textarea
+                    <TextAreaInput
                       v-if="field === 'description'"
-                      :value="item.row.locales[code][field] ?? ''"
-                      rows="3"
-                      class="field"
+                      :model-value="item.row.locales[code][field] ?? ''"
+                      :rows="3"
                       :aria-label="`${item.row.id} ${languageNames[code]}`"
-                      :disabled="!sessionCanEdit || item.saving || resultBusy"
-                      @input="setValue(code, item, ($event.target as HTMLTextAreaElement).value)"
-                    ></textarea>
-                    <input
+                      :is-disabled="!sessionCanEdit || item.saving || resultBusy"
+                      @update:model-value="setValue(code, item, $event)"
+                    />
+                    <TextInput
                       v-else
-                      :value="item.row.locales[code][field] ?? ''"
-                      class="field"
+                      :model-value="item.row.locales[code][field] ?? ''"
                       :aria-label="`${item.row.id} ${languageNames[code]}`"
-                      :disabled="!sessionCanEdit || item.saving || resultBusy"
-                      @input="setValue(code, item, ($event.target as HTMLInputElement).value)"
+                      :is-disabled="!sessionCanEdit || item.saving || resultBusy"
+                      @update:model-value="setValue(code, item, $event)"
                     /> </SkeletonStateSlot
-                  ><button
-                    :class="[
-                      'chip mt-1.5',
-                      item.row.locales[code].status === 'approved'
-                        ? 'bg-success-soft text-success-soft-foreground'
-                        : 'bg-muted text-muted-foreground',
-                    ]"
+                  ><Button
+                    variant="soft"
+                    :tone="item.row.locales[code].status === 'approved' ? 'success' : 'neutral'"
+                    size="xs"
+                    class="mt-1.5 rounded-full"
                     :aria-pressed="item.row.locales[code].status === 'approved'"
-                    :disabled="!sessionCanEdit || item.saving || resultBusy"
+                    :is-disabled="!sessionCanEdit || item.saving || resultBusy"
                     @click="toggleApproved(code, item)"
                   >
-                    <Icon v-if="item.row.locales[code].status === 'approved'" :icon="Check" :size="11" />
+                    <template v-if="item.row.locales[code].status === 'approved'" #leading
+                      ><Icon :icon="Check" :size="11"
+                    /></template>
                     {{ item.row.locales[code].status === 'approved' ? t('Approved') : t('Draft') }}
-                  </button>
+                  </Button>
                 </td>
                 <td class="px-4 py-3 text-right">
-                  <button
-                    class="btn-outline"
-                    :disabled="!sessionCanEdit || !grid.isDirty(item) || item.saving || resultBusy"
+                  <Button
+                    variant="outline"
+                    tone="neutral"
+                    :is-disabled="!sessionCanEdit || !grid.isDirty(item) || resultBusy"
+                    :is-loading="item.saving"
                     @click="grid.save(item)"
                   >
                     {{ item.saving ? t('Saving…') : t('Save') }}
-                  </button>
+                  </Button>
                 </td>
               </tr>
             </tbody>
           </table>
-        </div>
+        </Card>
       </SkeletonStateGroup>
     </div>
   </section>

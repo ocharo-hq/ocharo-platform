@@ -1,5 +1,6 @@
-import { effectScope } from 'vue';
+import { defineComponent, effectScope } from 'vue';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { flushPromises, mount } from '@vue/test-utils';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { catalogueApi } from '../src/integration/catalogue';
@@ -7,9 +8,10 @@ import { useProductList } from '../src/application/catalogue/UseProductList';
 import { useCollections } from '../src/application/catalogue/UseCollections';
 import { useProductEditor } from '../src/application/catalogue/UseProductEditor';
 import { useCatalogueAdmin } from '../src/application/catalogue/UseCatalogueAdmin';
-import { useCatalogueStore } from '../src/application/catalogue/CatalogueStore';
+import { useCatalogueSettings } from '../src/application/catalogue/UseCatalogueSettings';
 import type { ProductSummary } from '../src/domain/catalogue/CatalogueModels';
 import { productFixture, sourceFixture } from './NativeDesignFixture';
+import { OwnerUser, publishSession } from './helpers/IdentitySessions';
 const product: ProductSummary = {
   id: 'nimcha-v01',
   garmentType: 'nimcha',
@@ -34,34 +36,64 @@ const product: ProductSummary = {
   stockTotal: null,
 };
 beforeEach(() => vi.restoreAllMocks());
+let admin!: ReturnType<typeof useCatalogueAdmin>;
+let settings!: ReturnType<typeof useCatalogueSettings>;
+/** Hands the settings store and the admin commands, as a page sees them, to the test that mounts it. */
+const SettingsProbe = defineComponent({
+  setup() {
+    admin = useCatalogueAdmin();
+    settings = useCatalogueSettings();
+    return () => null;
+  },
+});
 describe('Catalogue server-acknowledged commands', () => {
   it('retains acknowledged settings revision when the independent projection refresh fails', async () => {
-    const admin = useCatalogueAdmin();
-    const store = useCatalogueStore();
     const oldSettings = sourceFixture().settings;
     const nextSettings = { ...oldSettings, brandName: 'Saved Ocharo' };
-    store.settings.value = oldSettings;
-    store.settingsRevision.value = 2;
+    const read = vi
+      .spyOn(catalogueApi, 'getSettings')
+      .mockResolvedValueOnce(ResultExtensions.ok({ settings: oldSettings, revision: 2, sourceRoot: null }))
+      .mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('transport')));
     let acknowledge!: (value: Awaited<ReturnType<typeof catalogueApi.saveSettings>>) => void;
     vi.spyOn(catalogueApi, 'saveSettings').mockReturnValue(
       new Promise((resolve) => {
         acknowledge = resolve;
       }),
     );
-    vi.spyOn(catalogueApi, 'getSettings').mockResolvedValue(
-      ResultExtensions.fail(ApiFailureFactory.create('transport')),
-    );
+    const host = mount(SettingsProbe);
+    await flushPromises();
+    expect(settings.settingsRevision.value).toBe(2);
     const command = admin.saveSettings(nextSettings);
     expect(admin.busy.value).toBe(true);
-    expect(store.settings.value?.brandName).toBe(oldSettings.brandName);
-    expect(store.settingsRevision.value).toBe(2);
-    expect(catalogueApi.getSettings).not.toHaveBeenCalled();
+    expect(settings.settings.value?.brandName).toBe(oldSettings.brandName);
+    expect(settings.settingsRevision.value).toBe(2);
+    expect(read).toHaveBeenCalledOnce();
     acknowledge(ResultExtensions.ok({ settings: nextSettings, revision: 3, sourceRoot: null }));
     await command;
-    expect(catalogueApi.getSettings).toHaveBeenCalledOnce();
-    expect(store.settings.value?.brandName).toBe('Saved Ocharo');
-    expect(store.settingsRevision.value).toBe(3);
+    await flushPromises();
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(settings.settings.value?.brandName).toBe('Saved Ocharo');
+    expect(settings.settingsRevision.value).toBe(3);
     expect(admin.busy.value).toBe(false);
+    host.unmount();
+  });
+  it('clears the cached settings when the session ends or another person signs in', async () => {
+    const read = vi
+      .spyOn(catalogueApi, 'getSettings')
+      .mockResolvedValue(ResultExtensions.ok({ settings: sourceFixture().settings, revision: 4, sourceRoot: null }));
+    const host = mount(SettingsProbe);
+    await flushPromises();
+    expect(settings.settingsRevision.value).toBe(4);
+
+    read.mockReturnValue(new Promise(() => {}));
+    publishSession(null);
+    await flushPromises();
+    expect(settings.settings.value).toBeNull();
+
+    publishSession({ ...OwnerUser, person: { ...OwnerUser.person, sub: 'person-other' } });
+    await flushPromises();
+    expect(settings.settings.value).toBeNull();
+    host.unmount();
   });
   it('keeps the product grid and selection unchanged until bulk status succeeds', async () => {
     const scope = effectScope();

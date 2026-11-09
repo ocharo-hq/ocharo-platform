@@ -11,7 +11,17 @@ import { ArrowDown, ArrowLeft, ArrowUp, History, ImagePlus, RotateCcw, Save, Tra
 import { Modal, ModalContent } from '@wow-two-beta/fe/presentation/overlays';
 import ProductsPage from './ProductsPage.vue';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
-import { useCatalogueStore, useProductEditor } from '../../application/catalogue';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge, Card, LabelText } from '@wow-two-beta/fe/presentation/display';
+import {
+  CheckboxField,
+  CheckboxInput,
+  Field,
+  NumberInput,
+  TextAreaInput,
+  TextInput,
+} from '@wow-two-beta/fe/presentation/forms';
+import { useCatalogueSettings, useCatalogueStore, useProductEditor } from '../../application/catalogue';
 import type { MediaRole, MediaView } from '../../domain/catalogue/CatalogueModels';
 import { roleLabels } from '../../domain/catalogue/CatalogueRules';
 import { productReviewFieldLabel } from '../../domain/catalogue/ProductReviewFields';
@@ -35,6 +45,7 @@ defineOptions({ name: 'ProductEditorPage' });
 const route = useRoute();
 const router = useRouter();
 const store = useCatalogueStore();
+const settings = useCatalogueSettings();
 const editor = useProductEditor();
 const { t, uiLocale } = useUiLocale();
 const activeLocale = ref<CatalogueLanguage>(uiLocale.value);
@@ -103,14 +114,20 @@ const { refresh, refreshing } = useRefresh(async () => {
   if (productId.value) await editor.load(productId.value);
 });
 onMounted(async () => {
-  await store.loadSettings();
+  const current = await settings.ensure();
   if (productId.value) await editor.load(productId.value);
   else
     editor.startNew(
-      typeof route.query.type === 'string' ? route.query.type : (store.garmentTypes.value[0]?.key ?? 'nimcha'),
+      typeof route.query.type === 'string' ? route.query.type : (current?.settings.garmentTypes[0]?.key ?? 'nimcha'),
+      current?.settings.sizePreset ?? [],
     );
   loaded.value = true;
 });
+/** Confirms or reopens a language's copy; a language without a name cannot be confirmed. */
+function setTranslationApproved(code: CatalogueLanguage, approved: boolean) {
+  if (editor.draft.value)
+    ensureProductLocale(editor.draft.value.locales, code).status = approved ? 'approved' : 'draft';
+}
 function warnUnsaved(event: BeforeUnloadEvent) {
   if (editor.dirty.value) event.preventDefault();
 }
@@ -194,13 +211,13 @@ async function onFiles(event: Event) {
           class="flex min-h-0 min-w-0 flex-1 flex-col border-0 p-0"
         >
           <div class="catalogue-product-body min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
-            <RouterLink to="/" class="btn-ghost -ml-3 mb-3"
-              ><Icon :icon="ArrowLeft" :size="15" />{{ t('Products') }}</RouterLink
-            >
+            <Button as-child variant="ghost" tone="neutral" class="-ml-3 mb-3">
+              <RouterLink to="/"><Icon :icon="ArrowLeft" :size="15" />{{ t('Products') }}</RouterLink>
+            </Button>
             <div class="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <p class="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                  {{ store.garmentName(editor.draft.value.garmentType, uiLocale) }}
+                  {{ settings.garmentName(editor.draft.value.garmentType, uiLocale) }}
                 </p>
                 <h1 class="mt-1 font-editorial text-4xl tracking-tight">
                   {{
@@ -214,50 +231,49 @@ async function onFiles(event: Event) {
                     {{ editor.detail.value.revision }}</span
                   >
                   <StatusBadge :status="editor.draft.value.status" />
-                  <span v-if="openIssues" class="chip bg-warning-soft text-warning-soft-foreground">{{
+                  <Badge v-if="openIssues" variant="warning" size="sm">{{
                     t('{count} open questions', { count: openIssues })
-                  }}</span>
-                  <span
-                    v-for="c in editor.detail.value?.collectionIds ?? []"
-                    :key="c"
-                    class="chip bg-muted text-muted-foreground"
-                    >{{ c }}</span
-                  >
+                  }}</Badge>
+                  <Badge v-for="c in editor.detail.value?.collectionIds ?? []" :key="c" size="sm">{{ c }}</Badge>
                 </p>
               </div>
             </div>
 
-            <section class="panel mt-5" :aria-label="t('Translation review')">
+            <Card
+              v-bind="{ role: 'region', 'aria-label': t('Translation review') }"
+              radius="2xl"
+              padding="xl"
+              class="mt-5"
+            >
               <div class="flex flex-wrap items-center gap-2">
                 <span class="mr-2 text-sm font-semibold">{{ t('Translation review') }}</span>
-                <label
+                <Badge
                   v-for="review in reviews"
                   :key="review.code"
-                  :class="[
-                    'chip gap-2 border px-3 py-2',
-                    review.approved
-                      ? 'border-success/30 bg-success-soft text-success-soft-foreground'
-                      : 'border-warning/30 bg-warning-soft text-warning-soft-foreground',
-                  ]"
+                  :variant="review.approved ? 'success' : 'warning'"
+                  is-outlined
+                  size="lg"
+                  class="h-auto gap-2 py-1"
                 >
-                  <input
-                    type="checkbox"
-                    :checked="review.approved"
-                    :disabled="!ensureProductLocale(editor.draft.value.locales, review.code).name?.trim()"
-                    @change="
-                      ensureProductLocale(editor.draft.value.locales, review.code).status = (
-                        $event.target as HTMLInputElement
-                      ).checked
-                        ? 'approved'
-                        : 'draft'
-                    "
+                  <CheckboxInput
+                    size="sm"
+                    :model-value="review.approved"
+                    :is-disabled="!ensureProductLocale(editor.draft.value.locales, review.code).name?.trim()"
+                    v-bind="{ 'aria-label': `${t('I confirm the translation')} · ${review.label}` }"
+                    @update:model-value="setTranslationApproved(review.code, $event)"
                   />
-                  <button type="button" @click="activeLocale = review.code">
+                  <Button
+                    variant="link"
+                    tone="neutral"
+                    size="xs"
+                    class="text-current"
+                    @click="activeLocale = review.code"
+                  >
                     {{ review.label }} · {{ review.approved ? t('Confirmed') : t('Needs review') }}
-                  </button>
-                </label>
+                  </Button>
+                </Badge>
               </div>
-            </section>
+            </Card>
 
             <ul
               v-if="editor.problems.value.length"
@@ -268,38 +284,49 @@ async function onFiles(event: Event) {
 
             <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,1fr)]">
               <div class="space-y-6">
-                <section class="panel" aria-labelledby="basics-heading">
+                <Card v-bind="{ role: 'region', 'aria-labelledby': 'basics-heading' }" radius="2xl" padding="xl">
                   <h2 id="basics-heading" class="font-editorial text-2xl">{{ t('Basics') }}</h2>
                   <div class="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label class="label" for="garment">{{ t('Garment type') }}</label>
+                      <LabelText for="garment" class="mb-1.5 block">{{ t('Garment type') }}</LabelText>
                       <CatalogueSelect
                         id="garment"
                         v-model="editor.draft.value.garmentType"
                         :disabled="!editor.isNew.value"
                         :label="t('Garment type')"
-                        :options="store.garmentTypes.value.map((g) => ({ value: g.key, label: g[uiLocale] }))"
+                        :options="settings.garmentTypes.value.map((g) => ({ value: g.key, label: g[uiLocale] }))"
                       />
                     </div>
                     <div>
-                      <span class="label">{{ t('Status') }}</span>
+                      <p class="mb-1.5 text-sm font-medium">{{ t('Status') }}</p>
                       <ProductStatusPicker v-model="editor.draft.value.status" />
                     </div>
                     <div v-if="editor.isNew.value">
-                      <label class="label" for="variant">{{ t('Variant code (blank = automatic)') }}</label>
-                      <input id="variant" v-model="editor.draft.value.variantCode" class="field" placeholder="v17" />
+                      <LabelText for="variant" class="mb-1.5 block">{{
+                        t('Variant code (blank = automatic)')
+                      }}</LabelText>
+                      <TextInput
+                        id="variant"
+                        :model-value="editor.draft.value.variantCode ?? ''"
+                        placeholder="v17"
+                        @update:model-value="editor.draft.value.variantCode = $event"
+                      />
                     </div>
                     <div>
-                      <label class="label" for="sort">{{ t('Display order') }}</label>
-                      <input id="sort" v-model.number="editor.draft.value.sortOrder" type="number" class="field" />
+                      <LabelText for="sort" class="mb-1.5 block">{{ t('Display order') }}</LabelText>
+                      <NumberInput
+                        id="sort"
+                        :model-value="editor.draft.value.sortOrder"
+                        @update:model-value="editor.draft.value.sortOrder = $event ?? 0"
+                      />
                     </div>
                     <div>
-                      <label class="label" for="design">{{ t('Design family') }}</label>
-                      <input
+                      <LabelText for="design" class="mb-1.5 block">{{ t('Design family') }}</LabelText>
+                      <TextInput
                         id="design"
-                        v-model="editor.draft.value.designId"
-                        class="field"
+                        :model-value="editor.draft.value.designId ?? ''"
                         :placeholder="t('Optional')"
+                        @update:model-value="editor.draft.value.designId = $event"
                       />
                     </div>
                   </div>
@@ -307,7 +334,7 @@ async function onFiles(event: Event) {
                     <TagInput
                       v-model="editor.draft.value.sizes"
                       :label="t('Sizes')"
-                      :suggestions="store.settings.value?.sizePreset"
+                      :suggestions="settings.settings.value?.sizePreset"
                       :ordered-sizes="true"
                     />
                     <TagInput
@@ -319,12 +346,17 @@ async function onFiles(event: Event) {
                     <TagInput v-model="editor.draft.value.decorationCodes" :label="t('Decoration codes')" />
                   </div>
                   <div class="mt-4">
-                    <label class="label" for="notes">{{ t('Internal note (not printed)') }}</label>
-                    <textarea id="notes" v-model="editor.draft.value.notes" rows="2" class="field" />
+                    <LabelText for="notes" class="mb-1.5 block">{{ t('Internal note (not printed)') }}</LabelText>
+                    <TextAreaInput
+                      id="notes"
+                      :rows="2"
+                      :model-value="editor.draft.value.notes ?? ''"
+                      @update:model-value="editor.draft.value.notes = $event"
+                    />
                   </div>
-                </section>
+                </Card>
 
-                <section class="panel" aria-labelledby="copy-heading">
+                <Card v-bind="{ role: 'region', 'aria-labelledby': 'copy-heading' }" radius="2xl" padding="xl">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <h2 id="copy-heading" class="font-editorial text-2xl">{{ t('Product text') }}</h2>
                     <CatalogueSelect
@@ -336,43 +368,56 @@ async function onFiles(event: Event) {
                     />
                   </div>
                   <div v-if="activeCopy" class="mt-4 space-y-4">
-                    <label class="flex items-center gap-2 rounded-xl border border-border bg-background p-3 text-sm">
-                      <input
-                        type="checkbox"
-                        :checked="activeCopy.status === 'approved'"
-                        :disabled="!activeCopy.name?.trim()"
-                        @change="activeCopy.status = ($event.target as HTMLInputElement).checked ? 'approved' : 'draft'"
-                      />
-                      {{ t('I confirm the translation') }} ·
-                      {{ catalogueLanguages.find((language) => language.code === activeLocale)?.label }}
-                    </label>
+                    <CheckboxField
+                      :model-value="activeCopy.status === 'approved'"
+                      :is-disabled="!activeCopy.name?.trim()"
+                      :label="`${t('I confirm the translation')} · ${catalogueLanguages.find((language) => language.code === activeLocale)?.label ?? ''}`"
+                      wrapper-class-name="rounded-xl border border-border bg-background p-3"
+                      @update:model-value="activeCopy.status = $event ? 'approved' : 'draft'"
+                    />
                     <p class="text-xs text-muted-foreground">
                       {{ t('Unconfirmed copy is excluded from this language’s web catalogue and PDF.') }}
                     </p>
                     <div :dir="languageDirection" class="grid gap-4">
-                      <label
-                        ><span class="label">{{ t('Name') }}</span
-                        ><input v-model="activeCopy.name" class="field" @input="invalidateTranslation"
-                      /></label>
-                      <div class="grid gap-4 sm:grid-cols-2">
-                        <label
-                          ><span class="label">{{ t('Fabric') }}</span
-                          ><input v-model="activeCopy.fabric" class="field" @input="invalidateTranslation"
-                        /></label>
-                        <label
-                          ><span class="label">{{ t('Decoration') }}</span
-                          ><input v-model="activeCopy.decoration" class="field" @input="invalidateTranslation"
-                        /></label>
-                      </div>
-                      <label
-                        ><span class="label">{{ t('Description') }}</span
-                        ><textarea
-                          v-model="activeCopy.description"
-                          rows="4"
-                          class="field"
-                          @input="invalidateTranslation"
+                      <Field :label="t('Name')">
+                        <TextInput
+                          :model-value="activeCopy.name ?? ''"
+                          @update:model-value="
+                            activeCopy.name = $event;
+                            invalidateTranslation();
+                          "
                         />
-                      </label>
+                      </Field>
+                      <div class="grid gap-4 sm:grid-cols-2">
+                        <Field :label="t('Fabric')">
+                          <TextInput
+                            :model-value="activeCopy.fabric ?? ''"
+                            @update:model-value="
+                              activeCopy.fabric = $event;
+                              invalidateTranslation();
+                            "
+                          />
+                        </Field>
+                        <Field :label="t('Decoration')">
+                          <TextInput
+                            :model-value="activeCopy.decoration ?? ''"
+                            @update:model-value="
+                              activeCopy.decoration = $event;
+                              invalidateTranslation();
+                            "
+                          />
+                        </Field>
+                      </div>
+                      <Field :label="t('Description')">
+                        <TextAreaInput
+                          :rows="4"
+                          :model-value="activeCopy.description ?? ''"
+                          @update:model-value="
+                            activeCopy.description = $event;
+                            invalidateTranslation();
+                          "
+                        />
+                      </Field>
                     </div>
                   </div>
                   <details
@@ -382,17 +427,17 @@ async function onFiles(event: Event) {
                     <summary class="cursor-pointer font-semibold">{{ t('Original source text') }}</summary>
                     <p class="mt-2 whitespace-pre-line">{{ editor.detail.value.document.sourceVerbatim }}</p>
                   </details>
-                </section>
+                </Card>
 
-                <section class="panel" aria-labelledby="price-heading">
+                <Card v-bind="{ role: 'region', 'aria-labelledby': 'price-heading' }" radius="2xl" padding="xl">
                   <h2 id="price-heading" class="mb-4 font-editorial text-2xl">{{ t('Price') }}</h2>
                   <PriceTiersEditor v-model="editor.draft.value.pricing" />
-                </section>
+                </Card>
 
-                <section class="panel" aria-labelledby="issues-heading">
+                <Card v-bind="{ role: 'region', 'aria-labelledby': 'issues-heading' }" radius="2xl" padding="xl">
                   <div class="flex items-center justify-between">
                     <h2 id="issues-heading" class="font-editorial text-2xl">{{ t('Unresolved product facts') }}</h2>
-                    <button class="btn-outline" @click="addIssue">{{ t('Add question') }}</button>
+                    <Button variant="outline" tone="neutral" @click="addIssue">{{ t('Add question') }}</Button>
                   </div>
                   <p class="mt-3 text-sm text-muted-foreground">
                     {{ t('Internal fact checks, not customer FAQs. Open questions block publication.') }}
@@ -408,33 +453,34 @@ async function onFiles(event: Event) {
                     >
                       <div class="flex flex-wrap items-center gap-2">
                         <span class="text-sm font-semibold">{{ t(productReviewFieldLabel(issue.field)) }}</span>
-                        <button
-                          :class="[
-                            'chip',
-                            issue.status === 'open'
-                              ? 'bg-warning-soft text-warning-soft-foreground'
-                              : 'bg-success-soft text-success-soft-foreground',
-                          ]"
+                        <Button
+                          variant="soft"
+                          :tone="issue.status === 'open' ? 'warning' : 'success'"
+                          size="xs"
+                          class="rounded-full"
                           @click="issue.status = issue.status === 'open' ? 'resolved' : 'open'"
                         >
                           {{ issue.status === 'open' ? t('Open') : t('Resolved') }}
-                        </button>
-                        <button
-                          class="btn-ghost ml-auto"
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          tone="neutral"
+                          shape="square"
+                          class="ml-auto"
                           :aria-label="t('Delete question')"
                           @click="editor.draft.value.issues.splice(index, 1)"
                         >
                           <Icon :icon="Trash2" :size="14" />
-                        </button>
+                        </Button>
                       </div>
-                      <textarea v-model="issue.question" rows="2" class="field mt-2" :aria-label="t('Question text')" />
+                      <TextAreaInput v-model="issue.question" :rows="2" class="mt-2" :aria-label="t('Question text')" />
                     </li>
                   </ul>
-                </section>
+                </Card>
               </div>
 
               <div class="space-y-6">
-                <section class="panel" aria-labelledby="images-heading">
+                <Card v-bind="{ role: 'region', 'aria-labelledby': 'images-heading' }" radius="2xl" padding="xl">
                   <div class="flex items-center justify-between gap-3">
                     <h2 id="images-heading" class="font-editorial text-2xl">{{ t('Images') }}</h2>
                     <div class="flex items-center gap-2">
@@ -444,15 +490,18 @@ async function onFiles(event: Event) {
                         class="w-32"
                         :options="roleOptions"
                       />
-                      <button
-                        class="btn-outline"
-                        :disabled="!editor.detail.value || editor.uploading.value"
+                      <Button
+                        variant="outline"
+                        tone="neutral"
+                        :is-disabled="!editor.detail.value"
+                        :is-loading="editor.uploading.value"
                         @click="fileInput?.click()"
                       >
-                        <Icon :icon="editor.uploading.value ? Upload : ImagePlus" :size="15" />{{
-                          editor.uploading.value ? t('Uploading…') : t('Add')
-                        }}
-                      </button>
+                        <template #leading
+                          ><Icon :icon="editor.uploading.value ? Upload : ImagePlus" :size="15"
+                        /></template>
+                        {{ editor.uploading.value ? t('Uploading…') : t('Add') }}
+                      </Button>
                       <input
                         ref="fileInput"
                         type="file"
@@ -490,40 +539,49 @@ async function onFiles(event: Event) {
                           :options="roleOptions"
                           class="min-w-0 flex-1"
                         />
-                        <button
-                          class="btn-ghost px-1.5"
+                        <Button
+                          variant="ghost"
+                          tone="neutral"
+                          shape="square"
+                          size="sm"
                           :aria-label="t('Move earlier')"
-                          :disabled="index === 0"
+                          :is-disabled="index === 0"
                           @click="move(index, -1)"
                         >
                           <Icon :icon="ArrowUp" :size="13" />
-                        </button>
-                        <button
-                          class="btn-ghost px-1.5"
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          tone="neutral"
+                          shape="square"
+                          size="sm"
                           :aria-label="t('Move later')"
-                          :disabled="index === (editor.draft.value.media?.length ?? 0) - 1"
+                          :is-disabled="index === (editor.draft.value.media?.length ?? 0) - 1"
                           @click="move(index, 1)"
                         >
                           <Icon :icon="ArrowDown" :size="13" />
-                        </button>
-                        <button
-                          class="btn-ghost px-1.5 text-destructive"
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          tone="danger"
+                          shape="square"
+                          size="sm"
                           :aria-label="t('Remove image')"
                           @click="changeMedia(index, true)"
                         >
                           <Icon :icon="Trash2" :size="13" />
-                        </button>
+                        </Button>
                       </div>
-                      <label class="mt-2 flex items-center gap-2 text-xs"
-                        ><input
-                          type="checkbox"
-                          :checked="item.isActive !== false"
-                          :disabled="
-                            item.isActive !== false && activeImages <= 1 && editor.draft.value.status === 'active'
-                          "
-                          @change="changeMedia(index)"
-                        />{{ t('Active image') }}</label
-                      >
+                      <CheckboxField
+                        :model-value="item.isActive !== false"
+                        size="sm"
+                        :is-disabled="
+                          item.isActive !== false && activeImages <= 1 && editor.draft.value.status === 'active'
+                        "
+                        :label="t('Active image')"
+                        wrapper-class-name="mt-2 text-xs"
+                        @update:model-value="changeMedia(index)"
+                      />
                       <CatalogueSelect
                         :model-value="
                           item.group ?? (['model', 'detail', 'fabric'].includes(item.role) ? item.role : 'product')
@@ -533,15 +591,15 @@ async function onFiles(event: Event) {
                         class="mt-2"
                         @update:model-value="item.group = $event"
                       />
-                      <label class="mt-3 block">
-                        <span class="label">{{ t('Alt text') }}</span>
-                        <textarea
-                          v-model="item.alt"
-                          rows="2"
-                          class="field resize-y"
+                      <Field :label="t('Alt text')" class="mt-3">
+                        <TextAreaInput
+                          :rows="2"
+                          :model-value="item.alt ?? ''"
+                          class="resize-y"
                           :placeholder="t('Describe the product and view shown')"
+                          @update:model-value="item.alt = $event"
                         />
-                      </label>
+                      </Field>
                       <p
                         v-if="index === 0"
                         class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-primary-soft-foreground"
@@ -556,19 +614,27 @@ async function onFiles(event: Event) {
                   >
                     <p>{{ t('Removed images leave the product list when saved; their files remain stored.') }}</p>
                     <div class="mt-2 flex flex-wrap gap-2">
-                      <button
+                      <Button
                         v-for="view in detached"
                         :key="view.media.id"
-                        class="chip bg-muted"
+                        variant="soft"
+                        tone="neutral"
+                        size="xs"
+                        class="rounded-full"
                         @click="reattach(view)"
                       >
                         ↺ {{ view.media.fileName }}
-                      </button>
+                      </Button>
                     </div>
                   </div>
-                </section>
+                </Card>
 
-                <section v-if="editor.history.value.length" class="panel" aria-labelledby="history-heading">
+                <Card
+                  v-if="editor.history.value.length"
+                  v-bind="{ role: 'region', 'aria-labelledby': 'history-heading' }"
+                  radius="2xl"
+                  padding="xl"
+                >
                   <h2 id="history-heading" class="flex items-center gap-2 font-editorial text-2xl">
                     <Icon :icon="History" :size="18" />{{ t('History') }}
                   </h2>
@@ -582,26 +648,35 @@ async function onFiles(event: Event) {
                         <p class="font-semibold">v{{ entry.revision }} · {{ entry.summary }}</p>
                         <p class="text-xs text-muted-foreground">{{ formatHistoryWhen(entry.savedAt) }}</p>
                       </div>
-                      <button
+                      <Button
                         v-if="entry.revision !== editor.detail.value?.revision"
-                        class="btn-ghost shrink-0 px-2 text-xs"
-                        :disabled="!sessionCanEdit || editor.dirty.value"
+                        variant="ghost"
+                        tone="neutral"
+                        size="sm"
+                        class="shrink-0 text-xs"
+                        :is-disabled="!sessionCanEdit || editor.dirty.value"
                         :title="
                           editor.dirty.value ? t('Save or cancel your changes first.') : t('Restore this revision')
                         "
                         @click="editor.restore(entry.revision)"
                       >
-                        <Icon :icon="RotateCcw" :size="13" />{{ t('Restore') }}
-                      </button>
+                        <template #leading><Icon :icon="RotateCcw" :size="13" /></template>
+                        {{ t('Restore') }}
+                      </Button>
                     </li>
                   </ol>
-                </section>
+                </Card>
 
-                <section v-if="editor.detail.value?.document.source" class="panel text-xs text-muted-foreground">
-                  <p class="label">{{ t('Source') }}</p>
+                <Card
+                  v-if="editor.detail.value?.document.source"
+                  radius="2xl"
+                  padding="xl"
+                  class="text-xs text-muted-foreground"
+                >
+                  <p class="mb-1 font-semibold uppercase tracking-[0.12em]">{{ t('Source') }}</p>
                   <p class="break-all">{{ editor.detail.value.document.source.path }}</p>
                   <p class="mt-1 break-all font-mono">sha256 {{ editor.detail.value.document.source.sha256 }}</p>
-                </section>
+                </Card>
               </div>
             </div>
           </div>
@@ -612,32 +687,31 @@ async function onFiles(event: Event) {
               <span :class="['text-sm', editor.dirty.value ? 'font-semibold text-warning' : 'text-muted-foreground']">
                 {{ editor.dirty.value ? t('Unsaved changes') : t('All changes saved') }}
               </span>
-              <input
+              <TextInput
                 v-model="summary"
-                class="field col-span-3 row-start-1 min-w-0 sm:col-auto sm:row-auto sm:max-w-xs sm:flex-1"
+                class="col-span-3 row-start-1 min-w-0 sm:col-auto sm:row-auto sm:max-w-xs sm:flex-1"
                 :placeholder="t('Change note (optional)')"
                 :aria-label="t('Change note')"
               />
-              <button
-                class="btn-ghost ml-auto"
-                :disabled="!editor.dirty.value || editor.isNew.value || editor.saving.value || editor.uploading.value"
+              <Button
+                variant="ghost"
+                tone="neutral"
+                class="ml-auto"
+                :is-disabled="
+                  !editor.dirty.value || editor.isNew.value || editor.saving.value || editor.uploading.value
+                "
                 @click="editor.reset()"
               >
                 {{ t('Cancel') }}
-              </button>
-              <button
-                class="btn-primary"
-                :disabled="
-                  !sessionCanEdit ||
-                  (!editor.dirty.value && !editor.isNew.value) ||
-                  editor.saving.value ||
-                  editor.uploading.value
-                "
-                :aria-busy="editor.saving.value"
+              </Button>
+              <Button
+                :is-disabled="!sessionCanEdit || (!editor.dirty.value && !editor.isNew.value) || editor.uploading.value"
+                :is-loading="editor.saving.value"
                 @click="save"
               >
-                <Icon :icon="Save" :size="15" />{{ editor.saving.value ? t('Saving…') : t('Save') }}
-              </button>
+                <template #leading><Icon :icon="Save" :size="15" /></template>
+                {{ editor.saving.value ? t('Saving…') : t('Save') }}
+              </Button>
             </div>
           </footer>
         </fieldset>

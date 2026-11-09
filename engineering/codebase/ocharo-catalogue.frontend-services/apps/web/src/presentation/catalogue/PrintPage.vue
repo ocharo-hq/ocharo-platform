@@ -9,19 +9,21 @@ import ContentSkeleton from '../common/ContentSkeleton.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import { Printer } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
-import { useBrandKit, useCatalogueStore, usePublicCatalogue } from '../../application/catalogue';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { CheckboxField, SegmentedPicker, ToggleInput } from '@wow-two-beta/fe/presentation/forms';
+import { useBrandKit, useCatalogueSettings, usePublicCatalogue } from '../../application/catalogue';
 import type { LocaleCode, PublicProduct } from '../../domain/catalogue/CatalogueModels';
 import { formatUzs, locales } from '../../domain/catalogue/CatalogueRules';
 import { useUiLocale } from '../../application/shared/UseUiLocale';
 
 /** Print-ready lookbook / price sheet built from the public feed (what other platforms see). */
 defineOptions({ name: 'PrintPage' });
-const store = useCatalogueStore();
+const settings = useCatalogueSettings();
 const feed = usePublicCatalogue();
 const brand = useBrandKit();
 const { t } = useUiLocale();
 const languageNames = computed(() => ({ uz: t('Uzbek'), ru: t('Russian'), en: t('English') }));
-const contactLines = computed(() => brand.contactLines(store.settings.value?.contactLines ?? []));
+const contactLines = computed(() => brand.contactLines(settings.settings.value?.contactLines ?? []));
 const locale = ref<LocaleCode>('uz');
 const { refresh, refreshing } = useRefresh(() => feed.load(locale.value));
 const resultBusy = computed(() => feed.loading.value || refreshing.value);
@@ -101,6 +103,10 @@ function sizeOpen(p: PublicProduct, size: string) {
   if (!p.sizes.includes(size)) return false;
   return p.availability === 'unknown' || p.availability === 'made-to-order' || (p.availableSizes ?? []).includes(size);
 }
+/** Switches between the lookbook and the order sheet; the pressed segment stays selected. */
+function chooseMode(value: string | readonly string[] | null) {
+  if (value === 'lookbook' || value === 'order') mode.value = value;
+}
 function printSheet() {
   window.print();
 }
@@ -118,45 +124,34 @@ onMounted(() => feed.load(locale.value));
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
-        <CatalogueSelect :model-value="locale" :label="t('Content language')" class="w-36"
-          :options="locales.map(code => ({ value: code, label: languageNames[code] }))"
-          @update:model-value="locale = $event as LocaleCode" />
-        <CatalogueSelect v-model="collection" :label="t('Collection')" class="w-48"
-          :options="[{ value: '', label: t('All products') }, ...(feed.catalogue.value?.collections ?? []).map(item => ({ value: item.id, label: item.name }))]" />
-        <div role="tablist" class="flex rounded-lg bg-muted p-1 text-sm">
-          <button
-            role="tab"
-            :aria-selected="mode === 'lookbook'"
-            :class="[
-              'rounded-md px-3 py-1.5',
-              mode === 'lookbook' ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground',
-            ]"
-            @click="mode = 'lookbook'"
-          >
-            {{ t('Lookbook') }}
-          </button>
-          <button
-            role="tab"
-            :aria-selected="mode === 'order'"
-            :class="[
-              'rounded-md px-3 py-1.5',
-              mode === 'order' ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground',
-            ]"
-            @click="mode = 'order'"
-          >
-            {{ t('Order sheet') }}
-          </button>
-        </div>
-        <label v-if="mode === 'lookbook'" class="flex items-center gap-2 text-sm"
-          ><input v-model="showPrices" type="checkbox" />{{ t('Prices') }}</label
-        >
-        <RefreshButton :busy="resultBusy" @refresh="refresh" /><button
-          class="btn-primary"
-          :disabled="resultBusy || !feed.loaded.value"
+        <CatalogueSelect
+          :model-value="locale"
+          :label="t('Content language')"
+          class="w-36"
+          :options="locales.map((code) => ({ value: code, label: languageNames[code] }))"
+          @update:model-value="locale = $event as LocaleCode"
+        />
+        <CatalogueSelect
+          v-model="collection"
+          :label="t('Collection')"
+          class="w-48"
+          :options="[
+            { value: '', label: t('All products') },
+            ...(feed.catalogue.value?.collections ?? []).map((item) => ({ value: item.id, label: item.name })),
+          ]"
+        />
+        <SegmentedPicker :model-value="mode" :aria-label="t('Catalogue sheet')" @update:model-value="chooseMode">
+          <ToggleInput value="lookbook">{{ t('Lookbook') }}</ToggleInput>
+          <ToggleInput value="order">{{ t('Order sheet') }}</ToggleInput>
+        </SegmentedPicker>
+        <CheckboxField v-if="mode === 'lookbook'" v-model="showPrices" :label="t('Prices')" />
+        <RefreshButton :busy="resultBusy" @refresh="refresh" /><Button
+          :is-disabled="resultBusy || !feed.loaded.value"
           @click="printSheet"
         >
-          <Icon :icon="Printer" :size="15" />{{ t('Print') }}
-        </button>
+          <template #leading><Icon :icon="Printer" :size="15" /></template>
+          {{ t('Print') }}
+        </Button>
       </div>
     </div>
 
