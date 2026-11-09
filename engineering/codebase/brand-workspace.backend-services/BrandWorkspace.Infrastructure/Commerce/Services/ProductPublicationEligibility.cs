@@ -1,4 +1,4 @@
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 
 namespace BrandWorkspace.Infrastructure.Commerce.Services;
 

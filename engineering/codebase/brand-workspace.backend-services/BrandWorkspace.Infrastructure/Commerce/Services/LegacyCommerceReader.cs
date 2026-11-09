@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using OcharoBrand.Domain.Brand;

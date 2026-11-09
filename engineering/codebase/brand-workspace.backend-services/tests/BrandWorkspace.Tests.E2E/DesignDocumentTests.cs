@@ -49,7 +49,7 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     [Theory]
     [InlineData("catalogue")]
     [InlineData("business-card")]
-    public async Task Workflow_ShouldPersistRevisions_AndArchiveWithoutLosingContent(string kind)
+    public async Task Workflow_ShouldPersistRevisionsAndArchiveWithoutLosingContent(string kind)
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
@@ -65,7 +65,9 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
 
         using HttpResponseMessage saved = await client.PutAsJsonAsync($"{path}/{id}", new
         {
-            title = "Second", snapshot = Snapshot("O‘zbekcha\nNext line"), expectedRevision = 1
+            title = "Second",
+            snapshot = Snapshot("O‘zbekcha\nNext line"),
+            expectedRevision = 1
         });
         saved.StatusCode.Should().Be(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
         (await DataAsync(saved)).GetProperty("revision").GetInt32().Should().Be(2);
@@ -96,7 +98,9 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
             .Should().Be("Original text");
         using HttpResponseMessage editArchived = await client.PutAsJsonAsync($"{path}/{id}", new
         {
-            title = "Should fail", snapshot, expectedRevision = 3
+            title = "Should fail",
+            snapshot,
+            expectedRevision = 3
         });
         editArchived.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
@@ -121,7 +125,9 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         }
         using HttpResponseMessage save = await client.PutAsJsonAsync(foreignIdPath, new
         {
-            title = "Foreign overwrite", snapshot = Snapshot("Foreign"), expectedRevision = 1
+            title = "Foreign overwrite",
+            snapshot = Snapshot("Foreign"),
+            expectedRevision = 1
         });
         save.StatusCode.Should().Be(HttpStatusCode.NotFound);
         using HttpResponseMessage archive = await client.PostAsJsonAsync(
@@ -157,14 +163,18 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         (await client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.OK);
         (await client.PutAsJsonAsync(path, new
         {
-            title = "Denied", snapshot = Snapshot("Denied"), expectedRevision = 1
+            title = "Denied",
+            snapshot = Snapshot("Denied"),
+            expectedRevision = 1
         })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await client.PostAsJsonAsync($"{path}/archive", new { expectedRevision = 1 })).StatusCode
             .Should().Be(HttpStatusCode.Forbidden);
         await fixture.SetRoleAsync(owner, "editor");
         (await client.PutAsJsonAsync(path, new
         {
-            title = "Editor", snapshot = Snapshot("Allowed"), expectedRevision = 1
+            title = "Editor",
+            snapshot = Snapshot("Allowed"),
+            expectedRevision = 1
         })).StatusCode.Should().Be(HttpStatusCode.OK);
         using HttpClient anonymous = DeskTestHost.CreateClient(fixture.Factory);
         (await anonymous.PostAsJsonAsync($"{path}/archive", new { expectedRevision = 2 })).StatusCode
@@ -174,7 +184,7 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     }
 
     [Fact]
-    public async Task ConcurrentSaves_ShouldKeepOneWinner_AndProtectImmutableHistory()
+    public async Task ConcurrentSaves_ShouldKeepOneWinnerAndProtectImmutableHistory()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         DesignDocumentService service = Service();
@@ -206,7 +216,9 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         using HttpClient client = await fixture.LoginAsync(owner);
         using HttpResponseMessage conflict = await client.PutAsJsonAsync($"{Path(owner)}/{original.Id}", new
         {
-            title = "Stale", snapshot = Snapshot("Stale"), expectedRevision = 1
+            title = "Stale",
+            snapshot = Snapshot("Stale"),
+            expectedRevision = 1
         });
         conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await conflict.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString()
@@ -215,7 +227,7 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     }
 
     [Fact]
-    public async Task InvalidRequests_ShouldReturnBoundedProblems_WithoutCreatingRows()
+    public async Task InvalidRequests_ShouldReturnBoundedProblemsWithoutCreatingRows()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);

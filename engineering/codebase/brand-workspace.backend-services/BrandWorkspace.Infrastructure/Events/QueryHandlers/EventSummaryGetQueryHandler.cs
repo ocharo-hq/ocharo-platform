@@ -11,8 +11,13 @@ public sealed class EventSummaryGetQueryHandler(EventService service)
     : IQueryHandler<EventSummaryGetQuery, AppResult<ShowcaseEventSummary>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<ShowcaseEventSummary>> HandleAsync(EventSummaryGetQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<ShowcaseEventSummary>> HandleAsync(
+        EventSummaryGetQuery request,
+        CancellationToken cancellationToken)
     {
-        return AppResult<ShowcaseEventSummary>.Ok(await service.GetSummaryAsync(request.Access, request.Today, cancellationToken));
+        return AppResult<ShowcaseEventSummary>.Ok(await service.GetSummaryAsync(
+            request.Access,
+            request.Today,
+            cancellationToken));
     }
 }

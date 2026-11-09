@@ -7,7 +7,7 @@ using System.Text.Json.Nodes;
 using AwesomeAssertions;
 using BrandWorkspace.Application.Access.Models;
 using BrandWorkspace.Application.Access.Repositories;
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 using BrandWorkspace.Persistence.Commerce.Repositories;
 using BrandWorkspace.Persistence.Commerce.Serializers;
 using OcharoBrand.Domain.Brand;
@@ -17,67 +17,118 @@ using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Real authenticated multipart, tenant, optimistic revision and immutable release artifact coverage.</summary>
-public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : IClassFixture<PreparationDatabaseFixture>
+/// <summary>
+/// Real authenticated multipart, tenant, optimistic revision and immutable release artifact coverage.
+/// </summary>
+public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture)
+    : IClassFixture<PreparationDatabaseFixture>
 {
-    private static readonly byte[] Pdf=Encoding.ASCII.GetBytes("%PDF-1.7\n1 0 obj <</Type /Catalog>> endobj\n%%EOF\n");
-    private sealed record Setup(OrganizationAccess Owner,HttpClient Client,Guid Brand,Guid Design,string Path,string Slug);
+    private static readonly byte[] Pdf =
+        Encoding.ASCII.GetBytes("%PDF-1.7\n1 0 obj <</Type /Catalog>> endobj\n%%EOF\n");
+    private sealed record Setup(
+        OrganizationAccess Owner,
+        HttpClient Client,
+        Guid Brand,
+        Guid Design,
+        string Path,
+        string Slug);
 
     [Fact]
-    public async Task Workflow_BindsSavedRevision_PreservesLegacyEdits_AndServesOnlyApprovedReleaseAssets()
+    public async Task EditionWorkflow_ShouldBindTheSavedRevisionKeepLegacyEditsAndServeOnlyApprovedAssets()
     {
-        var x=await Create();using var client=x.Client;
-        using var attached=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));
-        attached.StatusCode.Should().Be(HttpStatusCode.OK,await attached.Content.ReadAsStringAsync());
-        var draft=await Data(attached);var edition=draft.GetProperty("snapshot").GetProperty("catalogueEditions")[0];
+        var x = await Create();
+        using var client = x.Client;
+        using var attached = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        attached.StatusCode.Should().Be(HttpStatusCode.OK, await attached.Content.ReadAsStringAsync());
+        var draft = await Data(attached);
+        var edition = draft.GetProperty("snapshot").GetProperty("catalogueEditions")[0];
         edition.GetProperty("title").GetString().Should().Be("Saved source title");
         edition.GetProperty("sourceDesignId").GetGuid().Should().Be(x.Design);
         edition.GetProperty("sourceRevision").GetInt32().Should().Be(1);
         edition.GetProperty("approvedForPublication").GetBoolean().Should().BeFalse();
         edition.GetProperty("pages")[0].GetProperty("widthMm").GetDouble().Should().Be(210);
         edition.GetProperty("pdfSha256").GetString().Should().Be(Convert.ToHexStringLower(SHA256.HashData(Pdf)));
-        using var duplicate=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,2));
-        (await Data(duplicate)).GetProperty("revision").GetInt32().Should().Be(2,"same source and exact bytes are idempotent");
+        using var duplicate = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 2));
+        (await Data(duplicate))
+            .GetProperty("revision")
+            .GetInt32()
+            .Should()
+            .Be(2, "same source and exact bytes are idempotent");
         // An older client drops the new property. The server must preserve its own artifacts.
-        var legacy=JsonNode.Parse(draft.GetProperty("snapshot").GetRawText())!;legacy.AsObject().Remove("catalogueEditions");
-        using var saved=await client.PutAsJsonAsync(x.Path,new{expectedRevision=2,snapshot=legacy});
-        saved.StatusCode.Should().Be(HttpStatusCode.OK,await saved.Content.ReadAsStringAsync());
-        (await Data(saved)).GetProperty("snapshot").GetProperty("catalogueEditions")[0].GetProperty("id").GetGuid().Should().Be(edition.GetProperty("id").GetGuid());
+        var legacy = JsonNode.Parse(draft.GetProperty("snapshot").GetRawText())!;
+        legacy.AsObject().Remove("catalogueEditions");
+        using var saved = await client.PutAsJsonAsync(x.Path, new { expectedRevision = 2, snapshot = legacy });
+        saved.StatusCode.Should().Be(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
+        (await Data(saved))
+            .GetProperty("snapshot")
+            .GetProperty("catalogueEditions")[0]
+            .GetProperty("id")
+            .GetGuid()
+            .Should()
+            .Be(edition.GetProperty("id").GetGuid());
         // Generic owner edits cannot forge approval or an artifact hash.
-        var forged=JsonNode.Parse((await Data(saved)).GetProperty("snapshot").GetRawText())!;
-        forged["catalogueEditions"]![0]!["approvedForPublication"]=true;forged["catalogueEditions"]![0]!["pdfSha256"]=new string('f',64);
-        using var ignored=await client.PutAsJsonAsync(x.Path,new{expectedRevision=3,snapshot=forged});
+        var forged = JsonNode.Parse((await Data(saved)).GetProperty("snapshot").GetRawText())!;
+        forged["catalogueEditions"]![0]!["approvedForPublication"] = true;
+        forged["catalogueEditions"]![0]!["pdfSha256"] = new string('f', 64);
+        using var ignored = await client.PutAsJsonAsync(x.Path, new { expectedRevision = 3, snapshot = forged });
         ignored.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await Data(ignored)).GetProperty("snapshot").GetProperty("catalogueEditions")[0].GetProperty("approvedForPublication").GetBoolean().Should().BeFalse();
-        using var generic=await client.PostAsJsonAsync(x.Path+"/releases",new{expectedRevision=4,note="Brand only"});
-        generic.StatusCode.Should().Be(HttpStatusCode.OK,await generic.Content.ReadAsStringAsync());
-        var unapprovedRelease=(await Data(generic)).GetProperty("id").GetGuid();
-        using var anon=fixture.Factory.CreateClient();
-        var route=$"/api/public/v1/brands/{x.Slug}";
-        var before=await anon.GetFromJsonAsync<JsonElement>(route+"/catalogue?locale=en");
-        before.GetProperty("edition").ValueKind.Should().Be(JsonValueKind.Null);
-        (await anon.GetAsync($"{route}/catalogue-editions/{edition.GetProperty("id").GetGuid()}/catalogue.pdf?release={unapprovedRelease}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        using var published=await client.PostAsJsonAsync(x.Path+"/catalogue-editions/en/publish",new{expectedRevision=4,note="Reviewed exact rendered files"});
-        published.StatusCode.Should().Be(HttpStatusCode.OK,await published.Content.ReadAsStringAsync());
-        var release=await Data(published);release.GetProperty("sourceRevision").GetInt32().Should().Be(5);
-        var view=(await anon.GetFromJsonAsync<JsonElement>(route+"/catalogue?locale=en")).GetProperty("edition");
+        (await Data(ignored))
+            .GetProperty("snapshot")
+            .GetProperty("catalogueEditions")[0]
+            .GetProperty("approvedForPublication")
+            .GetBoolean()
+            .Should()
+            .BeFalse();
+        using var generic = await client.PostAsJsonAsync(
+            x.Path + "/releases",
+            new { expectedRevision = 4, note = "Brand only" });
+        generic.StatusCode.Should().Be(HttpStatusCode.OK, await generic.Content.ReadAsStringAsync());
+        var unapprovedRelease = (await Data(generic)).GetProperty("id").GetGuid();
+        using var anon = fixture.Factory.CreateClient();
+        var route = $"/api/public/v1/brands/{x.Slug}";
+        var before = await anon.GetFromJsonAsync<JsonElement>(route + "/catalogue?locale=en");
+        before.TryGetProperty("edition", out _).Should().BeFalse();
+        (await anon.GetAsync(
+            $"{route}/catalogue-editions/{edition.GetProperty("id").GetGuid()}/"
+                + $"catalogue.pdf?release={unapprovedRelease}")).StatusCode
+            .Should()
+            .Be(HttpStatusCode.NotFound);
+        using var published = await client.PostAsJsonAsync(
+            x.Path + "/catalogue-editions/en/publish",
+            new { expectedRevision = 4, note = "Reviewed exact rendered files" });
+        published.StatusCode.Should().Be(HttpStatusCode.OK, await published.Content.ReadAsStringAsync());
+        var release = await Data(published);
+        release.GetProperty("sourceRevision").GetInt32().Should().Be(5);
+        var view = (await anon.GetFromJsonAsync<JsonElement>(route + "/catalogue?locale=en")).GetProperty("edition");
         view.GetProperty("pageCount").GetInt32().Should().Be(1);
-        foreach(var url in new[]{view.GetProperty("pdfUrl").GetString()!,view.GetProperty("pages")[0].GetProperty("pdfUrl").GetString()!,view.GetProperty("pages")[0].GetProperty("pngUrl").GetString()!})
+        foreach (var url in new[]
         {
-            using var download=await anon.GetAsync(url+"&download=1");
+            view.GetProperty("pdfUrl").GetString()!,
+            view.GetProperty("pages")[0].GetProperty("pdfUrl").GetString()!,
+            view.GetProperty("pages")[0].GetProperty("pngUrl").GetString()!,
+        })
+        {
+            using var download = await anon.GetAsync(url + "&download=1");
             download.StatusCode.Should().Be(HttpStatusCode.OK);
             download.Headers.CacheControl!.NoStore.Should().BeTrue();
             download.Headers.GetValues("X-Content-Type-Options").Should().Contain("nosniff");
             download.Content.Headers.ContentDisposition!.DispositionType.Should().Be("attachment");
-            (await download.Content.ReadAsByteArrayAsync()).Should().Equal(url.Contains(".png?")?Png():Pdf);
+            (await download.Content.ReadAsByteArrayAsync()).Should().Equal(url.Contains(".png?") ? Png() : Pdf);
             (await anon.GetAsync(url.Split('?')[0])).StatusCode.Should().Be(HttpStatusCode.NotFound);
         }
-        var current=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
-        using var replaced=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,current.GetProperty("revision").GetInt32(),pdf:Pdf.Concat(Encoding.ASCII.GetBytes("\n")).ToArray()));
+        var current = (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        using var replaced = await client.PostAsync(
+            x.Path + "/catalogue-editions",
+            Bundle(
+                x.Design,
+                current.GetProperty("revision").GetInt32(),
+                pdf: Pdf.Concat(Encoding.ASCII.GetBytes("\n")).ToArray()));
         replaced.StatusCode.Should().Be(HttpStatusCode.OK);
         // Replacement creates a new unapproved draft; the existing release remains immutable and reachable.
         (await anon.GetByteArrayAsync(view.GetProperty("pdfUrl").GetString()!)).Should().Equal(Pdf);
-        using var withdrawn=await client.PostAsJsonAsync(x.Path+$"/releases/{release.GetProperty("id").GetGuid()}/withdraw",new{reason="Withdraw edition"});
+        using var withdrawn = await client.PostAsJsonAsync(
+            x.Path + $"/releases/{release.GetProperty("id").GetGuid()}/withdraw",
+            new { reason = "Withdraw edition" });
         withdrawn.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await anon.GetAsync(view.GetProperty("pdfUrl").GetString()!)).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -86,77 +137,145 @@ public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : 
     [InlineData("fr")]
     [InlineData("zh-Hans")]
     [InlineData("ar")]
-    public async Task ExtendedLanguage_CanPublishAndDownloadItsExactSavedEdition(string locale)
+    public async Task ExtendedLanguage_ShouldPublishAndDownloadItsExactSavedEdition(string locale)
     {
-        var x=await Create(locale:locale);using var client=x.Client;
-        using var attached=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));
-        attached.StatusCode.Should().Be(HttpStatusCode.OK,await attached.Content.ReadAsStringAsync());
-        var draft=await Data(attached);
-        draft.GetProperty("snapshot").GetProperty("catalogueEditions")[0].GetProperty("locale").GetString().Should().Be(locale);
-        using var unsupported=await client.PostAsJsonAsync(x.Path+"/catalogue-editions/xx/publish",new{expectedRevision=2,note="Unsupported locale"});
+        var x = await Create(locale: locale);
+        using var client = x.Client;
+        using var attached = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        attached.StatusCode.Should().Be(HttpStatusCode.OK, await attached.Content.ReadAsStringAsync());
+        var draft = await Data(attached);
+        draft
+            .GetProperty("snapshot")
+            .GetProperty("catalogueEditions")[0]
+            .GetProperty("locale")
+            .GetString()
+            .Should()
+            .Be(locale);
+        using var unsupported = await client.PostAsJsonAsync(
+            x.Path + "/catalogue-editions/xx/publish",
+            new { expectedRevision = 2, note = "Unsupported locale" });
         unsupported.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        using var published=await client.PostAsJsonAsync(x.Path+$"/catalogue-editions/{locale}/publish",new{expectedRevision=2,note="Reviewed translated edition"});
-        published.StatusCode.Should().Be(HttpStatusCode.OK,await published.Content.ReadAsStringAsync());
-        using var anonymous=fixture.Factory.CreateClient();
-        var view=await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale={locale}");
+        using var published = await client.PostAsJsonAsync(
+            x.Path + $"/catalogue-editions/{locale}/publish",
+            new { expectedRevision = 2, note = "Reviewed translated edition" });
+        published.StatusCode.Should().Be(HttpStatusCode.OK, await published.Content.ReadAsStringAsync());
+        using var anonymous = fixture.Factory.CreateClient();
+        var view =
+            await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale={locale}");
         view.GetProperty("locale").GetString().Should().Be(locale);
-        view.GetProperty("availableLocales").EnumerateArray().Select(item=>item.GetString()).Should().Equal(locale);
+        view.GetProperty("availableLocales").EnumerateArray().Select(item => item.GetString()).Should().Equal(locale);
         view.GetProperty("edition").GetProperty("locale").GetString().Should().Be(locale);
         view.GetProperty("edition").GetProperty("sourceDesignId").GetGuid().Should().Be(x.Design);
-        (await anonymous.GetByteArrayAsync(view.GetProperty("edition").GetProperty("pdfUrl").GetString()!)).Should().Equal(Pdf);
-        var english=await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale=en");
-        english.GetProperty("edition").ValueKind.Should().Be(JsonValueKind.Null,"an extended edition must not fall back to another language");
+        (await anonymous.GetByteArrayAsync(view.GetProperty("edition").GetProperty("pdfUrl").GetString()!))
+            .Should()
+            .Equal(Pdf);
+        var english =
+            await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale=en");
+        english
+            .TryGetProperty("edition", out _)
+            .Should()
+            .BeFalse("an extended edition must not fall back to another language");
     }
 
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task ConnectedCatalogueSettings_BindTheEditionToItsCanonicalBrand(bool foreignBrand)
+    public async Task ConnectedCatalogueSettings_ShouldBindTheEditionToItsCanonicalBrand(bool foreignBrand)
     {
-        var x=await Create(foreignSettingsBrand:foreignBrand);using var client=x.Client;
-        using var response=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));
-        response.StatusCode.Should().Be(foreignBrand?HttpStatusCode.BadRequest:HttpStatusCode.OK,await response.Content.ReadAsStringAsync());
-        var current=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
-        current.GetProperty("revision").GetInt32().Should().Be(foreignBrand?1:2);
-        current.GetProperty("snapshot").GetProperty("catalogueEditions").GetArrayLength().Should().Be(foreignBrand?0:1);
-        if(foreignBrand)
+        var x = await Create(foreignSettingsBrand: foreignBrand);
+        using var client = x.Client;
+        using var response = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        response.StatusCode
+            .Should()
+            .Be(
+                foreignBrand ? HttpStatusCode.BadRequest : HttpStatusCode.OK,
+                await response.Content.ReadAsStringAsync());
+        var current = (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        current.GetProperty("revision").GetInt32().Should().Be(foreignBrand ? 1 : 2);
+        current
+            .GetProperty("snapshot")
+            .GetProperty("catalogueEditions")
+            .GetArrayLength()
+            .Should()
+            .Be(foreignBrand ? 0 : 1);
+        if (foreignBrand)
         {
-            await using var command=fixture.DataSource.CreateCommand("SELECT COUNT(*) FROM commerce.media WHERE brand_id=$1");
+            await using var command =
+                fixture.DataSource.CreateCommand("SELECT COUNT(*) FROM commerce.media WHERE brand_id=$1");
             command.Parameters.AddWithValue(x.Brand);
-            Convert.ToInt32(await command.ExecuteScalarAsync()).Should().Be(0,"a foreign source must be rejected before storing its rendered artifacts");
+            Convert.ToInt32(await command.ExecuteScalarAsync())
+                .Should()
+                .Be(0, "a foreign source must be rejected before storing its rendered artifacts");
         }
     }
 
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task SourceReferences_RejectForeignBrandAndUnknownProducts(bool foreignBrand)
+    public async Task SourceReferences_ShouldReturn400_WhenTheyNameAForeignBrandOrUnknownProducts(bool foreignBrand)
     {
-        object sourcePage=foreignBrand
-            ?new{id="cover",title="Foreign",width=210,height=297,productIds=Array.Empty<string>(),catalogueSource=new{brandId=Guid.NewGuid()}}
-            :new{id="cover",title="Unknown product",width=210,height=297,productIds=new[]{"not-a-brand-product"}};
-        var x=await Create(sourcePage);using var client=x.Client;
-        using var response=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,await response.Content.ReadAsStringAsync());
-        (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data").GetProperty("revision").GetInt32().Should().Be(1);
+        object sourcePage = foreignBrand
+            ? new
+            {
+                id = "cover",
+                title = "Foreign",
+                width = 210,
+                height = 297,
+                productIds = Array.Empty<string>(),
+                catalogueSource = new { brandId = Guid.NewGuid() },
+            }
+            : new
+            {
+                id = "cover",
+                title = "Unknown product",
+                width = 210,
+                height = 297,
+                productIds = new[] { "not-a-brand-product" },
+            };
+        var x = await Create(sourcePage);
+        using var client = x.Client;
+        using var response = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+        (await client.GetFromJsonAsync<JsonElement>(x.Path))
+            .GetProperty("data")
+            .GetProperty("revision")
+            .GetInt32()
+            .Should()
+            .Be(1);
     }
 
     [Fact]
-    public async Task EditorialCoverWithoutProductIds_CanBeAttached()
+    public async Task EditorialCover_ShouldAttach_WhenItNamesNoProducts()
     {
-        var x=await Create(new{id="cover",title="Editorial cover",width=210,height=297});using var client=x.Client;
-        using var response=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));
-        response.StatusCode.Should().Be(HttpStatusCode.OK,await response.Content.ReadAsStringAsync());
-        (await Data(response)).GetProperty("snapshot").GetProperty("catalogueEditions")[0].GetProperty("pages")[0].GetProperty("productIds").GetArrayLength().Should().Be(0);
+        var x = await Create(new { id = "cover", title = "Editorial cover", width = 210, height = 297 });
+        using var client = x.Client;
+        using var response = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        (await Data(response))
+            .GetProperty("snapshot")
+            .GetProperty("catalogueEditions")[0]
+            .GetProperty("pages")[0]
+            .GetProperty("productIds")
+            .GetArrayLength()
+            .Should()
+            .Be(0);
     }
 
     [Fact]
-    public async Task NullSnapshot_ReturnsValidationWithoutMutatingDraft()
+    public async Task Attach_ShouldReturn400WithoutChangingTheDraft_WhenTheSnapshotIsNull()
     {
-        var x=await Create();using var client=x.Client;
-        using var response=await client.PutAsJsonAsync(x.Path,new{expectedRevision=1,snapshot=(object?)null});
+        var x = await Create();
+        using var client = x.Client;
+        using var response = await client.PutAsJsonAsync(
+            x.Path,
+            new { expectedRevision = 1, snapshot = (object?)null });
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data").GetProperty("revision").GetInt32().Should().Be(1);
+        (await client.GetFromJsonAsync<JsonElement>(x.Path))
+            .GetProperty("data")
+            .GetProperty("revision")
+            .GetInt32()
+            .Should()
+            .Be(1);
     }
 
     [Theory]
@@ -166,153 +285,435 @@ public sealed class CatalogueEditionTests(PreparationDatabaseFixture fixture) : 
     [InlineData("pdf")]
     [InlineData("png")]
     [InlineData("dimensions")]
-    public async Task InvalidBundles_DoNotChangeDraftOrStoreArtifacts(string fault)
+    public async Task Attach_ShouldReturn400WithoutStoringArtifacts_WhenTheBundleIsInvalid(string fault)
     {
-        var x=await Create();using var client=x.Client;
-        using var response=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1,fault));
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest,await response.Content.ReadAsStringAsync());
-        var current=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        var x = await Create();
+        using var client = x.Client;
+        using var response = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1, fault));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+        var current = (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
         current.GetProperty("revision").GetInt32().Should().Be(1);
         current.GetProperty("snapshot").GetProperty("catalogueEditions").GetArrayLength().Should().Be(0);
-        await using var cmd=fixture.DataSource.CreateCommand("SELECT COUNT(*) FROM commerce.media WHERE brand_id=$1");cmd.Parameters.AddWithValue(x.Brand);
+        await using var cmd = fixture.DataSource.CreateCommand("SELECT COUNT(*) FROM commerce.media WHERE brand_id=$1");
+        cmd.Parameters.AddWithValue(x.Brand);
         Convert.ToInt32(await cmd.ExecuteScalarAsync()).Should().Be(0);
     }
 
     [Fact]
-    public async Task Access_RejectsForeignDesignsViewerAttachmentsEditorPublicationAndAnonymousRequests()
+    public async Task EditionAccess_ShouldRefuse_WhenTheDesignIsForeignOrTheCallerLacksTheRole()
     {
-        var x=await Create();using var client=x.Client;
-        var y=await Create();using var other=y.Client;
-        using var foreign=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(y.Design,1));
+        var x = await Create();
+        using var client = x.Client;
+        var y = await Create();
+        using var other = y.Client;
+        using var foreign = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(y.Design, 1));
         foreign.StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await fixture.SetRoleAsync(x.Owner,"viewer");
-        using var viewer=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));viewer.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        await fixture.SetRoleAsync(x.Owner,"editor");
-        using var attach=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));attach.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var editor=await client.PostAsJsonAsync(x.Path+"/catalogue-editions/en/publish",new{expectedRevision=2,note="Cannot approve"});editor.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await fixture.SetRoleAsync(x.Owner, "viewer");
+        using var viewer = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        viewer.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await fixture.SetRoleAsync(x.Owner, "editor");
+        using var attach = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        attach.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var editor = await client.PostAsJsonAsync(
+            x.Path + "/catalogue-editions/en/publish",
+            new { expectedRevision = 2, note = "Cannot approve" });
+        editor.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         client.DefaultRequestHeaders.Remove(DeskTestHost.PersonHeader);
-        using var anonymous=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,2));anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var anonymous = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 2));
+        anonymous.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
-    public async Task StalePublishAndMissingBlob_RollBackApprovalAndRevision()
+    public async Task Publish_ShouldRollBackApprovalAndRevision_WhenStaleOrABlobIsMissing()
     {
-        var x=await Create();using var client=x.Client;
-        using var attach=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));attach.StatusCode.Should().Be(HttpStatusCode.OK);
-        using var staleAttach=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));staleAttach.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        using var stale=await client.PostAsJsonAsync(x.Path+"/catalogue-editions/en/publish",new{expectedRevision=1,note="Stale"});stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        await using(var cmd=fixture.DataSource.CreateCommand("DELETE FROM commerce.media WHERE brand_id=$1")){cmd.Parameters.AddWithValue(x.Brand);await cmd.ExecuteNonQueryAsync();}
-        using var missing=await client.PostAsJsonAsync(x.Path+"/catalogue-editions/en/publish",new{expectedRevision=2,note="Missing bytes"});missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var current=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
-        current.GetProperty("revision").GetInt32().Should().Be(2);
-        current.GetProperty("snapshot").GetProperty("catalogueEditions")[0].GetProperty("approvedForPublication").GetBoolean().Should().BeFalse();
-        (await client.GetFromJsonAsync<JsonElement>(x.Path+"/releases")).GetProperty("data").GetArrayLength().Should().Be(0);
-    }
-
-    [Fact]
-    public async Task ConcurrentSaveAndPublish_HaveOneWinnerWithoutPartialApproval()
-    {
-        var x=await Create();using var client=x.Client;
-        using var attached=await client.PostAsync(x.Path+"/catalogue-editions",Bundle(x.Design,1));
-        var snapshot=(await Data(attached)).GetProperty("snapshot");
-        var publish=client.PostAsJsonAsync(x.Path+"/catalogue-editions/en/publish",new{expectedRevision=2,note="Race"});
-        var save=client.PutAsJsonAsync(x.Path,new{expectedRevision=2,snapshot});
-        var responses=await Task.WhenAll(publish,save);
-        responses.Select(r=>r.StatusCode).Should().BeEquivalentTo(new[]{HttpStatusCode.OK,HttpStatusCode.Conflict});
-        var current=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
-        current.GetProperty("revision").GetInt32().Should().Be(3);
-        current.GetProperty("snapshot").GetProperty("catalogueEditions")[0].GetProperty("approvedForPublication").GetBoolean().Should().Be(responses[0].IsSuccessStatusCode);
-        foreach(var response in responses)response.Dispose();
-    }
-
-
-    [Fact]
-    public async Task NamedWebCatalogue_ListsSummary_PublishesById_AndKeepsSiblingCatalogues()
-    {
-        var x=await Create();using var client=x.Client;
-        var draft=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
-        var products=new[]{new CommerceProduct(new ProductDocument {Id="vest",GarmentType="vest",VariantCode="v01",Status="active",Locales=new(ProductLocale.Empty(),ProductLocale.Empty(),new("approved","Vest","Silk",null,null))}),new CommerceProduct(new ProductDocument {Id="unconfirmed",GarmentType="vest",VariantCode="v02",Status="active",Locales=ProductLocales.Empty()})};
-        var snapshot=JsonSerializer.Deserialize<CommerceSnapshot>(draft.GetProperty("snapshot"),new JsonSerializerOptions(JsonSerializerDefaults.Web))! with {Products=products};
-        using var saved=await client.PutAsJsonAsync(x.Path,new{expectedRevision=1,snapshot});saved.StatusCode.Should().Be(HttpStatusCode.OK,await saved.Content.ReadAsStringAsync());
-        int revision=2;Guid summer=Guid.Empty;
-        foreach(var slug in new[]{"summer","winter"})
+        var x = await Create();
+        using var client = x.Client;
+        using var attach = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        attach.StatusCode.Should().Be(HttpStatusCode.OK);
+        using var staleAttach = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        staleAttach.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        using var stale = await client.PostAsJsonAsync(
+            x.Path + "/catalogue-editions/en/publish",
+            new { expectedRevision = 1, note = "Stale" });
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        await using (var cmd = fixture.DataSource.CreateCommand("DELETE FROM commerce.media WHERE brand_id=$1"))
         {
-            using var created=await client.PostAsJsonAsync($"/api/organizations/{x.Owner.OrganizationId}/design-documents",new{kind="catalogue",title=slug,snapshot=new{
-                schemaVersion=1,kind="catalogue",locale="en",templateId="catalogue",pages=Array.Empty<object>(),
-                catalogueSettings=new{brandId=x.Brand,mediaGroup="all",priceDisplay=new{show=true,showCurrency=true,showQuantity=true,showRetail=true,showWholesale=true},copyByLocale=new{}},
-                catalogue=new{slug,description="Season collection",isActive=true,outputs=new{web=true,pdf=false},web=new{theme="grid",pages=new[]{new{id="looks",title="Looks",layout="grid",isActive=true,productIds=new[]{"vest","unconfirmed"}},new{id="hidden",title="Hidden",layout="collage",isActive=false,productIds=new[]{"vest"}}}}}}});
-            created.StatusCode.Should().Be(HttpStatusCode.OK,await created.Content.ReadAsStringAsync());var design=(await Data(created)).GetProperty("id").GetGuid();
-            using var bundle=new MultipartFormDataContent();bundle.Add(new StringContent(JsonSerializer.Serialize(new{expectedRevision=revision,sourceDesignId=design,sourceRevision=1})),"metadata");
-            using var attached=await client.PostAsync(x.Path+"/catalogue-editions",bundle);attached.StatusCode.Should().Be(HttpStatusCode.OK,await attached.Content.ReadAsStringAsync());
-            var attachedData=await Data(attached);revision=attachedData.GetProperty("revision").GetInt32();var edition=attachedData.GetProperty("snapshot").GetProperty("catalogueEditions").EnumerateArray().Single(e=>e.GetProperty("slug").GetString()==slug);
-            edition.GetProperty("pdfSha256").ValueKind.Should().Be(JsonValueKind.Null);edition.GetProperty("pages").GetArrayLength().Should().Be(0);
-            edition.GetProperty("web").GetProperty("pages")[0].GetProperty("productIds").EnumerateArray().Select(p=>p.GetString()).Should().Equal("vest");
-            var id=edition.GetProperty("id").GetGuid();if(slug=="summer")summer=id;
-            using var published=await client.PostAsJsonAsync(x.Path+$"/catalogue-editions/{id}/publish",new{expectedRevision=revision,note="Reviewed web catalogue"});published.StatusCode.Should().Be(HttpStatusCode.OK,await published.Content.ReadAsStringAsync());revision++;
+            cmd.Parameters.AddWithValue(x.Brand);
+            await cmd.ExecuteNonQueryAsync();
         }
-        var summaries=(await client.GetFromJsonAsync<JsonElement>($"/api/organizations/{x.Owner.OrganizationId}/design-documents?kind=catalogue")).GetProperty("data");
-        var summary=summaries.EnumerateArray().Single(item=>item.GetProperty("title").GetString()=="summer");
-        summary.GetProperty("locale").GetString().Should().Be("en");summary.TryGetProperty("snapshot",out _).Should().BeFalse();
+        using var missing = await client.PostAsJsonAsync(
+            x.Path + "/catalogue-editions/en/publish",
+            new { expectedRevision = 2, note = "Missing bytes" });
+        missing.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var current = (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        current.GetProperty("revision").GetInt32().Should().Be(2);
+        current
+            .GetProperty("snapshot")
+            .GetProperty("catalogueEditions")[0]
+            .GetProperty("approvedForPublication")
+            .GetBoolean()
+            .Should()
+            .BeFalse();
+        (await client.GetFromJsonAsync<JsonElement>(x.Path + "/releases"))
+            .GetProperty("data")
+            .GetArrayLength()
+            .Should()
+            .Be(0);
+    }
+
+    [Fact]
+    public async Task SaveAndPublish_ShouldHaveOneWinnerWithoutPartialApproval_WhenConcurrent()
+    {
+        var x = await Create();
+        using var client = x.Client;
+        using var attached = await client.PostAsync(x.Path + "/catalogue-editions", Bundle(x.Design, 1));
+        var snapshot = (await Data(attached)).GetProperty("snapshot");
+        var publish = client.PostAsJsonAsync(
+            x.Path + "/catalogue-editions/en/publish",
+            new { expectedRevision = 2, note = "Race" });
+        var save = client.PutAsJsonAsync(x.Path, new { expectedRevision = 2, snapshot });
+        var responses = await Task.WhenAll(publish, save);
+        responses
+            .Select(r => r.StatusCode)
+            .Should()
+            .BeEquivalentTo(new[] { HttpStatusCode.OK, HttpStatusCode.Conflict });
+        var current = (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        current.GetProperty("revision").GetInt32().Should().Be(3);
+        current
+            .GetProperty("snapshot")
+            .GetProperty("catalogueEditions")[0]
+            .GetProperty("approvedForPublication")
+            .GetBoolean()
+            .Should()
+            .Be(responses[0].IsSuccessStatusCode);
+        foreach (var response in responses) response.Dispose();
+    }
+
+
+    [Fact]
+    public async Task NamedWebCatalogue_ShouldListItsSummaryPublishByIdAndKeepSiblings()
+    {
+        var x = await Create();
+        using var client = x.Client;
+        var draft = (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        var products = new[]
+        {
+            new CommerceProduct(new ProductDocument
+            {
+                Id = "vest",
+                GarmentType = "vest",
+                VariantCode = "v01",
+                Status = "active",
+                Locales = new(
+                    ProductLocale.Empty(),
+                    ProductLocale.Empty(),
+                    new("approved", "Vest", "Silk", null, null)),
+            }),
+            new CommerceProduct(new ProductDocument
+            {
+                Id = "unconfirmed",
+                GarmentType = "vest",
+                VariantCode = "v02",
+                Status = "active",
+                Locales = ProductLocales.Empty(),
+            }),
+        };
+        var snapshot = JsonSerializer.Deserialize<CommerceSnapshot>(
+            draft.GetProperty("snapshot"),
+            new JsonSerializerOptions(JsonSerializerDefaults.Web))! with { Products = products };
+        using var saved = await client.PutAsJsonAsync(x.Path, new { expectedRevision = 1, snapshot });
+        saved.StatusCode.Should().Be(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
+        int revision = 2;
+        Guid summer = Guid.Empty;
+        foreach (var slug in new[] { "summer", "winter" })
+        {
+            using var created = await client.PostAsJsonAsync(
+                $"/api/organizations/{x.Owner.OrganizationId}/design-documents",
+                new
+                {
+                    kind = "catalogue",
+                    title = slug,
+                    snapshot = new
+                    {
+                        schemaVersion = 1,
+                        kind = "catalogue",
+                        locale = "en",
+                        templateId = "catalogue",
+                        pages = Array.Empty<object>(),
+                        catalogueSettings = new
+                        {
+                            brandId = x.Brand,
+                            mediaGroup = "all",
+                            priceDisplay = new
+                            {
+                                show = true,
+                                showCurrency = true,
+                                showQuantity = true,
+                                showRetail = true,
+                                showWholesale = true,
+                            },
+                            copyByLocale = new { },
+                        },
+                        catalogue = new
+                        {
+                            slug,
+                            description = "Season collection",
+                            isActive = true,
+                            outputs = new { web = true, pdf = false },
+                            web = new
+                            {
+                                theme = "grid",
+                                pages = new[]
+                                {
+                                    new
+                                    {
+                                        id = "looks",
+                                        title = "Looks",
+                                        layout = "grid",
+                                        isActive = true,
+                                        productIds = new[] { "vest", "unconfirmed" },
+                                    },
+                                    new
+                                    {
+                                        id = "hidden",
+                                        title = "Hidden",
+                                        layout = "collage",
+                                        isActive = false,
+                                        productIds = new[] { "vest" },
+                                    },
+                                },
+                            },
+                        }
+                    }
+                });
+            created.StatusCode.Should().Be(HttpStatusCode.OK, await created.Content.ReadAsStringAsync());
+            var design = (await Data(created)).GetProperty("id").GetGuid();
+            using var bundle = new MultipartFormDataContent();
+            bundle.Add(
+                new StringContent(JsonSerializer.Serialize(new
+                {
+                    expectedRevision = revision,
+                    sourceDesignId = design,
+                    sourceRevision = 1,
+                })),
+                "metadata");
+            using var attached = await client.PostAsync(x.Path + "/catalogue-editions", bundle);
+            attached.StatusCode.Should().Be(HttpStatusCode.OK, await attached.Content.ReadAsStringAsync());
+            var attachedData = await Data(attached);
+            revision = attachedData.GetProperty("revision").GetInt32();
+            var edition = attachedData
+                .GetProperty("snapshot")
+                .GetProperty("catalogueEditions")
+                .EnumerateArray()
+                .Single(e => e.GetProperty("slug").GetString() == slug);
+            edition.TryGetProperty("pdfSha256", out _).Should().BeFalse();
+            edition.GetProperty("pages").GetArrayLength().Should().Be(0);
+            edition
+                .GetProperty("web")
+                .GetProperty("pages")[0]
+                .GetProperty("productIds")
+                .EnumerateArray()
+                .Select(p => p.GetString())
+                .Should()
+                .Equal("vest");
+            var id = edition.GetProperty("id").GetGuid();
+            if (slug == "summer") summer = id;
+            using var published = await client.PostAsJsonAsync(
+                x.Path + $"/catalogue-editions/{id}/publish",
+                new { expectedRevision = revision, note = "Reviewed web catalogue" });
+            published.StatusCode.Should().Be(HttpStatusCode.OK, await published.Content.ReadAsStringAsync());
+            revision++;
+        }
+        var summaries =
+            (await client.GetFromJsonAsync<JsonElement>(
+                $"/api/organizations/{x.Owner.OrganizationId}/design-documents?kind=catalogue")).GetProperty("data");
+        var summary = summaries.EnumerateArray().Single(item => item.GetProperty("title").GetString() == "summer");
+        summary.GetProperty("locale").GetString().Should().Be("en");
+        summary.TryGetProperty("snapshot", out _).Should().BeFalse();
         summary.GetProperty("catalogue").GetProperty("web").GetProperty("pageCount").GetInt32().Should().Be(1);
-        using var anonymous=fixture.Factory.CreateClient();var json=await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale=en");
-        json.GetProperty("catalogues").GetArrayLength().Should().Be(2);json.GetProperty("edition").ValueKind.Should().Be(JsonValueKind.Null);
-        var release=json.GetProperty("release").GetProperty("id").GetGuid();
-        (await anonymous.GetAsync($"/api/public/v1/brands/{x.Slug}/catalogue-editions/{summer}/catalogue.pdf?release={release}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var anonymous = fixture.Factory.CreateClient();
+        var json = await anonymous.GetFromJsonAsync<JsonElement>($"/api/public/v1/brands/{x.Slug}/catalogue?locale=en");
+        json.GetProperty("catalogues").GetArrayLength().Should().Be(2);
+        json.TryGetProperty("edition", out _).Should().BeFalse();
+        var release = json.GetProperty("release").GetProperty("id").GetGuid();
+        (await anonymous.GetAsync(
+            $"/api/public/v1/brands/{x.Slug}/catalogue-editions/{summer}/catalogue.pdf?release={release}")).StatusCode
+            .Should()
+            .Be(HttpStatusCode.NotFound);
         // A stale prepared web edition cannot expose unconfirmed translated data.
-        var current=(await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");var changed=JsonNode.Parse(current.GetProperty("snapshot").GetRawText())!;
-        changed["products"]![0]!["document"]!["locales"]!["en"]!["status"]="draft";
-        using var edited=await client.PutAsJsonAsync(x.Path,new{expectedRevision=revision,snapshot=changed});edited.StatusCode.Should().Be(HttpStatusCode.OK);revision++;
-        using var rejected=await client.PostAsJsonAsync(x.Path+$"/catalogue-editions/{summer}/publish",new{expectedRevision=revision,note="Should reject stale approval"});rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var current = (await client.GetFromJsonAsync<JsonElement>(x.Path)).GetProperty("data");
+        var changed = JsonNode.Parse(current.GetProperty("snapshot").GetRawText())!;
+        changed["products"]![0]!["document"]!["locales"]!["en"]!["status"] = "draft";
+        using var edited = await client.PutAsJsonAsync(x.Path, new { expectedRevision = revision, snapshot = changed });
+        edited.StatusCode.Should().Be(HttpStatusCode.OK);
+        revision++;
+        using var rejected = await client.PostAsJsonAsync(
+            x.Path + $"/catalogue-editions/{summer}/publish",
+            new { expectedRevision = revision, note = "Should reject stale approval" });
+        rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task NamedCatalogueSave_RejectsUnknownProductOrForeignBrand(bool foreignBrand)
+    public async Task NamedCatalogueSave_ShouldBeRefused_WhenItNamesAnUnknownProductOrForeignBrand(bool foreignBrand)
     {
-        var x=await Create();using var client=x.Client;var selectedBrand=x.Brand;
-        if(foreignBrand){var other=await Create();other.Client.Dispose();selectedBrand=other.Brand;}
-        using var response=await client.PostAsJsonAsync($"/api/organizations/{x.Owner.OrganizationId}/design-documents",new{kind="catalogue",title="Foreign",snapshot=new{
-            schemaVersion=1,kind="catalogue",locale="en",templateId="catalogue",pages=Array.Empty<object>(),
-            catalogueSettings=new{brandId=selectedBrand,mediaGroup="all",priceDisplay=new{show=true,showCurrency=true,showQuantity=true,showRetail=true,showWholesale=true},copyByLocale=new{}},
-            catalogue=new{slug="summer",description="",isActive=true,outputs=new{web=true,pdf=false},web=new{theme="grid",pages=new[]{new{id="looks",title="Looks",layout="grid",isActive=true,productIds=new[]{"foreign-product"}}}}}
-        }});
-        response.StatusCode.Should().Be(foreignBrand?HttpStatusCode.NotFound:HttpStatusCode.BadRequest,await response.Content.ReadAsStringAsync());
-        var summaries=(await client.GetFromJsonAsync<JsonElement>($"/api/organizations/{x.Owner.OrganizationId}/design-documents?kind=catalogue")).GetProperty("data");
-        summaries.GetArrayLength().Should().Be(1,"invalid named catalogues must not create saved design records");
+        var x = await Create();
+        using var client = x.Client;
+        var selectedBrand = x.Brand;
+        if (foreignBrand)
+        {
+            var other = await Create();
+            other.Client.Dispose();
+            selectedBrand = other.Brand;
+        }
+        using var response = await client.PostAsJsonAsync(
+            $"/api/organizations/{x.Owner.OrganizationId}/design-documents",
+            new
+            {
+                kind = "catalogue",
+                title = "Foreign",
+                snapshot = new
+                {
+                    schemaVersion = 1,
+                    kind = "catalogue",
+                    locale = "en",
+                    templateId = "catalogue",
+                    pages = Array.Empty<object>(),
+                    catalogueSettings = new
+                    {
+                        brandId = selectedBrand,
+                        mediaGroup = "all",
+                        priceDisplay = new
+                        {
+                            show = true,
+                            showCurrency = true,
+                            showQuantity = true,
+                            showRetail = true,
+                            showWholesale = true,
+                        },
+                        copyByLocale = new { },
+                    },
+                    catalogue = new
+                    {
+                        slug = "summer",
+                        description = "",
+                        isActive = true,
+                        outputs = new { web = true, pdf = false },
+                        web = new
+                        {
+                            theme = "grid",
+                            pages = new[]
+                            {
+                                new
+                                {
+                                    id = "looks",
+                                    title = "Looks",
+                                    layout = "grid",
+                                    isActive = true,
+                                    productIds = new[] { "foreign-product" },
+                                },
+                            },
+                        },
+                    }
+                }
+            });
+        response.StatusCode
+            .Should()
+            .Be(
+                foreignBrand ? HttpStatusCode.NotFound : HttpStatusCode.BadRequest,
+                await response.Content.ReadAsStringAsync());
+        var summaries =
+            (await client.GetFromJsonAsync<JsonElement>(
+                $"/api/organizations/{x.Owner.OrganizationId}/design-documents?kind=catalogue")).GetProperty("data");
+        summaries.GetArrayLength().Should().Be(1, "invalid named catalogues must not create saved design records");
     }
 
-    private async Task<Setup> Create(object? sourcePage=null,string locale="en",bool? foreignSettingsBrand=null)
+    private async Task<Setup> Create(object? sourcePage = null, string locale = "en", bool? foreignSettingsBrand = null)
     {
-        var owner=await fixture.CreateOwnerAsync();var client=await fixture.LoginAsync(owner);
-        using var brandResponse=await client.PostAsJsonAsync($"/api/organizations/{owner.OrganizationId}/brands",new{name="Edition fixture",timeZone="Asia/Tashkent"});
-        var brand=(await Data(brandResponse)).GetProperty("id").GetGuid();var path=$"/api/organizations/{owner.OrganizationId}/brands/{brand}/commerce";
-        var slug="edition-"+Guid.NewGuid().ToString("N");
-        var snapshot=new CommerceSnapshot{Slug=slug,Identity=new BrandIdentity{Name="Edition fixture"}};
-        using var saved=await client.PutAsJsonAsync(path,new{expectedRevision=0,snapshot});saved.StatusCode.Should().Be(HttpStatusCode.OK,await saved.Content.ReadAsStringAsync());
-        var designSnapshot=JsonSerializer.SerializeToNode(new{
-            schemaVersion=1,kind="catalogue",locale,templateId="fixture-template",pages=new[]{sourcePage??new{id="cover",title="Saved cover",width=210,height=297,productIds=Array.Empty<string>(),elements=Array.Empty<object>()}}
+        var owner = await fixture.CreateOwnerAsync();
+        var client = await fixture.LoginAsync(owner);
+        using var brandResponse = await client.PostAsJsonAsync(
+            $"/api/organizations/{owner.OrganizationId}/brands",
+            new { name = "Edition fixture", timeZone = "Asia/Tashkent" });
+        var brand = (await Data(brandResponse)).GetProperty("id").GetGuid();
+        var path = $"/api/organizations/{owner.OrganizationId}/brands/{brand}/commerce";
+        var slug = "edition-" + Guid.NewGuid().ToString("N");
+        var snapshot = new CommerceSnapshot { Slug = slug, Identity = new BrandIdentity { Name = "Edition fixture" } };
+        using var saved = await client.PutAsJsonAsync(path, new { expectedRevision = 0, snapshot });
+        saved.StatusCode.Should().Be(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync());
+        var designSnapshot = JsonSerializer.SerializeToNode(new
+        {
+            schemaVersion = 1,
+            kind = "catalogue",
+            locale,
+            templateId = "fixture-template",
+            pages = new[]
+            {
+                sourcePage
+                    ?? new
+                    {
+                        id = "cover",
+                        title = "Saved cover",
+                        width = 210,
+                        height = 297,
+                        productIds = Array.Empty<string>(),
+                        elements = Array.Empty<object>(),
+                    },
+            }
         })!;
-        if(foreignSettingsBrand is {} foreign)
-            designSnapshot["catalogueSettings"]=JsonSerializer.SerializeToNode(new{brandId=foreign?Guid.NewGuid():brand,
-                mediaGroup="all",priceDisplay=new{show=true,showCurrency=true,showQuantity=true,showRetail=true,showWholesale=true},copyByLocale=new{} });
-        using var design=await client.PostAsJsonAsync($"/api/organizations/{owner.OrganizationId}/design-documents",new{kind="catalogue",title="Saved source title",snapshot=designSnapshot});
-        design.StatusCode.Should().Be(HttpStatusCode.OK,await design.Content.ReadAsStringAsync());
-        return new(owner,client,brand,(await Data(design)).GetProperty("id").GetGuid(),path,slug);
+        if (foreignSettingsBrand is { } foreign)
+            designSnapshot["catalogueSettings"] = JsonSerializer.SerializeToNode(new
+            {
+                brandId = foreign ? Guid.NewGuid() : brand,
+                mediaGroup = "all",
+                priceDisplay = new
+                {
+                    show = true,
+                    showCurrency = true,
+                    showQuantity = true,
+                    showRetail = true,
+                    showWholesale = true,
+                },
+                copyByLocale = new { }
+            });
+        using var design = await client.PostAsJsonAsync(
+            $"/api/organizations/{owner.OrganizationId}/design-documents",
+            new { kind = "catalogue", title = "Saved source title", snapshot = designSnapshot });
+        design.StatusCode.Should().Be(HttpStatusCode.OK, await design.Content.ReadAsStringAsync());
+        return new(owner, client, brand, (await Data(design)).GetProperty("id").GetGuid(), path, slug);
     }
-    private static MultipartFormDataContent Bundle(Guid design,int revision,string? fault=null,byte[]? pdf=null)
+    private static MultipartFormDataContent Bundle(Guid design, int revision, string? fault = null, byte[]? pdf = null)
     {
-        var body=new MultipartFormDataContent();body.Add(new StringContent(JsonSerializer.Serialize(new{expectedRevision=revision,sourceDesignId=design,sourceRevision=1})),"metadata");
-        body.Add(new ByteArrayContent(fault=="pdf"?[1,2,3]:pdf??Pdf),"pdf","catalogue.pdf");
-        body.Add(new ByteArrayContent(fault=="png"?[1,2,3]:Png(fault=="dimensions"?210:297)),"page-cover.png","cover.png");
-        if(fault!="missing")body.Add(new ByteArrayContent(pdf??Pdf),"page-cover.pdf","cover.pdf");
-        if(fault is "extra" or "duplicate")body.Add(new ByteArrayContent(Pdf),fault=="extra"?"page-unknown.pdf":"page-cover.pdf","other.pdf");
+        var body = new MultipartFormDataContent();
+        body.Add(
+            new StringContent(JsonSerializer.Serialize(new
+            {
+                expectedRevision = revision,
+                sourceDesignId = design,
+                sourceRevision = 1,
+            })),
+            "metadata");
+        body.Add(new ByteArrayContent(fault == "pdf" ? [1, 2, 3] : pdf ?? Pdf), "pdf", "catalogue.pdf");
+        body.Add(
+            new ByteArrayContent(fault == "png" ? [1, 2, 3] : Png(fault == "dimensions" ? 210 : 297)),
+            "page-cover.png",
+            "cover.png");
+        if (fault != "missing") body.Add(new ByteArrayContent(pdf ?? Pdf), "page-cover.pdf", "cover.pdf");
+        if (fault is "extra" or "duplicate")
+            body.Add(new ByteArrayContent(Pdf), fault == "extra" ? "page-unknown.pdf" : "page-cover.pdf", "other.pdf");
         return body;
     }
-    private static byte[] Png(int height=297)
+    private static byte[] Png(int height = 297)
     {
-        using var bitmap=new SKBitmap(210,height);bitmap.Erase(SKColors.Beige);
-        using var image=SKImage.FromBitmap(bitmap);using var data=image.Encode(SKEncodedImageFormat.Png,100);return data.ToArray();
+        using var bitmap = new SKBitmap(210, height);
+        bitmap.Erase(SKColors.Beige);
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
-    private static async Task<JsonElement> Data(HttpResponseMessage response)=>JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync()).GetProperty("data");
+    private static async Task<JsonElement> Data(HttpResponseMessage response)
+    {
+        return JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync()).GetProperty("data");
+    }
 }

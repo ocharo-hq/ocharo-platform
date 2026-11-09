@@ -4,7 +4,9 @@ using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
 namespace BrandWorkspace.Application.Commerce.Queries;
 
-/// <summary>Represents a query to open a released edition's PDF or page artifact; the release check decides each time.</summary>
+/// <summary>
+/// Represents a query to open a released edition's PDF or page artifact; the release check decides each time.
+/// </summary>
 public sealed record PublicEditionAssetOpenQuery : IQuery<AppResult<PublicAsset>>
 {
     /// <summary>Gets the brand's public slug.</summary>

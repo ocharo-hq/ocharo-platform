@@ -26,14 +26,19 @@ public sealed class PreparationController(ISender sender) : ControllerBase
     [HttpGet("brands")]
     public async Task<IActionResult> GetBrands(CancellationToken cancellationToken)
     {
-        var result = await sender.SendAsync(new BrandGetAllQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext) },
+        var result = await sender.SendAsync(
+            new BrandGetAllQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext) },
             cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<IReadOnlyList<Brand>>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<IReadOnlyList<Brand>>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Configures a brand.</summary>
     [HttpPost("brands")]
-    public async Task<IActionResult> CreateBrand([FromBody] CreateBrandRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateBrand(
+        [FromBody] CreateBrandRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new BrandCreateCommand
         {
@@ -41,16 +46,21 @@ public sealed class PreparationController(ISender sender) : ControllerBase
             Name = request.Name,
             TimeZone = request.TimeZone,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<Brand>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<Brand>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Gets the organization's preparation images.</summary>
     [HttpGet("media")]
     public async Task<IActionResult> GetMedia(CancellationToken cancellationToken)
     {
-        var result = await sender.SendAsync(new PreparationMediaGetAllQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext) },
+        var result = await sender.SendAsync(
+            new PreparationMediaGetAllQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext) },
             cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<IReadOnlyList<MediaAsset>>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<IReadOnlyList<MediaAsset>>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Stores one image and its provenance, sent as multipart form data.</summary>
@@ -68,16 +78,24 @@ public sealed class PreparationController(ISender sender) : ControllerBase
             Provenance = upload.Provenance,
             Bytes = upload.Bytes,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<MediaAsset>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<MediaAsset>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
-    /// <summary>Answers an image's bytes, never a redirect: the design export fetch()es this route into a blob, and Files'
-    /// links send no CORS header.</summary>
+    /// <summary>
+    /// Answers an image's bytes, never a redirect: the design export fetch()es this route into a blob, and Files' links
+    /// send no CORS header.
+    /// </summary>
     [HttpGet("media/{mediaId:guid}/content")]
     public async Task<IActionResult> GetMediaContent(Guid mediaId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new PreparationMediaContentGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), MediaId = mediaId },
+            new PreparationMediaContentGetQuery
+            {
+                Access = OrganizationAccessFilter.GetAccess(HttpContext),
+                MediaId = mediaId,
+            },
             cancellationToken);
         return result.Match<IActionResult>(ok => Bytes(ok.Data), fail => this.ToProblem(fail.Error));
     }
@@ -87,18 +105,29 @@ public sealed class PreparationController(ISender sender) : ControllerBase
     public async Task<IActionResult> GetDrafts([FromQuery] Guid? brandId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new DraftGetAllQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), BrandId = brandId }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<IReadOnlyList<DraftSummary>>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+            new DraftGetAllQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), BrandId = brandId },
+            cancellationToken);
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<IReadOnlyList<DraftSummary>>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Creates a draft.</summary>
     [HttpPost("drafts")]
-    public async Task<IActionResult> CreateDraft([FromBody] SaveDraftRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateDraft(
+        [FromBody] SaveDraftRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new DraftSaveCommand { Access = OrganizationAccessFilter.GetAccess(HttpContext), Input = request.ToInput() },
+            new DraftSaveCommand
+            {
+                Access = OrganizationAccessFilter.GetAccess(HttpContext),
+                Input = request.ToInput(),
+            },
             cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<Draft>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<Draft>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Gets a draft at its current revision.</summary>
@@ -106,13 +135,19 @@ public sealed class PreparationController(ISender sender) : ControllerBase
     public async Task<IActionResult> GetDraft(Guid draftId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new DraftGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), DraftId = draftId }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<Draft>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+            new DraftGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), DraftId = draftId },
+            cancellationToken);
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<Draft>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Replaces a draft at the revision the operator edited.</summary>
     [HttpPut("drafts/{draftId:guid}")]
-    public async Task<IActionResult> SaveDraft(Guid draftId, [FromBody] SaveDraftRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> SaveDraft(
+        Guid draftId,
+        [FromBody] SaveDraftRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new DraftSaveCommand
         {
@@ -121,33 +156,47 @@ public sealed class PreparationController(ISender sender) : ControllerBase
             ExpectedRevision = request.ExpectedRevision,
             Input = request.ToInput(),
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<Draft>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<Draft>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Requests review of the current revision.</summary>
     [HttpPost("drafts/{draftId:guid}/request-review")]
-    public Task<IActionResult> RequestReview(Guid draftId, [FromBody] RevisionRequest request, CancellationToken cancellationToken)
+    public Task<IActionResult> RequestReview(
+        Guid draftId,
+        [FromBody] RevisionRequest request,
+        CancellationToken cancellationToken)
     {
         return ReviewAsync(draftId, request.ExpectedRevision, ReviewAction.Request, null, cancellationToken);
     }
 
     /// <summary>Approves the current revision.</summary>
     [HttpPost("drafts/{draftId:guid}/approve")]
-    public Task<IActionResult> Approve(Guid draftId, [FromBody] RevisionRequest request, CancellationToken cancellationToken)
+    public Task<IActionResult> Approve(
+        Guid draftId,
+        [FromBody] RevisionRequest request,
+        CancellationToken cancellationToken)
     {
         return ReviewAsync(draftId, request.ExpectedRevision, ReviewAction.Approve, null, cancellationToken);
     }
 
     /// <summary>Revokes the current revision's approval, with a reason.</summary>
     [HttpPost("drafts/{draftId:guid}/revoke-approval")]
-    public Task<IActionResult> RevokeApproval(Guid draftId, [FromBody] RevisionRequest request, CancellationToken cancellationToken)
+    public Task<IActionResult> RevokeApproval(
+        Guid draftId,
+        [FromBody] RevisionRequest request,
+        CancellationToken cancellationToken)
     {
         return ReviewAsync(draftId, request.ExpectedRevision, ReviewAction.Revoke, request.Reason, cancellationToken);
     }
 
     /// <summary>Prepares an approved revision's manual package once per retry identity.</summary>
     [HttpPost("drafts/{draftId:guid}/exports")]
-    public async Task<IActionResult> CreateExport(Guid draftId, [FromBody] CreateExportRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateExport(
+        Guid draftId,
+        [FromBody] CreateExportRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new ExportCreateCommand
         {
@@ -156,16 +205,21 @@ public sealed class PreparationController(ISender sender) : ControllerBase
             ExpectedRevision = request.ExpectedRevision,
             IdempotencyKey = request.IdempotencyKey,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<ManualExport>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<ManualExport>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
-    /// <summary>Downloads an export: the desk links here with a plain link, so a redirect to the private Files file, saved
-    /// under the same name, serves it; membership still decides, and the answer stays no-store.</summary>
+    /// <summary>
+    /// Downloads an export: the desk links here with a plain link, so a redirect to the private Files file, saved under
+    /// the same name, serves it; membership still decides, and the answer stays no-store.
+    /// </summary>
     [HttpGet("exports/{exportId:guid}/download")]
     public async Task<IActionResult> DownloadExport(Guid exportId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new ExportOpenQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), ExportId = exportId }, cancellationToken);
+            new ExportOpenQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), ExportId = exportId },
+            cancellationToken);
         return result.Match<IActionResult>(
             ok =>
             {
@@ -178,7 +232,11 @@ public sealed class PreparationController(ISender sender) : ControllerBase
     }
 
     /// <summary>Applies a review transition at the revision it names.</summary>
-    private async Task<IActionResult> ReviewAsync(Guid draftId, int expectedRevision, ReviewAction action, string? reason,
+    private async Task<IActionResult> ReviewAsync(
+        Guid draftId,
+        int expectedRevision,
+        ReviewAction action,
+        string? reason,
         CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new DraftReviewCommand
@@ -189,7 +247,9 @@ public sealed class PreparationController(ISender sender) : ControllerBase
             Action = action,
             Reason = reason,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<Draft>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<Draft>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Answers an image's bytes under its own content type.</summary>

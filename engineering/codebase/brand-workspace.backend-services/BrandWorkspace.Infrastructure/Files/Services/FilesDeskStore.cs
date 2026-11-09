@@ -25,7 +25,12 @@ public sealed class FilesDeskStore(
 {
     public bool IsEnabled => true;
 
-    public async Task<StoredFile> StoreAsync(byte[] bytes, string name, string contentType, DeskFileReference reference, CancellationToken token)
+    public async Task<StoredFile> StoreAsync(
+        byte[] bytes,
+        string name,
+        string contentType,
+        DeskFileReference reference,
+        CancellationToken token)
     {
         var sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
         FileModel file;
@@ -44,12 +49,18 @@ public sealed class FilesDeskStore(
         // An idempotency key answers with its first upload; other bytes under the same reference are never adopted.
         if (!string.Equals(file.Sha256, sha, StringComparison.Ordinal))
             throw DeskErrors.Conflict("WoW2 Files holds other bytes under this reference.").ToException();
-        Unwrap(await references.AttachAsync(file.Id, new FileReference(reference.RecordType, reference.RecordId), token));
+        Unwrap(await references.AttachAsync(
+            file.Id,
+            new FileReference(reference.RecordType, reference.RecordId),
+            token));
         return new StoredFile(file.Id.ToString(), file.Sha256, file.Size);
     }
 
     public async Task AttachAsync(string fileId, DeskFileReference reference, CancellationToken token) =>
-        Unwrap(await references.AttachAsync(Parse(fileId), new FileReference(reference.RecordType, reference.RecordId), token));
+        Unwrap(await references.AttachAsync(
+            Parse(fileId),
+            new FileReference(reference.RecordType, reference.RecordId),
+            token));
 
     public async Task<Uri> LinkAsync(string fileId, int? width, bool download, CancellationToken token)
     {
@@ -74,8 +85,13 @@ public sealed class FilesDeskStore(
         return bytes;
     }
 
-    /// <summary>Returns a Files call's value, or refuses the Desk request with the status its failure maps to.</summary>
-    internal static T Unwrap<T>(Result<T> result) where T : notnull => result.Match(value => value, error => throw Refusal(error));
+    /// <summary>
+    /// Returns a Files call's value, or refuses the Desk request with the status its failure maps to.
+    /// </summary>
+    internal static T Unwrap<T>(Result<T> result) where T : notnull
+    {
+        return result.Match(value => value, error => throw Refusal(error));
+    }
 
     private static void Unwrap(Result result) => result.Match(() => true, error => throw Refusal(error));
 
@@ -86,8 +102,10 @@ public sealed class FilesDeskStore(
     private static AppException Refusal(AppError error) => error.Type switch
     {
         AppErrorType.Validation => DeskErrors.Invalid(error.Message).ToException(),
-        AppErrorType.NotFound or AppErrorType.FileNotFound => DeskErrors.NotFound("The file is gone from WoW2 Files.").ToException(),
-        AppErrorType.ExternalUnavailable => DeskErrors.Unavailable("WoW2 Files is unavailable; try again shortly.").ToException(),
+        AppErrorType.NotFound or AppErrorType.FileNotFound => DeskErrors.NotFound("The file is gone from WoW2 Files.")
+            .ToException(),
+        AppErrorType.ExternalUnavailable => DeskErrors.Unavailable("WoW2 Files is unavailable; try again shortly.")
+            .ToException(),
         _ => DeskErrors.Upstream($"WoW2 Files refused the call: {error.Message}").ToException(),
     };
 }

@@ -4,7 +4,10 @@ using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
 namespace BrandWorkspace.Application.Access.Commands;
 
-/// <summary>Represents a command to project a signed-in member and their organization into Desk, so authored records keep their foreign keys.</summary>
+/// <summary>
+/// Represents a command to project a signed-in member and their organization into Desk, so authored records keep their
+/// foreign keys.
+/// </summary>
 public sealed record MemberProjectCommand : ICommand<AppResult<OrganizationAccess>>
 {
     /// <summary>Gets the caller's resolved organization membership.</summary>

@@ -5,7 +5,7 @@ using BrandWorkspace.Application.Files.Models;
 using BrandWorkspace.Application.Files.Services;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Preparation.Repositories;
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 

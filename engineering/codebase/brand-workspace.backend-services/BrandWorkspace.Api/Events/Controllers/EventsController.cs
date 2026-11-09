@@ -21,9 +21,17 @@ public sealed class EventsController(ISender sender) : ControllerBase
 {
     /// <summary>Gets the events matching the filters, a page at a time.</summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] string? query, [FromQuery] string? scope, [FromQuery] string? format,
-        [FromQuery] string? status, [FromQuery] string? from, [FromQuery] string? to, [FromQuery] bool? includeUndated,
-        [FromQuery] int? limit, [FromQuery] int? offset, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? query,
+        [FromQuery] string? scope,
+        [FromQuery] string? format,
+        [FromQuery] string? status,
+        [FromQuery] string? from,
+        [FromQuery] string? to,
+        [FromQuery] bool? includeUndated,
+        [FromQuery] int? limit,
+        [FromQuery] int? offset,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new EventGetAllQuery
         {
@@ -48,7 +56,8 @@ public sealed class EventsController(ISender sender) : ControllerBase
     public async Task<IActionResult> GetSummary([FromQuery] string? today, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new EventSummaryGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), Today = today }, cancellationToken);
+            new EventSummaryGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), Today = today },
+            cancellationToken);
         return result.Match<IActionResult>(
             ok => Ok(ApiResponse<ShowcaseEventSummary>.Ok(ok.Data)),
             fail => this.ToProblem(fail.Error));
@@ -59,7 +68,11 @@ public sealed class EventsController(ISender sender) : ControllerBase
     public async Task<IActionResult> Create([FromBody] EventRequest request, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new EventCreateCommand { Access = OrganizationAccessFilter.GetAccess(HttpContext), Fields = request.Fields() },
+            new EventCreateCommand
+            {
+                Access = OrganizationAccessFilter.GetAccess(HttpContext),
+                Fields = request.Fields(),
+            },
             cancellationToken);
         return result.Match<IActionResult>(
             ok => Ok(ApiResponse<ShowcaseEvent>.Ok(ok.Data)),
@@ -71,7 +84,8 @@ public sealed class EventsController(ISender sender) : ControllerBase
     public async Task<IActionResult> Get(Guid eventId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new EventGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), EventId = eventId }, cancellationToken);
+            new EventGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), EventId = eventId },
+            cancellationToken);
         return result.Match<IActionResult>(
             ok => Ok(ApiResponse<ShowcaseEvent>.Ok(ok.Data)),
             fail => this.ToProblem(fail.Error));
@@ -79,7 +93,10 @@ public sealed class EventsController(ISender sender) : ControllerBase
 
     /// <summary>Replaces an event at the revision the operator edited.</summary>
     [HttpPut("{eventId:guid}")]
-    public async Task<IActionResult> Update(Guid eventId, [FromBody] UpdateEventRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(
+        Guid eventId,
+        [FromBody] UpdateEventRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new EventUpdateCommand
         {
@@ -95,7 +112,10 @@ public sealed class EventsController(ISender sender) : ControllerBase
 
     /// <summary>Deletes an event at the revision the operator saw.</summary>
     [HttpDelete("{eventId:guid}")]
-    public async Task<IActionResult> Delete(Guid eventId, [FromQuery] int expectedRevision, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(
+        Guid eventId,
+        [FromQuery] int expectedRevision,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new EventDeleteCommand
         {

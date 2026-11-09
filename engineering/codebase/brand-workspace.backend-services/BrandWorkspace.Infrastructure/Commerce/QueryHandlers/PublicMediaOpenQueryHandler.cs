@@ -13,7 +13,9 @@ public sealed class PublicMediaOpenQueryHandler(ICommerceRepository repository, 
     : IQueryHandler<PublicMediaOpenQuery, AppResult<StoredContent>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<StoredContent>> HandleAsync(PublicMediaOpenQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<StoredContent>> HandleAsync(
+        PublicMediaOpenQuery request,
+        CancellationToken cancellationToken)
     {
         if (await repository.PublicAsync(request.Slug, request.Release, cancellationToken) is not { } release
             || !CommerceRules.ApprovedHashes(release.Snapshot).Contains(request.Sha256)

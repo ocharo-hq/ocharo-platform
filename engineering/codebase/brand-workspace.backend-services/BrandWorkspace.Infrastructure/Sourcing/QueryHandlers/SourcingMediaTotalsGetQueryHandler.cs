@@ -11,7 +11,9 @@ public sealed class SourcingMediaTotalsGetQueryHandler(SourcingService service)
     : IQueryHandler<SourcingMediaTotalsGetQuery, AppResult<SourcingMediaTotals>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<SourcingMediaTotals>> HandleAsync(SourcingMediaTotalsGetQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<SourcingMediaTotals>> HandleAsync(
+        SourcingMediaTotalsGetQuery request,
+        CancellationToken cancellationToken)
     {
         return AppResult<SourcingMediaTotals>.Ok(await service.GetMediaTotalsAsync(request.Access, cancellationToken));
     }

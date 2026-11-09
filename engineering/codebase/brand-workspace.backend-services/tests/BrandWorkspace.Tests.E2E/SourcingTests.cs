@@ -26,7 +26,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
     private static readonly CancellationToken Token = CancellationToken.None;
 
     [Fact]
-    public async Task Suppliers_ShouldPersistRevisions_AndFilterBySearchAndStage()
+    public async Task Suppliers_ShouldPersistRevisionsAndFilterBySearchAndStage()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
@@ -34,8 +34,12 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
 
         JsonElement created = await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new
         {
-            name = "  Sun Woollen Industries ", stage = "contacted", country = "in", city = "Amritsar",
-            website = "https://example.test/sun", notes = "First line\nSecond line"
+            name = "  Sun Woollen Industries ",
+            stage = "contacted",
+            country = "in",
+            city = "Amritsar",
+            website = "https://example.test/sun",
+            notes = "First line\nSecond line"
         }));
         Guid id = created.GetProperty("id").GetGuid();
         created.GetProperty("name").GetString().Should().Be("Sun Woollen Industries");
@@ -47,15 +51,22 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
 
         JsonElement updated = await DataAsync(await client.PutAsJsonAsync($"{path}/suppliers/{id}", new
         {
-            expectedRevision = 1, name = "Sun Woollen Industries", stage = "replied", country = "IN", city = "Ludhiana",
-            website = (string?)null, notes = ""
+            expectedRevision = 1,
+            name = "Sun Woollen Industries",
+            stage = "replied",
+            country = "IN",
+            city = "Ludhiana",
+            website = (string?)null,
+            notes = ""
         }));
         updated.GetProperty("revision").GetInt32().Should().Be(2);
         updated.TryGetProperty("website", out _).Should().BeFalse();
 
         using HttpResponseMessage stale = await client.PutAsJsonAsync($"{path}/suppliers/{id}", new
         {
-            expectedRevision = 1, name = "Stale", stage = "lead"
+            expectedRevision = 1,
+            name = "Stale",
+            stage = "lead"
         });
         await ProblemAsync(stale, HttpStatusCode.Conflict, "Conflict");
 
@@ -83,7 +94,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
     }
 
     [Fact]
-    public async Task Routes_ShouldKeepOnePrimary_NormalizeDestinations_AndSurvivePersonRemoval()
+    public async Task Routes_ShouldKeepOnePrimaryNormalizeDestinationsAndSurvivePersonRemoval()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
@@ -102,7 +113,11 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
 
         JsonElement whatsapp = await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new
         {
-            channel = "whatsapp", destination = "+91 (000) 000-0001", verified = true, isPrimary = true, personId
+            channel = "whatsapp",
+            destination = "+91 (000) 000-0001",
+            verified = true,
+            isPrimary = true,
+            personId
         }));
         whatsapp.GetProperty("destination").GetString().Should().Be("+910000000001");
         whatsapp.GetProperty("personId").GetGuid().Should().Be(personId);
@@ -130,7 +145,9 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
             "Conflict");
         await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new
         {
-            channel = "phone", destination = "+910000000002", personId = foreignPerson
+            channel = "phone",
+            destination = "+910000000002",
+            personId = foreignPerson
         }), HttpStatusCode.BadRequest, "Validation");
         await ProblemAsync(
             await client.PostAsJsonAsync(
@@ -168,7 +185,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
     }
 
     [Fact]
-    public async Task Membership_ShouldHideForeignSuppliers_AndKeepViewersReadOnly()
+    public async Task Membership_ShouldHideForeignSuppliersAndKeepViewersReadOnly()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         OrganizationAccess stranger = await fixture.CreateOwnerAsync();
@@ -205,7 +222,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
     }
 
     [Fact]
-    public async Task Media_ShouldDeduplicate_PreviewImages_AndMoveBetweenInboxAndSupplier()
+    public async Task Media_ShouldDeduplicatePreviewImagesAndMoveBetweenInboxAndSupplier()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
@@ -259,7 +276,10 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
 
         JsonElement captioned = await DataAsync(await client.PutAsJsonAsync($"{path}/media/{mediaId}", new
         {
-            expectedRevision = 2, supplierId = supplier, capture = "screenshot", caption = "Peach floral, near B"
+            expectedRevision = 2,
+            supplierId = supplier,
+            capture = "screenshot",
+            caption = "Peach floral, near B"
         }));
         captioned.GetProperty("revision").GetInt32().Should().Be(3);
         captioned.GetProperty("capture").GetString().Should().Be("screenshot");
@@ -286,7 +306,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
     }
 
     [Fact]
-    public async Task Media_ShouldAcceptPdfAndVideo_FlagNearDuplicates_AndRejectOtherContent()
+    public async Task Media_ShouldAcceptPdfAndVideoFlagNearDuplicatesAndRejectOtherContent()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
@@ -336,7 +356,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
     }
 
     [Fact]
-    public async Task Import_ShouldValidateFirst_BeIdempotent_AndNeverOverwriteDeskEdits()
+    public async Task Import_ShouldValidateFirstStayIdempotentAndKeepDeskEdits()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
@@ -379,7 +399,10 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
 
             await DataAsync(await client.PutAsJsonAsync($"{path}/suppliers/{swiId}", new
             {
-                expectedRevision = 1, name = "SWI (edited in Desk)", stage = "dropped", country = "IN"
+                expectedRevision = 1,
+                name = "SWI (edited in Desk)",
+                stage = "dropped",
+                country = "IN"
             }));
             SourcingImportReport repeated = await ImportAsync(owner, bundle, dryRun: false);
             repeated.Suppliers.Existing.Should().Be(2);
@@ -510,11 +533,11 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
     {
         using var bitmap = new SKBitmap(96, 96);
         for (int y = 0; y < 96; y++)
-        for (int x = 0; x < 96; x++)
-        {
-            byte value = (byte)((horizontal ? x : y) * 255 / 95);
-            bitmap.SetPixel(x, y, new SKColor(value, (byte)(255 - value), 90));
-        }
+            for (int x = 0; x < 96; x++)
+            {
+                byte value = (byte)((horizontal ? x : y) * 255 / 95);
+                bitmap.SetPixel(x, y, new SKColor(value, (byte)(255 - value), 90));
+            }
         if (marker) bitmap.SetPixel(10, 10, SKColors.White);
         using SKImage image = SKImage.FromBitmap(bitmap);
         using SKData output = image.Encode(SKEncodedImageFormat.Png, 100);

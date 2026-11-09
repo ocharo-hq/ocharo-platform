@@ -14,8 +14,12 @@ public static class MultipartFormReader
     /// <param name="options">The form limits.</param>
     /// <param name="messages">The messages of each refusal.</param>
     /// <param name="cancellationToken">The token that cancels the read.</param>
-    public static async Task<Result<IFormCollection>> ReadAsync(HttpRequest request, long maximumRequestBytes, FormOptions options,
-        FormReadMessages messages, CancellationToken cancellationToken)
+    public static async Task<Result<IFormCollection>> ReadAsync(
+        HttpRequest request,
+        long maximumRequestBytes,
+        FormOptions options,
+        FormReadMessages messages,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(messages);
@@ -33,10 +37,11 @@ public static class MultipartFormReader
         {
             return Result<IFormCollection>.Fail(DeskErrors.Invalid(messages.Malformed));
         }
-        catch (IOException) when (!cancellationToken.IsCancellationRequested && !request.HttpContext.RequestAborted.IsCancellationRequested)
+        catch (IOException) when (!cancellationToken.IsCancellationRequested
+            && !request.HttpContext.RequestAborted.IsCancellationRequested)
         {
-            // MultipartReader reports a completed body with a missing boundary as IOException; an aborted request keeps its
-            // transport or cancellation outcome instead of becoming a validation failure.
+            // MultipartReader reports a completed body with a missing boundary as IOException; an aborted request keeps
+            // its transport or cancellation outcome instead of becoming a validation failure.
             return Result<IFormCollection>.Fail(DeskErrors.Invalid(messages.Unterminated));
         }
     }

@@ -5,16 +5,20 @@ using Microsoft.AspNetCore.Identity;
 
 namespace BrandWorkspace.Api.Foundation.Verbs;
 
-/// <summary>Represents an import verb's arguments, its actor resolved to an existing editor's membership; an import never
-/// creates operators or memberships.</summary>
+/// <summary>
+/// Represents an import verb's arguments, its actor resolved to an existing editor's membership; an import never
+/// creates operators or memberships.
+/// </summary>
 /// <param name="Access">The actor's membership in the organization.</param>
 /// <param name="BundlePath">The bundle file's path.</param>
 /// <param name="DryRun">Whether the import only reports.</param>
 public sealed record ImportVerbArguments(OrganizationAccess Access, string BundlePath, bool DryRun)
 {
-    /// <summary>Parses <c>--bundle &lt;bundle.json&gt; --organization &lt;organization-id&gt; --actor &lt;operator-email&gt;
+    /// <summary>
+    /// Parses <c>--bundle &lt;bundle.json&gt; --organization &lt;organization-id&gt; --actor &lt;operator-email&gt;
     /// [--dry-run]</c> and resolves the actor; wrong arguments throw <paramref name="usage"/>, an unknown actor or a
-    /// non-member refuses.</summary>
+    /// non-member refuses.
+    /// </summary>
     /// <param name="services">A scope's provider.</param>
     /// <param name="args">The arguments after the verb's name.</param>
     /// <param name="usage">The usage the verb reports on wrong arguments.</param>
@@ -42,7 +46,9 @@ public sealed record ImportVerbArguments(OrganizationAccess Access, string Bundl
             throw new ArgumentException(usage);
         var user = await services.GetRequiredService<UserManager<AccessUser>>().FindByEmailAsync(options["--actor"])
             ?? throw new InvalidOperationException("The actor is not a provisioned operator.");
-        var access = await services.GetRequiredService<IAccessRepository>().FindMembershipAsync(organizationId, user.Id, cancellationToken)
+        var access = await services
+            .GetRequiredService<IAccessRepository>()
+            .FindMembershipAsync(organizationId, user.Id, cancellationToken)
             ?? throw new InvalidOperationException("The actor is not a member of that organization.");
         return new ImportVerbArguments(access, options["--bundle"], dryRun);
     }

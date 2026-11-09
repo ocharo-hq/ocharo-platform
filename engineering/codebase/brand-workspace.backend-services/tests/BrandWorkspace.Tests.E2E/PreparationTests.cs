@@ -22,7 +22,7 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
     private static readonly CancellationToken Token = CancellationToken.None;
 
     [Fact]
-    public async Task Workflow_ShouldExportExactImmutableBytesAndCopy_AndPreservePackageAfterRevocation()
+    public async Task Workflow_ShouldExportExactBytesAndCopyAndKeepThePackageAfterRevocation()
     {
         var owner = await fixture.CreateOwnerAsync();
         var (input, media, bytes) = await CreateInputAsync(owner);
@@ -48,7 +48,11 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
             manifest.GetProperty("revision").GetInt32().Should().Be(1);
             manifest.GetProperty("approval").GetProperty("approvedBy").GetString().Should().Be(owner.UserId);
             manifest.GetProperty("media")[0].GetProperty("sha256").GetString().Should().Be(media.Sha256);
-            manifest.GetProperty("operatorReceipt").GetProperty("reportedPublishedAt").ValueKind.Should().Be(JsonValueKind.Null);
+            manifest
+                .GetProperty("operatorReceipt")
+                .GetProperty("reportedPublishedAt").ValueKind
+                .Should()
+                .Be(JsonValueKind.Null);
         }
         await fixture.Service.ReviewAsync(owner, draft.Id, 1, ReviewAction.Revoke, "Replace the caption", Token);
         var newExport = () => fixture.Service.CreateExportAsync(owner, draft.Id, 1, Guid.NewGuid(), Token);
@@ -64,7 +68,7 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
     }
 
     [Fact]
-    public async Task TenantScope_ShouldDenyForeignReferencesReadsExports_AndDatabaseAssociations()
+    public async Task TenantScope_ShouldDenyForeignReferencesReadsExportsAndDatabaseAssociations()
     {
         var first = await fixture.CreateOwnerAsync();
         var second = await fixture.CreateOwnerAsync();
@@ -81,23 +85,33 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
         foreach (var operation in forbidden)
             (await operation.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.NotFound);
         var ownBrand = await fixture.Service.CreateBrandAsync(second, "Other brand", "UTC", Token);
-        var foreignMedia = () => fixture.Service.SaveDraftAsync(second, null, null, input with { BrandId = ownBrand.Id }, Token);
+        var foreignMedia = () =>
+            fixture.Service.SaveDraftAsync(second, null, null, input with { BrandId = ownBrand.Id }, Token);
         (await foreignMedia.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.NotFound);
         await using var sql = fixture.DataSource.CreateCommand(
-            "INSERT INTO preparation.draft_media(organization_id,draft_id,revision,position,media_id) VALUES($1,$2,1,0,$3)");
+            "INSERT INTO preparation.draft_media(organization_id,draft_id,revision,position,media_id) "
+                + "VALUES($1,$2,1,0,$3)");
         sql.Parameters.AddWithValue(second.OrganizationId);
         sql.Parameters.AddWithValue(draft.Id);
         sql.Parameters.AddWithValue(media.Id);
         var invalidFk = () => sql.ExecuteNonQueryAsync();
-        (await invalidFk.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(PostgresErrorCodes.ForeignKeyViolation);
+        (await invalidFk.Should().ThrowAsync<PostgresException>()).Which.SqlState
+            .Should()
+            .Be(PostgresErrorCodes.ForeignKeyViolation);
         using var client = await fixture.LoginAsync(second);
-        (await client.GetAsync($"/api/organizations/{first.OrganizationId}/drafts/{draft.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await client.GetAsync($"/api/organizations/{second.OrganizationId}/media/{media.Id}/content")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await client.GetAsync($"/api/organizations/{second.OrganizationId}/exports/{export.Id}/download")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await client.GetAsync($"/api/organizations/{first.OrganizationId}/drafts/{draft.Id}")).StatusCode
+            .Should()
+            .Be(HttpStatusCode.NotFound);
+        (await client.GetAsync($"/api/organizations/{second.OrganizationId}/media/{media.Id}/content")).StatusCode
+            .Should()
+            .Be(HttpStatusCode.NotFound);
+        (await client.GetAsync($"/api/organizations/{second.OrganizationId}/exports/{export.Id}/download")).StatusCode
+            .Should()
+            .Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task Roles_ShouldEnforceLiveMembership_WithoutFakeHttpPrincipals()
+    public async Task Roles_ShouldEnforceLiveMembership()
     {
         var owner = await fixture.CreateOwnerAsync();
         var (input, _, _) = await CreateInputAsync(owner);
@@ -105,21 +119,36 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
         using var client = await fixture.LoginAsync(owner);
         var path = $"/api/organizations/{owner.OrganizationId}";
         await fixture.SetRoleAsync(owner, "editor");
-        (await client.PostAsJsonAsync($"{path}/drafts/{draft.Id}/request-review", new { expectedRevision = 1 })).StatusCode.Should().Be(HttpStatusCode.OK);
-        (await client.PostAsJsonAsync($"{path}/drafts/{draft.Id}/approve", new { expectedRevision = 1 })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-        (await client.PostAsJsonAsync($"{path}/brands", new { name = "Denied", timeZone = "UTC" })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await client.PostAsJsonAsync(
+            $"{path}/drafts/{draft.Id}/request-review",
+            new { expectedRevision = 1 })).StatusCode
+            .Should()
+            .Be(HttpStatusCode.OK);
+        (await client.PostAsJsonAsync($"{path}/drafts/{draft.Id}/approve", new { expectedRevision = 1 })).StatusCode
+            .Should()
+            .Be(HttpStatusCode.Forbidden);
+        (await client.PostAsJsonAsync($"{path}/brands", new { name = "Denied", timeZone = "UTC" })).StatusCode
+            .Should()
+            .Be(HttpStatusCode.Forbidden);
         await fixture.SetRoleAsync(owner, "viewer");
         (await client.GetAsync($"{path}/drafts/{draft.Id}")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await client.PutAsJsonAsync($"{path}/drafts/{draft.Id}", new
         {
-            input.BrandId, input.Title, input.Caption, input.Language, input.Destination, input.SourceNotes, input.MediaIds, expectedRevision = 1
+            input.BrandId,
+            input.Title,
+            input.Caption,
+            input.Language,
+            input.Destination,
+            input.SourceNotes,
+            input.MediaIds,
+            expectedRevision = 1
         })).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         await fixture.SetRoleAsync(owner, null);
         (await client.GetAsync($"{path}/drafts/{draft.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
-    public async Task ConcurrentSaves_ShouldKeepOneWinner_AndHistoricalBrandAndContent()
+    public async Task ConcurrentSaves_ShouldKeepOneWinnerAndItsHistoricalBrandAndContent()
     {
         var owner = await fixture.CreateOwnerAsync();
         var (input, _, _) = await CreateInputAsync(owner);
@@ -139,7 +168,8 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
         current.RequestedReviewRevision.Should().BeNull();
         current.BrandId.Should().Be(nextBrand.Id);
         await using var history = fixture.DataSource.CreateCommand(
-            "SELECT brand_id,snapshot->>'brandId',snapshot->>'caption' FROM preparation.draft_revisions WHERE organization_id=$1 AND draft_id=$2 AND revision=1");
+            "SELECT brand_id,snapshot->>'brandId',snapshot->>'caption' FROM preparation.draft_revisions "
+                + "WHERE organization_id=$1 AND draft_id=$2 AND revision=1");
         history.Parameters.AddWithValue(owner.OrganizationId);
         history.Parameters.AddWithValue(draft.Id);
         await using var reader = await history.ExecuteReaderAsync();
@@ -160,13 +190,16 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
             await fixture.Service.ReviewAsync(owner, draft.Id, 1, ReviewAction.Request, null, Token);
             await Task.WhenAll(
                 CaptureAsync(() => fixture.Service.ReviewAsync(owner, draft.Id, 1, ReviewAction.Approve, null, Token)),
-                CaptureAsync(() => fixture.Service.SaveDraftAsync(owner, draft.Id, 1, input with { Caption = "Changed" }, Token)));
+                CaptureAsync(() =>
+                    fixture.Service.SaveDraftAsync(owner, draft.Id, 1, input with { Caption = "Changed" }, Token)));
             var current = await fixture.Service.GetDraftAsync(owner, draft.Id, Token);
             current.Revision.Should().Be(2);
             current.Approval.Should().BeNull();
             current = await ApproveAsync(owner, current);
-            var exporting = CaptureAsync(() => fixture.Service.CreateExportAsync(owner, draft.Id, 2, Guid.NewGuid(), Token));
-            var revoking = CaptureAsync(() => fixture.Service.ReviewAsync(owner, draft.Id, 2, ReviewAction.Revoke, "Concurrent revocation", Token));
+            var exporting = CaptureAsync(() =>
+                fixture.Service.CreateExportAsync(owner, draft.Id, 2, Guid.NewGuid(), Token));
+            var revoking = CaptureAsync(() =>
+                fixture.Service.ReviewAsync(owner, draft.Id, 2, ReviewAction.Revoke, "Concurrent revocation", Token));
             await Task.WhenAll(exporting, revoking);
             var exported = await exporting;
             if (exported.Error is null)
@@ -178,12 +211,14 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
             else exported.Error!.Error.Type.Should().Be(AppErrorType.Conflict);
             (await fixture.Service.GetDraftAsync(owner, draft.Id, Token)).Approval.Should().BeNull();
             var afterRevocation = () => fixture.Service.CreateExportAsync(owner, draft.Id, 2, Guid.NewGuid(), Token);
-            (await afterRevocation.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Conflict);
+            (await afterRevocation.Should().ThrowAsync<AppException>()).Which.Error.Type
+                .Should()
+                .Be(AppErrorType.Conflict);
         }
     }
 
     [Fact]
-    public async Task ExportKeys_ShouldBeUniqueAcrossDrafts_AndEmptyMediaMustStayExplicit()
+    public async Task ExportKeys_ShouldBeUniqueAcrossDraftsAndKeepEmptyMediaExplicit()
     {
         var owner = await fixture.CreateOwnerAsync();
         var (input, _, _) = await CreateInputAsync(owner);
@@ -212,7 +247,7 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
     }
 
     [Fact]
-    public async Task Upload_ShouldValidateRealMultipartBytes_AndReturnPrivateExactContent()
+    public async Task Upload_ShouldValidateRealMultipartBytesAndReturnPrivateExactContent()
     {
         var owner = await fixture.CreateOwnerAsync();
         using var client = await fixture.LoginAsync(owner);
@@ -238,7 +273,7 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Upload_ShouldRejectTruncatedMultipart_WithoutPersistingMedia(bool truncateImage)
+    public async Task Upload_ShouldReturn400WithoutPersistingMedia_WhenTheMultipartIsTruncated(bool truncateImage)
     {
         var owner = await fixture.CreateOwnerAsync();
         using var client = await fixture.LoginAsync(owner);
@@ -257,7 +292,11 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
         response.Headers.CacheControl!.NoStore.Should().BeTrue();
-        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("Validation");
+        (await response.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("code")
+            .GetString()
+            .Should()
+            .Be("Validation");
         (await fixture.Service.GetMediaAsync(owner, Token)).Should().BeEmpty();
     }
 
@@ -265,9 +304,20 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
     {
         var brand = await fixture.Service.CreateBrandAsync(owner, "Fixture stationery", "UTC", Token);
         var bytes = ImageBytes();
-        var media = await fixture.Service.CreateMediaAsync(owner, "fixture.png", "Generated test pixels; not product facts", bytes, Token);
-        var input = new DraftInput(brand.Id, "Operator-authored title", "Exact caption\nSecond line: O‘zbekcha.", "uz-Latn",
-            "manual", "User-supplied reference; no fetched facts.", [media.Id]);
+        var media = await fixture.Service.CreateMediaAsync(
+            owner,
+            "fixture.png",
+            "Generated test pixels; not product facts",
+            bytes,
+            Token);
+        var input = new DraftInput(
+            brand.Id,
+            "Operator-authored title",
+            "Exact caption\nSecond line: O‘zbekcha.",
+            "uz-Latn",
+            "manual",
+            "User-supplied reference; no fetched facts.",
+            [media.Id]);
         return (input, media, bytes);
     }
 

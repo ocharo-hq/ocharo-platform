@@ -12,7 +12,9 @@ public sealed class PublicCatalogueGetQueryHandler(ICommerceRepository repositor
     : IQueryHandler<PublicCatalogueGetQuery, AppResult<object>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<object>> HandleAsync(PublicCatalogueGetQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<object>> HandleAsync(
+        PublicCatalogueGetQuery request,
+        CancellationToken cancellationToken)
     {
         if (await repository.PublicAsync(request.Slug, request.Release, cancellationToken) is not { } release)
             return AppResult<object>.Fail(DeskErrors.NotFound("The brand was not found."));

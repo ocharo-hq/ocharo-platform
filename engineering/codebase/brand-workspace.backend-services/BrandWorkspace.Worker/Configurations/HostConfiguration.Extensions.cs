@@ -113,7 +113,11 @@ public static partial class HostConfiguration
     public static async Task<int> RunCommandOrHostAsync(this IHost host, string[] args)
     {
         var repository = host.Services.GetRequiredService<IFoundationRepository>();
-        if (args.Length == 0) { await host.RunAsync(); return 0; }
+        if (args.Length == 0)
+        {
+            await host.RunAsync();
+            return 0;
+        }
         if (args is ["--enqueue-probe"])
         {
             var probeId = Guid.NewGuid();

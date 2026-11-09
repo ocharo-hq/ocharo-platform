@@ -48,8 +48,24 @@ public sealed partial class EventValidationService
         string priority = Priority(string.IsNullOrWhiteSpace(fields.Priority) ? "normal" : fields.Priority);
         string notes = Text(fields.Notes, "Notes", 8000);
         return new ShowcaseEventInput(
-            title, organizer, scope, format, country, city, venue, startsOn, endsOn, precision, deadline, participation, cost,
-            website, sourceUrl, status, priority, notes);
+            title,
+            organizer,
+            scope,
+            format,
+            country,
+            city,
+            venue,
+            startsOn,
+            endsOn,
+            precision,
+            deadline,
+            participation,
+            cost,
+            website,
+            sourceUrl,
+            status,
+            priority,
+            notes);
     }
 
     public ShowcaseEventFilter Filter(
@@ -77,13 +93,17 @@ public sealed partial class EventValidationService
     public string Format(string? value)
     {
         string format = value?.Trim() ?? "";
-        return Formats.Contains(format) ? format : throw Invalid("Choose an event format: " + string.Join(", ", Formats) + ".");
+        return Formats.Contains(format)
+            ? format
+            : throw Invalid("Choose an event format: " + string.Join(", ", Formats) + ".");
     }
 
     public string Status(string? value)
     {
         string status = value?.Trim() ?? "";
-        return Statuses.Contains(status) ? status : throw Invalid("Choose an event status: " + string.Join(", ", Statuses) + ".");
+        return Statuses.Contains(status)
+            ? status
+            : throw Invalid("Choose an event status: " + string.Join(", ", Statuses) + ".");
     }
 
     public string DatePrecision(string? value)
@@ -137,9 +157,15 @@ public sealed partial class EventValidationService
     private static DateOnly? Date(string? value, string field)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
-        if (!DateOnly.TryParseExact(value.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date))
+        if (!DateOnly.TryParseExact(
+            value.Trim(),
+            "yyyy-MM-dd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out DateOnly date))
             throw Invalid($"{field} must be a date such as 2026-10-08.");
-        if (date < EarliestDate || date > LatestDate) throw Invalid($"{field} must be between 2000-01-01 and 2100-12-31.");
+        if (date < EarliestDate || date > LatestDate)
+            throw Invalid($"{field} must be between 2000-01-01 and 2100-12-31.");
         return date;
     }
 
@@ -147,7 +173,9 @@ public sealed partial class EventValidationService
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
         string country = value.Trim().ToUpperInvariant();
-        return CountryPattern().IsMatch(country) ? country : throw Invalid("Use a two-letter country code such as UZ or FR.");
+        return CountryPattern().IsMatch(country)
+            ? country
+            : throw Invalid("Use a two-letter country code such as UZ or FR.");
     }
 
     private static string? Url(string? value, string field)

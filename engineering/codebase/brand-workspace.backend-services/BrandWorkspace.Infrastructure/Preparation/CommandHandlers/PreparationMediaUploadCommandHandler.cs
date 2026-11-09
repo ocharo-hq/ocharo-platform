@@ -11,9 +11,16 @@ public sealed class PreparationMediaUploadCommandHandler(PreparationService serv
     : ICommandHandler<PreparationMediaUploadCommand, AppResult<MediaAsset>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<MediaAsset>> HandleAsync(PreparationMediaUploadCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<MediaAsset>> HandleAsync(
+        PreparationMediaUploadCommand request,
+        CancellationToken cancellationToken)
     {
-        var asset = await service.CreateMediaAsync(request.Access, request.FileName, request.Provenance, request.Bytes, cancellationToken);
+        var asset = await service.CreateMediaAsync(
+            request.Access,
+            request.FileName,
+            request.Provenance,
+            request.Bytes,
+            cancellationToken);
         return AppResult<MediaAsset>.Ok(asset);
     }
 }

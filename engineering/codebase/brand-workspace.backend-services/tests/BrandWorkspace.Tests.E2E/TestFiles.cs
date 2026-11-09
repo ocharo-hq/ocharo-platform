@@ -10,9 +10,11 @@ using WoW.Two.Sdk.Beta.Be.Files.Urls;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>An in-memory Files tenant, copied from Catalogue's and Marketing's tests: uploads keep their bytes, idempotency
-/// key, app and visibility; references attach and list; links name the file, the asked width and disposition; reads serve
-/// the kept bytes. An <see cref="Outage"/> fails every call, as an unreachable Files does.</summary>
+/// <summary>
+/// An in-memory Files tenant, copied from Catalogue's and Marketing's tests: uploads keep their bytes, idempotency key,
+/// app and visibility; references attach and list; links name the file, the asked width and disposition; reads serve
+/// the kept bytes. An <see cref="Outage"/> fails every call, as an unreachable Files does.
+/// </summary>
 public sealed class TestFiles : IFileUploadsBroker, IFileStoreBroker, IFileReferencesBroker, IFileUrlsBroker
 {
     /// <summary>Holds the Files root the tests configure.</summary>
@@ -68,7 +70,10 @@ public sealed class TestFiles : IFileUploadsBroker, IFileStoreBroker, IFileRefer
         return file;
     }
 
-    public async Task<Result<FileModel>> UploadAsync(Stream content, UploadSpec spec, CancellationToken cancellationToken = default)
+    public async Task<Result<FileModel>> UploadAsync(
+        Stream content,
+        UploadSpec spec,
+        CancellationToken cancellationToken = default)
     {
         if (Outage is { } outage)
             return Result<FileModel>.Fail(outage);
@@ -76,7 +81,12 @@ public sealed class TestFiles : IFileUploadsBroker, IFileStoreBroker, IFileRefer
             return Result<FileModel>.Ok(files[first]);
         using var buffer = new MemoryStream();
         await content.CopyToAsync(buffer, cancellationToken);
-        var file = NewModel(buffer.ToArray(), spec.Name, spec.AppId, spec.ContentType ?? "application/octet-stream", spec.Visibility);
+        var file = NewModel(
+            buffer.ToArray(),
+            spec.Name,
+            spec.AppId,
+            spec.ContentType ?? "application/octet-stream",
+            spec.Visibility);
         files[file.Id] = file;
         contents[file.Id] = buffer.ToArray();
         Interlocked.Increment(ref uploads);
@@ -96,15 +106,26 @@ public sealed class TestFiles : IFileUploadsBroker, IFileStoreBroker, IFileRefer
         return Task.FromResult(Result.Ok());
     }
 
-    public Task<Result<IReadOnlyList<FileReference>>> ListAsync(FileId id, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Outage is { } outage ? Result<IReadOnlyList<FileReference>>.Fail(outage)
+    public Task<Result<IReadOnlyList<FileReference>>> ListAsync(
+        FileId id,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Outage is { } outage ? Result<IReadOnlyList<FileReference>>.Fail(outage)
             : Result<IReadOnlyList<FileReference>>.Ok(references.TryGetValue(id, out var bag) ? bag.ToList() : []));
+    }
 
-    public Task<Result<SignedFileUrl>> IssueAsync(FileId id, UrlSpec spec, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Outage is { } outage ? Result<SignedFileUrl>.Fail(outage)
+    public Task<Result<SignedFileUrl>> IssueAsync(
+        FileId id,
+        UrlSpec spec,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(Outage is { } outage ? Result<SignedFileUrl>.Fail(outage)
             : files.ContainsKey(id)
-                ? Result<SignedFileUrl>.Ok(new SignedFileUrl(Link(id, spec.Width, spec.Disposition), DateTimeOffset.UtcNow + spec.Lifetime))
+                ? Result<SignedFileUrl>.Ok(new SignedFileUrl(
+                    Link(id, spec.Width, spec.Disposition),
+                    DateTimeOffset.UtcNow + spec.Lifetime))
                 : Result<SignedFileUrl>.Fail(AppErrorFactory.NotFound("No such file.")));
+    }
 
     public Task<Result<FileModel>> GetAsync(FileId id, CancellationToken cancellationToken = default) =>
         Task.FromResult(files.TryGetValue(id, out var file)
@@ -113,36 +134,77 @@ public sealed class TestFiles : IFileUploadsBroker, IFileStoreBroker, IFileRefer
 
     public Task<Result<FilePage>> ListAsync(FileQuery query, CancellationToken cancellationToken = default) =>
         Task.FromResult(Outage is { } outage ? Result<FilePage>.Fail(outage)
-            : Result<FilePage>.Ok(new FilePage(files.Values.Where(file => query.AppId is null || file.AppId == query.AppId).ToList(), null)));
+            : Result<FilePage>.Ok(new FilePage(
+                files.Values.Where(file => query.AppId is null || file.AppId == query.AppId).ToList(),
+                null)));
 
-    public Task<Result<FileContent>> OpenReadAsync(FileId id, ByteRange? range = null, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Outage is { } outage ? Result<FileContent>.Fail(outage)
-            : files.TryGetValue(id, out var file) && contents.TryGetValue(id, out var bytes)
-                ? Result<FileContent>.Ok(new FileContent(new MemoryStream(bytes, false), file.ContentType, bytes.LongLength, bytes.LongLength, null))
-                : Result<FileContent>.Fail(AppErrorFactory.NotFound("No such file.")));
-
-    public Task<Result<FileModel>> UpdateAsync(FileId id, FilePatch patch, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-    public Task<Result<FileModel>> DeleteAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-    public Task<Result<FileModel>> RestoreAsync(FileId id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-    public Task<Result> DetachAsync(FileId id, FileReference reference, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-    public Task<Result<Uri>> GetPublicUrlAsync(FileId id, int? width = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
-
-    private static FileModel NewModel(byte[] bytes, string name, string? appId, string contentType, FileVisibility visibility) => new()
+    public Task<Result<FileContent>> OpenReadAsync(
+        FileId id,
+        ByteRange? range = null,
+        CancellationToken cancellationToken = default)
     {
-        Id = FileId.New(),
-        TenantId = "ocharo",
-        AppId = appId,
-        Name = name,
-        ContentType = contentType,
-        Kind = contentType.StartsWith("image/", StringComparison.Ordinal) ? FileKind.Image : FileKind.Document,
-        Size = bytes.LongLength,
-        Sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes)),
-        Visibility = visibility,
-        State = FileState.Ready,
-        CreatedAtUtc = DateTimeOffset.UtcNow,
-    };
+        return Task.FromResult(Outage is { } outage ? Result<FileContent>.Fail(outage)
+            : files.TryGetValue(id, out var file) && contents.TryGetValue(id, out var bytes)
+                ? Result<FileContent>.Ok(new FileContent(
+                    new MemoryStream(bytes, false),
+                    file.ContentType,
+                    bytes.LongLength,
+                    bytes.LongLength,
+                    null))
+                : Result<FileContent>.Fail(AppErrorFactory.NotFound("No such file.")));
+    }
+
+    public Task<Result<FileModel>> UpdateAsync(
+        FileId id,
+        FilePatch patch,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException();
+    }
+
+    public Task<Result<FileModel>> DeleteAsync(FileId id, CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException();
+    }
+
+    public Task<Result<FileModel>> RestoreAsync(FileId id, CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException();
+    }
+
+    public Task<Result> DetachAsync(FileId id, FileReference reference, CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException();
+    }
+
+    public Task<Result<Uri>> GetPublicUrlAsync(
+        FileId id,
+        int? width = null,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotSupportedException();
+    }
+
+    private static FileModel NewModel(
+        byte[] bytes,
+        string name,
+        string? appId,
+        string contentType,
+        FileVisibility visibility)
+    {
+        return new()
+        {
+            Id = FileId.New(),
+            TenantId = "ocharo",
+            AppId = appId,
+            Name = name,
+            ContentType = contentType,
+            Kind = contentType.StartsWith("image/", StringComparison.Ordinal) ? FileKind.Image : FileKind.Document,
+            Size = bytes.LongLength,
+            Sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes)),
+            Visibility = visibility,
+            State = FileState.Ready,
+            CreatedAtUtc = DateTimeOffset.UtcNow,
+        };
+    }
 }

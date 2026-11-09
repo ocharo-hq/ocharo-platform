@@ -16,7 +16,9 @@ using WoW.Two.Sdk.Beta.Be.Web.ExceptionHandling.Extensions;
 
 namespace BrandWorkspace.Api.Sourcing.Controllers;
 
-/// <summary>Exposes an organization's suppliers, their people and routes, and shared supplier media over HTTP.</summary>
+/// <summary>
+/// Exposes an organization's suppliers, their people and routes, and shared supplier media over HTTP.
+/// </summary>
 [ApiController]
 [Route("api/organizations/{organizationId:guid}/sourcing")]
 [Authorize]
@@ -25,8 +27,12 @@ public sealed class SourcingController(ISender sender) : ControllerBase
 {
     /// <summary>Gets the suppliers matching the search, a page at a time.</summary>
     [HttpGet("suppliers")]
-    public async Task<IActionResult> GetSuppliers([FromQuery] string? query, [FromQuery] string? stage, [FromQuery] int? limit,
-        [FromQuery] int? offset, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetSuppliers(
+        [FromQuery] string? query,
+        [FromQuery] string? stage,
+        [FromQuery] int? limit,
+        [FromQuery] int? offset,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new SupplierGetAllQuery
         {
@@ -43,7 +49,9 @@ public sealed class SourcingController(ISender sender) : ControllerBase
 
     /// <summary>Records a supplier.</summary>
     [HttpPost("suppliers")]
-    public async Task<IActionResult> CreateSupplier([FromBody] SupplierRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateSupplier(
+        [FromBody] SupplierRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new SupplierCreateCommand
         {
@@ -55,7 +63,9 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             Website = request.Website,
             Notes = request.Notes,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<Supplier>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<Supplier>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Gets one supplier with its people and routes.</summary>
@@ -63,8 +73,11 @@ public sealed class SourcingController(ISender sender) : ControllerBase
     public async Task<IActionResult> GetSupplier(Guid supplierId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new SupplierGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), SupplierId = supplierId }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<Supplier>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+            new SupplierGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), SupplierId = supplierId },
+            cancellationToken);
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<Supplier>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Replaces a supplier at the revision the operator edited.</summary>
@@ -84,12 +97,17 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             Website = request.Website,
             Notes = request.Notes,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<Supplier>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<Supplier>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Records a person who speaks for a supplier.</summary>
     [HttpPost("suppliers/{supplierId:guid}/people")]
-    public async Task<IActionResult> CreatePerson(Guid supplierId, [FromBody] PersonRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreatePerson(
+        Guid supplierId,
+        [FromBody] PersonRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new PersonCreateCommand
         {
@@ -99,7 +117,9 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             Role = request.Role,
             Notes = request.Notes,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<SupplierPerson>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<SupplierPerson>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Replaces a person at the revision the operator edited.</summary>
@@ -116,12 +136,17 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             Role = request.Role,
             Notes = request.Notes,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<SupplierPerson>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<SupplierPerson>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Deletes a person at the revision the operator saw.</summary>
     [HttpDelete("people/{personId:guid}")]
-    public async Task<IActionResult> DeletePerson(Guid personId, [FromQuery] int expectedRevision, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeletePerson(
+        Guid personId,
+        [FromQuery] int expectedRevision,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new PersonDeleteCommand
         {
@@ -136,7 +161,10 @@ public sealed class SourcingController(ISender sender) : ControllerBase
 
     /// <summary>Records a route that reaches a supplier.</summary>
     [HttpPost("suppliers/{supplierId:guid}/routes")]
-    public async Task<IActionResult> CreateRoute(Guid supplierId, [FromBody] RouteRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CreateRoute(
+        Guid supplierId,
+        [FromBody] RouteRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new RouteCreateCommand
         {
@@ -151,12 +179,17 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             PersonId = request.PersonId,
             Notes = request.Notes,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<ContactRoute>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<ContactRoute>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Replaces a route at the revision the operator edited.</summary>
     [HttpPut("routes/{routeId:guid}")]
-    public async Task<IActionResult> UpdateRoute(Guid routeId, [FromBody] UpdateRouteRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateRoute(
+        Guid routeId,
+        [FromBody] UpdateRouteRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new RouteUpdateCommand
         {
@@ -172,12 +205,17 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             PersonId = request.PersonId,
             Notes = request.Notes,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<ContactRoute>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<ContactRoute>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Deletes a route at the revision the operator saw.</summary>
     [HttpDelete("routes/{routeId:guid}")]
-    public async Task<IActionResult> DeleteRoute(Guid routeId, [FromQuery] int expectedRevision, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteRoute(
+        Guid routeId,
+        [FromQuery] int expectedRevision,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new RouteDeleteCommand
         {
@@ -192,8 +230,12 @@ public sealed class SourcingController(ISender sender) : ControllerBase
 
     /// <summary>Gets a supplier's media or the inbox, a page at a time.</summary>
     [HttpGet("media")]
-    public async Task<IActionResult> GetMedia([FromQuery] Guid? supplierId, [FromQuery] bool? unassigned, [FromQuery] int? limit,
-        [FromQuery] int? offset, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetMedia(
+        [FromQuery] Guid? supplierId,
+        [FromQuery] bool? unassigned,
+        [FromQuery] int? limit,
+        [FromQuery] int? offset,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new SourcingMediaGetAllQuery
         {
@@ -213,8 +255,11 @@ public sealed class SourcingController(ISender sender) : ControllerBase
     public async Task<IActionResult> GetMediaSummary(CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new SourcingMediaTotalsGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext) }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<SourcingMediaTotals>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+            new SourcingMediaTotalsGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext) },
+            cancellationToken);
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<SourcingMediaTotals>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Stores one supplier file, sent as multipart form data.</summary>
@@ -234,12 +279,16 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             Capture = upload.Capture,
             Caption = upload.Caption,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<SourcingMediaUpload>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<SourcingMediaUpload>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Moves media to a supplier, or back to the inbox.</summary>
     [HttpPost("media/assign")]
-    public async Task<IActionResult> AssignMedia([FromBody] AssignMediaRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> AssignMedia(
+        [FromBody] AssignMediaRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new SourcingMediaAssignCommand
         {
@@ -254,7 +303,10 @@ public sealed class SourcingController(ISender sender) : ControllerBase
 
     /// <summary>Replaces a media item's supplier, capture and caption at the revision the operator edited.</summary>
     [HttpPut("media/{mediaId:guid}")]
-    public async Task<IActionResult> UpdateMedia(Guid mediaId, [FromBody] UpdateMediaRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateMedia(
+        Guid mediaId,
+        [FromBody] UpdateMediaRequest request,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new SourcingMediaUpdateCommand
         {
@@ -265,12 +317,17 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             Capture = request.Capture,
             Caption = request.Caption,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<SourcingMedia>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<SourcingMedia>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Deletes a media item at the revision the operator saw.</summary>
     [HttpDelete("media/{mediaId:guid}")]
-    public async Task<IActionResult> DeleteMedia(Guid mediaId, [FromQuery] int expectedRevision, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteMedia(
+        Guid mediaId,
+        [FromQuery] int expectedRevision,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new SourcingMediaDeleteCommand
         {
@@ -283,23 +340,37 @@ public sealed class SourcingController(ISender sender) : ControllerBase
             fail => this.ToProblem(fail.Error));
     }
 
-    /// <summary>Opens a media item's original: a redirect to a WoW2 Files link once Files holds it, else its bytes; the desk
-    /// loads it with img, video and plain links, membership still decides, and the answer stays no-store.</summary>
+    /// <summary>
+    /// Opens a media item's original: a redirect to a WoW2 Files link once Files holds it, else its bytes; the desk
+    /// loads it with img, video and plain links, membership still decides, and the answer stays no-store.
+    /// </summary>
     [HttpGet("media/{mediaId:guid}/content")]
     public async Task<IActionResult> OpenMedia(Guid mediaId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new SourcingMediaOpenQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), MediaId = mediaId }, cancellationToken);
-        return result.Match<IActionResult>(ok => Stored(ok.Data, enableRangeProcessing: true), fail => this.ToProblem(fail.Error));
+            new SourcingMediaOpenQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), MediaId = mediaId },
+            cancellationToken);
+        return result.Match<IActionResult>(
+            ok => Stored(ok.Data, enableRangeProcessing: true),
+            fail => this.ToProblem(fail.Error));
     }
 
-    /// <summary>Opens a media item's thumbnail: a redirect to the Files variant once Files holds the original, else its bytes.</summary>
+    /// <summary>
+    /// Opens a media item's thumbnail: a redirect to the Files variant once Files holds the original, else its bytes.
+    /// </summary>
     [HttpGet("media/{mediaId:guid}/thumbnail")]
     public async Task<IActionResult> OpenThumbnail(Guid mediaId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new SourcingThumbnailOpenQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), MediaId = mediaId }, cancellationToken);
-        return result.Match<IActionResult>(ok => Stored(ok.Data, enableRangeProcessing: false), fail => this.ToProblem(fail.Error));
+            new SourcingThumbnailOpenQuery
+            {
+                Access = OrganizationAccessFilter.GetAccess(HttpContext),
+                MediaId = mediaId,
+            },
+            cancellationToken);
+        return result.Match<IActionResult>(
+            ok => Stored(ok.Data, enableRangeProcessing: false),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Answers stored content: a redirect to its Files link, else its bytes.</summary>

@@ -5,7 +5,9 @@ using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
 namespace BrandWorkspace.Application.Sourcing.Commands;
 
-/// <summary>Represents a command to replace a media item's supplier, capture and caption at an expected revision.</summary>
+/// <summary>
+/// Represents a command to replace a media item's supplier, capture and caption at an expected revision.
+/// </summary>
 public sealed record SourcingMediaUpdateCommand : ICommand<AppResult<SourcingMedia>>
 {
     /// <summary>Gets the caller's resolved organization membership.</summary>

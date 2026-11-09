@@ -1,10 +1,11 @@
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 using System.Text.Json;
 using AwesomeAssertions;
 using BrandWorkspace.Application.Commerce.Models;
 using BrandWorkspace.Application.Commerce.Repositories;
 using BrandWorkspace.Infrastructure.Commerce.Services;
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 using BrandWorkspace.Persistence.Commerce.Repositories;
 using BrandWorkspace.Persistence.Commerce.Serializers;
 using OcharoBrand.Domain.Brand;
@@ -18,36 +19,75 @@ public sealed class CommerceSerializationTests
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
-    public void CreativeInput_PreservesLocalAndSavedRevisionEvidence(int revision)
+    public void CreativeInput_ShouldKeepTheRevision_WhenItIsLocalOrSaved(int revision)
     {
         var input = Input(revision);
         CommerceRules.ValidateCreativeInput(input);
         input.Source.Revision.Should().Be(revision);
     }
     [Fact]
-    public void CreativeInput_RejectsNegativeRevision()
+    public void CreativeInput_ShouldThrow_WhenTheRevisionIsNegative()
     {
         var validate = () => CommerceRules.ValidateCreativeInput(Input(-1));
         validate.Should().Throw<AppException>();
     }
-    private static CreativeImportInput Input(int revision) => new(Guid.NewGuid(),null,
-        new("ocharo-studio","workspace","look",revision),[],[],new(Guid.NewGuid(),new string('a',64),"image/png"),null);
+    private static CreativeImportInput Input(int revision) => new(
+        Guid.NewGuid(),
+        null,
+        new("ocharo-studio", "workspace", "look", revision),
+        [],
+        [],
+        new(Guid.NewGuid(), new string('a', 64), "image/png"),
+        null);
 
     [Fact]
-    public void Commerce_RoundtripPreservesSizeIdentifiersForPublication()
+    public void CommerceSnapshot_ShouldKeepSizeIdentifiers_WhenRoundTripped()
     {
-        var product = new ProductDocument { Id="garment-v01",GarmentType="garment",VariantCode="v01",Status="active",Sizes=["M","XL"],
-            Stock=new Dictionary<string,int>{{"M",7},{"XL",2}},Locales=new(ProductLocale.Empty(),ProductLocale.Empty(),new("approved","Garment",null,null,null)) };
-        var snapshot = new CommerceSnapshot { Slug="brand",Identity=new BrandIdentity{Name="Brand"},Products=[new(product)] };
-        var stored = JsonSerializer.Serialize(snapshot,CommerceJson.Options);
-        var restored = JsonSerializer.Deserialize<CommerceSnapshot>(stored,CommerceJson.Options)!;
-        restored.Products[0].Document.Stock!.Keys.Should().BeEquivalentTo("M","XL");
+        var product = new ProductDocument
+        {
+            Id = "garment-v01",
+            GarmentType = "garment",
+            VariantCode = "v01",
+            Status = "active",
+            Sizes = ["M", "XL"],
+            Stock = new Dictionary<string, int> { { "M", 7 }, { "XL", 2 } },
+            Locales = new(ProductLocale.Empty(), ProductLocale.Empty(), new("approved", "Garment", null, null, null))
+        };
+        var snapshot = new CommerceSnapshot
+        {
+            Slug = "brand",
+            Identity = new BrandIdentity { Name = "Brand" },
+            Products = [new(product)],
+        };
+        var stored = JsonSerializer.Serialize(snapshot, CommerceJson.Options);
+        var restored = JsonSerializer.Deserialize<CommerceSnapshot>(stored, CommerceJson.Options)!;
+        restored.Products[0].Document.Stock!.Keys.Should().BeEquivalentTo("M", "XL");
         var validate = () => CommerceRules.Validate(restored);
         validate.Should().NotThrow();
-        var response = JsonSerializer.SerializeToElement(new {data=new CommerceDraft(Guid.NewGuid(),1,restored,DateTimeOffset.UtcNow)},CommerceJson.Options);
-        response.GetProperty("data").GetProperty("snapshot").GetProperty("products")[0].GetProperty("document").GetProperty("stock").GetProperty("M").GetInt32().Should().Be(7);
-        var release = new CommerceRelease(Guid.NewGuid(),Guid.NewGuid(),1,1,DateTimeOffset.UtcNow,"Reviewed",restored);
-        var projection = JsonSerializer.SerializeToElement(PublicProjection.Catalogue(release,"en"));
+        var response = JsonSerializer.SerializeToElement(
+            new { data = new CommerceDraft(Guid.NewGuid(), 1, restored, DateTimeOffset.UtcNow) },
+            JsonOptionsConstants.Default);
+        response
+            .GetProperty("data")
+            .GetProperty("snapshot")
+            .GetProperty("products")[0]
+            .GetProperty("document")
+            .GetProperty("stock")
+            .GetProperty("M")
+            .GetInt32()
+            .Should()
+            .Be(7);
+        var release = new CommerceRelease(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            1,
+            1,
+            DateTimeOffset.UtcNow,
+            "Reviewed",
+            restored);
+        var projection = JsonSerializer.SerializeToElement(
+            PublicProjection.Catalogue(release, "en"),
+            JsonOptionsConstants.Default);
         projection.GetProperty("products")[0].GetProperty("availability").GetString().Should().Be("in-stock");
     }
 }

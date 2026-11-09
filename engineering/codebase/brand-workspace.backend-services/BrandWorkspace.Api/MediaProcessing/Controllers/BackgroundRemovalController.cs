@@ -13,8 +13,10 @@ using WoW.Two.Sdk.Beta.Be.Web.ExceptionHandling.Extensions;
 namespace BrandWorkspace.Api.MediaProcessing.Controllers;
 
 /// <summary>Exposes private background removal for service callers over HTTP.</summary>
-/// <remarks>Only an Identity service token holding <see cref="MediaProcessingPolicy.Scope"/> opens it: none or a bad one
-/// answers 401, a missing scope 403; Desk's sign-in cookie never does.</remarks>
+/// <remarks>
+/// Only an Identity service token holding <see cref="MediaProcessingPolicy.Scope"/> opens it: none or a bad one answers
+/// 401, a missing scope 403; Desk's sign-in cookie never does.
+/// </remarks>
 [ApiController]
 [Route("api/integrations/media/background-removal")]
 [Authorize(Policy = MediaProcessingPolicy.Name)]
@@ -39,7 +41,8 @@ public sealed class BackgroundRemovalController(ISender sender) : ControllerBase
         var read = await ImageBodyReader.ReadAsync(Request, cancellationToken);
         if (read.IsFailure(out var error, out var bytes))
             return this.ToProblem(error);
-        var result = await sender.SendAsync(new BackgroundRemovalCommand { Bytes = bytes, ContentType = Request.ContentType! },
+        var result = await sender.SendAsync(
+            new BackgroundRemovalCommand { Bytes = bytes, ContentType = Request.ContentType! },
             cancellationToken);
         return result.Match<IActionResult>(
             ok =>

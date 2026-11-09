@@ -16,11 +16,14 @@ public sealed class PublicEditionAssetOpenQueryHandler(ICommerceRepository repos
     private const string Missing = "The catalogue file was not found.";
 
     /// <inheritdoc />
-    public async ValueTask<AppResult<PublicAsset>> HandleAsync(PublicEditionAssetOpenQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<PublicAsset>> HandleAsync(
+        PublicEditionAssetOpenQuery request,
+        CancellationToken cancellationToken)
     {
         if (request.Release is null
             || await repository.PublicAsync(request.Slug, request.Release, cancellationToken) is not { } published
-            || published.Snapshot.CatalogueEditions.SingleOrDefault(edition => edition.Id == request.EditionId && edition.ApprovedForPublication)
+            || published.Snapshot.CatalogueEditions.SingleOrDefault(edition =>
+                edition.Id == request.EditionId && edition.ApprovedForPublication)
                 is not { } edition
             || !CommerceRules.PdfEligible(edition, published.Snapshot))
             return AppResult<PublicAsset>.Fail(DeskErrors.NotFound(Missing));

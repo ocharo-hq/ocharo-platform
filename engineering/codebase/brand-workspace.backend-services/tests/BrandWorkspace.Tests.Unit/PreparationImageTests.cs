@@ -17,7 +17,7 @@ public sealed class PreparationImageTests
     [Theory]
     [InlineData("png", "image/png")]
     [InlineData("jpg", "image/jpeg")]
-    public void Validate_ShouldPreserveBytesAndDigest_ForCompleteImages(string extension, string contentType)
+    public void Validate_ShouldKeepBytesAndDigest_WhenTheImageIsComplete(string extension, string contentType)
     {
         var bytes = ImageBytes(extension);
         var result = _validator.Validate($"image.{extension}", bytes);
@@ -66,7 +66,11 @@ public sealed class PreparationImageTests
     {
         var oversized = new byte[ImageValidationService.MaximumBytes + 1];
         var tooBig = () => _validator.Validate("image.png", oversized);
-        tooBig.Should().Throw<AppException>().Which.Error.Metadata![DeskErrorReasons.Key].Should().Be(DeskErrorReasons.TooLarge);
+        tooBig
+            .Should()
+            .Throw<AppException>().Which.Error.Metadata![DeskErrorReasons.Key]
+            .Should()
+            .Be(DeskErrorReasons.TooLarge);
         using var wide = new SKBitmap(ImageValidationService.MaximumDimension + 1, 1);
         wide.Erase(SKColors.Blue);
         using var wideImage = SKImage.FromBitmap(wide);

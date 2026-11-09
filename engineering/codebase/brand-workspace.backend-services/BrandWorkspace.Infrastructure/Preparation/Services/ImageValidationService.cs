@@ -28,9 +28,14 @@ public sealed class ImageValidationService
             var info = codec.Info;
             if (info.Width <= 0 || info.Height <= 0 || info.Width > MaximumDimension || info.Height > MaximumDimension
                 || (long)info.Width * info.Height > MaximumPixels || codec.FrameCount > 1)
-                throw DeskErrors.Invalid("Use a single image up to 8192 pixels per side and 20 megapixels.").ToException();
+                throw DeskErrors.Invalid("Use a single image up to 8192 pixels per side and 20 megapixels.")
+                    .ToException();
             // Decoding validates compressed pixel data as well as dimensions and format headers.
-            using var decoded = new SKBitmap(new SKImageInfo(info.Width, info.Height, SKColorType.Rgba8888, SKAlphaType.Premul));
+            using var decoded = new SKBitmap(new SKImageInfo(
+                info.Width,
+                info.Height,
+                SKColorType.Rgba8888,
+                SKAlphaType.Premul));
             if (codec.GetPixels(decoded.Info, decoded.GetPixels()) != SKCodecResult.Success)
                 throw DeskErrors.Invalid("The image could not be completely decoded.").ToException();
             if (codec.EncodedFormat == SKEncodedImageFormat.Png)
@@ -41,7 +46,9 @@ public sealed class ImageValidationService
             }
             else if (bytes.Length < 2 || bytes[^2] != 0xff || bytes[^1] != 0xd9)
                 throw DeskErrors.Invalid("The JPEG has an invalid ending.").ToException();
-            return new ValidatedImage(bytes, codec.EncodedFormat == SKEncodedImageFormat.Png ? "image/png" : "image/jpeg",
+            return new ValidatedImage(
+                bytes,
+                codec.EncodedFormat == SKEncodedImageFormat.Png ? "image/png" : "image/jpeg",
                 Convert.ToHexStringLower(SHA256.HashData(bytes)));
         }
     }

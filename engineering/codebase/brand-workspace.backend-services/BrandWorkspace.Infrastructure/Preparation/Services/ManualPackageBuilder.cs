@@ -25,13 +25,22 @@ public sealed class ManualPackageBuilder : IManualPackageBuilder
             var entries = new List<object>();
             foreach (var media in snapshot.Media)
             {
-                if (media.Asset.OrganizationId != snapshot.OrganizationId || media.Bytes.LongLength != media.Asset.ByteLength
+                if (media.Asset.OrganizationId != snapshot.OrganizationId
+                    || media.Bytes.LongLength != media.Asset.ByteLength
                     || Convert.ToHexStringLower(SHA256.HashData(media.Bytes)) != media.Asset.Sha256)
                     throw new InvalidDataException("Stored image identity or integrity does not match its snapshot.");
                 var path = $"media/{media.Asset.Id:D}{(media.Asset.ContentType == "image/png" ? ".png" : ".jpg")}";
                 Write(archive, path, media.Bytes, snapshot.Export.CreatedAtUtc);
-                entries.Add(new { path, media.Asset.Id, media.Asset.FileName, media.Asset.ContentType,
-                    media.Asset.ByteLength, media.Asset.Sha256, media.Asset.Provenance });
+                entries.Add(new
+                {
+                    path,
+                    media.Asset.Id,
+                    media.Asset.FileName,
+                    media.Asset.ContentType,
+                    media.Asset.ByteLength,
+                    media.Asset.Sha256,
+                    media.Asset.Provenance
+                });
             }
             Write(archive, "caption.txt", Encoding.UTF8.GetBytes(snapshot.Draft.Caption), snapshot.Export.CreatedAtUtc);
             var manifest = new
@@ -47,11 +56,22 @@ public sealed class ManualPackageBuilder : IManualPackageBuilder
                 draftId = snapshot.Draft.Id,
                 snapshot.Draft.Revision,
                 snapshot.Draft.Approval,
-                content = new { snapshot.Draft.Title, snapshot.Draft.Caption, snapshot.Draft.Language,
-                    snapshot.Draft.Destination, snapshot.Draft.SourceNotes },
+                content = new
+                {
+                    snapshot.Draft.Title,
+                    snapshot.Draft.Caption,
+                    snapshot.Draft.Language,
+                    snapshot.Draft.Destination,
+                    snapshot.Draft.SourceNotes
+                },
                 media = entries,
-                operatorReceipt = new { reportedBy = (string?)null, reportedPublishedAt = (string?)null,
-                    destinationUrl = (string?)null, note = (string?)null }
+                operatorReceipt = new
+                {
+                    reportedBy = (string?)null,
+                    reportedPublishedAt = (string?)null,
+                    destinationUrl = (string?)null,
+                    note = (string?)null
+                }
             };
             Write(archive, "manifest.json", JsonSerializer.SerializeToUtf8Bytes(manifest, StoredJsonConstants.Default),
                 snapshot.Export.CreatedAtUtc);

@@ -19,7 +19,9 @@ public sealed class OrganizationsController(ISender sender) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
     {
-        Guid? id = Guid.TryParse(User.FindFirstValue(OrganizationClaimTypeConstants.Id), out var parsed) ? parsed : null;
+        Guid? id = Guid.TryParse(User.FindFirstValue(OrganizationClaimTypeConstants.Id), out var parsed)
+            ? parsed
+            : null;
         var result = await sender.SendAsync(new OrganizationGetAllQuery
         {
             OrganizationId = id,

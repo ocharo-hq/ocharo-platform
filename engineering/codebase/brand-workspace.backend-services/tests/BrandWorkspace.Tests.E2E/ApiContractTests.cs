@@ -10,7 +10,6 @@ using Microsoft.Extensions.Hosting;
 using Testcontainers.PostgreSql;
 using WoW.Two.Sdk.Beta.Be.Testing;
 using WoW.Two.Sdk.Beta.Be.Testing.Containers.Postgres;
-using Xunit;
 
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 
@@ -55,7 +54,10 @@ public sealed class ApiContractTests(ApiDatabaseFixture database) : IClassFixtur
         (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         (await client.GetAsync("/api/system/status")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         factory.Services.GetService<IBackgroundJobClient>().Should().BeNull();
-        factory.Services.GetServices<IHostedService>().Should().NotContain(service => service.GetType().Namespace!.StartsWith("Hangfire"));
+        factory.Services
+            .GetServices<IHostedService>()
+            .Should()
+            .NotContain(service => service.GetType().Namespace!.StartsWith("Hangfire"));
     }
 
     [Fact]
@@ -68,11 +70,15 @@ public sealed class ApiContractTests(ApiDatabaseFixture database) : IClassFixtur
         using var response = await client.SendAsync(request);
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("status").GetInt32().Should().Be(400);
+        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement
+            .GetProperty("status")
+            .GetInt32()
+            .Should()
+            .Be(400);
     }
 
     [Fact]
-    public async Task Status_ShouldReportTheInformationalVersion_WhereTheRetiredVersionRouteAnswers404()
+    public async Task StatusRoute_ShouldReportTheInformationalVersion_WhenTheVersionRouteIsRetired()
     {
         await using var factory = CreateFactory(database.Connection);
         using var client = factory.CreateClient();
@@ -88,13 +94,15 @@ public sealed class ApiContractTests(ApiDatabaseFixture database) : IClassFixtur
     }
 
     [Fact]
-    public async Task PublicBrandRoutes_ShouldStayEmbeddableCrossOrigin_WhileEveryOtherResponseStaysSameOrigin()
+    public async Task ResourcePolicy_ShouldBeCrossOriginOnlyOnPublicBrandRoutes()
     {
         await using var factory = CreateFactory(database.Connection);
         using var client = factory.CreateClient();
 
         using var media = await client.GetAsync($"/api/public/v1/brands/no-such-brand/media/{new string('0', 64)}");
-        using var edition = await client.GetAsync($"/api/public/v1/brands/no-such-brand/catalogue-editions/{Guid.NewGuid()}/catalogue.pdf");
+        using var edition =
+            await client.GetAsync(
+                $"/api/public/v1/brands/no-such-brand/catalogue-editions/{Guid.NewGuid()}/catalogue.pdf");
         using var status = await client.GetAsync("/api/system/status");
 
         media.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -119,13 +127,4 @@ public sealed class ApiContractTests(ApiDatabaseFixture database) : IClassFixtur
         factory.Clock.SetUtcNow(DateTimeOffset.UtcNow);
         return factory;
     }
-}
-
-/// <summary>One PostgreSQL database for contract tests; the first API host to start applies its schema.</summary>
-public sealed class ApiDatabaseFixture : IAsyncLifetime
-{
-    private readonly PostgresFixture _database = new(new PostgreSqlBuilder().WithImage("postgres:18-alpine").Build());
-    public string Connection => _database.ConnectionString;
-    public async Task InitializeAsync() => await _database.StartAsync();
-    public async Task DisposeAsync() => await _database.DisposeAsync();
 }

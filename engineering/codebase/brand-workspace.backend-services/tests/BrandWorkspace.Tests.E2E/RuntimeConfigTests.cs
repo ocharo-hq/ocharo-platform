@@ -31,7 +31,11 @@ public sealed class RuntimeConfigTests(ApiDatabaseFixture database) : IClassFixt
     public async Task RuntimeConfig_ShouldServeEveryConfiguredAddressAnonymouslyAndUncached()
     {
         await using var factory = CreateFactory(EveryApp);
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), HandleCookies = false });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+            HandleCookies = false,
+        });
 
         using var response = await client.GetAsync("/api/runtime-config");
 
@@ -60,7 +64,11 @@ public sealed class RuntimeConfigTests(ApiDatabaseFixture database) : IClassFixt
     public async Task RuntimeConfig_ShouldAnswerWithoutASession_WhenTheCookieIsForged(string origin)
     {
         await using var factory = CreateFactory(EveryApp);
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri(origin), HandleCookies = false });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri(origin),
+            HandleCookies = false,
+        });
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/runtime-config");
         request.Headers.Add("Cookie", "__Host-brand-workspace-session=forged");
 
@@ -86,7 +94,10 @@ public sealed class RuntimeConfigTests(ApiDatabaseFixture database) : IClassFixt
             ["OcharoApps:Wear"] = "",
             ["OcharoApps:Blog"] = "javascript:alert(1)",
         });
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+        });
 
         using var response = await client.GetAsync("/api/runtime-config");
 
@@ -101,7 +112,10 @@ public sealed class RuntimeConfigTests(ApiDatabaseFixture database) : IClassFixt
     public async Task RuntimeConfig_ShouldServeAnEmptyObject_WhenNoAddressIsConfigured()
     {
         await using var factory = CreateFactory(new Dictionary<string, string?>());
-        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost") });
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost"),
+        });
 
         using var response = await client.GetAsync("/api/runtime-config");
 
@@ -132,7 +146,12 @@ public sealed class RuntimeConfigTests(ApiDatabaseFixture database) : IClassFixt
     [Fact]
     public void RejectedSettings_ShouldNameConfiguredAddressesItLeavesOut()
     {
-        var settings = new OcharoAppsSettings { Desk = "http://desk.example.com/", Atlas = "https://atlas.example.com/", Wear = " " };
+        var settings = new OcharoAppsSettings
+        {
+            Desk = "http://desk.example.com/",
+            Atlas = "https://atlas.example.com/",
+            Wear = " ",
+        };
 
         settings.RejectedSettings().Should().Equal("OcharoApps:Desk");
     }

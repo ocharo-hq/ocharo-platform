@@ -7,7 +7,9 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Api.Sourcing.Readers;
 
-/// <summary>Reads one supplier file and its single <c>supplierId</c>, <c>capture</c> and <c>caption</c> fields.</summary>
+/// <summary>
+/// Reads one supplier file and its single <c>supplierId</c>, <c>capture</c> and <c>caption</c> fields.
+/// </summary>
 public static class SourcingUploadReader
 {
     /// <summary>Holds the largest upload body: the largest video and room for its fields.</summary>
@@ -31,15 +33,24 @@ public static class SourcingUploadReader
     /// <summary>Reads the upload of <paramref name="request"/>.</summary>
     /// <param name="request">The upload request.</param>
     /// <param name="cancellationToken">The token that cancels the read.</param>
-    public static async Task<Result<SourcingUploadForm>> ReadAsync(HttpRequest request, CancellationToken cancellationToken)
+    public static async Task<Result<SourcingUploadForm>> ReadAsync(
+        HttpRequest request,
+        CancellationToken cancellationToken)
     {
-        var read = await MultipartFormReader.ReadAsync(request, MaximumRequestBytes, Limits, Messages, cancellationToken);
+        var read = await MultipartFormReader.ReadAsync(
+            request,
+            MaximumRequestBytes,
+            Limits,
+            Messages,
+            cancellationToken);
         if (read.IsFailure(out var error, out var form))
             return Result<SourcingUploadForm>.Fail(error);
         if (form.Files.Count != 1 || form.Files[0].Name != "file")
             return Result<SourcingUploadForm>.Fail(DeskErrors.Invalid("Send exactly one file in the 'file' field."));
-        if (form.Keys.Any(key => key is not ("supplierId" or "capture" or "caption")) || form.Any(field => field.Value.Count > 1))
-            return Result<SourcingUploadForm>.Fail(DeskErrors.Invalid("Only single supplierId, capture and caption fields are accepted."));
+        if (form.Keys.Any(key => key is not ("supplierId" or "capture" or "caption"))
+            || form.Any(field => field.Value.Count > 1))
+            return Result<SourcingUploadForm>.Fail(
+                DeskErrors.Invalid("Only single supplierId, capture and caption fields are accepted."));
         Guid? supplierId = null;
         if (!string.IsNullOrWhiteSpace(form["supplierId"]))
         {

@@ -10,8 +10,15 @@ public sealed class NoDeskFiles : IDeskFileStore
 
     public bool IsEnabled => false;
 
-    public Task<StoredFile> StoreAsync(byte[] bytes, string name, string contentType, DeskFileReference reference, CancellationToken token) =>
+    public Task<StoredFile> StoreAsync(
+        byte[] bytes,
+        string name,
+        string contentType,
+        DeskFileReference reference,
+        CancellationToken token)
+    {
         throw Disabled();
+    }
 
     public Task AttachAsync(string fileId, DeskFileReference reference, CancellationToken token) => throw Disabled();
 

@@ -14,15 +14,19 @@ public sealed class BackgroundRemovalCommandHandler(IBackgroundRemovalService wo
     private static readonly SemaphoreSlim Processing = new(1, 1);
 
     /// <inheritdoc />
-    public async ValueTask<AppResult<BackgroundRemovalResult>> HandleAsync(BackgroundRemovalCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<BackgroundRemovalResult>> HandleAsync(
+        BackgroundRemovalCommand request,
+        CancellationToken cancellationToken)
     {
         if (!await Processing.WaitAsync(0, cancellationToken))
-            return AppResult<BackgroundRemovalResult>.Fail(DeskErrors.Busy("Image processing is busy. Try again shortly."));
+            return AppResult<BackgroundRemovalResult>.Fail(
+                DeskErrors.Busy("Image processing is busy. Try again shortly."));
         try
         {
             var input = RasterImageGuard.Validate(request.Bytes);
             if (input.ContentType != request.ContentType)
-                return AppResult<BackgroundRemovalResult>.Fail(DeskErrors.UnsupportedMediaType("Image bytes do not match the declared type."));
+                return AppResult<BackgroundRemovalResult>.Fail(
+                    DeskErrors.UnsupportedMediaType("Image bytes do not match the declared type."));
             return AppResult<BackgroundRemovalResult>.Ok(await worker.RemoveAsync(request.Bytes, cancellationToken));
         }
         catch (BackgroundRemovalException exception)

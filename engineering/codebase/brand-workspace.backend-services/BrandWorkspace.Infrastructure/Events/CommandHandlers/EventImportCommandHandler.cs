@@ -11,7 +11,9 @@ public sealed class EventImportCommandHandler(EventImportService service)
     : ICommandHandler<EventImportCommand, AppResult<EventImportReport>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<EventImportReport>> HandleAsync(EventImportCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<EventImportReport>> HandleAsync(
+        EventImportCommand request,
+        CancellationToken cancellationToken)
     {
         var report = await service.ImportAsync(request.Access, request.BundlePath, request.DryRun, cancellationToken);
         return AppResult<EventImportReport>.Ok(report);

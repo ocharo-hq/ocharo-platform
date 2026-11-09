@@ -35,7 +35,7 @@ public sealed class SourcingValidationTests
     }
 
     [Fact]
-    public void Supplier_ShouldTrimBlankOptionalsToNull_AndUppercaseCountry()
+    public void Supplier_ShouldTrimBlankOptionalsToNullAndUppercaseTheCountry()
     {
         var input = _validation.Supplier("  Kashweave ", null, "in", " ", "", null);
         input.Name.Should().Be("Kashweave");

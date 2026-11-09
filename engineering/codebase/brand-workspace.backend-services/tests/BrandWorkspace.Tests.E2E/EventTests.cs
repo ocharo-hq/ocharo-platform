@@ -13,13 +13,15 @@ using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Exercises the showcase events feed, its summary and bundle import against real PostgreSQL and membership.</summary>
+/// <summary>
+/// Exercises the showcase events feed, its summary and bundle import against real PostgreSQL and membership.
+/// </summary>
 public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixture<PreparationDatabaseFixture>
 {
     private static readonly CancellationToken Token = CancellationToken.None;
 
     [Fact]
-    public async Task Events_ShouldApplyDefaults_PersistRevisions_AndDelete()
+    public async Task Events_ShouldApplyDefaultsPersistRevisionsAndDelete()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
@@ -27,15 +29,40 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
 
         JsonElement created = await DataAsync(await client.PostAsJsonAsync(path, new
         {
-            title = "  Tashkent Fashion Week ", organizer = "Fashion Council", scope = "local", format = "runway", country = "uz",
-            city = "Tashkent", venue = " ", startsOn = "2026-10-20", endsOn = "2026-10-24",
-            participation = "Application package to the organiser", cost = "", website = "https://example.test/tfw",
+            title = "  Tashkent Fashion Week ",
+            organizer = "Fashion Council",
+            scope = "local",
+            format = "runway",
+            country = "uz",
+            city = "Tashkent",
+            venue = " ",
+            startsOn = "2026-10-20",
+            endsOn = "2026-10-24",
+            participation = "Application package to the organiser",
+            cost = "",
+            website = "https://example.test/tfw",
             notes = "Show the shawl line\nBring the catalogue"
         }));
         Guid id = created.GetProperty("id").GetGuid();
         created.EnumerateObject().Select(property => property.Name).Should().Equal(
-            "id", "title", "organizer", "scope", "format", "country", "city", "startsOn", "endsOn", "datePrecision", "participation",
-            "website", "status", "priority", "notes", "revision", "createdAt", "updatedAt");
+            "id",
+            "title",
+            "organizer",
+            "scope",
+            "format",
+            "country",
+            "city",
+            "startsOn",
+            "endsOn",
+            "datePrecision",
+            "participation",
+            "website",
+            "status",
+            "priority",
+            "notes",
+            "revision",
+            "createdAt",
+            "updatedAt");
         created.TryGetProperty("key", out _).Should().BeFalse();
         created.GetProperty("title").GetString().Should().Be("Tashkent Fashion Week");
         created.GetProperty("country").GetString().Should().Be("UZ");
@@ -49,7 +76,9 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         created.GetProperty("priority").GetString().Should().Be("normal");
         created.GetProperty("revision").GetInt32().Should().Be(1);
 
-        JsonElement undated = await DataAsync(await client.PostAsJsonAsync(path, new { title = "Somewhere fair", scope = "international", format = "trade-fair" }));
+        JsonElement undated = await DataAsync(await client.PostAsJsonAsync(
+            path,
+            new { title = "Somewhere fair", scope = "international", format = "trade-fair" }));
         undated.GetProperty("datePrecision").GetString().Should().Be("unknown");
         undated.TryGetProperty("startsOn", out _).Should().BeFalse();
         undated.GetProperty("participation").GetString().Should().BeEmpty();
@@ -59,9 +88,17 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
 
         JsonElement updated = await DataAsync(await client.PutAsJsonAsync($"{path}/{id}", new
         {
-            expectedRevision = 1, title = "Tashkent Fashion Week", scope = "local", format = "runway", country = "UZ",
-            startsOn = "2026-11-01", datePrecision = "month", applicationDeadline = "2026-10-15", cost = "Stand: 1 200 USD",
-            status = "applying", priority = "high"
+            expectedRevision = 1,
+            title = "Tashkent Fashion Week",
+            scope = "local",
+            format = "runway",
+            country = "UZ",
+            startsOn = "2026-11-01",
+            datePrecision = "month",
+            applicationDeadline = "2026-10-15",
+            cost = "Stand: 1 200 USD",
+            status = "applying",
+            priority = "high"
         }));
         updated.GetProperty("revision").GetInt32().Should().Be(2);
         updated.GetProperty("datePrecision").GetString().Should().Be("month");
@@ -73,29 +110,87 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
 
         await ProblemAsync(await client.PutAsJsonAsync($"{path}/{id}", new
         {
-            expectedRevision = 1, title = "Stale", scope = "local", format = "runway"
+            expectedRevision = 1,
+            title = "Stale",
+            scope = "local",
+            format = "runway"
         }), HttpStatusCode.Conflict, "Conflict");
-        await ProblemAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=1"), HttpStatusCode.Conflict, "Conflict");
-        (await DataAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=2"))).GetProperty("id").GetGuid().Should().Be(id);
+        await ProblemAsync(
+            await client.DeleteAsync($"{path}/{id}?expectedRevision=1"),
+            HttpStatusCode.Conflict,
+            "Conflict");
+        (await DataAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=2")))
+            .GetProperty("id")
+            .GetGuid()
+            .Should()
+            .Be(id);
         await ProblemAsync(await client.GetAsync($"{path}/{id}"), HttpStatusCode.NotFound, "NotFound");
-        await ProblemAsync(await client.PutAsJsonAsync($"{path}/{id}", new { expectedRevision = 2, title = "Gone", scope = "local", format = "runway" }),
-            HttpStatusCode.NotFound, "NotFound");
-        await ProblemAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=2"), HttpStatusCode.NotFound, "NotFound");
+        await ProblemAsync(
+            await client.PutAsJsonAsync(
+                $"{path}/{id}",
+                new { expectedRevision = 2, title = "Gone", scope = "local", format = "runway" }),
+            HttpStatusCode.NotFound,
+            "NotFound");
+        await ProblemAsync(
+            await client.DeleteAsync($"{path}/{id}?expectedRevision=2"),
+            HttpStatusCode.NotFound,
+            "NotFound");
     }
 
     [Fact]
-    public async Task List_ShouldOrderByStartThenTitle_AndFilter()
+    public async Task List_ShouldOrderByStartThenTitleAndFilter()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
         string path = Path(owner);
-        await CreateAsync(client, path, new { title = "Bravo Market", scope = "local", format = "market", country = "UZ", city = "Tashkent", startsOn = "2026-11-10", status = "candidate" });
-        await CreateAsync(client, path, new { title = "Alpha Runway", scope = "regional", format = "runway", country = "kz", city = "Almaty", startsOn = "2026-10-01", endsOn = "2026-10-31" });
-        await CreateAsync(client, path, new { title = "Charlie Expo", organizer = "Dubai Design District", scope = "international", format = "exhibition", country = "AE", startsOn = "2026-12-05", endsOn = "2026-12-07" });
+        await CreateAsync(
+            client,
+            path,
+            new
+            {
+                title = "Bravo Market",
+                scope = "local",
+                format = "market",
+                country = "UZ",
+                city = "Tashkent",
+                startsOn = "2026-11-10",
+                status = "candidate",
+            });
+        await CreateAsync(
+            client,
+            path,
+            new
+            {
+                title = "Alpha Runway",
+                scope = "regional",
+                format = "runway",
+                country = "kz",
+                city = "Almaty",
+                startsOn = "2026-10-01",
+                endsOn = "2026-10-31",
+            });
+        await CreateAsync(
+            client,
+            path,
+            new
+            {
+                title = "Charlie Expo",
+                organizer = "Dubai Design District",
+                scope = "international",
+                format = "exhibition",
+                country = "AE",
+                startsOn = "2026-12-05",
+                endsOn = "2026-12-07",
+            });
         await CreateAsync(client, path, new { title = "100% Uzbek Design", scope = "local", format = "festival" });
-        await CreateAsync(client, path, new { title = "aardvark fair", scope = "local", format = "trade-fair", startsOn = "2026-10-01" });
+        await CreateAsync(
+            client,
+            path,
+            new { title = "aardvark fair", scope = "local", format = "trade-fair", startsOn = "2026-10-01" });
 
-        (await TitlesAsync(client, path)).Should().Equal("aardvark fair", "Alpha Runway", "Bravo Market", "Charlie Expo", "100% Uzbek Design");
+        (await TitlesAsync(client, path))
+            .Should()
+            .Equal("aardvark fair", "Alpha Runway", "Bravo Market", "Charlie Expo", "100% Uzbek Design");
         (await TitlesAsync(client, $"{path}?scope=regional")).Should().Equal("Alpha Runway");
         (await TitlesAsync(client, $"{path}?format=exhibition")).Should().Equal("Charlie Expo");
         (await TitlesAsync(client, $"{path}?status=candidate")).Should().Equal("Bravo Market");
@@ -105,11 +200,19 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         (await TitlesAsync(client, $"{path}?query=%25")).Should().Equal("100% Uzbek Design");
         (await TitlesAsync(client, $"{path}?query=_")).Should().BeEmpty();
 
-        (await TitlesAsync(client, $"{path}?from=2026-10-15&to=2026-11-30")).Should().Equal("Alpha Runway", "Bravo Market", "100% Uzbek Design");
-        (await TitlesAsync(client, $"{path}?from=2026-10-15&to=2026-11-30&includeUndated=false")).Should().Equal("Alpha Runway", "Bravo Market");
+        (await TitlesAsync(client, $"{path}?from=2026-10-15&to=2026-11-30"))
+            .Should()
+            .Equal("Alpha Runway", "Bravo Market", "100% Uzbek Design");
+        (await TitlesAsync(client, $"{path}?from=2026-10-15&to=2026-11-30&includeUndated=false"))
+            .Should()
+            .Equal("Alpha Runway", "Bravo Market");
         (await TitlesAsync(client, $"{path}?from=2026-12-07")).Should().Equal("Charlie Expo", "100% Uzbek Design");
-        (await TitlesAsync(client, $"{path}?to=2026-10-01&includeUndated=false")).Should().Equal("aardvark fair", "Alpha Runway");
-        (await TitlesAsync(client, $"{path}?includeUndated=false")).Should().Equal("aardvark fair", "Alpha Runway", "Bravo Market", "Charlie Expo");
+        (await TitlesAsync(client, $"{path}?to=2026-10-01&includeUndated=false"))
+            .Should()
+            .Equal("aardvark fair", "Alpha Runway");
+        (await TitlesAsync(client, $"{path}?includeUndated=false"))
+            .Should()
+            .Equal("aardvark fair", "Alpha Runway", "Bravo Market", "Charlie Expo");
         (await TitlesAsync(client, $"{path}?limit=2&offset=1")).Should().Equal("Alpha Runway", "Bravo Market");
 
         await ProblemAsync(await client.GetAsync($"{path}?scope=galactic"), HttpStatusCode.BadRequest, "Validation");
@@ -124,24 +227,56 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
         string path = Path(owner);
-        await CreateAsync(client, path, new { title = "Announced month", scope = "regional", format = "runway", startsOn = "2026-11-01", datePrecision = "month" });
-        await CreateAsync(client, path, new { title = "Expected month", scope = "local", format = "market", startsOn = "2026-11-01", datePrecision = "estimated" });
-        await CreateAsync(client, path, new { title = "Single day", scope = "local", format = "market", startsOn = "2026-11-01" });
+        await CreateAsync(
+            client,
+            path,
+            new
+            {
+                title = "Announced month",
+                scope = "regional",
+                format = "runway",
+                startsOn = "2026-11-01",
+                datePrecision = "month",
+            });
+        await CreateAsync(
+            client,
+            path,
+            new
+            {
+                title = "Expected month",
+                scope = "local",
+                format = "market",
+                startsOn = "2026-11-01",
+                datePrecision = "estimated",
+            });
+        await CreateAsync(
+            client,
+            path,
+            new { title = "Single day", scope = "local", format = "market", startsOn = "2026-11-01" });
 
         (await TitlesAsync(client, $"{path}?from=2026-11-30")).Should().Equal("Announced month", "Expected month");
         (await TitlesAsync(client, $"{path}?from=2026-12-01")).Should().BeEmpty();
     }
 
     [Fact]
-    public async Task Summary_ShouldCountEveryStatus_AndListOpenDeadlinesSoonestFirst()
+    public async Task Summary_ShouldCountEveryStatusAndListOpenDeadlinesSoonestFirst()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
         string path = Path(owner);
 
         JsonElement empty = await DataAsync(await client.GetAsync($"{path}/summary"));
-        empty.GetProperty("byStatus").EnumerateObject().Select(property => property.Name).Should().Equal(EventValidationService.Statuses);
-        empty.GetProperty("byStatus").EnumerateObject().Should().OnlyContain(property => property.Value.GetInt32() == 0);
+        empty
+            .GetProperty("byStatus")
+            .EnumerateObject()
+            .Select(property => property.Name)
+            .Should()
+            .Equal(EventValidationService.Statuses);
+        empty
+            .GetProperty("byStatus")
+            .EnumerateObject()
+            .Should()
+            .OnlyContain(property => property.Value.GetInt32() == 0);
         empty.GetProperty("upcomingDeadlines").GetArrayLength().Should().Be(0);
 
         await CreateAsync(client, path, Deadline("Closed yesterday", "2026-10-07", "shortlisted"));
@@ -161,9 +296,17 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         byStatus.EnumerateObject().Select(property => property.Value.GetInt32()).Should().Equal(1, 3, 1, 1, 1, 1, 1, 1);
         summary.GetProperty("upcomingDeadlines").EnumerateArray().Select(item => item.GetProperty("title").GetString())
             .Should().Equal("Closes today", "In two days", "Mid October", "November", "December");
-        summary.GetProperty("upcomingDeadlines")[0].GetProperty("applicationDeadline").GetString().Should().Be("2026-10-08");
+        summary
+            .GetProperty("upcomingDeadlines")[0]
+            .GetProperty("applicationDeadline")
+            .GetString()
+            .Should()
+            .Be("2026-10-08");
 
-        await ProblemAsync(await client.GetAsync($"{path}/summary?today=tomorrow"), HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(
+            await client.GetAsync($"{path}/summary?today=tomorrow"),
+            HttpStatusCode.BadRequest,
+            "Validation");
     }
 
     [Theory]
@@ -171,16 +314,23 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
     [InlineData("""{"title":"Bad format","scope":"local","format":"gala"}""")]
     [InlineData("""{"title":"Bad status","scope":"local","format":"runway","status":"won"}""")]
     [InlineData("""{"title":" ","scope":"local","format":"runway"}""")]
-    [InlineData("""{"title":"Backwards","scope":"local","format":"runway","startsOn":"2026-10-10","endsOn":"2026-10-09"}""")]
+    [InlineData(
+        """{"title":"Backwards","scope":"local","format":"runway","startsOn":"2026-10-10","endsOn":"2026-10-09"}""")]
     [InlineData("""{"title":"End only","scope":"local","format":"runway","endsOn":"2026-10-09"}""")]
-    [InlineData("""{"title":"Unknown dated","scope":"local","format":"runway","startsOn":"2026-10-10","datePrecision":"unknown"}""")]
-    [InlineData("""{"title":"Mid month","scope":"local","format":"runway","startsOn":"2026-10-15","datePrecision":"month"}""")]
+    [InlineData(
+        """
+        {"title":"Unknown dated","scope":"local","format":"runway","startsOn":"2026-10-10",
+         "datePrecision":"unknown"}
+        """)]
+    [InlineData(
+        """{"title":"Mid month","scope":"local","format":"runway","startsOn":"2026-10-15","datePrecision":"month"}""")]
     [InlineData("""{"title":"Estimated undated","scope":"local","format":"runway","datePrecision":"estimated"}""")]
     [InlineData("""{"title":"Day undated","scope":"local","format":"runway","datePrecision":"day"}""")]
     [InlineData("""{"title":"No such day","scope":"local","format":"runway","startsOn":"2026-02-30"}""")]
     [InlineData("""{"title":"Too early","scope":"local","format":"runway","applicationDeadline":"1999-12-31"}""")]
     [InlineData("""{"title":"Script","scope":"local","format":"runway","website":"javascript:alert(1)"}""")]
-    [InlineData("""{"title":"Script source","scope":"local","format":"runway","sourceUrl":"ftp://example.test/list"}""")]
+    [InlineData(
+        """{"title":"Script source","scope":"local","format":"runway","sourceUrl":"ftp://example.test/list"}""")]
     [InlineData("""{"title":"Country","scope":"local","format":"runway","country":"UZB"}""")]
     public async Task Create_ShouldRejectUnusableEvents(string body)
     {
@@ -192,42 +342,65 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
     }
 
     [Fact]
-    public async Task Membership_ShouldHideForeignEvents_AndKeepViewersReadOnly()
+    public async Task Membership_ShouldHideForeignEventsAndKeepViewersReadOnly()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         OrganizationAccess stranger = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
         using HttpClient strangerClient = await fixture.LoginAsync(stranger);
-        Guid id = (await DataAsync(await client.PostAsJsonAsync(Path(owner), new { title = "Private", scope = "local", format = "market" })))
+        Guid id = (await DataAsync(await client.PostAsJsonAsync(
+            Path(owner),
+            new { title = "Private", scope = "local", format = "market" })))
             .GetProperty("id").GetGuid();
 
         (await strangerClient.GetAsync(Path(owner))).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await strangerClient.GetAsync($"{Path(owner)}/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ProblemAsync(await strangerClient.GetAsync($"{Path(stranger)}/{id}"), HttpStatusCode.NotFound, "NotFound");
+        await ProblemAsync(
+            await strangerClient.GetAsync($"{Path(stranger)}/{id}"),
+            HttpStatusCode.NotFound,
+            "NotFound");
         await ProblemAsync(await strangerClient.PutAsJsonAsync($"{Path(stranger)}/{id}", new
         {
-            expectedRevision = 1, title = "Taken", scope = "local", format = "market"
+            expectedRevision = 1,
+            title = "Taken",
+            scope = "local",
+            format = "market"
         }), HttpStatusCode.NotFound, "NotFound");
-        await ProblemAsync(await strangerClient.DeleteAsync($"{Path(stranger)}/{id}?expectedRevision=1"), HttpStatusCode.NotFound, "NotFound");
+        await ProblemAsync(
+            await strangerClient.DeleteAsync($"{Path(stranger)}/{id}?expectedRevision=1"),
+            HttpStatusCode.NotFound,
+            "NotFound");
         (await DataAsync(await strangerClient.GetAsync(Path(stranger)))).GetArrayLength().Should().Be(0);
         (await DataAsync(await strangerClient.GetAsync($"{Path(stranger)}/summary"))).GetProperty("byStatus")
             .GetProperty("shortlisted").GetInt32().Should().Be(0);
 
         await fixture.SetRoleAsync(owner, "viewer");
-        (await DataAsync(await client.GetAsync($"{Path(owner)}/{id}"))).GetProperty("title").GetString().Should().Be("Private");
+        (await DataAsync(await client.GetAsync($"{Path(owner)}/{id}")))
+            .GetProperty("title")
+            .GetString()
+            .Should()
+            .Be("Private");
         (await DataAsync(await client.GetAsync($"{Path(owner)}/summary"))).GetProperty("byStatus")
             .GetProperty("shortlisted").GetInt32().Should().Be(1);
-        await ProblemAsync(await client.PostAsJsonAsync(Path(owner), new { title = "Blocked", scope = "local", format = "market" }),
-            HttpStatusCode.Forbidden, "Forbidden");
+        await ProblemAsync(
+            await client.PostAsJsonAsync(Path(owner), new { title = "Blocked", scope = "local", format = "market" }),
+            HttpStatusCode.Forbidden,
+            "Forbidden");
         await ProblemAsync(await client.PutAsJsonAsync($"{Path(owner)}/{id}", new
         {
-            expectedRevision = 1, title = "Blocked", scope = "local", format = "market"
+            expectedRevision = 1,
+            title = "Blocked",
+            scope = "local",
+            format = "market"
         }), HttpStatusCode.Forbidden, "Forbidden");
-        await ProblemAsync(await client.DeleteAsync($"{Path(owner)}/{id}?expectedRevision=1"), HttpStatusCode.Forbidden, "Forbidden");
+        await ProblemAsync(
+            await client.DeleteAsync($"{Path(owner)}/{id}?expectedRevision=1"),
+            HttpStatusCode.Forbidden,
+            "Forbidden");
     }
 
     [Fact]
-    public async Task Import_ShouldValidateFirst_BeIdempotent_AndNeverOverwriteDeskEdits()
+    public async Task Import_ShouldValidateFirstStayIdempotentAndKeepDeskEdits()
     {
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
@@ -249,7 +422,11 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
             imported.Created.Should().Be(3);
             imported.Existing.Should().Be(0);
             JsonElement events = await DataAsync(await client.GetAsync(path));
-            events.EnumerateArray().Select(item => item.GetProperty("key").GetString()).Should().Equal("tfw-2026", "cafw-almaty", "dubai-design-week");
+            events
+                .EnumerateArray()
+                .Select(item => item.GetProperty("key").GetString())
+                .Should()
+                .Equal("tfw-2026", "cafw-almaty", "dubai-design-week");
             JsonElement tfw = events[0];
             tfw.GetProperty("status").GetString().Should().Be("candidate");
             tfw.GetProperty("datePrecision").GetString().Should().Be("day");
@@ -262,8 +439,13 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
             Guid tfwId = tfw.GetProperty("id").GetGuid();
             await DataAsync(await client.PutAsJsonAsync($"{path}/{tfwId}", new
             {
-                expectedRevision = 1, title = "Tashkent Fashion Week (edited in Desk)", scope = "local", format = "runway",
-                startsOn = "2026-10-20", status = "applying", notes = "Application sent by hand."
+                expectedRevision = 1,
+                title = "Tashkent Fashion Week (edited in Desk)",
+                scope = "local",
+                format = "runway",
+                startsOn = "2026-10-20",
+                status = "applying",
+                notes = "Application sent by hand."
             }));
             EventImportReport repeated = await ImportAsync(owner, bundle, dryRun: false);
             repeated.Created.Should().Be(0);
@@ -277,14 +459,27 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
             object[] invalidEvents =
             [
                 new { key = "new-event", title = "Would be new", scope = "local", format = "market" },
-                new { key = "backwards", title = "Backwards", scope = "local", format = "market", startsOn = "2026-10-10", endsOn = "2026-10-01" },
+                new
+                {
+                    key = "backwards",
+                    title = "Backwards",
+                    scope = "local",
+                    format = "market",
+                    startsOn = "2026-10-10",
+                    endsOn = "2026-10-01",
+                },
                 new { key = "new-event", title = "Repeated", scope = "local", format = "market" },
                 new { title = "No key", scope = "local", format = "market" }
             ];
             string invalid = await WriteBundleAsync(directory, "invalid.json", invalidEvents);
             Func<Task> rejected = () => ImportAsync(owner, invalid, dryRun: false);
             string message = (await rejected.Should().ThrowAsync<AppException>()).Which.Message;
-            message.Should().Contain("nothing was imported").And.Contain("events[1] backwards").And.Contain("repeated").And.Contain("key is required");
+            message
+                .Should()
+                .Contain("nothing was imported").And
+                .Contain("events[1] backwards").And
+                .Contain("repeated").And
+                .Contain("key is required");
             (await DataAsync(await client.GetAsync(path))).GetArrayLength().Should().Be(3);
 
             string wrongFormat = System.IO.Path.Combine(directory, "wrong.json");
@@ -302,27 +497,53 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
     [
         new
         {
-            key = "tfw-2026", title = "Tashkent Fashion Week", organizer = "Synthetic Council", scope = "local", format = "runway",
-            country = "uz", city = "Tashkent", startsOn = "2026-10-20", endsOn = "2026-10-24",
-            participation = "Application package to the organiser", website = "https://example.test/tfw",
-            sourceUrl = "https://example.test/news/tfw", notes = "Synthetic fixture."
+            key = "tfw-2026",
+            title = "Tashkent Fashion Week",
+            organizer = "Synthetic Council",
+            scope = "local",
+            format = "runway",
+            country = "uz",
+            city = "Tashkent",
+            startsOn = "2026-10-20",
+            endsOn = "2026-10-24",
+            participation = "Application package to the organiser",
+            website = "https://example.test/tfw",
+            sourceUrl = "https://example.test/news/tfw",
+            notes = "Synthetic fixture.",
         },
         new
         {
-            key = "cafw-almaty", title = "Central Asia Fashion Week", scope = "regional", format = "runway", country = "KZ",
-            city = "Almaty", startsOn = "2026-10-28", datePrecision = "day", status = "shortlisted", priority = "high"
+            key = "cafw-almaty",
+            title = "Central Asia Fashion Week",
+            scope = "regional",
+            format = "runway",
+            country = "KZ",
+            city = "Almaty",
+            startsOn = "2026-10-28",
+            datePrecision = "day",
+            status = "shortlisted",
+            priority = "high",
         },
         new
         {
-            key = "dubai-design-week", title = "Dubai Design Week", scope = "international", format = "exhibition", country = "AE",
-            startsOn = "2026-11-01", datePrecision = "estimated", applicationDeadline = "2026-09-01", cost = " "
+            key = "dubai-design-week",
+            title = "Dubai Design Week",
+            scope = "international",
+            format = "exhibition",
+            country = "AE",
+            startsOn = "2026-11-01",
+            datePrecision = "estimated",
+            applicationDeadline = "2026-09-01",
+            cost = " ",
         }
     ];
 
     private async Task<EventImportReport> ImportAsync(OrganizationAccess owner, string bundle, bool dryRun)
     {
         using IServiceScope scope = fixture.Factory.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<EventImportService>().ImportAsync(owner, bundle, dryRun, Token);
+        return await scope.ServiceProvider
+            .GetRequiredService<EventImportService>()
+            .ImportAsync(owner, bundle, dryRun, Token);
     }
 
     private static async Task<string> WriteBundleAsync(string directory, string name, object[] events)
@@ -344,7 +565,10 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         await DataAsync(await client.PostAsJsonAsync(path, body));
 
     private static async Task<IReadOnlyList<string?>> TitlesAsync(HttpClient client, string url) =>
-        (await DataAsync(await client.GetAsync(url))).EnumerateArray().Select(item => item.GetProperty("title").GetString()).ToArray();
+        (await DataAsync(await client.GetAsync(url)))
+            .EnumerateArray()
+            .Select(item => item.GetProperty("title").GetString())
+            .ToArray();
 
     private static string Path(OrganizationAccess access) => $"/api/organizations/{access.OrganizationId}/events";
 

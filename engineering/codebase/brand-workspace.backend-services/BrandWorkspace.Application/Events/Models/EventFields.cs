@@ -1,6 +1,8 @@
 namespace BrandWorkspace.Application.Events.Models;
 
-/// <summary>Unvalidated event fields as an operator or an import bundle sent them; dates are ISO <c>YYYY-MM-DD</c> strings.</summary>
+/// <summary>
+/// Unvalidated event fields as an operator or an import bundle sent them; dates are ISO <c>YYYY-MM-DD</c> strings.
+/// </summary>
 public sealed record EventFields(
     string? Title,
     string? Organizer,

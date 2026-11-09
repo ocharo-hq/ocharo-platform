@@ -13,7 +13,9 @@ public static class ImageBodyReader
     /// <summary>Holds the refusal of a body over the limit.</summary>
     private const string TooLarge = "Image exceeds 20 MiB.";
 
-    /// <summary>Refuses a request whose declared length or content type the route does not accept, before it is read.</summary>
+    /// <summary>
+    /// Refuses a request whose declared length or content type the route does not accept, before it is read.
+    /// </summary>
     /// <param name="request">The request to check.</param>
     public static Result Check(HttpRequest request)
     {

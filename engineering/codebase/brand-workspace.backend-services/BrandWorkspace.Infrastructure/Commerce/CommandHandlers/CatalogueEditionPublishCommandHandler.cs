@@ -1,7 +1,7 @@
 using BrandWorkspace.Application.Commerce.Commands;
 using BrandWorkspace.Application.Commerce.Repositories;
 using BrandWorkspace.Application.Foundation.Errors;
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 using BrandWorkspace.Infrastructure.Foundation.Extensions;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;

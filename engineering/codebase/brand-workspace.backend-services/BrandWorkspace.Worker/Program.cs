@@ -3,11 +3,14 @@ using BrandWorkspace.Worker.Configurations;
 using Microsoft.Extensions.Hosting;
 
 // Build and configure the host.
-Console.Error.WriteLine($"BrandWorkspace worker {Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "dev"}");
+var version = Assembly.GetExecutingAssembly()
+    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "dev";
+Console.Error.WriteLine($"BrandWorkspace worker {version}");
 
 var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
 {
-    Args = [], ContentRootPath = AppContext.BaseDirectory
+    Args = [],
+    ContentRootPath = AppContext.BaseDirectory
 });
 builder.Configure(args.Length == 0);
 

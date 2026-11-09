@@ -11,9 +11,16 @@ public sealed class SupplierGetAllQueryHandler(SourcingService service)
     : IQueryHandler<SupplierGetAllQuery, AppResult<IReadOnlyList<SupplierSummary>>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<IReadOnlyList<SupplierSummary>>> HandleAsync(SupplierGetAllQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<IReadOnlyList<SupplierSummary>>> HandleAsync(
+        SupplierGetAllQuery request,
+        CancellationToken cancellationToken)
     {
-        var suppliers = await service.GetSuppliersAsync(request.Access, request.Query, request.Stage, request.Limit, request.Offset,
+        var suppliers = await service.GetSuppliersAsync(
+            request.Access,
+            request.Query,
+            request.Stage,
+            request.Limit,
+            request.Offset,
             cancellationToken);
         return AppResult<IReadOnlyList<SupplierSummary>>.Ok(suppliers);
     }

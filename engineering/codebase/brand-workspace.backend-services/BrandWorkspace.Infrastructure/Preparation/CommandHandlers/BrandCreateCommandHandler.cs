@@ -11,8 +11,14 @@ public sealed class BrandCreateCommandHandler(PreparationService service)
     : ICommandHandler<BrandCreateCommand, AppResult<Brand>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<Brand>> HandleAsync(BrandCreateCommand request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<Brand>> HandleAsync(
+        BrandCreateCommand request,
+        CancellationToken cancellationToken)
     {
-        return AppResult<Brand>.Ok(await service.CreateBrandAsync(request.Access, request.Name, request.TimeZone, cancellationToken));
+        return AppResult<Brand>.Ok(await service.CreateBrandAsync(
+            request.Access,
+            request.Name,
+            request.TimeZone,
+            cancellationToken));
     }
 }

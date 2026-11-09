@@ -4,7 +4,10 @@ using WoW.Two.Sdk.Beta.Be.Mediator.Result;
 
 namespace BrandWorkspace.Application.Access.Queries;
 
-/// <summary>Represents a query to list the organizations the signed-in person's session opens: its active organization, projected into Desk.</summary>
+/// <summary>
+/// Represents a query to list the organizations the signed-in person's session opens: its active organization,
+/// projected into Desk.
+/// </summary>
 public sealed record OrganizationGetAllQuery : IQuery<AppResult<IReadOnlyList<Organization>>>
 {
     /// <summary>Gets the session's active organization, if any.</summary>

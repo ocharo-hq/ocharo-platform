@@ -2,8 +2,10 @@ using System.Text.Json.Serialization;
 
 namespace BrandWorkspace.Api.RuntimeConfig.Models;
 
-/// <summary>Represents the public settings the SPA reads once at startup, under its own config names; an address left out
-/// is absent.</summary>
+/// <summary>
+/// Represents the public settings the SPA reads once at startup, under its own config names; an address left out is
+/// absent.
+/// </summary>
 public sealed record RuntimeConfigDto
 {
     /// <summary>Gets the Desk address.</summary>

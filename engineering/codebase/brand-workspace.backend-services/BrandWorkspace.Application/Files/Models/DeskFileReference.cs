@@ -2,8 +2,10 @@ using BrandWorkspace.Application.Files.Constants;
 
 namespace BrandWorkspace.Application.Files.Models;
 
-/// <summary>Names the Desk record that keeps a file alive: <c>{RecordType}:{RecordId}</c> is also the upload's idempotency key
-/// and the manifest's reference.</summary>
+/// <summary>
+/// Names the Desk record that keeps a file alive: <c>{RecordType}:{RecordId}</c> is also the upload's idempotency key
+/// and the manifest's reference.
+/// </summary>
 public sealed record DeskFileReference(string RecordType, string RecordId)
 {
     public static DeskFileReference PreparationMedia(Guid organizationId, Guid mediaId) =>

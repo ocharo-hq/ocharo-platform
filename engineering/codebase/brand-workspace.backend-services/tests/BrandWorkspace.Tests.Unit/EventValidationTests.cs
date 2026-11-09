@@ -13,11 +13,18 @@ public sealed class EventValidationTests
     private readonly EventValidationService _validation = new();
 
     [Fact]
-    public void Event_ShouldTrimBlankOptionalsToNull_UppercaseCountry_AndApplyDefaults()
+    public void Event_ShouldTrimBlankOptionalsToNullUppercaseTheCountryAndApplyDefaults()
     {
         var input = _validation.Event(Fields(
-            title: "  Tashkent Fashion Week ", organizer: " ", country: " uz ", city: "", venue: "\t", startsOn: " 2026-10-20 ",
-            cost: "  ", website: " https://example.test/tfw ", notes: null));
+            title: "  Tashkent Fashion Week ",
+            organizer: " ",
+            country: " uz ",
+            city: "",
+            venue: "\t",
+            startsOn: " 2026-10-20 ",
+            cost: "  ",
+            website: " https://example.test/tfw ",
+            notes: null));
         input.Title.Should().Be("Tashkent Fashion Week");
         input.Organizer.Should().BeNull();
         input.Country.Should().Be("UZ");
@@ -35,13 +42,16 @@ public sealed class EventValidationTests
     }
 
     [Fact]
-    public void Event_ShouldDefaultToUnknownPrecision_WithoutDates_AndUseTheGivenDefaultStatus()
+    public void Event_ShouldDefaultToUnknownPrecisionAndTheGivenStatus_WhenItHasNoDates()
     {
         var input = _validation.Event(Fields(), EventValidationService.ImportedStatus);
         input.DatePrecision.Should().Be("unknown");
         input.StartsOn.Should().BeNull();
         input.Status.Should().Be("candidate");
-        _validation.Event(Fields(status: "attended"), EventValidationService.ImportedStatus).Status.Should().Be("attended");
+        _validation
+            .Event(Fields(status: "attended"), EventValidationService.ImportedStatus).Status
+            .Should()
+            .Be("attended");
     }
 
     [Theory]
@@ -53,8 +63,12 @@ public sealed class EventValidationTests
     {
         var input = _validation.Event(Fields(startsOn: startsOn, endsOn: endsOn, datePrecision: precision));
         input.DatePrecision.Should().Be(precision);
-        input.StartsOn.Should().Be(startsOn is null ? null : DateOnly.Parse(startsOn, System.Globalization.CultureInfo.InvariantCulture));
-        input.EndsOn.Should().Be(endsOn is null ? null : DateOnly.Parse(endsOn, System.Globalization.CultureInfo.InvariantCulture));
+        input.StartsOn
+            .Should()
+            .Be(startsOn is null ? null : DateOnly.Parse(startsOn, System.Globalization.CultureInfo.InvariantCulture));
+        input.EndsOn
+            .Should()
+            .Be(endsOn is null ? null : DateOnly.Parse(endsOn, System.Globalization.CultureInfo.InvariantCulture));
     }
 
     [Theory]
@@ -103,15 +117,18 @@ public sealed class EventValidationTests
     }
 
     [Fact]
-    public void Event_ShouldKeepMultilineCost_ButRejectMultilineTitle()
+    public void Event_ShouldKeepAMultilineCostButRejectAMultilineTitle()
     {
-        _validation.Event(Fields(cost: "Stand: 1 200 USD\nRegistration: 100 USD")).Cost.Should().Be("Stand: 1 200 USD\nRegistration: 100 USD");
+        _validation
+            .Event(Fields(cost: "Stand: 1 200 USD\nRegistration: 100 USD")).Cost
+            .Should()
+            .Be("Stand: 1 200 USD\nRegistration: 100 USD");
         Action act = () => _validation.Event(Fields(title: "Two\nlines"));
         act.Should().Throw<AppException>();
     }
 
     [Fact]
-    public void Filter_ShouldTreatBlankFiltersAsAbsent_AndParseDates()
+    public void Filter_ShouldTreatBlankFiltersAsAbsentAndParseDates()
     {
         var filter = _validation.Filter(" ", "", null, " ", "2026-10-01", null, includeUndated: false);
         filter.Query.Should().BeNull();
@@ -143,9 +160,35 @@ public sealed class EventValidationTests
     }
 
     private static EventFields Fields(
-        string? title = "Event", string? organizer = null, string? country = null, string? city = null, string? venue = null,
-        string? startsOn = null, string? endsOn = null, string? datePrecision = null, string? cost = null, string? website = null,
-        string? status = null, string? notes = null) =>
-        new(title, organizer, "local", "runway", country, city, venue, startsOn, endsOn, datePrecision, null, null, cost, website,
-            null, status, null, notes);
+        string? title = "Event",
+        string? organizer = null,
+        string? country = null,
+        string? city = null,
+        string? venue = null,
+        string? startsOn = null,
+        string? endsOn = null,
+        string? datePrecision = null,
+        string? cost = null,
+        string? website = null,
+        string? status = null,
+        string? notes = null) =>
+        new(
+            title,
+            organizer,
+            "local",
+            "runway",
+            country,
+            city,
+            venue,
+            startsOn,
+            endsOn,
+            datePrecision,
+            null,
+            null,
+            cost,
+            website,
+            null,
+            status,
+            null,
+            notes);
 }

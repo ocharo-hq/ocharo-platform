@@ -7,7 +7,9 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Api.DesignDocuments.Readers;
 
-/// <summary>Reads an editor document request strictly: one bounded JSON object, unique and known members, exact casing.</summary>
+/// <summary>
+/// Reads an editor document request strictly: one bounded JSON object, unique and known members, exact casing.
+/// </summary>
 public static class DesignDocumentRequestReader
 {
     /// <summary>Holds the largest request body: the largest snapshot and room for its envelope.</summary>

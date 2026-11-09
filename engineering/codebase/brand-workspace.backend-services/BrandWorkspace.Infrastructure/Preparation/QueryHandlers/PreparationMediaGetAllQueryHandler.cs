@@ -11,7 +11,9 @@ public sealed class PreparationMediaGetAllQueryHandler(PreparationService servic
     : IQueryHandler<PreparationMediaGetAllQuery, AppResult<IReadOnlyList<MediaAsset>>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<IReadOnlyList<MediaAsset>>> HandleAsync(PreparationMediaGetAllQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<IReadOnlyList<MediaAsset>>> HandleAsync(
+        PreparationMediaGetAllQuery request,
+        CancellationToken cancellationToken)
     {
         return AppResult<IReadOnlyList<MediaAsset>>.Ok(await service.GetMediaAsync(request.Access, cancellationToken));
     }

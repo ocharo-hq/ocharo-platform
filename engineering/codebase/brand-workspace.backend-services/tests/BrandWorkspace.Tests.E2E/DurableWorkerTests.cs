@@ -47,10 +47,14 @@ public sealed class DurableWorkerTests
             (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
         }
         // Applying the same embedded source again, through the image's migrate verb, is idempotent.
-        foreach (var run in new[] { await DeskTestHost.MigrateAsync(connection), await DeskTestHost.MigrateAsync(connection) })
+        foreach (var run in new[]
+        {
+            await DeskTestHost.MigrateAsync(connection),
+            await DeskTestHost.MigrateAsync(connection),
+        })
             run.Exit.Should().Be(0, run.Error);
-        // The jobs worker installs the queue's schema as it builds its storage (Hangfire's own installer), before anything
-        // enqueues; here without starting it, so no heartbeat is recorded yet.
+        // The jobs worker installs the queue's schema as it builds its storage (Hangfire's own installer), before
+        // anything enqueues; here without starting it, so no heartbeat is recorded yet.
         using (var installer = CreateWorker(connection, executeJobs: true))
             installer.Services.GetRequiredService<JobStorage>().Should().NotBeNull();
         string jobId;
@@ -71,7 +75,11 @@ public sealed class DurableWorkerTests
             status.GetProperty("service").GetString().Should().Be("brand-workspace");
             status.GetProperty("worker").GetProperty("state").GetString().Should().Be("waiting");
             api.Services.GetService<IBackgroundJobClient>().Should().BeNull();
-            (await api.Services.GetRequiredService<IFoundationRepository>().GetProbeAsync(probeId, CancellationToken.None)).Should().BeNull();
+            (await api.Services
+                .GetRequiredService<IFoundationRepository>()
+                .GetProbeAsync(probeId, CancellationToken.None))
+                .Should()
+                .BeNull();
         }
 
         // Restart the same PostgreSQL container, preserving its persisted database files.
@@ -86,7 +94,11 @@ public sealed class DurableWorkerTests
             try
             {
                 await AssertCompletedAsync(worker, jobId, probeId);
-                (await worker.Services.GetRequiredService<IFoundationRepository>().GetLastHeartbeatAsync(CancellationToken.None)).Should().NotBeNull();
+                (await worker.Services
+                    .GetRequiredService<IFoundationRepository>()
+                    .GetLastHeartbeatAsync(CancellationToken.None))
+                    .Should()
+                    .NotBeNull();
             }
             finally { await worker.StopAsync(); }
         }
@@ -114,8 +126,14 @@ public sealed class DurableWorkerTests
 
     private static IHost CreateWorker(string connection, bool executeJobs)
     {
-        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings { EnvironmentName = Environments.Development });
-        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Database"] = connection });
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        {
+            EnvironmentName = Environments.Development,
+        });
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:Database"] = connection,
+        });
         WorkerConfiguration.Configure(builder, executeJobs);
         return builder.Build();
     }

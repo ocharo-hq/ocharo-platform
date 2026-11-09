@@ -11,7 +11,9 @@ public sealed class OrganizationGetAllQueryHandler(IAccessRepository repository)
     : IQueryHandler<OrganizationGetAllQuery, AppResult<IReadOnlyList<Organization>>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<IReadOnlyList<Organization>>> HandleAsync(OrganizationGetAllQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<IReadOnlyList<Organization>>> HandleAsync(
+        OrganizationGetAllQuery request,
+        CancellationToken cancellationToken)
     {
         var organizations = new List<Organization>();
         if (request.OrganizationId is { } id && request.Role is { } role)

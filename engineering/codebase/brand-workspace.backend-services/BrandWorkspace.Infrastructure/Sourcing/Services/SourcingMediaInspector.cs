@@ -7,7 +7,9 @@ using WoW.Two.Sdk.Beta.Be.Media.Images;
 
 namespace BrandWorkspace.Infrastructure.Sourcing.Services;
 
-/// <summary>Identifies supplier media by content, bounds it, and derives previews and fingerprints from images.</summary>
+/// <summary>
+/// Identifies supplier media by content, bounds it, and derives previews and fingerprints from images.
+/// </summary>
 public sealed class SourcingMediaInspector(IImageService images)
 {
     public const int MaximumImageBytes = 20 * 1024 * 1024;
@@ -28,7 +30,8 @@ public sealed class SourcingMediaInspector(IImageService images)
         }
         if (bytes.Length >= 12 && bytes.AsSpan(4, 4).SequenceEqual("ftyp"u8))
         {
-            if (bytes.Length > MaximumVideoBytes) throw DeskErrors.TooLarge("Videos must be at most 64 MiB.").ToException();
+            if (bytes.Length > MaximumVideoBytes)
+                throw DeskErrors.TooLarge("Videos must be at most 64 MiB.").ToException();
             return new InspectedMedia(bytes, sha256, "video/mp4", null, null, null, null, false, null);
         }
         if (bytes.Length > MaximumImageBytes) throw DeskErrors.TooLarge("Images must be at most 20 MiB.").ToException();
@@ -49,12 +52,19 @@ public sealed class SourcingMediaInspector(IImageService images)
             ImageResult thumbnail = await images.EditAsync(new MemoryStream(bytes, false), new ImageEditSpec
             {
                 AutoOrient = true,
-                Resize = new ImageResizeSpec { Width = ThumbnailSize, Height = ThumbnailSize, Fit = ImageFit.Max, Upscale = false },
+                Resize = new ImageResizeSpec
+                {
+                    Width = ThumbnailSize,
+                    Height = ThumbnailSize,
+                    Fit = ImageFit.Max,
+                    Upscale = false,
+                },
                 Output = new ImageOutputSpec { Format = ImageFormat.Webp, Quality = 78 }
             }, token);
             ImageMetadataResult? metadata = await ReadMetadataAsync(bytes, token);
             ImageAnalysisResult analysis = await images.AnalyzeAsync(new MemoryStream(bytes, false), token);
-            bool rotated = thumbnail.Width != thumbnail.Height && (thumbnail.Width > thumbnail.Height) != (probe.Width > probe.Height);
+            bool rotated = thumbnail.Width != thumbnail.Height
+                && (thumbnail.Width > thumbnail.Height) != (probe.Width > probe.Height);
             return new InspectedMedia(
                 bytes,
                 sha256,

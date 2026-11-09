@@ -9,17 +9,31 @@ using WoW.Two.Sdk.Beta.Be.Identity.Jwt;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Sends a signal the way an Identity instance does: a <c>webhook+jwt</c> signed with its key, bound to the signal URL and the body.</summary>
+/// <summary>
+/// Sends a signal the way an Identity instance does: a <c>webhook+jwt</c> signed with its key, bound to the signal URL
+/// and the body.
+/// </summary>
 internal sealed class IdentitySignalSender(string issuer) : IDisposable
 {
     private readonly RSA rsa = RSA.Create(2048);
 
-    public TrustedIssuer TrustedIssuer => new() { Issuer = issuer, SigningKeys = [new RsaSecurityKey(rsa) { KeyId = "signal" }] };
+    public TrustedIssuer TrustedIssuer => new()
+    {
+        Issuer = issuer,
+        SigningKeys = [new RsaSecurityKey(rsa) { KeyId = "signal" }],
+    };
 
     public HttpRequestMessage SessionEnded(string signalUrl, string sessionId, string subject)
     {
         var body = JsonSerializer.Serialize(
-            new SessionEndedEvent { Issuer = issuer, SessionId = sessionId, Subject = subject, At = DateTimeOffset.UtcNow, TokensExpireBy = DateTimeOffset.UtcNow.AddHours(1) },
+            new SessionEndedEvent
+            {
+                Issuer = issuer,
+                SessionId = sessionId,
+                Subject = subject,
+                At = DateTimeOffset.UtcNow,
+                TokensExpireBy = DateTimeOffset.UtcNow.AddHours(1),
+            },
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var signature = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
         {
@@ -27,7 +41,9 @@ internal sealed class IdentitySignalSender(string issuer) : IDisposable
             Audience = signalUrl,
             TokenType = "webhook+jwt",
             Expires = DateTime.UtcNow.AddMinutes(5),
-            SigningCredentials = new SigningCredentials(new RsaSecurityKey(rsa) { KeyId = "signal" }, SecurityAlgorithms.RsaSha256),
+            SigningCredentials = new SigningCredentials(
+                new RsaSecurityKey(rsa) { KeyId = "signal" },
+                SecurityAlgorithms.RsaSha256),
             Claims = new Dictionary<string, object>
             {
                 ["jti"] = Guid.NewGuid().ToString("N"),

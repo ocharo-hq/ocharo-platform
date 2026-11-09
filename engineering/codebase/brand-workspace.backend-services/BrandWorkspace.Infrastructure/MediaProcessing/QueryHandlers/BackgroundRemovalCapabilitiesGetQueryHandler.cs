@@ -11,7 +11,9 @@ public sealed class BackgroundRemovalCapabilitiesGetQueryHandler(IBackgroundRemo
     : IQueryHandler<BackgroundRemovalCapabilitiesGetQuery, AppResult<BackgroundRemovalStatus>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<BackgroundRemovalStatus>> HandleAsync(BackgroundRemovalCapabilitiesGetQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<BackgroundRemovalStatus>> HandleAsync(
+        BackgroundRemovalCapabilitiesGetQuery request,
+        CancellationToken cancellationToken)
     {
         return AppResult<BackgroundRemovalStatus>.Ok(await worker.GetStatusAsync(cancellationToken));
     }

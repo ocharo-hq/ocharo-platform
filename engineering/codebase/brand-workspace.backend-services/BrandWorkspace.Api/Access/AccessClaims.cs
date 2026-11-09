@@ -11,7 +11,15 @@ public static class AccessClaims
     public static string UserId(ClaimsPrincipal principal) =>
         principal.FindFirstValue(Subject) ?? throw new InvalidOperationException("Authenticated user id is missing.");
     public static string? Session(ClaimsPrincipal principal) => principal.FindFirstValue(SessionId);
-    /// <summary>The active organization's name and slug (<c>org_name</c>, <c>org_slug</c>); Desk names its projection from them.</summary>
-    public static string? OrganizationName(ClaimsPrincipal principal) => principal.FindFirstValue(OrganizationClaimTypeConstants.Name);
-    public static string? OrganizationSlug(ClaimsPrincipal principal) => principal.FindFirstValue(OrganizationClaimTypeConstants.Slug);
+    /// <summary>
+    /// The active organization's name and slug (<c>org_name</c>, <c>org_slug</c>); Desk names its projection from them.
+    /// </summary>
+    public static string? OrganizationName(ClaimsPrincipal principal)
+    {
+        return principal.FindFirstValue(OrganizationClaimTypeConstants.Name);
+    }
+    public static string? OrganizationSlug(ClaimsPrincipal principal)
+    {
+        return principal.FindFirstValue(OrganizationClaimTypeConstants.Slug);
+    }
 }

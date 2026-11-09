@@ -4,5 +4,8 @@ namespace BrandWorkspace.Api.Access;
 public static class AccessProblems
 {
     public static IResult Create(int status, string title, string code) =>
-        Results.Problem(statusCode: status, title: title, extensions: new Dictionary<string, object?> { ["code"] = code });
+        Results.Problem(
+            statusCode: status,
+            title: title,
+            extensions: new Dictionary<string, object?> { ["code"] = code });
 }

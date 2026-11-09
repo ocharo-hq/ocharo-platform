@@ -10,11 +10,13 @@ using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>The Desk host reads its settings files through the SDK and keeps local conveniences to a local run.</summary>
+/// <summary>
+/// The Desk host reads its settings files through the SDK and keeps local conveniences to a local run.
+/// </summary>
 public sealed class LocalRunTests
 {
     [Fact]
-    public void LocalRun_ReadsTheMachineFileOnlyWhenTheLaunchProfileAsks()
+    public void LocalRun_ShouldReadTheMachineFileOnly_WhenTheLaunchProfileAsks()
     {
         WithContentRoot(root =>
         {
@@ -26,7 +28,7 @@ public sealed class LocalRunTests
     }
 
     [Fact]
-    public void DeployedDev_ReadsTheTargetFileAndNeverTheMachineFile()
+    public void DeployedDev_ShouldReadTheTargetFileAndNeverTheMachineFile()
     {
         WithContentRoot(root =>
         {
@@ -38,7 +40,7 @@ public sealed class LocalRunTests
     }
 
     [Fact]
-    public async Task DeployedDev_RefusesAKeyRingWithoutDurableStorage()
+    public async Task DeployedDev_ShouldRefuseTheKeyRing_WhenItHasNoDurableStorage()
     {
         await using var app = Build(["--DEPLOY_ENVIRONMENT=dev"]);
 
@@ -47,7 +49,7 @@ public sealed class LocalRunTests
     }
 
     [Fact]
-    public async Task LocalRun_KeepsTheMachineKeyRing()
+    public async Task LocalRun_ShouldKeepTheMachineKeyRing()
     {
         await using var app = Build([]);
 
@@ -58,7 +60,10 @@ public sealed class LocalRunTests
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            ApplicationName = DeskTestHost.ApplicationName, Args = args, EnvironmentName = Environments.Development, ContentRootPath = contentRoot ?? AppContext.BaseDirectory
+            ApplicationName = DeskTestHost.ApplicationName,
+            Args = args,
+            EnvironmentName = Environments.Development,
+            ContentRootPath = contentRoot ?? AppContext.BaseDirectory
         });
         builder.Configure();
         return builder.Build();

@@ -2,7 +2,7 @@ using BrandWorkspace.Application.Commerce.Commands;
 using BrandWorkspace.Application.Commerce.Models;
 using BrandWorkspace.Application.Commerce.Repositories;
 using BrandWorkspace.Application.Foundation.Errors;
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 using BrandWorkspace.Infrastructure.Commerce.Services;
 using BrandWorkspace.Infrastructure.Foundation.Extensions;
 using Microsoft.Extensions.Configuration;

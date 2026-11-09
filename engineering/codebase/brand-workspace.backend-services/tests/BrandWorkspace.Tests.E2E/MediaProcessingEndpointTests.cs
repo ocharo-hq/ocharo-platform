@@ -27,8 +27,10 @@ using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Exercises the image HTTP boundaries on Desk's own composition with no database: the policy, the bearer scheme and the
-/// audience are Desk's, a <see cref="FakeTokenIssuer"/> signs the tokens, and a stand-in worker takes the images.</summary>
+/// <summary>
+/// Exercises the image HTTP boundaries on Desk's own composition with no database: the policy, the bearer scheme and
+/// the audience are Desk's, a <see cref="FakeTokenIssuer"/> signs the tokens, and a stand-in worker takes the images.
+/// </summary>
 public sealed class MediaProcessingEndpointTests
 {
     private const string Route = "/api/integrations/media/background-removal";
@@ -55,14 +57,17 @@ public sealed class MediaProcessingEndpointTests
     }
 
     [Fact]
-    public async Task SignedSignal_ShouldEndTheSessionsTokens_AtTheResourceRoute()
+    public async Task SignedSignal_ShouldEndTheSessionsTokens_WhenPostedToTheResourceRoute()
     {
         await using var host = await EndpointHost.CreateAsync();
         var person = Person();
         var token = host.Tokens.IssuePersonToken(person, Audience, "ocharo-editorial", Scope);
         (await host.SendAsync(process: false, token)).StatusCode.Should().Be(HttpStatusCode.OK);
 
-        using var signal = await host.Client.SendAsync(host.Signals.SessionEnded(ResourceSignalUrl, person.SessionId!.Value.ToString("D"), person.Id.ToString("D")));
+        using var signal = await host.Client.SendAsync(host.Signals.SessionEnded(
+            ResourceSignalUrl,
+            person.SessionId!.Value.ToString("D"),
+            person.Id.ToString("D")));
 
         signal.StatusCode.Should().Be(HttpStatusCode.Accepted);
         (await host.WaitUntilRefusedAsync(token)).Should().BeTrue("the handler runs off the request");
@@ -71,11 +76,13 @@ public sealed class MediaProcessingEndpointTests
     [Theory]
     [InlineData(ResourceSignalUrl)]
     [InlineData(BffSignalUrl)]
-    public async Task SignalRoutes_ShouldAnswer401_ForAnUnsignedPostWithoutASession(string url)
+    public async Task SignalRoutes_ShouldReturn401_WhenAnUnsignedPostHasNoSession(string url)
     {
         await using var host = await EndpointHost.CreateAsync();
 
-        using var response = await host.Client.PostAsync(new Uri(url).AbsolutePath, new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
+        using var response = await host.Client.PostAsync(
+            new Uri(url).AbsolutePath,
+            new StringContent("{}", System.Text.Encoding.UTF8, "application/json"));
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
@@ -85,7 +92,10 @@ public sealed class MediaProcessingEndpointTests
     {
         await using var host = await EndpointHost.CreateAsync();
         var person = Person();
-        using var captured = host.Signals.SessionEnded("https://elsewhere.test/signals/identity", person.SessionId!.Value.ToString("D"), person.Id.ToString("D"));
+        using var captured = host.Signals.SessionEnded(
+            "https://elsewhere.test/signals/identity",
+            person.SessionId!.Value.ToString("D"),
+            person.Id.ToString("D"));
         captured.RequestUri = new Uri(new Uri(ResourceSignalUrl).AbsolutePath, UriKind.Relative);
 
         using var response = await host.Client.SendAsync(captured);
@@ -102,7 +112,12 @@ public sealed class MediaProcessingEndpointTests
         var change = host.Clock.GetUtcNow().AddSeconds(5);
         var denyList = host.Services.GetRequiredService<ITokenDenyList>();
 
-        await denyList.AddAccessAsync(host.Tokens.Issuer, person.Id.ToString("D"), person.OrganizationId!.Value.ToString("D"), change, change.AddHours(1));
+        await denyList.AddAccessAsync(
+            host.Tokens.Issuer,
+            person.Id.ToString("D"),
+            person.OrganizationId!.Value.ToString("D"),
+            change,
+            change.AddHours(1));
         host.Clock.SetUtcNow(change.AddSeconds(5));
         var after = host.Tokens.IssuePersonToken(person, Audience, "ocharo-editorial", Scope);
 
@@ -110,7 +125,10 @@ public sealed class MediaProcessingEndpointTests
         (await host.SendAsync(process: false, after)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
-    private static FakePerson Person() => new() { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid(), SessionId = Guid.NewGuid() };
+    private static FakePerson Person()
+    {
+        return new() { Id = Guid.NewGuid(), OrganizationId = Guid.NewGuid(), SessionId = Guid.NewGuid() };
+    }
 
     [Theory]
     [InlineData("wrong-audience", "audience")]
@@ -164,7 +182,12 @@ public sealed class MediaProcessingEndpointTests
     {
         await using var host = await EndpointHost.CreateAsync();
         var subject = Guid.NewGuid().ToString("D");
-        DeskTestHost.Register(new DeskTestHost.Person(subject, Guid.NewGuid(), "owner", "Media owner", $"media-{Guid.NewGuid():N}@example.test"));
+        DeskTestHost.Register(new DeskTestHost.Person(
+            subject,
+            Guid.NewGuid(),
+            "owner",
+            "Media owner",
+            $"media-{Guid.NewGuid():N}@example.test"));
         host.Client.DefaultRequestHeaders.Add(DeskTestHost.PersonHeader, subject);
 
         using var response = await host.SendAsync(process, token: null);
@@ -177,10 +200,12 @@ public sealed class MediaProcessingEndpointTests
     [Theory]
     [InlineData("https://desk.test")]
     [InlineData("https://desk.test/")]
-    public async Task ImageEndpoint_ShouldAcceptTheTokenAudience_HoweverTheResourceUriIsWritten(string resourceUri)
+    public async Task ImageEndpoint_ShouldAcceptTheTokenAudience_WhenTheResourceUriSpellingDiffers(string resourceUri)
     {
         await using var host = await EndpointHost.CreateAsync(resourceUri);
-        var bearer = host.Services.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+        var bearer = host.Services
+            .GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
+            .Get(JwtBearerDefaults.AuthenticationScheme);
 
         using var capabilities = await host.GetCapabilitiesAsync();
         using var processed = await host.PostAsync(ImageContent(Png()));
@@ -217,7 +242,9 @@ public sealed class MediaProcessingEndpointTests
         var keyReads = identity.KeySetReads;
         using var foreign = await host.SendAsync(process: false, stranger.IssueServiceToken(Caller, Audience, Scope));
         using var forged = await host.SendAsync(process: false, impostor.IssueServiceToken(Caller, Audience, Scope));
-        using var elsewhere = await host.SendAsync(process: false, identity.Tokens.IssueServiceToken(Caller, "https://elsewhere.test/", Scope));
+        using var elsewhere = await host.SendAsync(
+            process: false,
+            identity.Tokens.IssueServiceToken(Caller, "https://elsewhere.test/", Scope));
 
         first.StatusCode.Should().Be(HttpStatusCode.OK);
         second.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -228,7 +255,7 @@ public sealed class MediaProcessingEndpointTests
     }
 
     [Fact]
-    public async Task BffCookie_ShouldStayEveryDefaultScheme_WithTheBearerSchemeRegistered()
+    public async Task BffCookie_ShouldStayEveryDefaultScheme_WhenTheBearerSchemeIsRegistered()
     {
         await using var host = await EndpointHost.CreateAsync(standInSignIn: false);
         var schemes = host.Services.GetRequiredService<IAuthenticationSchemeProvider>();
@@ -281,7 +308,9 @@ public sealed class MediaProcessingEndpointTests
     {
         var start = () => EndpointHost.CreateAsync(resourceUri);
 
-        (await start.Should().ThrowAsync<OptionsValidationException>()).Which.Message.Should().Contain("Identity:Resource:Uri");
+        (await start.Should().ThrowAsync<OptionsValidationException>()).Which.Message
+            .Should()
+            .Contain("Identity:Resource:Uri");
     }
 
     [Fact]
@@ -293,28 +322,41 @@ public sealed class MediaProcessingEndpointTests
         {
             var builder = WebApplication.CreateBuilder(new WebApplicationOptions
             {
-                ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development, ContentRootPath = AppContext.BaseDirectory
+                ApplicationName = DeskTestHost.ApplicationName,
+                EnvironmentName = Environments.Development,
+                ContentRootPath = AppContext.BaseDirectory
             });
             builder.Configure();
             await using var app = builder.Build();
 
-            app.Services.GetRequiredService<IdentityResourceSettings>().Uri.Should().Be("https://from-environment.test");
+            app.Services
+                .GetRequiredService<IdentityResourceSettings>().Uri
+                .Should()
+                .Be("https://from-environment.test");
         }
         finally { Environment.SetEnvironmentVariable(variable, null); }
     }
 
     [Fact]
-    public async Task Worker_ShouldBeAskedAtItsPlatformName_WithTheDeployedSettings()
+    public async Task Worker_ShouldBeAskedAtItsPlatformName_WhenTheDeployedSettingsApply()
     {
         const string key = "a-private-worker-key-for-this-test-only";
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            ApplicationName = DeskTestHost.ApplicationName, EnvironmentName = Environments.Development, ContentRootPath = AppContext.BaseDirectory,
-            Args = ["--Identity:Resource:Uri=https://desk.test", "--ImageProcessing:WorkerBaseUrl=http://ocharo-dev-image-worker:8080", $"--ImageProcessing:WorkerKey={key}"]
+            ApplicationName = DeskTestHost.ApplicationName,
+            EnvironmentName = Environments.Development,
+            ContentRootPath = AppContext.BaseDirectory,
+            Args = [
+                "--Identity:Resource:Uri=https://desk.test",
+                "--ImageProcessing:WorkerBaseUrl=http://ocharo-dev-image-worker:8080",
+                $"--ImageProcessing:WorkerKey={key}",
+            ]
         });
         builder.Configure();
         var worker = new WorkerStandIn();
-        builder.Services.AddHttpClient<IBackgroundRemovalService, HttpBackgroundRemovalService>().ConfigurePrimaryHttpMessageHandler(() => worker);
+        builder.Services
+            .AddHttpClient<IBackgroundRemovalService, HttpBackgroundRemovalService>()
+            .ConfigurePrimaryHttpMessageHandler(() => worker);
         await using var app = builder.Build();
 
         var status = await app.Services.GetRequiredService<IBackgroundRemovalService>().GetStatusAsync();
@@ -365,7 +407,9 @@ public sealed class MediaProcessingEndpointTests
     [InlineData("unsupported", HttpStatusCode.UnsupportedMediaType)]
     [InlineData("mismatch", HttpStatusCode.UnsupportedMediaType)]
     [InlineData("corrupt", HttpStatusCode.BadRequest)]
-    public async Task Processing_ShouldRejectInput_WhenImageTypeOrBytesAreInvalid(string scenario, HttpStatusCode expected)
+    public async Task Processing_ShouldRejectInput_WhenImageTypeOrBytesAreInvalid(
+        string scenario,
+        HttpStatusCode expected)
     {
         await using var host = await EndpointHost.CreateAsync();
         var bytes = scenario == "corrupt" ? Png()[..24] : Png();
@@ -456,31 +500,52 @@ public sealed class MediaProcessingEndpointTests
         public FakeTimeProvider Clock { get; }
         public IdentitySignalSender Signals { get; }
 
-        /// <summary>A token of <see cref="Tokens"/> that expired an hour ago, so only its lifetime refuses it.</summary>
+        /// <summary>
+        /// A token of <see cref="Tokens"/> that expired an hour ago, so only its lifetime refuses it.
+        /// </summary>
         public string ExpiredToken { get; }
 
         public IServiceProvider Services => app.Services;
 
-        private EndpointHost(WebApplication application, Worker worker, FakeTokenIssuer tokens, string expiredToken, FakeTimeProvider clock, IdentitySignalSender signals)
+        private EndpointHost(
+            WebApplication application,
+            Worker worker,
+            FakeTokenIssuer tokens,
+            string expiredToken,
+            FakeTimeProvider clock,
+            IdentitySignalSender signals)
         {
-            app = application; Worker = worker; Tokens = tokens; ExpiredToken = expiredToken; Clock = clock; Signals = signals;
-            Client = app.GetTestClient(); Client.BaseAddress = new Uri("https://localhost");
+            app = application;
+            Worker = worker;
+            Tokens = tokens;
+            ExpiredToken = expiredToken;
+            Clock = clock;
+            Signals = signals;
+            Client = app.GetTestClient();
+            Client.BaseAddress = new Uri("https://localhost");
         }
 
-        /// <summary>Starts Desk with no database. <paramref name="standInSignIn"/> swaps the BFF cookie for <see cref="DeskTestHost"/>'s
-        /// handler; <paramref name="loopbackAuthority"/> leaves the real verification on, reading that instance's keys.</summary>
-        public static async Task<EndpointHost> CreateAsync(string? resourceUri = "https://desk.test", bool standInSignIn = true, string? loopbackAuthority = null)
+        /// <summary>
+        /// Starts Desk with no database. <paramref name="standInSignIn"/> swaps the BFF cookie for
+        /// <see cref="DeskTestHost"/>'s handler; <paramref name="loopbackAuthority"/> leaves the real verification on,
+        /// reading that instance's keys.
+        /// </summary>
+        public static async Task<EndpointHost> CreateAsync(
+            string? resourceUri = "https://desk.test",
+            bool standInSignIn = true,
+            string? loopbackAuthority = null)
         {
             var worker = new Worker();
             var clock = new FakeTimeProvider(DateTimeOffset.UtcNow.AddHours(-1));
             var tokens = new FakeTokenIssuer(clock: clock);
             var expiredToken = tokens.IssueServiceToken(Caller, Audience, Scope);
             clock.SetUtcNow(DateTimeOffset.UtcNow);
+            var authority = loopbackAuthority ?? DeskTestHost.IdentityClientSettings["Identity:Client:Authority"];
             string[] args =
             [
                 "--AllowedHosts=localhost",
                 "--ConnectionStrings:Database=Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1",
-                $"--Identity:Client:Authority={loopbackAuthority ?? DeskTestHost.IdentityClientSettings["Identity:Client:Authority"]}",
+                $"--Identity:Client:Authority={authority}",
                 "--Identity:Client:ClientId=desk",
                 $"--Identity:Client:IsHttpsMetadataRequired={loopbackAuthority is null}",
                 $"--Identity:Client:SignalUrl={BffSignalUrl}",
@@ -489,7 +554,10 @@ public sealed class MediaProcessingEndpointTests
             ];
             var builder = WebApplication.CreateBuilder(new WebApplicationOptions
             {
-                ApplicationName = DeskTestHost.ApplicationName, Args = args, EnvironmentName = Environments.Development, ContentRootPath = AppContext.BaseDirectory
+                ApplicationName = DeskTestHost.ApplicationName,
+                Args = args,
+                EnvironmentName = Environments.Development,
+                ContentRootPath = AppContext.BaseDirectory
             });
             builder.WebHost.UseTestServer();
             builder.Logging.ClearProviders();
@@ -498,13 +566,21 @@ public sealed class MediaProcessingEndpointTests
             if (standInSignIn) DeskTestHost.Use(builder.Services);
             if (loopbackAuthority is null) builder.Services.AddFakeTokenIssuer(tokens);
             // Desk's own cache is a table, and this host has no database; only a person's token reads the deny list.
-            builder.Services.AddSingleton<IDistributedCache>(new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())));
+            builder.Services.AddSingleton<IDistributedCache>(
+                new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())));
             var signals = new IdentitySignalSender(tokens.Issuer);
-            builder.Services.PostConfigure<IdentitySignalReceiverOptions>(options => options.TrustedIssuers.Add(signals.TrustedIssuer));
+            builder.Services.PostConfigure<IdentitySignalReceiverOptions>(options =>
+                options.TrustedIssuers.Add(signals.TrustedIssuer));
             var application = builder.Build();
             application.Configure();
             try { await application.StartAsync(); }
-            catch { await application.DisposeAsync(); tokens.Dispose(); signals.Dispose(); throw; }
+            catch
+            {
+                await application.DisposeAsync();
+                tokens.Dispose();
+                signals.Dispose();
+                throw;
+            }
             return new(application, worker, tokens, expiredToken, clock, signals);
         }
 
@@ -533,7 +609,9 @@ public sealed class MediaProcessingEndpointTests
 
         public async Task<HttpResponseMessage> SendAsync(bool process, string? token)
         {
-            using var request = new HttpRequestMessage(process ? HttpMethod.Post : HttpMethod.Get, Route + (process ? "" : "/capabilities"));
+            using var request = new HttpRequestMessage(
+                process ? HttpMethod.Post : HttpMethod.Get,
+                Route + (process ? "" : "/capabilities"));
             if (process) request.Content = ImageContent(Png());
             if (token is not null) request.Headers.Authorization = new("Bearer", token);
             return await Client.SendAsync(request);
@@ -548,7 +626,10 @@ public sealed class MediaProcessingEndpointTests
         }
     }
 
-    /// <summary>The documents a real Identity instance serves for its issuer, over loopback HTTP, signing through a <see cref="FakeTokenIssuer"/>.</summary>
+    /// <summary>
+    /// The documents a real Identity instance serves for its issuer, over loopback HTTP, signing through a
+    /// <see cref="FakeTokenIssuer"/>.
+    /// </summary>
     private sealed class LoopbackIdentity : IAsyncDisposable
     {
         private readonly WebApplication app;
@@ -565,12 +646,30 @@ public sealed class MediaProcessingEndpointTests
             builder.WebHost.UseUrls("http://127.0.0.1:0");
             builder.Logging.ClearProviders();
             var identity = new LoopbackIdentity(builder.Build());
-            identity.app.MapGet("/.well-known/openid-configuration", () => Results.Json(new { issuer = identity.Tokens.Issuer, jwks_uri = identity.Origin + "/keys" }));
+            identity.app.MapGet(
+                "/.well-known/openid-configuration",
+                () => Results.Json(new { issuer = identity.Tokens.Issuer, jwks_uri = identity.Origin + "/keys" }));
             identity.app.MapGet("/keys", () =>
             {
                 Interlocked.Increment(ref identity.keySetReads);
-                var key = JsonWebKeyConverter.ConvertFromRSASecurityKey((RsaSecurityKey)identity.Tokens.AsTrustedIssuer().SigningKeys![0]);
-                return Results.Json(new { keys = new[] { new { kty = key.Kty, use = "sig", alg = SecurityAlgorithms.RsaSha256, kid = key.Kid, n = key.N, e = key.E } } });
+                var key =
+                    JsonWebKeyConverter.ConvertFromRSASecurityKey(
+                        (RsaSecurityKey)identity.Tokens.AsTrustedIssuer().SigningKeys![0]);
+                return Results.Json(new
+                {
+                    keys = new[]
+                    {
+                        new
+                        {
+                            kty = key.Kty,
+                            use = "sig",
+                            alg = SecurityAlgorithms.RsaSha256,
+                            kid = key.Kid,
+                            n = key.N,
+                            e = key.E,
+                        },
+                    },
+                });
             });
             await identity.app.StartAsync();
             identity.Origin = identity.app.Urls.Single().TrimEnd('/');
@@ -601,9 +700,13 @@ public sealed class MediaProcessingEndpointTests
             StatusCalls++;
             return Task.FromResult(Status);
         }
-        public async Task<BackgroundRemovalResult> RemoveAsync(byte[] source, CancellationToken cancellationToken = default)
+        public async Task<BackgroundRemovalResult> RemoveAsync(
+            byte[] source,
+            CancellationToken cancellationToken = default)
         {
-            RemoveCalls++; LastSource = source.ToArray(); Entered.TrySetResult();
+            RemoveCalls++;
+            LastSource = source.ToArray();
+            Entered.TrySetResult();
             if (Block) await Release.Task.WaitAsync(cancellationToken);
             if (Failure is { } failure) throw failure;
             return new(Output, 3, 2, "fixture-u2net");
@@ -616,19 +719,35 @@ public sealed class MediaProcessingEndpointTests
         public string? Asked { get; private set; }
         public string? Key { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
         {
             Asked = request.RequestUri!.AbsoluteUri;
             Key = request.Headers.GetValues("X-Image-Worker-Key").Single();
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"ready":true,"model":"u2net"}""") });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("""{"ready":true,"model":"u2net"}"""),
+            });
         }
     }
 
     private sealed class UnknownLengthContent : HttpContent
     {
         private readonly byte[] bytes;
-        public UnknownLengthContent(byte[] bytes) { this.bytes = bytes; Headers.ContentType = new("image/png"); }
-        protected override bool TryComputeLength(out long length) { length = 0; return false; }
-        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => stream.WriteAsync(bytes).AsTask();
+        public UnknownLengthContent(byte[] bytes)
+        {
+            this.bytes = bytes;
+            Headers.ContentType = new("image/png");
+        }
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context)
+        {
+            return stream.WriteAsync(bytes).AsTask();
+        }
     }
 }

@@ -34,7 +34,7 @@ public sealed class DesignDocumentValidationTests
     }
 
     [Fact]
-    public void ValidateInput_ShouldDetachValidSnapshots_AndPreserveUnicodeAndNestedContent()
+    public void ValidateInput_ShouldDetachValidSnapshotsAndKeepUnicodeAndNestedContent()
     {
         DesignDocumentInput result;
         using (JsonDocument source = JsonDocument.Parse(
@@ -91,9 +91,16 @@ public sealed class DesignDocumentValidationTests
         using JsonDocument nested = JsonDocument.Parse(deep);
         Action depth = () => _validation.ValidateInput(new DesignDocumentInput("Title", nested.RootElement));
         depth.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
-        JsonElement large = JsonSerializer.SerializeToElement(new { texts = Enumerable.Repeat(new string('x', 65536), 17) });
+        JsonElement large = JsonSerializer.SerializeToElement(new
+        {
+            texts = Enumerable.Repeat(new string('x', 65536), 17),
+        });
         Action total = () => _validation.ValidateInput(new DesignDocumentInput("Title", large));
-        total.Should().Throw<AppException>().Which.Error.Metadata![DeskErrorReasons.Key].Should().Be(DeskErrorReasons.TooLarge);
+        total
+            .Should()
+            .Throw<AppException>().Which.Error.Metadata![DeskErrorReasons.Key]
+            .Should()
+            .Be(DeskErrorReasons.TooLarge);
     }
 
     [Theory]

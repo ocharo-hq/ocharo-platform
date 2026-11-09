@@ -9,13 +9,26 @@ namespace BrandWorkspace.Infrastructure.Sourcing.Services;
 /// <summary>Normalizes and bounds sourcing fields before they reach organization-scoped persistence.</summary>
 public sealed partial class SourcingValidationService
 {
-    public static readonly IReadOnlyList<string> Stages = ["lead", "contacted", "replied", "quoted", "qualified", "dropped"];
+    public static readonly IReadOnlyList<string> Stages = [
+        "lead",
+        "contacted",
+        "replied",
+        "quoted",
+        "qualified",
+        "dropped",
+    ];
     public static readonly IReadOnlyList<string> Channels =
         ["whatsapp", "email", "phone", "form", "website", "instagram", "facebook", "telegram", "marketplace", "other"];
     public static readonly IReadOnlyList<string> Captures = ["original", "screenshot", "derived"];
     public const int MaximumAssignedMedia = 200;
 
-    public SupplierInput Supplier(string? name, string? stage, string? country, string? city, string? website, string? notes)
+    public SupplierInput Supplier(
+        string? name,
+        string? stage,
+        string? country,
+        string? city,
+        string? website,
+        string? notes)
     {
         return new SupplierInput(
             Required(name, "Supplier name", 160),
@@ -28,11 +41,20 @@ public sealed partial class SourcingValidationService
 
     public PersonInput Person(string? name, string? role, string? notes)
     {
-        return new PersonInput(Required(name, "Person name", 160), Optional(role, "Role", 120), Text(notes, "Notes", 4000));
+        return new PersonInput(
+            Required(name, "Person name", 160),
+            Optional(role, "Role", 120),
+            Text(notes, "Notes", 4000));
     }
 
     public RouteInput Route(
-        string? channel, string? destination, string? label, string? sourceUrl, bool verified, bool isPrimary, Guid? personId,
+        string? channel,
+        string? destination,
+        string? label,
+        string? sourceUrl,
+        bool verified,
+        bool isPrimary,
+        Guid? personId,
         string? notes)
     {
         string validatedChannel = Channel(channel);
@@ -55,7 +77,9 @@ public sealed partial class SourcingValidationService
     public string Stage(string? value)
     {
         string stage = value?.Trim() ?? "";
-        return Stages.Contains(stage) ? stage : throw Invalid("Choose a supplier stage: " + string.Join(", ", Stages) + ".");
+        return Stages.Contains(stage)
+            ? stage
+            : throw Invalid("Choose a supplier stage: " + string.Join(", ", Stages) + ".");
     }
 
     public string? StageFilter(string? value) => string.IsNullOrWhiteSpace(value) ? null : Stage(value);
@@ -63,7 +87,9 @@ public sealed partial class SourcingValidationService
     public string Channel(string? value)
     {
         string channel = value?.Trim() ?? "";
-        return Channels.Contains(channel) ? channel : throw Invalid("Choose a contact channel: " + string.Join(", ", Channels) + ".");
+        return Channels.Contains(channel)
+            ? channel
+            : throw Invalid("Choose a contact channel: " + string.Join(", ", Channels) + ".");
     }
 
     public string Capture(string? value)
@@ -91,12 +117,16 @@ public sealed partial class SourcingValidationService
 
     public string? SourceMessageId(string? value) => Optional(value, "Source message", 200);
 
-    /// <summary>Keeps only the final file name segment and replaces characters that are unsafe in headers or paths.</summary>
+    /// <summary>
+    /// Keeps only the final file name segment and replaces characters that are unsafe in headers or paths.
+    /// </summary>
     public string OriginalName(string? value)
     {
         string name = (value ?? "").Replace('\\', '/');
         name = name[(name.LastIndexOf('/') + 1)..].Trim();
-        name = new string(name.Select(character => char.IsControl(character) || character is ':' or '"' ? '_' : character).ToArray());
+        name = new string(name
+            .Select(character => char.IsControl(character) || character is ':' or '"' ? '_' : character)
+            .ToArray());
         if (name is "" or "." or "..") name = "upload";
         return name.Length <= 255 ? name : name[..255];
     }
@@ -130,7 +160,9 @@ public sealed partial class SourcingValidationService
                     : throw Invalid("Phone and WhatsApp destinations need 6 to 20 digits, optionally starting with +.");
             case "email":
                 string email = destination.ToLowerInvariant();
-                return email.Length <= 254 && EmailPattern().IsMatch(email) ? email : throw Invalid("Enter a valid email address.");
+                return email.Length <= 254 && EmailPattern().IsMatch(email)
+                    ? email
+                    : throw Invalid("Enter a valid email address.");
             case "website" or "form" or "marketplace":
                 return Url(destination, "Destination")!;
             default:
@@ -142,7 +174,9 @@ public sealed partial class SourcingValidationService
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
         string country = value.Trim().ToUpperInvariant();
-        return CountryPattern().IsMatch(country) ? country : throw Invalid("Use a two-letter country code such as IN or UZ.");
+        return CountryPattern().IsMatch(country)
+            ? country
+            : throw Invalid("Use a two-letter country code such as IN or UZ.");
     }
 
     private static string? Url(string? value, string field)

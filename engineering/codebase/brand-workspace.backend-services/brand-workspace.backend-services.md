@@ -120,8 +120,9 @@ resolves the member's access from the Identity claims and projects them into Des
 JSON (`AddControllersWithSdkJson`: camelCase, null members left out, enums as camelCase strings); failures are the SDK's
 problem details, `detail` the message and `code` the error kind (`Validation`, `NotFound`, `Conflict`, `Forbidden`, …).
 Desk's status mapper answers 413 for an oversized body, 415 for an unsupported image type and 502 for a call WoW2 Files
-refused. The commerce and public brand routes keep commerce's own JSON (nulls written, case-sensitive dictionary keys
-such as size labels), which Marketing and Blog read. Below the handlers, validators and repositories raise catalog errors
+refused. Dictionary keys travel as written, so size labels such as `XL` keep their case; the commerce draft reads
+`{}` before its first save, and the public brand routes answer their payload bare, as Marketing and Blog read it.
+Commerce's stored snapshots keep their own JSON (`CommerceJson`: nulls written). Below the handlers, validators and repositories raise catalog errors
 (`DeskErrors`) that the mediator's exception-mapping interceptor returns as failures.
 
 - `GET /health`: the boot bundle's endpoint, anonymous: `200 Healthy` once PostgreSQL answers and Desk's

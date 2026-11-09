@@ -6,4 +6,9 @@ namespace BrandWorkspace.Api.Sourcing.Models;
 /// <param name="SupplierId">The supplier the file came from; none puts it in the inbox.</param>
 /// <param name="Capture">How the file was captured.</param>
 /// <param name="Caption">The caption.</param>
-public sealed record SourcingUploadForm(string FileName, byte[] Bytes, Guid? SupplierId, string Capture, string Caption);
+public sealed record SourcingUploadForm(
+    string FileName,
+    byte[] Bytes,
+    Guid? SupplierId,
+    string Capture,
+    string Caption);

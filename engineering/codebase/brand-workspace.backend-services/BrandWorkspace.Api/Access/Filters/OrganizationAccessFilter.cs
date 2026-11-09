@@ -50,7 +50,8 @@ public sealed class OrganizationAccessFilter(ISender sender) : IAsyncActionFilte
             return;
         }
         if (!Guid.TryParse(http.GetRouteValue(OrganizationRouteKey)?.ToString(), out var organizationId)
-            || http.User.FindFirstValue(OrganizationClaimTypeConstants.Id) != organizationId.ToString("D", CultureInfo.InvariantCulture)
+            || http.User.FindFirstValue(OrganizationClaimTypeConstants.Id)
+                != organizationId.ToString("D", CultureInfo.InvariantCulture)
             || http.User.GetOrganizationRole(organizationId) is not { } role)
         {
             context.Result = controller.ToProblem(DeskErrors.NotFound("Not found"));

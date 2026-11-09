@@ -46,7 +46,8 @@ public sealed class DesignDocumentValidationService
         {
             throw Invalid("Snapshot contains an invalid Unicode value.");
         }
-        if (JsonSerializer.SerializeToUtf8Bytes(input.Snapshot, StoredJsonConstants.Default).Length > MaximumSnapshotBytes)
+        if (JsonSerializer.SerializeToUtf8Bytes(input.Snapshot, StoredJsonConstants.Default).Length
+            > MaximumSnapshotBytes)
             throw DeskErrors.TooLarge("Snapshot must contain at most 1 MiB of stored JSON.").ToException();
         return new DesignDocumentInput(input.Title.Trim(), input.Snapshot.Clone());
     }
@@ -63,9 +64,37 @@ public sealed class DesignDocumentValidationService
             throw Invalid("Limit must be 1 to 100 and offset must be 0 to 1000000.");
     }
 
-    private static readonly string[] CopyFields = ["collection", "coverNote", "header", "footer", "sizes", "pieces", "priceOnRequest", "prices", "materials", "decoration"];
-    private static readonly string[] ProductFields = ["name", "fabric", "decoration", "description", "details", "notes", "sizes", "price", "price-label", "currency"];
-    private static readonly string[] PriceFields = ["show", "showCurrency", "showQuantity", "showRetail", "showWholesale"];
+    private static readonly string[] CopyFields = [
+        "collection",
+        "coverNote",
+        "header",
+        "footer",
+        "sizes",
+        "pieces",
+        "priceOnRequest",
+        "prices",
+        "materials",
+        "decoration",
+    ];
+    private static readonly string[] ProductFields = [
+        "name",
+        "fabric",
+        "decoration",
+        "description",
+        "details",
+        "notes",
+        "sizes",
+        "price",
+        "price-label",
+        "currency",
+    ];
+    private static readonly string[] PriceFields = [
+        "show",
+        "showCurrency",
+        "showQuantity",
+        "showRetail",
+        "showWholesale",
+    ];
 
     private static bool String(JsonElement value, out string text)
     {
@@ -73,53 +102,75 @@ public sealed class DesignDocumentValidationService
         return value.ValueKind == JsonValueKind.String;
     }
 
-    private static bool Group(JsonElement value) => String(value, out var group) && group is "all" or "model" or "product" or "detail" or "fabric";
+    private static bool Group(JsonElement value)
+    {
+        return String(value, out var group) && group is "all" or "model" or "product" or "detail" or "fabric";
+    }
 
     private static void ValidateCatalogueMetadata(JsonElement snapshot)
     {
-        var catalogue = snapshot.TryGetProperty("kind", out var kind) && String(kind, out var name) && name == "catalogue";
-        if (catalogue && snapshot.TryGetProperty("locale", out var locale) && (!String(locale, out var code) || !CatalogueLanguages.Supported(code)))
+        var catalogue = snapshot.TryGetProperty("kind", out var kind)
+            && String(kind, out var name)
+            && name == "catalogue";
+        if (catalogue
+            && snapshot.TryGetProperty("locale", out var locale)
+            && (!String(locale, out var code) || !CatalogueLanguages.Supported(code)))
             throw Invalid("Choose a supported catalogue language.");
         if (snapshot.TryGetProperty("catalogue", out _))
         {
             if (!catalogue) throw Invalid("Catalogue metadata belongs to catalogue documents.");
             _ = CatalogueDefinition.Read(snapshot);
-            if (!snapshot.TryGetProperty("pages", out var outputPages) || outputPages.ValueKind != JsonValueKind.Array || outputPages.GetArrayLength() > 100)
+            if (!snapshot.TryGetProperty("pages", out var outputPages)
+                || outputPages.ValueKind != JsonValueKind.Array
+                || outputPages.GetArrayLength() > 100)
                 throw Invalid("Catalogue PDF pages must be an array of up to 100 pages.");
         }
         if (snapshot.TryGetProperty("catalogueSettings", out var settings))
         {
             if (!catalogue || settings.ValueKind != JsonValueKind.Object)
                 throw Invalid("Catalogue settings belong to catalogue documents.");
-            if (settings.TryGetProperty("brandId", out var brand) && (!String(brand, out var brandId) || !Guid.TryParse(brandId, out var id) || id == Guid.Empty))
+            if (settings.TryGetProperty("brandId", out var brand)
+                && (!String(brand, out var brandId) || !Guid.TryParse(brandId, out var id) || id == Guid.Empty))
                 throw Invalid("Catalogue settings require a valid brand ID.");
-            if (settings.TryGetProperty("sourceRevision", out var revision) && (revision.ValueKind != JsonValueKind.Number || !revision.TryGetInt32(out var number) || number < 1))
+            if (settings.TryGetProperty("sourceRevision", out var revision)
+                && (revision.ValueKind != JsonValueKind.Number || !revision.TryGetInt32(out var number) || number < 1))
                 throw Invalid("Catalogue source revision must be positive.");
             if (!settings.TryGetProperty("mediaGroup", out var group) || !Group(group))
                 throw Invalid("Choose a known catalogue image group.");
-            if (!settings.TryGetProperty("priceDisplay", out var prices) || prices.ValueKind != JsonValueKind.Object
-                || PriceFields.Any(field => !prices.TryGetProperty(field, out var flag) || flag.ValueKind is not (JsonValueKind.True or JsonValueKind.False)))
+            if (!settings.TryGetProperty("priceDisplay", out var prices)
+                || prices.ValueKind != JsonValueKind.Object
+                || PriceFields.Any(field =>
+                    !prices.TryGetProperty(field, out var flag)
+                        || flag.ValueKind is not (JsonValueKind.True or JsonValueKind.False)))
                 throw Invalid("Catalogue price display settings must contain five boolean flags.");
             if (!settings.TryGetProperty("copyByLocale", out var copies) || copies.ValueKind != JsonValueKind.Object
                 || copies.EnumerateObject().Count() > CatalogueLanguages.Codes.Count)
                 throw Invalid("Catalogue shared copy must use supported language records.");
             foreach (var copy in copies.EnumerateObject())
             {
-                if (!CatalogueLanguages.Supported(copy.Name) || copy.Value.ValueKind != JsonValueKind.Object
+                if (!CatalogueLanguages.Supported(copy.Name)
+                    || copy.Value.ValueKind != JsonValueKind.Object
                     || copy.Value.EnumerateObject().Any(field => !CopyFields.Contains(field.Name))
-                    || CopyFields.Any(field => !copy.Value.TryGetProperty(field, out var text) || !String(text, out var content) || content.Length > 1000))
-                    throw Invalid("Shared catalogue copy requires ten text fields of up to 1000 characters per language.");
+                    || CopyFields.Any(field =>
+                        !copy.Value.TryGetProperty(field, out var text)
+                            || !String(text, out var content)
+                            || content.Length > 1000))
+                    throw Invalid(
+                        "Shared catalogue copy requires ten text fields of up to 1000 characters per language.");
             }
         }
         if (!snapshot.TryGetProperty("pages", out var pages) || pages.ValueKind != JsonValueKind.Array) return;
         foreach (var page in pages.EnumerateArray())
         {
             if (page.ValueKind != JsonValueKind.Object) continue;
-            if (page.TryGetProperty("isActive", out var active) && active.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) throw Invalid("Page activity must be a boolean.");
+            if (page.TryGetProperty("isActive", out var active)
+                && active.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                throw Invalid("Page activity must be a boolean.");
             if (page.TryGetProperty("catalogueSource", out var source) && source.ValueKind == JsonValueKind.Object
                 && source.TryGetProperty("mediaGroup", out var selected) && !Group(selected))
                 throw Invalid("Choose a known page image group.");
-            if (!page.TryGetProperty("elements", out var elements) || elements.ValueKind != JsonValueKind.Array) continue;
+            if (!page.TryGetProperty("elements", out var elements) || elements.ValueKind != JsonValueKind.Array)
+                continue;
             foreach (var element in elements.EnumerateArray())
             {
                 if (element.ValueKind != JsonValueKind.Object) continue;
@@ -127,10 +178,15 @@ public sealed class DesignDocumentValidationService
                     && (!String(direction, out var flow) || flow is not ("ltr" or "rtl")))
                     throw Invalid("Text direction must be ltr or rtl.");
                 if (!element.TryGetProperty("binding", out var binding)) continue;
-                if (!catalogue || binding.ValueKind != JsonValueKind.Object
-                    || !element.TryGetProperty("type", out var type) || !String(type, out var elementType) || elementType != "text"
-                    || !binding.TryGetProperty("kind", out var bindingKind) || !String(bindingKind, out var bindingType)
-                    || !binding.TryGetProperty("field", out var field) || !String(field, out var fieldName))
+                if (!catalogue
+                    || binding.ValueKind != JsonValueKind.Object
+                    || !element.TryGetProperty("type", out var type)
+                    || !String(type, out var elementType)
+                    || elementType != "text"
+                    || !binding.TryGetProperty("kind", out var bindingKind)
+                    || !String(bindingKind, out var bindingType)
+                    || !binding.TryGetProperty("field", out var field)
+                    || !String(field, out var fieldName))
                     throw Invalid("Catalogue text bindings must identify their source and field.");
                 if (bindingType == "shared")
                 {
@@ -138,13 +194,17 @@ public sealed class DesignDocumentValidationService
                 }
                 else if (bindingType == "product")
                 {
-                    var hasProduct = binding.TryGetProperty("productId", out var product) || element.TryGetProperty("productId", out product);
+                    var hasProduct = binding.TryGetProperty("productId", out var product)
+                        || element.TryGetProperty("productId", out product);
                     if (!ProductFields.Contains(fieldName) || !hasProduct || !String(product, out var productId)
                         || string.IsNullOrWhiteSpace(productId) || productId.Length > 256)
                         throw Invalid("Product text bindings require a product and supported field.");
                     var hasIndex = binding.TryGetProperty("index", out var index);
                     if ((fieldName is "price" or "price-label") && !hasIndex
-                        || hasIndex && (index.ValueKind != JsonValueKind.Number || !index.TryGetInt32(out var position) || position is < 0 or > 49))
+                        || hasIndex
+                            && (index.ValueKind != JsonValueKind.Number
+                                || !index.TryGetInt32(out var position)
+                                || position is < 0 or > 49))
                         throw Invalid("Catalogue price bindings require an index from zero to 49.");
                 }
                 else throw Invalid("Unknown catalogue binding source.");

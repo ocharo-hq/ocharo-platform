@@ -11,7 +11,9 @@ public sealed class BrandGetAllQueryHandler(PreparationService service)
     : IQueryHandler<BrandGetAllQuery, AppResult<IReadOnlyList<Brand>>>
 {
     /// <inheritdoc />
-    public async ValueTask<AppResult<IReadOnlyList<Brand>>> HandleAsync(BrandGetAllQuery request, CancellationToken cancellationToken)
+    public async ValueTask<AppResult<IReadOnlyList<Brand>>> HandleAsync(
+        BrandGetAllQuery request,
+        CancellationToken cancellationToken)
     {
         return AppResult<IReadOnlyList<Brand>>.Ok(await service.GetBrandsAsync(request.Access, cancellationToken));
     }

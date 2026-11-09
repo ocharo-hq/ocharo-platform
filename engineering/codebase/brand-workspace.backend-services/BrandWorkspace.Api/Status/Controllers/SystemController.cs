@@ -26,13 +26,26 @@ public sealed class SystemController(IFoundationRepository repository, TimeProvi
         try
         {
             if (!await repository.IsReadyAsync(cancellationToken))
-                return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: SchemaReadinessHealthCheck.NotReady);
-            var worker = WorkerSnapshot.From(await repository.GetLastHeartbeatAsync(cancellationToken), time.GetUtcNow());
-            return Ok(new { service = ServiceName, stage = "foundation", persistence = "PostgreSQL", worker, version = BuildIdentity.Version });
+                return Problem(
+                    statusCode: StatusCodes.Status503ServiceUnavailable,
+                    title: SchemaReadinessHealthCheck.NotReady);
+            var worker = WorkerSnapshot.From(
+                await repository.GetLastHeartbeatAsync(cancellationToken),
+                time.GetUtcNow());
+            return Ok(new
+            {
+                service = ServiceName,
+                stage = "foundation",
+                persistence = "PostgreSQL",
+                worker,
+                version = BuildIdentity.Version,
+            });
         }
         catch (Exception exception) when (exception is NpgsqlException or TimeoutException)
         {
-            return Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: SchemaReadinessHealthCheck.NotReady);
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: SchemaReadinessHealthCheck.NotReady);
         }
     }
 }

@@ -1,5 +1,5 @@
 using BrandWorkspace.Application.Commerce.Models;
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 
 namespace BrandWorkspace.Application.Commerce.Repositories;

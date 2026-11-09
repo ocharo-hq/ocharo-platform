@@ -5,7 +5,7 @@ using BrandWorkspace.Application.Commerce.Models;
 using BrandWorkspace.Application.Commerce.Repositories;
 using BrandWorkspace.Application.Commerce.Services;
 using BrandWorkspace.Application.Foundation.Errors;
-using BrandWorkspace.Domain.Commerce;
+using BrandWorkspace.Domain.Commerce.Models;
 using BrandWorkspace.Persistence.Commerce.Serializers;
 using Dapper;
 using Npgsql;

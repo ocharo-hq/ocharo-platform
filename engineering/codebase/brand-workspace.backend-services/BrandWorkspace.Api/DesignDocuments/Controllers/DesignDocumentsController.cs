@@ -23,8 +23,12 @@ public sealed class DesignDocumentsController(ISender sender) : ControllerBase
 {
     /// <summary>Gets the documents of a kind, a page at a time, without their snapshots.</summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] string? kind, [FromQuery] bool? includeArchived, [FromQuery] int? limit,
-        [FromQuery] int? offset, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? kind,
+        [FromQuery] bool? includeArchived,
+        [FromQuery] int? limit,
+        [FromQuery] int? offset,
+        CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new DesignDocumentGetAllQuery
         {
@@ -53,7 +57,9 @@ public sealed class DesignDocumentsController(ISender sender) : ControllerBase
             Kind = request.Kind,
             Input = request.ToInput(),
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Gets a document at its current revision.</summary>
@@ -61,9 +67,15 @@ public sealed class DesignDocumentsController(ISender sender) : ControllerBase
     public async Task<IActionResult> Get(Guid documentId, CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(
-            new DesignDocumentGetQuery { Access = OrganizationAccessFilter.GetAccess(HttpContext), DocumentId = documentId },
+            new DesignDocumentGetQuery
+            {
+                Access = OrganizationAccessFilter.GetAccess(HttpContext),
+                DocumentId = documentId,
+            },
             cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Replaces a document's content at the revision the editor opened, from a strict JSON body.</summary>
@@ -81,7 +93,9 @@ public sealed class DesignDocumentsController(ISender sender) : ControllerBase
             ExpectedRevision = request.ExpectedRevision,
             Input = request.ToInput(),
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Archives a document at the revision the editor opened, from a strict JSON body.</summary>
@@ -89,7 +103,9 @@ public sealed class DesignDocumentsController(ISender sender) : ControllerBase
     [DisableFormValueModelBinding]
     public async Task<IActionResult> Archive(Guid documentId, CancellationToken cancellationToken)
     {
-        var read = await DesignDocumentRequestReader.ReadAsync<ArchiveDesignDocumentRequest>(Request, cancellationToken);
+        var read = await DesignDocumentRequestReader.ReadAsync<ArchiveDesignDocumentRequest>(
+            Request,
+            cancellationToken);
         if (read.IsFailure(out var error, out var request))
             return this.ToProblem(error);
         var result = await sender.SendAsync(new DesignDocumentArchiveCommand
@@ -98,7 +114,9 @@ public sealed class DesignDocumentsController(ISender sender) : ControllerBase
             DocumentId = documentId,
             ExpectedRevision = request.ExpectedRevision,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 
     /// <summary>Gets a document's saved revisions, a page at a time.</summary>
@@ -128,6 +146,8 @@ public sealed class DesignDocumentsController(ISender sender) : ControllerBase
             DocumentId = documentId,
             Revision = revision,
         }, cancellationToken);
-        return result.Match<IActionResult>(ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)), fail => this.ToProblem(fail.Error));
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<DesignDocument>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
     }
 }

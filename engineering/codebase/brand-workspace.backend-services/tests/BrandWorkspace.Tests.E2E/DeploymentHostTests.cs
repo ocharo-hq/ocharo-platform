@@ -18,7 +18,9 @@ using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Desk as a deployed target runs it: Production, target settings only, behind the ingress, migrating itself.</summary>
+/// <summary>
+/// Desk as a deployed target runs it: Production, target settings only, behind the ingress, migrating itself.
+/// </summary>
 public sealed class DeploymentHostTests
 {
     private const string Ingress = "172.30.0.2";
@@ -36,9 +38,13 @@ public sealed class DeploymentHostTests
 
             (await client.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
             (await client.GetAsync("/api/system/status")).StatusCode.Should().Be(HttpStatusCode.OK);
-            factory.Services.GetService<IBackgroundJobClient>().Should().BeNull("the serving API registers no job client; the jobs worker owns the queue");
+            factory.Services
+                .GetService<IBackgroundJobClient>()
+                .Should()
+                .BeNull("the serving API registers no job client; the jobs worker owns the queue");
             await using var dataSource = NpgsqlDataSource.Create(database.ConnectionString);
-            await using var command = dataSource.CreateCommand("SELECT count(*) FROM public.migration_history WHERE applied_by = 'startup'");
+            await using var command =
+                dataSource.CreateCommand("SELECT count(*) FROM public.migration_history WHERE applied_by = 'startup'");
             ((long)(await command.ExecuteScalarAsync())!).Should().BePositive();
         }
         finally { keys.Delete(true); }
@@ -52,7 +58,9 @@ public sealed class DeploymentHostTests
         await using (var migrated = ApiContractTests.CreateFactory(database.ConnectionString))
             migrated.CreateClient().Dispose();
         await using (var dataSource = NpgsqlDataSource.Create(database.ConnectionString))
-        await using (var drift = dataSource.CreateCommand("UPDATE public.migration_history SET checksum = repeat('0', 64) WHERE ordinal = 1"))
+        await using (var drift =
+            dataSource.CreateCommand(
+                "UPDATE public.migration_history SET checksum = repeat('0', 64) WHERE ordinal = 1"))
             (await drift.ExecuteNonQueryAsync()).Should().Be(1);
 
         await using var drifted = ApiContractTests.CreateFactory(database.ConnectionString);
@@ -66,7 +74,10 @@ public sealed class DeploymentHostTests
     [InlineData(Ingress, Ingress, true)]
     [InlineData(Ingress, "203.0.113.9", false)]
     [InlineData(null, Ingress, false)]
-    public async Task ForwardedHeaders_ShouldApplyOnlyFromTheConfiguredIngress(string? trustedProxy, string sender, bool trusted)
+    public async Task ForwardedHeaders_ShouldApplyOnlyFromTheConfiguredIngress(
+        string? trustedProxy,
+        string sender,
+        bool trusted)
     {
         var keys = Directory.CreateTempSubdirectory("brand-workspace-proxy-keys-");
         try
@@ -87,14 +98,18 @@ public sealed class DeploymentHostTests
                 context.Request.Scheme.Should().Be("https");
                 context.Request.Host.Value.Should().Be("desk.example.test");
                 context.Connection.RemoteIpAddress.Should().Be(IPAddress.Parse("198.51.100.7"));
-                context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized, "sign-in sees HTTPS and only asks for a session");
+                context.Response.StatusCode
+                    .Should()
+                    .Be(StatusCodes.Status401Unauthorized, "sign-in sees HTTPS and only asks for a session");
             }
             else
             {
                 context.Request.Scheme.Should().Be("http");
                 context.Request.Host.Value.Should().Be("localhost");
                 context.Connection.RemoteIpAddress.Should().Be(IPAddress.Parse(sender));
-                context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest, "an untrusted sender cannot claim HTTPS");
+                context.Response.StatusCode
+                    .Should()
+                    .Be(StatusCodes.Status400BadRequest, "an untrusted sender cannot claim HTTPS");
             }
         }
         finally { keys.Delete(true); }
@@ -108,15 +123,17 @@ public sealed class DeploymentHostTests
             ConfigureHostHook = host => host.UseEnvironment(Environments.Production).UseIdentitySettings()
                 .ConfigureHostConfiguration(settings => settings.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["DEPLOY_ENVIRONMENT"] = "prod", ["Deployment:TrustedProxies:0"] = Ingress
+                    ["DEPLOY_ENVIRONMENT"] = "prod",
+                    ["Deployment:TrustedProxies:0"] = Ingress
                 })),
-            ConfigureConfigurationHook = configuration => configuration.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ConnectionStrings:Database"] = connection,
-                ["AllowedHosts"] = "desk.example.test;localhost",
-                ["DataProtection:KeysPath"] = keys,
-                ["DataProtection:ApplicationName"] = "brand-workspace:deployed-tests"
-            })
+            ConfigureConfigurationHook =
+                configuration => configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:Database"] = connection,
+                    ["AllowedHosts"] = "desk.example.test;localhost",
+                    ["DataProtection:KeysPath"] = keys,
+                    ["DataProtection:ApplicationName"] = "brand-workspace:deployed-tests"
+                })
         };
         factory.Clock.SetUtcNow(DateTimeOffset.UtcNow);
         return factory;
@@ -135,7 +152,10 @@ public sealed class DeploymentHostTests
         ];
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
-            ApplicationName = DeskTestHost.ApplicationName, Args = args, EnvironmentName = Environments.Production, ContentRootPath = AppContext.BaseDirectory
+            ApplicationName = DeskTestHost.ApplicationName,
+            Args = args,
+            EnvironmentName = Environments.Production,
+            ContentRootPath = AppContext.BaseDirectory
         });
         builder.WebHost.UseTestServer();
         builder.Configure();

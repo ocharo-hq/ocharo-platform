@@ -1,6 +1,8 @@
 namespace BrandWorkspace.Application.Foundation.Constants;
 
-/// <summary>Holds the reasons a Desk error names in its metadata where its kind alone does not decide the HTTP status.</summary>
+/// <summary>
+/// Holds the reasons a Desk error names in its metadata where its kind alone does not decide the HTTP status.
+/// </summary>
 public static class DeskErrorReasons
 {
     /// <summary>Holds the metadata key that carries the reason.</summary>

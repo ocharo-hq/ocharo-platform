@@ -31,9 +31,16 @@ public static class PreparationUploadReader
     /// <summary>Reads the upload of <paramref name="request"/>.</summary>
     /// <param name="request">The upload request.</param>
     /// <param name="cancellationToken">The token that cancels the read.</param>
-    public static async Task<Result<PreparationUploadForm>> ReadAsync(HttpRequest request, CancellationToken cancellationToken)
+    public static async Task<Result<PreparationUploadForm>> ReadAsync(
+        HttpRequest request,
+        CancellationToken cancellationToken)
     {
-        var read = await MultipartFormReader.ReadAsync(request, MaximumRequestBytes, Limits, Messages, cancellationToken);
+        var read = await MultipartFormReader.ReadAsync(
+            request,
+            MaximumRequestBytes,
+            Limits,
+            Messages,
+            cancellationToken);
         if (read.IsFailure(out var error, out var form))
             return Result<PreparationUploadForm>.Fail(error);
         if (form.Files.Count != 1 || form.Files[0].Name != "file" || form["provenance"].Count != 1)
@@ -43,6 +50,9 @@ public static class PreparationUploadReader
             return Result<PreparationUploadForm>.Fail(DeskErrors.TooLarge("Images must contain 1 byte to 5 MiB."));
         using var content = new MemoryStream();
         await file.CopyToAsync(content, cancellationToken);
-        return Result<PreparationUploadForm>.Ok(new PreparationUploadForm(file.FileName, form["provenance"].ToString(), content.ToArray()));
+        return Result<PreparationUploadForm>.Ok(new PreparationUploadForm(
+            file.FileName,
+            form["provenance"].ToString(),
+            content.ToArray()));
     }
 }

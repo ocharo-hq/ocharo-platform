@@ -13,15 +13,18 @@ using Xunit;
 
 namespace BrandWorkspace.Tests.E2E;
 
-/// <summary>Exercises authenticated adoption against synthetic offline donor databases and real tenant persistence.</summary>
-public sealed class CommerceAdoptionTests(PreparationDatabaseFixture fixture) : IClassFixture<PreparationDatabaseFixture>
+/// <summary>
+/// Exercises authenticated adoption against synthetic offline donor databases and real tenant persistence.
+/// </summary>
+public sealed class CommerceAdoptionTests(PreparationDatabaseFixture fixture)
+    : IClassFixture<PreparationDatabaseFixture>
 {
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("not-an-organization")]
     [InlineData("00000000-0000-0000-0000-000000000000")]
-    public async Task Adoption_RejectsMissingOrInvalidBindingBeforeReadingSource(string? binding)
+    public async Task Adoption_ShouldReturn403BeforeReadingTheSource_WhenTheBindingIsMissingOrInvalid(string? binding)
     {
         var owner = await fixture.CreateOwnerAsync();
         using var client = await fixture.LoginAsync(owner);
@@ -33,11 +36,14 @@ public sealed class CommerceAdoptionTests(PreparationDatabaseFixture fixture) : 
         using var response = await client.PostAsJsonAsync(PathFor(owner, brand), new { slug = "synthetic-adoption" });
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden, await response.Content.ReadAsStringAsync());
         response.Headers.CacheControl!.NoStore.Should().BeTrue();
-        (await client.GetFromJsonAsync<JsonElement>(CommercePath(owner, brand))).GetProperty("data").ValueKind.Should().Be(JsonValueKind.Null);
+        (await client.GetFromJsonAsync<JsonElement>(CommercePath(owner, brand)))
+            .TryGetProperty("data", out _)
+            .Should()
+            .BeFalse();
     }
 
     [Fact]
-    public async Task Adoption_OnlyConfiguredOwnerCanImportGlobalDonorData()
+    public async Task Adoption_ShouldImportGlobalDonorData_WhenTheCallerIsTheConfiguredOwner()
     {
         var intended = await fixture.CreateOwnerAsync();
         var other = await fixture.CreateOwnerAsync();
@@ -52,21 +58,40 @@ public sealed class CommerceAdoptionTests(PreparationDatabaseFixture fixture) : 
             var config = fixture.Factory.Services.GetRequiredService<IConfiguration>();
             config["Commerce:AdoptionOrganizationId"] = intended.OrganizationId.ToString();
             config["Commerce:SourceRoot"] = root;
-            using var rejected = await otherClient.PostAsJsonAsync(PathFor(other, otherBrand), new { slug = "synthetic-adoption" });
+            using var rejected = await otherClient.PostAsJsonAsync(
+                PathFor(other, otherBrand),
+                new { slug = "synthetic-adoption" });
             rejected.StatusCode.Should().Be(HttpStatusCode.Forbidden, await rejected.Content.ReadAsStringAsync());
-            (await otherClient.GetFromJsonAsync<JsonElement>(CommercePath(other, otherBrand))).GetProperty("data").ValueKind.Should().Be(JsonValueKind.Null);
+            (await otherClient.GetFromJsonAsync<JsonElement>(CommercePath(other, otherBrand)))
+                .TryGetProperty("data", out _)
+                .Should()
+                .BeFalse();
 
             await fixture.SetRoleAsync(intended, "editor");
-            using var editorRejected = await intendedClient.PostAsJsonAsync(PathFor(intended, intendedBrand), new { slug = "synthetic-adoption" });
+            using var editorRejected = await intendedClient.PostAsJsonAsync(
+                PathFor(intended, intendedBrand),
+                new { slug = "synthetic-adoption" });
             editorRejected.StatusCode.Should().Be(HttpStatusCode.Forbidden);
             await fixture.SetRoleAsync(intended, "owner");
-            using var adopted = await intendedClient.PostAsJsonAsync(PathFor(intended, intendedBrand), new { slug = "synthetic-adoption" });
+            using var adopted = await intendedClient.PostAsJsonAsync(
+                PathFor(intended, intendedBrand),
+                new { slug = "synthetic-adoption" });
             adopted.StatusCode.Should().Be(HttpStatusCode.OK, await adopted.Content.ReadAsStringAsync());
-            var saved = (await intendedClient.GetFromJsonAsync<JsonElement>(CommercePath(intended, intendedBrand))).GetProperty("data");
+            var saved = (await intendedClient.GetFromJsonAsync<JsonElement>(CommercePath(
+                intended,
+                intendedBrand))).GetProperty("data");
             saved.GetProperty("revision").GetInt32().Should().Be(1);
-            saved.GetProperty("snapshot").GetProperty("identity").GetProperty("name").GetString().Should().Be("Private synthetic donor");
+            saved
+                .GetProperty("snapshot")
+                .GetProperty("identity")
+                .GetProperty("name")
+                .GetString()
+                .Should()
+                .Be("Private synthetic donor");
             saved.GetProperty("snapshot").GetProperty("sources")[0].GetProperty("revision").GetInt32().Should().Be(7);
-            using var repeated = await intendedClient.PostAsJsonAsync(PathFor(intended, intendedBrand), new { slug = "synthetic-adoption" });
+            using var repeated = await intendedClient.PostAsJsonAsync(
+                PathFor(intended, intendedBrand),
+                new { slug = "synthetic-adoption" });
             repeated.StatusCode.Should().Be(HttpStatusCode.Conflict);
         }
         finally { if (Directory.Exists(root)) Directory.Delete(root, recursive: true); }
@@ -74,30 +99,57 @@ public sealed class CommerceAdoptionTests(PreparationDatabaseFixture fixture) : 
 
     private static async Task<Guid> CreateBrand(HttpClient client, OrganizationAccess owner)
     {
-        using var response = await client.PostAsJsonAsync($"/api/organizations/{owner.OrganizationId}/brands", new { name = "Synthetic adoption fixture", timeZone = "Asia/Tashkent" });
+        using var response = await client.PostAsJsonAsync(
+            $"/api/organizations/{owner.OrganizationId}/brands",
+            new { name = "Synthetic adoption fixture", timeZone = "Asia/Tashkent" });
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
-        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data").GetProperty("id").GetGuid();
+        return (await response.Content.ReadFromJsonAsync<JsonElement>())
+            .GetProperty("data")
+            .GetProperty("id")
+            .GetGuid();
     }
-    private static string CommercePath(OrganizationAccess owner, Guid brand) => $"/api/organizations/{owner.OrganizationId}/brands/{brand}/commerce";
-    private static string PathFor(OrganizationAccess owner, Guid brand) => CommercePath(owner, brand) + "/adopt-preserved";
+    private static string CommercePath(OrganizationAccess owner, Guid brand)
+    {
+        return $"/api/organizations/{owner.OrganizationId}/brands/{brand}/commerce";
+    }
+    private static string PathFor(OrganizationAccess owner, Guid brand)
+    {
+        return CommercePath(owner, brand) + "/adopt-preserved";
+    }
     private static async Task CreateDonor(string root)
     {
         foreach (var domain in new[] { "brand", "catalogue" })
         {
-            var directory = Path.Combine(root, $"ocharo-{domain}.backend-services", domain == "brand" ? "OcharoBrand.Api" : "OcharoCatalogue.Api", "App_Data");
+            var directory = Path.Combine(
+                root,
+                $"ocharo-{domain}.backend-services",
+                domain == "brand" ? "OcharoBrand.Api" : "OcharoCatalogue.Api",
+                "App_Data");
             Directory.CreateDirectory(directory);
-            await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = Path.Combine(directory, $"ocharo-{domain}.db"), Pooling = false }.ToString());
+            await using var connection = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = Path.Combine(directory, $"ocharo-{domain}.db"),
+                Pooling = false,
+            }.ToString());
             await connection.OpenAsync();
             await using var schema = connection.CreateCommand();
             schema.CommandText = domain == "brand"
-                ? "CREATE TABLE drafts(Id TEXT, Revision INTEGER, Json TEXT); CREATE TABLE logo_versions(Id TEXT, Json TEXT); CREATE TABLE media_blobs(Sha256 TEXT, ContentType TEXT, BlobPath TEXT);"
-                : "CREATE TABLE products(Id TEXT, Revision INTEGER, Json TEXT, SortOrder INTEGER); CREATE TABLE collections(Id TEXT, Revision INTEGER, Json TEXT, SortOrder INTEGER); CREATE TABLE media_blobs(Sha256 TEXT, ContentType TEXT, BlobPath TEXT);";
+                ? "CREATE TABLE drafts(Id TEXT, Revision INTEGER, Json TEXT); "
+                    + "CREATE TABLE logo_versions(Id TEXT, Json TEXT); "
+                    + "CREATE TABLE media_blobs(Sha256 TEXT, ContentType TEXT, BlobPath TEXT);"
+                : "CREATE TABLE products(Id TEXT, Revision INTEGER, Json TEXT, SortOrder INTEGER); "
+                    + "CREATE TABLE collections(Id TEXT, Revision INTEGER, Json TEXT, SortOrder INTEGER); "
+                    + "CREATE TABLE media_blobs(Sha256 TEXT, ContentType TEXT, BlobPath TEXT);";
             await schema.ExecuteNonQueryAsync();
             if (domain == "brand")
             {
                 await using var insert = connection.CreateCommand();
                 insert.CommandText = "INSERT INTO drafts VALUES ('private-donor',7,$json)";
-                insert.Parameters.AddWithValue("$json", JsonSerializer.Serialize(new BrandDraft { Identity = new BrandIdentity { Name = "Private synthetic donor" } }, StoredJsonConstants.Default));
+                insert.Parameters.AddWithValue(
+                    "$json",
+                    JsonSerializer.Serialize(
+                        new BrandDraft { Identity = new BrandIdentity { Name = "Private synthetic donor" } },
+                        StoredJsonConstants.Default));
                 await insert.ExecuteNonQueryAsync();
             }
         }

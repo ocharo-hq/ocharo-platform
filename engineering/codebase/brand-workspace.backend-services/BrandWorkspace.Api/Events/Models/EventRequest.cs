@@ -4,9 +4,24 @@ namespace BrandWorkspace.Api.Events.Models;
 
 /// <summary>Represents a new showcase event as the operator sent it.</summary>
 public sealed record EventRequest(
-    string? Title, string? Organizer, string? Scope, string? Format, string? Country, string? City, string? Venue,
-    string? StartsOn, string? EndsOn, string? DatePrecision, string? ApplicationDeadline, string? Participation, string? Cost,
-    string? Website, string? SourceUrl, string? Status, string? Priority, string? Notes)
+    string? Title,
+    string? Organizer,
+    string? Scope,
+    string? Format,
+    string? Country,
+    string? City,
+    string? Venue,
+    string? StartsOn,
+    string? EndsOn,
+    string? DatePrecision,
+    string? ApplicationDeadline,
+    string? Participation,
+    string? Cost,
+    string? Website,
+    string? SourceUrl,
+    string? Status,
+    string? Priority,
+    string? Notes)
 {
     /// <summary>Maps the request to the unvalidated event fields.</summary>
     public EventFields Fields()
