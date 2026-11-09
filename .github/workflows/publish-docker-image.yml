@@ -35,7 +35,9 @@ concurrency:
 
 jobs:
   delivery:
-    uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/delivery.yml@v0.15.0
+    # Pinned to a commit, not a tag, for cross-repository `from` links (pipelines e0d2bf3) until a v0.16.0 tag exists;
+    # the same pin as Studio and Marketing.
+    uses: wow-two-platform/wow-two-platform.pipelines/.github/workflows/delivery.yml@e134a47a298970bc6c2d504255a935b89b32a40f
     with:
       commit: ${{ inputs.commit }}
       # Desk compiles the Brand and Catalogue Domain projects and builds its own SPA.

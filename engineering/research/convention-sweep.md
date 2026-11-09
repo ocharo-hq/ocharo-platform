@@ -193,6 +193,7 @@ Rows kept in part while fixing them in v0.2, each with what lifts it.
 | D-13 | Both environments run as .NET `Production` (no `dotnetEnvironment`); Desk's loopback defaults stay in `appsettings.json` | the flag also switches the descriptor's `identity` service, whose WoW2 image turns on ephemeral signing keys in its Development file | the identity lane confirms Ocharo's dev Identity overrides both key flags |
 | D-14 | `jobs` and `image-worker` have no `configCheck:` item | neither answers `config check`: the be sdk `ServiceHost` covers web hosts only, and the image worker is Python | the be sdk offers a worker host with `config check` |
 | D-32 | Desk stamps migration history with the version minus its `+commit` build metadata | the be sdk history `version` column is `varchar(20)` | the be sdk widens the column |
+| CI | `publish-docker-image.yml` pins pipelines at commit `e134a47`, not a tag | cross-repository `from` links (pipelines `e0d2bf3`) are in no tag yet; Studio and Marketing (M-6) pin the same commit | the developer tags pipelines `v0.16.0` and every Ocharo repo re-pins to it |
 
 Fixed in the be sdk (`10.0.108-beta`, 2026-11-09): the wire preset keeps dictionary keys as written, and `UseApiDefaults`
 maps OpenAPI anonymously. Brand and Catalogue re-pinned and dropped their own OpenAPI mapping (B-2, C-2) and
