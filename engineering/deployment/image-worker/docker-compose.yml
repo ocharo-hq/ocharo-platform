@@ -1,6 +1,8 @@
 services:
   image-worker:
-    build: ../../codebase/ocharo-image.backend-services
+    build:
+      context: ../../codebase/ocharo-image.backend-services
+      dockerfile: ../../deployment/image-worker/Dockerfile
     ports:
       - "127.0.0.1:8360:8080"
     environment:

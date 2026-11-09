@@ -9,28 +9,44 @@
 # names stay unique across them, and Desk's site is the product's front door.
 # Brand and Catalogue each keep their SQLite store and blobs on their own volume (deployment.md § Brand and Catalogue
 # pilots). Desk and jobs compile only the pilots' Domain projects.
-# Both environments run as .NET Production (no dotnetEnvironment). Desk applies the schema as it starts and reports
-# ready only afterwards; jobs refuses to start on a missing schema, so it waits for Desk to be healthy.
+# Both environments run as .NET Production (no dotnetEnvironment). Desk's `migrate` item applies its schema before any
+# service restarts; Desk still applies it as it starts and reports ready only afterwards, and jobs refuses to start on a
+# missing schema, so it waits for Desk to be healthy.
 descriptor: 2
 product: ocharo
+name: Ocharo Platform
+description: Ocharo Desk, the operator workspace for Ocharo's brand identity, product authority, commerce and business management.
 sites:
   desk: {}                              # Desk, public: a domain, or Wheelhouse's sslip.io host until one is bound
   brand: {}                             # Brand, signed in through Ocharo's Identity; its public feed stays anonymous
   catalogue: {}                         # Catalogue authoring, signed in; the published reader stays anonymous
   identity: {}                          # Ocharo's own Identity: sign-in and tokens for every Ocharo app
-# Ocharo's Identity applies its `identity` migration set to Ocharo's database before the service restarts
-# (pipelines v0.12.0); Wheelhouse fills Migrations:ConnectionString from the target's database.
+# Before any service restarts (pipelines v0.12.0), Ocharo's Identity applies its `identity` migration set to Ocharo's
+# database, then Desk's image applies Desk's sets with the be sdk's `migrate` verb; Wheelhouse fills
+# Migrations:ConnectionString from the target's database.
 migrate:
   - service: identity
     command: [dotnet, Identity.Api.dll, migrate]
     timeout: 10m
-# After migrate and before any restart, and on every settings-only apply, Identity's image checks the settings the deploy
-# applies (pipelines v0.15.0, Wheelhouse v0.12): exit 0 consistent, 1 refused, 2 failed, a `config-result` line last; a
-# refused or retired key stops the deploy while the running release keeps serving. Desk and the pilots answer
-# `config check` since v0.2 Iteration 1 and get items with their migrate steps; jobs and the image worker answer none yet.
+  - service: desk
+    command: [dotnet, BrandWorkspace.Api.dll, migrate]
+    timeout: 10m
+# After migrate and before any restart, and on every settings-only apply, each item's image checks the settings the
+# deploy applies (pipelines v0.15.0, Wheelhouse v0.12): exit 0 consistent, 1 refused, 2 failed, a `config-result` line
+# last; a refused or retired key stops the deploy while the running release keeps serving. Identity, Desk, Brand and
+# Catalogue answer `config check`; jobs and the image worker answer none yet, so they have no item.
 configCheck:
   - service: identity
     command: [dotnet, Identity.Api.dll, config, check]
+    timeout: 2m
+  - service: desk
+    command: [dotnet, BrandWorkspace.Api.dll, config, check]
+    timeout: 2m
+  - service: brand
+    command: [dotnet, OcharoBrand.Api.dll, config, check]
+    timeout: 2m
+  - service: catalogue
+    command: [dotnet, OcharoCatalogue.Api.dll, config, check]
     timeout: 2m
 services:
   desk:
@@ -108,7 +124,7 @@ services:
       required: [ConnectionStrings:Database]
   image-worker:
     build:
-      dockerfile: codebase/ocharo-image.backend-services/Dockerfile
+      dockerfile: deployment/image-worker/Dockerfile
       context: codebase/ocharo-image.backend-services
     paths:
       - codebase/ocharo-image.backend-services/**

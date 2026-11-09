@@ -185,6 +185,8 @@ Rows kept in part while fixing them in v0.2, each with what lifts it.
 | D-21 | Desk's commerce and public brand routes serialize with `CommerceJson`, not the SDK preset | the preset camelCased dictionary keys, which rewrote data keys such as size labels (`XL` → `xl`) | Desk re-pins to be sdk `10.0.108-beta`, which keeps dictionary keys as written |
 | C-3 | Catalogue's `/api/public/catalogue` feed keeps the old web defaults (`PublicFeedJson`): nulls written, no envelope | Marketing's `CatalogueSyncService` reads `pricing` and `retail` without checking they exist | Marketing tolerates omitted nulls |
 | D-40 | Desk's Vite dev server stays HTTPS-only through mkcert, with no `VITE_HTTPS=false` mode or `*-http` launch entry | Ocharo's local transport override (`ocharo-ws/docs/local-development.md`) removes plaintext Vite modes for every Ocharo app | Ocharo drops its HTTPS-only override |
+| D-13 | Both environments run as .NET `Production` (no `dotnetEnvironment`); Desk's loopback defaults stay in `appsettings.json` | the flag also switches the descriptor's `identity` service, whose WoW2 image turns on ephemeral signing keys in its Development file | the identity lane confirms Ocharo's dev Identity overrides both key flags |
+| D-14 | `jobs` and `image-worker` have no `configCheck:` item | neither answers `config check`: the be sdk `ServiceHost` covers web hosts only, and the image worker is Python | the be sdk offers a worker host with `config check` |
 
 Fixed in the be sdk (`10.0.108-beta`, 2026-11-09): the wire preset keeps dictionary keys as written, and `UseApiDefaults`
 maps OpenAPI anonymously. Brand and Catalogue re-pinned and dropped their own OpenAPI mapping (B-2, C-2) and

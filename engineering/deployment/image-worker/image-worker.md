@@ -2,6 +2,8 @@
 
 *Last updated: 2026-11-09*
 
-Compose definition of the private image worker that Desk calls for background removal.
+Build and compose definition of the private image worker that Desk calls for background removal.
 
-- `docker-compose.yml` — builds `ocharo-image.backend-services` and binds the worker to `127.0.0.1:8360`.
+- `Dockerfile` — the worker's image, built from the `engineering/codebase/ocharo-image.backend-services/` context (its
+  `.dockerignore` applies); `deploy.yml`'s `image-worker` service builds it the same way.
+- `docker-compose.yml` — builds that image and binds the worker to `127.0.0.1:8360`.

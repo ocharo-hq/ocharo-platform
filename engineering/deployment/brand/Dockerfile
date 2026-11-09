@@ -6,9 +6,8 @@
 #
 #   docker build -f engineering/deployment/brand/Dockerfile -t ocharobrand engineering/codebase
 #
-#   docker run -d --name ocharobrand -p 127.0.0.1:8200:8080 -v ocharobrand-data:/data ocharobrand
-#
-# On first run the app creates /data/ocharo-brand.db automatically.
+# Wheelhouse runs it from deploy.yml with the target's settings: it signs in through Ocharo's Identity, so a
+# bare `docker run` without those settings refuses to boot. Its SQLite store lives on the `brand-data` volume.
 
 # ---- Stage 1: build the Vue workspace ----
 FROM node:24.11.0-alpine AS spa
@@ -24,6 +23,10 @@ COPY ocharo-brand.frontend-services/apps/web/public/ ./apps/web/public/
 COPY ocharo-brand.frontend-services/apps/web/src/ ./apps/web/src/
 COPY ocharo-brand.frontend-services/apps/web/scripts/ ./apps/web/scripts/
 COPY ocharo-brand.frontend-services/apps/web/tests/ ./apps/web/tests/
+# CI passes the release version and commit (versioning.md); a local build reports `dev`. Declared here, after the
+# installs, so a new version keeps their layers cached.
+ARG APP_VERSION
+ARG VCS_REF
 RUN pnpm build
 
 # ---- Stage 2: publish the .NET API (no Node here; the SPA arrives from stage 1) ----
@@ -32,6 +35,8 @@ WORKDIR /src/ocharo-brand.backend-services
 COPY ocharo-brand.backend-services/ ./
 # the built SPA lands in wwwroot so `dotnet publish` bundles it into the output.
 COPY --from=spa /spa/apps/web/dist ./OcharoBrand.Api/wwwroot
+ARG APP_VERSION
+ARG VCS_REF
 RUN dotnet publish OcharoBrand.Api/OcharoBrand.Api.csproj -c Release -o /app -p:RestoreLockedMode=true -p:UseAppHost=false -p:BuildSpa=false
 
 # ---- Stage 3: runtime ----

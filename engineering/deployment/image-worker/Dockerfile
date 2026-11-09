@@ -1,3 +1,4 @@
+# Build context: engineering/codebase/ocharo-image.backend-services/, whose .dockerignore applies.
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 NUMBA_CACHE_DIR=/tmp/numba OMP_NUM_THREADS=2
 WORKDIR /app
