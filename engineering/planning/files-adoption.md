@@ -30,7 +30,10 @@ code limits and local dev data; nothing read prod.
   cover, a Marketing asset and a Studio thumbnail each redirect to Files and serve their bytes; `marketing-assets` held
   3 files on dev, which move and fill their ids on Marketing's next boot. The read-back found 240×34 Studio thumbnails
   from a short viewport: studio `d1622c6` frames them at 240×180 from the viewport's centre.
-- Wave 3, Desk, built and pushed 2026-11-09 (#32), 305 tests passing.
+- Wave 3, Desk, released as `v0.1.34` 2026-11-09 (#32), 305 tests passing; on dev, preparation and sourcing read back
+  from Files the same day (the thumbnail as the 480×360 variant); export download and commerce wait for the final check.
+- Wave 4, Assets and Studio's garment sync, built and pushed 2026-11-09 (#33); its first upload waits for client 7's
+  secret on `identity` and in `ocharo-assets`' GitHub secrets.
 
 ## Instance
 
@@ -307,3 +310,13 @@ Identity:Server:Clients:N:Scopes:1: { default: files.write }
     idempotency key. A preparation image whose name's extension disagrees with its bytes fails Files' type check and
     stays on bytes.
   - deploy: `desk` links `Files:BaseUrl` to `Identity:Server:Resources:2:Uri`; `jobs` needs nothing.
+- #33 Assets releases, wave 4 (2026-11-09, `ocharo-assets` `7f6323a`, `ocharo-studio` `2cf03ce`, registry `e59c866`):
+  - client 7 `assets-release` (client credentials, resource `files`, scope `files.write`) has a typed secret, since
+    the same value is `ocharo-assets`' GitHub Actions secret `OCHARO_ASSETS_CLIENT_SECRET`.
+  - `release.mjs --check --upload` takes a token with `resource` = the Files root, uploads each GLB and the release
+    manifest as public files (`assets-release.garment:{sha}`, `assets-release.manifest:{sha}`, idempotency key and
+    reference alike), and checks each file's SHA-256, size and `ready` state; the manual `release-garments` workflow
+    runs it with the variables `OCHARO_IDENTITY_URL` and `OCHARO_FILES_URL`.
+  - Studio's `sync-garments.mjs --files <root>` fetches the manifest pinned in `garments-release.lock.json` and each
+    GLB from `/m/{sha}`, checking size and SHA-256; the local-library mode is unchanged.
+  - B serves plain `/m/{sha}` for its default tenant only, so Studio is given `{Files root}t/ocharo/`.
