@@ -7,8 +7,9 @@
 # Ocharo's own Identity instance, through which Desk, Brand and Catalogue sign in, as the primary repository of the one
 # `ocharo` product (Wheelhouse decision 70): Studio, Marketing and Assets deploy beside it, so service, site and volume
 # names stay unique across them, and Desk's site is the product's front door.
-# Brand and Catalogue each keep their SQLite store and blobs on their own volume (deployment.md § Brand and Catalogue
-# pilots). Desk and jobs compile only the pilots' Domain projects.
+# Brand and Catalogue store in schemas `brand` and `catalogue` of the product database; each volume keeps blobs stored
+# before WoW2 Files and the retired SQLite store until `import-sqlite` (deployment.md § Brand and Catalogue pilots).
+# Desk and jobs compile only the pilots' Domain projects.
 # Both environments run as .NET Production (no dotnetEnvironment). Desk's `migrate` item applies its schema before any
 # service restarts; Desk still applies it as it starts and reports ready only afterwards, and jobs refuses to start on a
 # missing schema, so it waits for Desk to be healthy.

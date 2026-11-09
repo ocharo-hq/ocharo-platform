@@ -178,9 +178,10 @@ Evidence caveats: D-24 counts `NpgsqlCommand|CreateCommand` matches; D-28, D-29 
 
 ## Status
 
-As of 2026-11-09 every row is fixed in v0.2 or kept as an exception below, except D-31 (Desk's retired identity
-tables, which deletes data and waits for the owner's go) and B-7–B-9, C-7–C-9 (PostgreSQL for Brand and Catalogue,
-v0.2 Iteration 13).
+As of 2026-11-09 every row is fixed in v0.2 or kept as an exception below. D-31 shipped as migration
+`013-identity-cutover` (not 011: deployed databases already hold 012), dropping the rows outright after the developer
+answered "completely fine" to dropping or archiving them. B-7–B-9 and C-7–C-9 moved Brand and Catalogue to
+PostgreSQL schemas `brand` and `catalogue`; each environment's one-time `import-sqlite` copy follows its deploy.
 
 ## Exceptions
 

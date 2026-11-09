@@ -289,8 +289,8 @@ with its own site and volume:
 
 | Service | Site | Volume at `/data` | Holds |
 |---|---|---|---|
-| `brand` | `brand` | `brand-data` | `ocharo-brand.db`, blobs and the Data Protection key ring (`/data/keys`) |
-| `catalogue` | `catalogue` | `catalogue-data` | `ocharo-catalogue.db`, blobs and the Data Protection key ring (`/data/keys`) |
+| `brand` | `brand` | `brand-data` | blobs stored before WoW2 Files; the retired `ocharo-brand.db` and key ring until `import-sqlite` |
+| `catalogue` | `catalogue` | `catalogue-data` | blobs stored before WoW2 Files; the retired `ocharo-catalogue.db` and key ring until `import-sqlite` |
 
 - Each host is a BFF (`WoW2.Sdk.Beta.Be.Identity.Client`, section `Identity:Client`, routes `/api/identity/*`): the
   authority links to the identity site, the secret to its Identity client, and the cookies are `__Host-ocharo-brand` and
@@ -301,8 +301,10 @@ with its own site and volume:
   `{brand,catalogue}:approve`. Every unsafe request echoes the session route's `csrfToken` in `X-Csrf-Token`.
 - Brand's `/api/public` feed and media and Catalogue's published reader stay anonymous, with
   `Access-Control-Allow-Origin: *` where they had it.
-- Sign-in sessions live in memory (no SQLite `IDistributedCache`), so a restart or deploy signs everyone out once; the
-  key ring on the volume keeps cookies readable across restarts.
+- Rows live in schemas `brand` and `catalogue` of the product database, sessions in each app's PostgreSQL cache
+  (`brand_cache`, `catalogue_cache`) and key rings in `{brand,catalogue}.data_protection_keys`, so a restart or deploy
+  keeps everyone signed in. The one-time copy from SQLite: `brand/brand.md` and `catalogue/catalogue.md`
+  § PostgreSQL move.
 - Identity client 1 and 2 each need `RedirectUris:0` `{site URL}/api/identity/callback` and
   `PostSignOutRedirectUris:0` `{site URL}/`, typed per environment like Desk's.
 - A deployed host has no private mft seed folders (`Brand:SeedLogoRoot`, `Catalogue:SourceRoot`): Brand seeds its
