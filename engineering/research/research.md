@@ -1,6 +1,6 @@
 # Engineering research
 
-*Last updated: 2026-09-27 12:36 AM*
+*Last updated: 2026-11-09*
 
 [Template audit](template-audit.md) records the inspected starter, its current working-tree provenance,
 and the adaptations required for this repository. A source manifest accompanies the audit.
@@ -11,6 +11,9 @@ sibling source, records composition boundaries, and identifies candidates for la
 [Ocharo editable template audit](ocharo-editor-template-audit.md) traces the actual catalogue/card sources,
 geometry, prices, logo artwork and visual export verification. [Overview variants](overview-variants.md)
 records the three implemented entry-page alternatives.
+
+[Convention sweep](convention-sweep.md) inventories 101 breaks against the WoW2 conventions in Desk, Brand and
+Catalogue (2026-11-09), with ids the backlog rows cite.
 
 The broader platform ideas, business evidence, architecture alternatives, provider research, and
 measurement analysis remain in the [canonical Ocharo platform folder][analysis]. Keep new business
