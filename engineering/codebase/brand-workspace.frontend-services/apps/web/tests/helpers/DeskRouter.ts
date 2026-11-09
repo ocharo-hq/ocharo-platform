@@ -1,4 +1,4 @@
-import { createDeskRouter } from '@/bootstrap/router';
+import { createDeskRouter } from '@/bootstrap/router/DeskRoutes';
 
 /** A Desk router that has already resolved the current address, as the running app has by the time a page mounts. */
 export async function deskRouter(): Promise<ReturnType<typeof createDeskRouter>> {

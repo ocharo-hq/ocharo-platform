@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { fitTextFrame } from '@/domain/workspace/FitTextFrame';
-import { createCardTemplate } from '@/domain/workspace/Templates';
+import { fitTextFrame } from '@/domain/design/FitTextFrame';
+import { createCardTemplate } from '@/domain/design/Templates';
 
 describe('editable text frames', () => {
   it('gives an ordinary location edit enough width without mutating the source', () => {

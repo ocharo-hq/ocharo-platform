@@ -8,13 +8,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { PasswordInput } from '@wow-two-beta/fe/presentation/forms';
 
-import { initializeUiLocale, provideUiLocale, useUiLocale } from '@/application/shared/UseUiLocale';
-import { sdkUiMessages } from '@/domain/shared/SdkUiMessages';
-import { ocharoApps } from '@/domain/shared/OcharoApps';
-import { translateUi, uiMessages, type UiLocale } from '@/domain/shared/UiMessages';
-import { emptyCopy, productCopy, type Product } from '@/domain/workspace/Commerce';
-import ProductEditor from '@/presentation/workspace/ProductEditor.vue';
-import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
+import { initializeUiLocale, provideUiLocale, useUiLocale } from '@/application/common/hooks/UseUiLocale';
+import { sdkUiMessages } from '@/domain/common/SdkUiMessages';
+import { ocharoApps } from '@/domain/common/models/OcharoApps';
+import { translateUi, uiMessages, type UiLocale } from '@/domain/common/UiMessages';
+import { emptyCopy, productCopy, type Product } from '@/domain/common/models/Commerce';
+import ProductEditor from '@/presentation/commerce/ProductEditor.vue';
+import UiLanguagePicker from '@/presentation/common/UiLanguagePicker.vue';
 
 const mounted: VueWrapper[] = [];
 const locale = useUiLocale();

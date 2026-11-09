@@ -2,15 +2,15 @@ import { deskSelect, chooseDeskValue } from './helpers/DeskSelect';
 import { flushPromises, mount } from "@vue/test-utils";
 import { ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import CatalogueSettingsPanel from "@/presentation/workspace/CatalogueSettingsPanel.vue";
-import { useUiLocale } from "@/application/shared/UseUiLocale";
-import type { WorkspaceControls } from "@/application/workspace/UseWorkspace";
-import type { AccessControls } from "@/application/workspace/UseAccess";
-import { createCatalogueCover } from "@/domain/workspace/CatalogueComposer";
-import { initialCommerce } from "@/domain/workspace/Commerce";
-import { translateDesignerNotice } from "@/domain/shared/DesignerUiMessages";
+import CatalogueSettingsPanel from "@/presentation/design/catalogue/CatalogueSettingsPanel.vue";
+import { useUiLocale } from "@/application/common/hooks/UseUiLocale";
+import type { WorkspaceControls } from "@/application/common/hooks/UseWorkspace";
+import type { AccessControls } from "@/application/common/hooks/UseAccess";
+import { createCatalogueCover } from "@/domain/design/catalogue/CatalogueComposer";
+import { initialCommerce } from "@/domain/common/models/Commerce";
+import { translateDesignerNotice } from "@/domain/common/DesignerUiMessages";
 const { get } = vi.hoisted(() => ({ get: vi.fn() }));
-vi.mock("@/application/workspace/UseCommerce", () => ({
+vi.mock("@/application/common/hooks/UseCommerce", () => ({
   useCommerce: () => ({ get }),
 }));
 const org = "11111111-1111-1111-1111-111111111111",

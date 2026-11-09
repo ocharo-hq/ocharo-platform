@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
-import { resolveConfirmation } from '@/application/shared/UseFeedback';
-import { useAccess, type AccessControls } from '@/application/workspace/UseAccess';
+import { resolveConfirmation } from '@/application/common/hooks/UseFeedback';
+import { useAccess, type AccessControls } from '@/application/common/hooks/UseAccess';
 
 const channel = vi.hoisted(() => ({
   receive: (message: string) => {

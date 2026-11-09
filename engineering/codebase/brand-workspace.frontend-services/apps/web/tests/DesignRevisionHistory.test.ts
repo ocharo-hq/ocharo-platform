@@ -1,15 +1,15 @@
 import { chooseDeskValue } from './helpers/DeskSelect';
-import { feedbackBus } from '@/application/shared/UseFeedback';
+import { feedbackBus } from '@/application/common/hooks/UseFeedback';
 import { ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
-import type { AccessControls } from '@/application/workspace/UseAccess';
-import type { DesignDocument } from '@/domain/workspace/EditorModels';
-import type { DesignRevisionCopy } from '@/domain/workspace/DesignRevisions';
-import { createCatalogueTemplate } from '@/domain/workspace/Templates';
-import DesignRevisionHistory from '@/presentation/workspace/DesignRevisionHistory.vue';
+import type { AccessControls } from '@/application/common/hooks/UseAccess';
+import type { DesignDocument } from '@/domain/common/models/EditorModels';
+import type { DesignRevisionCopy } from '@/domain/common/models/DesignRevisions';
+import { createCatalogueTemplate } from '@/domain/design/Templates';
+import DesignRevisionHistory from '@/presentation/design/core/DesignRevisionHistory.vue';
 
 const notices = vi.fn();
 const getRevisions = vi.fn(), getRevision = vi.fn();

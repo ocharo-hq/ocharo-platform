@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { validateSnapshot } from '@/domain/workspace/EditorModels';
-import { createCatalogueTemplate, createCardTemplate } from '@/domain/workspace/Templates';
-import { moveCatalogueProduct, renumberCataloguePages, setCataloguePrice } from '@/domain/workspace/CatalogueLayout';
+import { validateSnapshot } from '@/domain/common/models/EditorModels';
+import { createCatalogueTemplate, createCardTemplate } from '@/domain/design/Templates';
+import { moveCatalogueProduct, renumberCataloguePages, setCataloguePrice } from '@/domain/design/catalogue/CatalogueLayout';
 
 describe('imported Ocharo templates', () => {
   it.each(['uz', 'ru', 'en'] as const)('preserves v22 pages, products, price tiers and source assets in %s', (locale) => {

@@ -8,17 +8,17 @@ import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
 
-import { feedbackBus, resolveConfirmation } from '@/application/shared/UseFeedback';
-import { useUiLocale } from '@/application/shared/UseUiLocale';
-import type { AccessControls } from '@/application/workspace/UseAccess';
-import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
-import { eventInput, type EventsLocation, type ShowcaseEvent } from '@/domain/workspace/Events';
-import EventsPage from '@/presentation/workspace/EventsPage.vue';
+import { feedbackBus, resolveConfirmation } from '@/application/common/hooks/UseFeedback';
+import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
+import type { AccessControls } from '@/application/common/hooks/UseAccess';
+import type { WorkspaceControls } from '@/application/common/hooks/UseWorkspace';
+import { eventInput, type EventsLocation, type ShowcaseEvent } from '@/domain/events/Events';
+import EventsPage from '@/presentation/events/pages/EventsPage.vue';
 
 const api = vi.hoisted(() => ({
   listEvents: vi.fn(), summary: vi.fn(), createEvent: vi.fn(), getEvent: vi.fn(), updateEvent: vi.fn(), deleteEvent: vi.fn(),
 }));
-vi.mock('@/integration/workspace/EventsApi', () => ({ createEventsApi: () => api }));
+vi.mock('@/integration/events/EventsApi', () => ({ createEventsApi: () => api }));
 
 const ORG = '11111111-1111-4111-8111-111111111111';
 const FASHION_WEEK = '22222222-2222-4222-8222-222222222222';

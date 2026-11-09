@@ -4,9 +4,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
-import type { SourcingControls } from '@/application/workspace/UseSourcing';
-import { useSourcingUploads } from '@/application/workspace/UseSourcingUploads';
-import type { SourcingMedia } from '@/domain/workspace/Sourcing';
+import type { SourcingControls } from '@/application/sourcing/hooks/UseSourcing';
+import { useSourcingUploads } from '@/application/sourcing/hooks/UseSourcingUploads';
+import type { SourcingMedia } from '@/domain/sourcing/models/Sourcing';
 
 function media(id: string, supplierId: string | null): SourcingMedia {
   return {

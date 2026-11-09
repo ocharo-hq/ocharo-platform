@@ -1,10 +1,10 @@
 import { ref, shallowRef } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import OverviewPage from '../src/presentation/workspace/OverviewPage.vue';
-import type { AccessControls } from '../src/application/workspace/UseAccess';
-import type { WorkspaceControls } from '../src/application/workspace/UseWorkspace';
-import { useUiLocale } from '../src/application/shared/UseUiLocale';
+import OverviewPage from '../src/presentation/common/pages/OverviewPage.vue';
+import type { AccessControls } from '../src/application/common/hooks/UseAccess';
+import type { WorkspaceControls } from '../src/application/common/hooks/UseWorkspace';
+import { useUiLocale } from '../src/application/common/hooks/UseUiLocale';
 
 let wrapper: VueWrapper;
 beforeEach(() => useUiLocale().setUiLocale('en'));

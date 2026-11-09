@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthProvider } from '@wow-two-beta/fe/auth';
 
-import { feedbackBus } from '@/application/shared/UseFeedback';
-import { useAccess, type AccessControls } from '@/application/workspace/UseAccess';
-import { createSourcingApi } from '@/integration/workspace/SourcingApi';
+import { feedbackBus } from '@/application/common/hooks/UseFeedback';
+import { useAccess, type AccessControls } from '@/application/common/hooks/UseAccess';
+import { createSourcingApi } from '@/integration/sourcing/SourcingApi';
 
 const session = {
   authenticated: true,

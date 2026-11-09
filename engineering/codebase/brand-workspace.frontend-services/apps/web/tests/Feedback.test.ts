@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { confirmation, feedbackBus, notifyError, requestConfirmation, resolveConfirmation } from '@/application/shared/UseFeedback';
+import { confirmation, feedbackBus, notifyError, requestConfirmation, resolveConfirmation } from '@/application/common/hooks/UseFeedback';
 afterEach(()=>resolveConfirmation(false));
 describe('app feedback',()=>{
  it('keeps destructive navigation pending, cancels safely and rejects overlapping intents',async()=>{

@@ -1,0 +1,56 @@
+import { ResultExtensions, type Result } from '@wow-two-beta/fe/foundation/results';
+
+import { selectDesignPages } from '@/domain/design/DesignPageSelection';
+import { crossesPageEdge, type DesignPreflightIssue, type DesignPreflightReport } from '@/domain/design/DesignPreflight';
+import type { DesignSnapshot } from '@/domain/common/models/EditorModels';
+
+import { loadDesignImage, type DesignExportFailure } from './DesignExport';
+import { layoutDesignText } from './DesignTextLayout';
+
+/** Checks the selected export scope without mutating any original page or media; a browser without canvas fails. */
+export async function inspectDesign(snapshot: DesignSnapshot, pageIds?: readonly string[], signal?: AbortSignal,
+  imageLoader: typeof loadDesignImage = loadDesignImage): Promise<Result<DesignPreflightReport, DesignExportFailure>> {
+  const checked = selectDesignPages(snapshot, pageIds);
+  signal?.throwIfAborted(); await document.fonts.ready; signal?.throwIfAborted();
+  const context = document.createElement('canvas').getContext('2d');
+  if (!context) return ResultExtensions.fail({ type: 'unavailable', message: 'Page checks are unavailable in this browser.' });
+  const issues: DesignPreflightIssue[] = [], images = new Map<string, Promise<Result<HTMLImageElement, DesignExportFailure>>>();
+  for (const page of checked.pages) {
+    const unit = Math.min((checked.kind === 'business-card' ? 600 : 240) / 25.4, 8192 / Math.max(page.width, page.height), Math.sqrt(12_000_000 / (page.width * page.height)));
+    for (const element of page.elements) {
+      signal?.throwIfAborted();
+      if (element.opacity === 0) continue;
+      const add = (code: DesignPreflightIssue['code'], severity: DesignPreflightIssue['severity'], message: string) => {
+        issues.push({ pageId: page.id, pageNumber: snapshot.pages.findIndex(item => item.id === page.id) + 1,
+          pageTitle: page.title, elementId: element.id, elementLabel: element.label, code, severity, message });
+      };
+      if (crossesPageEdge(element, page)) add('outside-page', 'warning', 'Extends beyond the page. That part will be cropped.');
+      if (checked.kind === 'catalogue' && element.type === 'text') {
+        if (element.binding && !element.text?.trim() &&
+          (element.binding.kind === 'product' && ['name','price'].includes(element.binding.field) ||
+            element.binding.kind === 'shared' && ['collection','sizes','pieces'].includes(element.binding.field)))
+          add('missing-translation', 'error', `Complete this ${checked.locale} catalogue text before export.`);
+        if (element.binding?.kind === 'product' && element.binding.field === 'price-label' &&
+          checked.catalogueSettings?.priceDisplay.showQuantity && !checked.catalogueSettings.copyByLocale[checked.locale]?.pieces?.trim())
+          add('missing-translation', 'error', `Add the ${checked.locale} quantity unit in shared catalogue text.`);
+        if (!['uz','ru','en'].includes(checked.locale) && !element.binding && element.role !== 'page-number' && element.text?.trim() && !/^\d+$/.test(element.text))
+          add('independent-copy', 'warning', `Confirm this independent text is in ${checked.locale}. It is not connected to translated product fields.`);
+      }
+      if (element.type === 'text' && layoutDesignText(context, element, unit).overflow)
+        add('text-overflow', 'warning', 'Text extends beyond its frame and will be clipped. Enlarge the frame or shorten the text.');
+      if (element.type === 'image') {
+        if (!element.src) add('missing-image', 'error', 'No image is selected. Replace this photo before exporting.');
+        else {
+          let loaded = images.get(element.src);
+          if (!loaded) { loaded = imageLoader(element.src, signal); images.set(element.src, loaded); }
+          const image = await loaded.catch(() => null);
+          if (!image?.ok) {
+            signal?.throwIfAborted();
+            add('missing-image', 'error', 'The image could not load. Check your connection or replace this photo.');
+          }
+        }
+      }
+    }
+  }
+  return ResultExtensions.ok({ pageCount: checked.pages.length, issues });
+}

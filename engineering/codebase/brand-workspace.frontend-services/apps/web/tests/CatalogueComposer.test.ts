@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { appendCataloguePages, composeCataloguePages, createCatalogueCover, removeCataloguePage } from '@/domain/workspace/CatalogueComposer';
-import { isSafeDesignSource, validateSnapshot } from '@/domain/workspace/EditorModels';
-import { setCataloguePrice } from '@/domain/workspace/CatalogueLayout';
-import { initialCommerce, type CommerceDraft, type Product } from '@/domain/workspace/Commerce';
+import { appendCataloguePages, composeCataloguePages, createCatalogueCover, removeCataloguePage } from '@/domain/design/catalogue/CatalogueComposer';
+import { isSafeDesignSource, validateSnapshot } from '@/domain/common/models/EditorModels';
+import { setCataloguePrice } from '@/domain/design/catalogue/CatalogueLayout';
+import { initialCommerce, type CommerceDraft, type Product } from '@/domain/common/models/Commerce';
 const org = '11111111-1111-1111-1111-111111111111', brand = '22222222-2222-2222-2222-222222222222';
 const hashes = Array.from({ length: 6 }, (_, index) => String(index).repeat(64));
 function fixture(): CommerceDraft {

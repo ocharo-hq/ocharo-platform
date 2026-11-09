@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { memoryStorageBroker, type StorageBroker } from '@wow-two-beta/fe/foundation/storage';
-import { defaultSourcingPreferences, orderedSourcingSections } from '@/domain/workspace/SourcingPreferences';
-import { createSourcingPreferencesStorage } from '@/integration/workspace/SourcingPreferencesStorage';
-import { createSourcingApi } from '@/integration/workspace/SourcingApi';
+import { defaultSourcingPreferences, orderedSourcingSections } from '@/domain/sourcing/models/SourcingPreferences';
+import { createSourcingPreferencesStorage } from '@/integration/sourcing/SourcingPreferencesStorage';
+import { createSourcingApi } from '@/integration/sourcing/SourcingApi';
 
 const userId = '11111111-1111-4111-8111-111111111111';
 const organizationId = '22222222-2222-4222-8222-222222222222';

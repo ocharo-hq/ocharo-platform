@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createWorkspaceApi } from '@/integration/workspace/WorkspaceApi';
-import { isDesignRevision } from '@/integration/workspace/Decoders';
-import { createCatalogueTemplate } from '@/domain/workspace/Templates';
+import { createWorkspaceApi } from '@/integration/common/WorkspaceApi';
+import { isDesignRevision } from '@/integration/common/Decoders';
+import { createCatalogueTemplate } from '@/domain/design/Templates';
 
 afterEach(() => vi.unstubAllGlobals());
 const metadata = { revision: 2, title: 'Edition', archived: false, savedBy: 'Maftuna', savedAtUtc: '2026-09-30T10:00:00Z' };

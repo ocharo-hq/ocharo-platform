@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { selectDesignPages } from '@/domain/workspace/DesignPageSelection';
-import { createCatalogueTemplate } from '@/domain/workspace/Templates';
+import { selectDesignPages } from '@/domain/design/DesignPageSelection';
+import { createCatalogueTemplate } from '@/domain/design/Templates';
 
 describe('original catalogue page export selection', () => {
   it('preserves original16page geometry and artwork when exporting the whole edition', () => {

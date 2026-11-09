@@ -26,6 +26,22 @@ describe('frontend dependency rules', () => {
     expect(result?.errorCount).toBe(0);
   });
 
+  it('allows a domain slice to read the common slice', async () => {
+    const [result] = await eslint.lintText(
+      "import { readWorkspaceLocation } from '@/domain/common/models/Workspace';\nexport const read = readWorkspaceLocation;\n",
+      { filePath: 'src/domain/sourcing/Allowed.ts' },
+    );
+    expect(result?.errorCount).toBe(0);
+  });
+
+  it('keeps the common slice independent of concrete domain slices', async () => {
+    const [result] = await eslint.lintText(
+      "import { readSourcingAddress } from '@/domain/sourcing/models/Sourcing';\nexport const read = readSourcingAddress;\n",
+      { filePath: 'src/domain/common/Forbidden.ts' },
+    );
+    expect(result?.messages.some((message) => message.ruleId === 'architecture/boundaries')).toBe(true);
+  });
+
   it('rejects another domain slice even through a relative dynamic import', async () => {
     const [result] = await eslint.lintText(
       "export const load = () => import('../other/Unrelated');\n",

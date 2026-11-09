@@ -1,7 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import DesignPreflightReview from '@/presentation/workspace/DesignPreflightReview.vue';
-import type { DesignPreflightIssue } from '@/domain/workspace/DesignPreflight';
+import DesignPreflightReview from '@/presentation/design/core/DesignPreflightReview.vue';
+import type { DesignPreflightIssue } from '@/domain/design/DesignPreflight';
 const issue: DesignPreflightIssue = { pageId: 'second', pageNumber: 2, pageTitle: 'Collection', elementId: 'price', elementLabel: 'Quantity price', severity: 'warning', code: 'text-overflow', message: 'Text is clipped.' };
 beforeEach(() => {
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value: vi.fn() });

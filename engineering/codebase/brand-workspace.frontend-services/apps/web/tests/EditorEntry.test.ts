@@ -4,12 +4,12 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
-import {confirmation,resolveConfirmation,feedbackBus} from '@/application/shared/UseFeedback';
-import { useAccess } from '@/application/workspace/UseAccess';
-import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
-import type { createWorkspaceApi } from '@/integration/workspace/WorkspaceApi';
-import type { DesignDocument } from '@/domain/workspace/EditorModels';
-import DesignEditorPage from '@/presentation/workspace/DesignEditorPage.vue';
+import {confirmation,resolveConfirmation,feedbackBus} from '@/application/common/hooks/UseFeedback';
+import { useAccess } from '@/application/common/hooks/UseAccess';
+import type { WorkspaceControls } from '@/application/common/hooks/UseWorkspace';
+import type { createWorkspaceApi } from '@/integration/common/WorkspaceApi';
+import type { DesignDocument } from '@/domain/common/models/EditorModels';
+import DesignEditorPage from '@/presentation/design/pages/DesignEditorPage.vue';
 
 const organizationId = '11111111-1111-4111-8111-111111111111';
 const documentId = '22222222-2222-4222-8222-222222222222';

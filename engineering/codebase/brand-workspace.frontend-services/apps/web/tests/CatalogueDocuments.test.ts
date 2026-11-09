@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { catalogueMetadata, catalogueSlug, duplicateCatalogue, eligibleCataloguePdf, createCatalogue, cataloguePageProducts } from '@/domain/workspace/CatalogueDocuments';
-import { validateSnapshot, validCatalogueSlug, type CatalogueMetadata, type DesignSnapshot } from '@/domain/workspace/EditorModels';
-import { initialCommerce, type Product, type CommerceDraft } from '@/domain/workspace/Commerce';
+import { catalogueMetadata, catalogueSlug, duplicateCatalogue, eligibleCataloguePdf, createCatalogue, cataloguePageProducts } from '@/domain/design/catalogue/CatalogueDocuments';
+import { validateSnapshot, validCatalogueSlug, type CatalogueMetadata, type DesignSnapshot } from '@/domain/common/models/EditorModels';
+import { initialCommerce, type Product, type CommerceDraft } from '@/domain/common/models/Commerce';
 const copy={status:'approved' as const,name:'Robe',fabric:'Silk',description:'A robe',decoration:null};
 function product(id:string,approved=true):Product{return{document:{id,garmentType:'robe',variantCode:'v1',status:'active',sortOrder:0,sizes:['M'],fabricCodes:[],decorationCodes:[],tags:[],locales:{en:{...copy,status:approved?'approved':'draft'},ru:copy,uz:copy},pricing:null,media:[],issues:[],notes:null,stock:null,madeToOrder:false},revision:1,sourceRevision:null};}
 const meta=():CatalogueMetadata=>({slug:'spring',description:'Spring collection',isActive:true,outputs:{web:true,pdf:false},web:{theme:'editorial',pages:[]}});

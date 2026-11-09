@@ -1,11 +1,11 @@
 import { effectScope, ref } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryStorageBroker, type StorageBroker } from '@wow-two-beta/fe/foundation/storage';
-import type { AccessControls } from '@/application/workspace/UseAccess';
-import { useDesignRecovery } from '@/application/workspace/UseDesignRecovery';
-import { createDesignRecoveryStorage } from '@/integration/workspace/DesignRecoveryStorage';
-import { validateRecovery, type DesignRecoveryInput, type DesignRecoveryRecord, type DesignRecoveryScope } from '@/domain/workspace/DesignRecovery';
-import { createCardTemplate } from '@/domain/workspace/Templates';
+import type { AccessControls } from '@/application/common/hooks/UseAccess';
+import { useDesignRecovery } from '@/application/design/hooks/UseDesignRecovery';
+import { createDesignRecoveryStorage } from '@/integration/design/DesignRecoveryStorage';
+import { validateRecovery, type DesignRecoveryInput, type DesignRecoveryRecord, type DesignRecoveryScope } from '@/domain/design/DesignRecovery';
+import { createCardTemplate } from '@/domain/design/Templates';
 const scope: DesignRecoveryScope = { userId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', organizationId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', kind: 'business-card' };
 const input = (): DesignRecoveryInput => ({ title: 'Original card', snapshot: createCardTemplate(), source: { documentId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', revision: 4 } });
 const record = (title = 'Old card'): DesignRecoveryRecord => ({ schemaVersion: 1, scope, token: crypto.randomUUID(), savedAt: '2026-09-30T00:00:00Z', ...input(), title });
@@ -85,7 +85,7 @@ describe('tab design recovery boundary', () => {
   it('cannot clear a newer controller checkpoint after its own server save completes', () => {
     const { controls } = setup(); controls.enable(); const token = controls.checkpoint();
     const storage = createDesignRecoveryStorage(scope, broker), newer = record('Newer controller edit');
-    expect(storage.write(newer, token)).toBe(true); controls.saved(token);
+    expect(storage.write(newer, token)).toEqual({ ok: true, value: true }); controls.saved(token);
     expect(storage.read()).toEqual(newer); expect(controls.available.value?.title).toBe('Newer controller edit');
   });
   it('clears only its successfully saved checkpoint and never queues a late resurrection', () => {

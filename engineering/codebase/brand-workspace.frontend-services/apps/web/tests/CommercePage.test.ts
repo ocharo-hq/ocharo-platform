@@ -4,14 +4,14 @@ import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
-import type { AccessControls } from '@/application/workspace/UseAccess';
-import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
-import { initialCommerce } from '@/domain/workspace/Commerce';
-import { feedbackBus } from '@/application/shared/UseFeedback';
-import CommercePage from '@/presentation/workspace/CommercePage.vue';
+import type { AccessControls } from '@/application/common/hooks/UseAccess';
+import type { WorkspaceControls } from '@/application/common/hooks/UseWorkspace';
+import { initialCommerce } from '@/domain/common/models/Commerce';
+import { feedbackBus } from '@/application/common/hooks/UseFeedback';
+import CommercePage from '@/presentation/commerce/pages/CommercePage.vue';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), releases: vi.fn(), save: vi.fn(), image: vi.fn(), publish: vi.fn() }));
-vi.mock('@/integration/workspace/CommerceApi', () => ({ createCommerceApi: () => api }));
+vi.mock('@/integration/common/CommerceApi', () => ({ createCommerceApi: () => api }));
 let wrapper: VueWrapper;
 afterEach(() => wrapper?.unmount());
 beforeEach(() => {

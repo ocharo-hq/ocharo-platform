@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { emptyCopy, type Product } from '@/domain/workspace/Commerce';
-import { canConfirmProductPrices, hasFixedSomPricing, productBandPrice, productReviewIssueCount, unconfirmedProductLocales, updateProductBandPrice } from '@/domain/workspace/ProductReview';
+import { emptyCopy, type Product } from '@/domain/common/models/Commerce';
+import { canConfirmProductPrices, hasFixedSomPricing, productBandPrice, productReviewIssueCount, unconfirmedProductLocales, updateProductBandPrice } from '@/domain/commerce/ProductReview';
 function product(): Product { return { revision: 1, sourceRevision: null, document: { id: 'vest', garmentType: 'vest', variantCode: 'v1', status: 'active', sortOrder: 0, sizes: [], fabricCodes: [], decorationCodes: [], tags: [], locales: { uz: { ...emptyCopy(), name: 'Nimcha', status: 'approved' }, ru: emptyCopy(), en: { ...emptyCopy(), name: 'Vest', status: 'approved' } }, pricing: { currency: 'USD', status: 'confirmed', tiers: [{minimumQuantity:1, maximumQuantity:null, unitPrice:40}], wording:null }, media: [], issues: [], notes: null, stock: null, madeToOrder: false } }; }
 describe('product review', () => {
  it('requires core and explicitly authored languages, without inventing twenty-two missing translation issues', () => {

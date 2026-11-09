@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createWorkspaceApi } from '@/integration/workspace/WorkspaceApi';
+import { createWorkspaceApi } from '@/integration/common/WorkspaceApi';
 
 const session = {
   authenticated: false,

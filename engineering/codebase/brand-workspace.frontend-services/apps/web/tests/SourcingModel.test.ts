@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { safeWorkspaceDestination } from '@/domain/workspace/EditorNavigation';
-import { readWorkspaceLocation } from '@/domain/workspace/Models';
-import { routeHref, safeHttpUrl, sourcingPath, uploadRejection } from '@/domain/workspace/Sourcing';
+import { safeWorkspaceDestination } from '@/domain/common/EditorNavigation';
+import { readWorkspaceLocation } from '@/domain/common/models/Workspace';
+import { readSourcingAddress, routeHref, safeHttpUrl, sourcingPath, uploadRejection } from '@/domain/sourcing/models/Sourcing';
 
 const organization = '11111111-1111-4111-8111-111111111111';
 const supplier = '22222222-2222-4222-8222-222222222222';
@@ -10,19 +10,20 @@ const supplier = '22222222-2222-4222-8222-222222222222';
 describe('sourcing locations', () => {
   it('reads the list, inbox and supplier routes without changing other sections', () => {
     expect(readWorkspaceLocation(`/organizations/${organization}/sourcing`))
-      .toEqual({ organizationId: organization, section: 'sourcing', draftId: null, sourcing: { view: 'suppliers', supplierId: null } });
-    expect(readWorkspaceLocation(`/organizations/${organization}/sourcing/inbox`).sourcing).toEqual({ view: 'inbox', supplierId: null });
-    expect(readWorkspaceLocation(`/organizations/${organization}/sourcing/${supplier}`).sourcing).toEqual({ view: 'supplier', supplierId: supplier });
-    expect(readWorkspaceLocation(`/organizations/${organization}/sourcing/not-a-supplier`).sourcing).toEqual({ view: 'suppliers', supplierId: null });
-    expect(readWorkspaceLocation(`/organizations/${organization}/sourcing/${supplier}/extra`).sourcing).toEqual({ view: 'suppliers', supplierId: null });
+      .toEqual({ organizationId: organization, section: 'sourcing', draftId: null });
+    expect(readSourcingAddress(`/organizations/${organization}/sourcing`)).toEqual({ view: 'suppliers', supplierId: null });
+    expect(readSourcingAddress(`/organizations/${organization}/sourcing/inbox`)).toEqual({ view: 'inbox', supplierId: null });
+    expect(readSourcingAddress(`/organizations/${organization}/sourcing/${supplier}`)).toEqual({ view: 'supplier', supplierId: supplier });
+    expect(readSourcingAddress(`/organizations/${organization}/sourcing/not-a-supplier`)).toEqual({ view: 'suppliers', supplierId: null });
+    expect(readSourcingAddress(`/organizations/${organization}/sourcing/${supplier}/extra`)).toEqual({ view: 'suppliers', supplierId: null });
     expect(readWorkspaceLocation(`/organizations/${organization}/products`)).toEqual({ organizationId: organization, section: 'products', draftId: null });
-    expect(readWorkspaceLocation(`/organizations/${organization}/products`)).not.toHaveProperty('sourcing');
+    expect(readSourcingAddress(`/organizations/${organization}/products`)).toBeNull();
   });
 
   it('builds addresses that read back to the same location and survive sign-in', () => {
     for (const location of [{ view: 'materials', supplierId: null }, { view: 'suppliers', supplierId: null }, { view: 'inbox', supplierId: null }, { view: 'supplier', supplierId: supplier }] as const) {
       const path = sourcingPath(organization, location);
-      expect(readWorkspaceLocation(path).sourcing).toEqual(location);
+      expect(readSourcingAddress(path)).toEqual(location);
       expect(safeWorkspaceDestination(path)).toBe(path);
     }
     expect(() => sourcingPath('not-an-organization', { view: 'inbox', supplierId: null })).toThrow();

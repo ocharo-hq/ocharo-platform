@@ -1,8 +1,8 @@
 import {describe,expect,it} from 'vitest';
 import {mount} from '@vue/test-utils';
-import CatalogueWebPreview from '@/presentation/workspace/CatalogueWebPreview.vue';
-import {createCatalogue} from '@/domain/workspace/CatalogueDocuments';
-import {initialCommerce,type CommerceDraft,type Product} from '@/domain/workspace/Commerce';
+import CatalogueWebPreview from '@/presentation/design/catalogue/CatalogueWebPreview.vue';
+import {createCatalogue} from '@/domain/design/catalogue/CatalogueDocuments';
+import {initialCommerce,type CommerceDraft,type Product} from '@/domain/common/models/Commerce';
 const copy={status:'approved' as const,name:'Approved robe',fabric:'Silk',description:'A silk robe',decoration:null};
 const image=(id:string)=>({id,role:'model',fileName:id+'.png',contentType:'image/png',byteLength:10,sha256:id.repeat(64),width:100,height:200,hasPreview:true,alt:id,sourcePath:null});
 const product=(id:string,approved=true):Product=>({document:{id,garmentType:'robe',variantCode:'v1',status:'active',sortOrder:0,sizes:['M'],fabricCodes:[],decorationCodes:[],tags:[],locales:{en:{...copy,status:approved?'approved':'draft'},ru:copy,uz:copy},pricing:{currency:'USD',status:'confirmed',wording:null,tiers:[{minimumQuantity:1,maximumQuantity:9,unitPrice:140},{minimumQuantity:10,maximumQuantity:null,unitPrice:100}]},media:[image('a'),image('b')],issues:[],notes:null,stock:null,madeToOrder:false},revision:1,sourceRevision:null});

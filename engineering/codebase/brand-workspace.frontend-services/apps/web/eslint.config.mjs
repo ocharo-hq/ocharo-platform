@@ -31,7 +31,7 @@ const architectureRule = {
       if (!target?.startsWith(root)) return;
       const [targetLayer, targetSlice] = target.slice(root.length).split('/');
       if (!allowed.includes(targetLayer) ||
-          (layer !== 'bootstrap' && targetSlice !== slice && targetSlice !== 'shared')) {
+          (layer !== 'bootstrap' && targetSlice !== slice && targetSlice !== 'common')) {
         context.report({ node, messageId: 'edge' });
       }
     };

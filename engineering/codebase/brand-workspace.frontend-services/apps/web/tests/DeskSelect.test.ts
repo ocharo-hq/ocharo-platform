@@ -1,9 +1,9 @@
 import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { nextTick } from 'vue';
-import DeskSelect from '@/presentation/shared/DeskSelect.vue';
-import UiLanguagePicker from '@/presentation/shared/UiLanguagePicker.vue';
-import { useUiLocale } from '@/application/shared/UseUiLocale';
+import DeskSelect from '@/presentation/common/DeskSelect.vue';
+import UiLanguagePicker from '@/presentation/common/UiLanguagePicker.vue';
+import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
 
 const mounted: VueWrapper[] = [];
 beforeEach(() => {

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfigError, staticSource } from '@wow-two-beta/fe/foundation/config';
 
-import { feedbackBus } from '@/application/shared/UseFeedback';
+import { feedbackBus } from '@/application/common/hooks/UseFeedback';
 import {
   OcharoAppsProblem,
   loadOcharoApps,
@@ -12,8 +12,8 @@ import {
   resolveOcharoAppsConfig,
   runtimeConfigSource,
   useOcharoApps,
-} from '@/application/shared/UseOcharoApps';
-import { ocharoApps, type OcharoApp } from '@/domain/shared/OcharoApps';
+} from '@/application/common/hooks/UseOcharoApps';
+import { ocharoApps, type OcharoApp } from '@/domain/common/models/OcharoApps';
 
 /** The local-run addresses Desk falls back to when nothing configures an app. */
 const LocalDefaults = {

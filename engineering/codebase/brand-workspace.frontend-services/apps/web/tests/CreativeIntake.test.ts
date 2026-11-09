@@ -2,12 +2,12 @@ import { webcrypto } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
-import { readCreativeHandoff } from '@/domain/workspace/CreativeHandoff';
-import { useCommerce } from '@/application/workspace/UseCommerce';
-import type { AccessControls } from '@/application/workspace/UseAccess';
-import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
+import { readCreativeHandoff } from '@/domain/common/CreativeHandoff';
+import { useCommerce } from '@/application/common/hooks/UseCommerce';
+import type { AccessControls } from '@/application/common/hooks/UseAccess';
+import type { WorkspaceControls } from '@/application/common/hooks/UseWorkspace';
 const api = vi.hoisted(() => ({ creative: vi.fn() }));
-vi.mock('@/integration/workspace/CommerceApi', () => ({ createCommerceApi: () => api }));
+vi.mock('@/integration/common/CommerceApi', () => ({ createCommerceApi: () => api }));
 afterEach(() => vi.unstubAllGlobals());
 const manifest = () => ({ schemaVersion:1,source:{application:'ocharo-studio',workspaceId:'workspace',lookId:'look',revision:0},assetReleases:[],materials:[],derivative:{sha256:'a'.repeat(64),mediaType:'image/png',fileName:'render.png',bytes:3},sourceApproval:{status:'approved-for-review',note:'Author submission only'} });
 describe('Studio file intake', () => {

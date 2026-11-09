@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { systemApi } from '@/integration/system/SystemApi';
-import { createEventsApi } from '@/integration/workspace/EventsApi';
-import { createSourcingApi } from '@/integration/workspace/SourcingApi';
-import { createWorkspaceApi } from '@/integration/workspace/WorkspaceApi';
+import { createEventsApi } from '@/integration/events/EventsApi';
+import { createSourcingApi } from '@/integration/sourcing/SourcingApi';
+import { createWorkspaceApi } from '@/integration/common/WorkspaceApi';
 
 afterEach(() => vi.unstubAllGlobals());
 

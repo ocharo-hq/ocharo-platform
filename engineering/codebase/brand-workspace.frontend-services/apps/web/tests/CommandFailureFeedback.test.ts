@@ -4,11 +4,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { FileUploadPicker } from '@wow-two-beta/fe/presentation/forms';
-import { feedbackBus } from '@/application/shared/UseFeedback';
-import type { AccessControls } from '@/application/workspace/UseAccess';
-import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
-import BrandsPage from '@/presentation/workspace/BrandsPage.vue';
-import MediaPage from '@/presentation/workspace/MediaPage.vue';
+import { feedbackBus } from '@/application/common/hooks/UseFeedback';
+import type { AccessControls } from '@/application/common/hooks/UseAccess';
+import type { WorkspaceControls } from '@/application/common/hooks/UseWorkspace';
+import BrandsPage from '@/presentation/brands/pages/BrandsPage.vue';
+import MediaPage from '@/presentation/media/pages/MediaPage.vue';
 
 afterEach(() => vi.restoreAllMocks());
 const failure = () => ResultExtensions.fail(ApiFailureFactory.create('http', new Response(null, { status: 500 })));

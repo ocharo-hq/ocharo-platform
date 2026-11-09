@@ -4,8 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
-import { resolveConfirmation } from '@/application/shared/UseFeedback';
-import { useAccess, type AccessControls } from '@/application/workspace/UseAccess';
+import { resolveConfirmation } from '@/application/common/hooks/UseFeedback';
+import { useAccess, type AccessControls } from '@/application/common/hooks/UseAccess';
+
+import { installDeskGuards } from '@/bootstrap/router/DeskGuards';
 
 import { deskRouter } from './helpers/DeskRouter';
 
@@ -24,6 +26,7 @@ beforeEach(async () => {
     defineComponent({
       setup() {
         access = useAccess({ assign, reload: vi.fn(), router });
+        installDeskGuards(router, access);
         return () => h('div');
       },
     }),

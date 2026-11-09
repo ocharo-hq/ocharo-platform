@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import DesignCanvas from '@/presentation/workspace/DesignCanvas.vue';
-import type { DesignPage } from '@/domain/workspace/EditorModels';
+import DesignCanvas from '@/presentation/design/core/DesignCanvas.vue';
+import type { DesignPage } from '@/domain/common/models/EditorModels';
 
 function canvas(locked = false) {
   const page: DesignPage = { id: 'page', title: 'Canvas', width: 100, height: 100, background: '#FFFFFF',

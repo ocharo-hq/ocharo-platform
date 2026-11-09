@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { downloadText } from '@wow-two-beta/fe/foundation/files';
 
-import { createEventCalendar, downloadEventCalendar } from '@/application/workspace/EventCalendar';
-import type { UiLocale } from '@/domain/shared/UiMessages';
-import type { ShowcaseEvent } from '@/domain/workspace/Events';
+import { createEventCalendar, downloadEventCalendar } from '@/application/events/EventCalendar';
+import type { UiLocale } from '@/domain/common/UiMessages';
+import type { ShowcaseEvent } from '@/domain/events/Events';
 
 vi.mock('@wow-two-beta/fe/foundation/files', () => ({ downloadText: vi.fn(() => true) }));
 

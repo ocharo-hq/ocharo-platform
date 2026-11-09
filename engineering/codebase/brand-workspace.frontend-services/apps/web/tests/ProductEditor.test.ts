@@ -2,10 +2,10 @@ import { chooseDeskValue } from './helpers/DeskSelect';
 import { reactive } from 'vue';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import ProductEditor from '@/presentation/workspace/ProductEditor.vue';
-import { emptyCopy, productCopy, productMediaForGroup, type Product } from '@/domain/workspace/Commerce';
+import ProductEditor from '@/presentation/commerce/ProductEditor.vue';
+import { emptyCopy, productCopy, productMediaForGroup, type Product } from '@/domain/common/models/Commerce';
 
-vi.mock('@/application/shared/UseUiLocale', () => ({ useUiLocale: () => ({ t: (source:string) => source }) }));
+vi.mock('@/application/common/hooks/UseUiLocale', () => ({ useUiLocale: () => ({ t: (source:string) => source }) }));
 let wrapper:VueWrapper;
 afterEach(()=>wrapper?.unmount());
 function fixture():Product {return {revision:1,sourceRevision:null,document:{id:'vest',garmentType:'vest',variantCode:'v01',status:'draft',sortOrder:0,sizes:['M'],fabricCodes:['silk'],decorationCodes:[],tags:[],locales:{uz:{...emptyCopy(),name:'Nimcha'},ru:emptyCopy(),en:{...emptyCopy(),name:'Vest'}},pricing:{currency:'UZS',status:'confirmed',tiers:[{minimumQuantity:1,maximumQuantity:9,unitPrice:350000},{minimumQuantity:10,maximumQuantity:null,unitPrice:300000}],wording:null},media:[{id:'front',role:'cutout',fileName:'front.png',contentType:'image/png',byteLength:1,sha256:'a'.repeat(64),width:10,height:10,hasPreview:false,alt:null,sourcePath:null},{id:'model',role:'model',fileName:'model.png',contentType:'image/png',byteLength:1,sha256:'b'.repeat(64),width:10,height:10,hasPreview:false,alt:null,sourcePath:null}],issues:[],notes:null,stock:null,madeToOrder:false}};}

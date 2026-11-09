@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useUiLocale } from '@/application/shared/UseUiLocale';
+import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
+import { DeskDateFormat, formatDeskDate } from '@/domain/common/DeskDates';
 import { computed } from 'vue';
 
 import { Button } from '@wow-two-beta/fe/presentation/actions';
@@ -17,9 +18,7 @@ const { status, loading, busy, failureMessage, refresh } = useSystemStatus();
 /** The last worker observation, explicitly localized for the person viewing the page. */
 const lastSeen = computed(() =>
   status.value?.worker.lastSeenAtUtc
-    ? new Intl.DateTimeFormat(uiLocale.value, { dateStyle: 'medium', timeStyle: 'medium' }).format(
-        new Date(status.value.worker.lastSeenAtUtc),
-      )
+    ? formatDeskDate(status.value.worker.lastSeenAtUtc, uiLocale.value, DeskDateFormat.Medium)
     : null,
 );
 /** The readable heartbeat status, without implying publishing is enabled. */

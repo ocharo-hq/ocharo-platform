@@ -2,10 +2,10 @@ import { effectScope } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
-import { useAccess } from '@/application/workspace/UseAccess';
-import { useDesignDocument } from '@/application/workspace/DocumentStore';
-import { createCardTemplate } from '@/domain/workspace/Templates';
-import type { DesignDocument } from '@/domain/workspace/EditorModels';
+import { useAccess } from '@/application/common/hooks/UseAccess';
+import { useDesignDocument } from '@/application/design/DocumentStore';
+import { createCardTemplate } from '@/domain/design/Templates';
+import type { DesignDocument } from '@/domain/common/models/EditorModels';
 
 const scopes: ReturnType<typeof effectScope>[] = [];
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); vi.restoreAllMocks(); });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { designEditorUrl, readDesignTarget, safeWorkspaceDestination } from '@/domain/workspace/EditorNavigation';
-import { readWorkspaceLocation } from '@/domain/workspace/Models';
+import { designEditorUrl, readDesignTarget, safeWorkspaceDestination } from '@/domain/common/EditorNavigation';
+import { readWorkspaceLocation } from '@/domain/common/models/Workspace';
 
 const organization = '11111111-1111-4111-8111-111111111111';
 const design = '22222222-2222-4222-8222-222222222222';

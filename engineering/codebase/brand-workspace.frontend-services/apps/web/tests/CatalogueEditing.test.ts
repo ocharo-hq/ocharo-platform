@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { effectScope } from 'vue';
-import { bindCatalogueElement, catalogueSettings, connectCatalogueProducts, localizeUnboundTemplate, randomizeCatalogue, refreshCatalogue, replaceCataloguePhoto } from '@/domain/workspace/CatalogueEditing';
-import { composeCataloguePages, createCatalogueCover } from '@/domain/workspace/CatalogueComposer';
-import { initialCommerce, type CommerceDraft, type Product } from '@/domain/workspace/Commerce';
-import { cloneSnapshot, validateSnapshot, type DesignSnapshot } from '@/domain/workspace/EditorModels';
-import { createCatalogueTemplate } from '@/domain/workspace/Templates';
-import { useDesignDocument } from '@/application/workspace/DocumentStore';
-import { useAccess } from '@/application/workspace/UseAccess';
-import { layoutDesignText } from '@/integration/workspace/DesignTextLayout';
+import { bindCatalogueElement, catalogueSettings, connectCatalogueProducts, localizeUnboundTemplate, randomizeCatalogue, refreshCatalogue, replaceCataloguePhoto } from '@/domain/design/catalogue/CatalogueEditing';
+import { composeCataloguePages, createCatalogueCover } from '@/domain/design/catalogue/CatalogueComposer';
+import { initialCommerce, type CommerceDraft, type Product } from '@/domain/common/models/Commerce';
+import { cloneSnapshot, validateSnapshot, type DesignSnapshot } from '@/domain/common/models/EditorModels';
+import { createCatalogueTemplate } from '@/domain/design/Templates';
+import { useDesignDocument } from '@/application/design/DocumentStore';
+import { useAccess } from '@/application/common/hooks/UseAccess';
+import { layoutDesignText } from '@/integration/design/DesignTextLayout';
 const org='11111111-1111-1111-1111-111111111111',brand='22222222-2222-2222-2222-222222222222';
 const hashes=Array.from({length:6},(_,index)=>String(index+1).repeat(64));
 function fixture():CommerceDraft {

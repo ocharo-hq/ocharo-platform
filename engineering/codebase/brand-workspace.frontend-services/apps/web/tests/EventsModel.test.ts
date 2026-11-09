@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { safeWorkspaceDestination } from '@/domain/workspace/EditorNavigation';
+import { safeWorkspaceDestination } from '@/domain/common/EditorNavigation';
 import {
   daysLeftLabel, daysUntil, deadlineTone, eventDraft, eventInput, eventsPath, formatEventDates, groupEventsByMonth, localIsoDate, monthHeading,
-  safeEventUrl, validateEventDraft, type ShowcaseEvent,
-} from '@/domain/workspace/Events';
-import { readWorkspaceLocation } from '@/domain/workspace/Models';
-import { eventListQuery, isEventSummary, isShowcaseEvent } from '@/integration/workspace/EventsApi';
+  readEventsAddress, safeEventUrl, validateEventDraft, type ShowcaseEvent,
+} from '@/domain/events/Events';
+import { readWorkspaceLocation } from '@/domain/common/models/Workspace';
+import { eventListQuery, isEventSummary, isShowcaseEvent } from '@/integration/events/EventsApi';
 
 const organization = '11111111-1111-4111-8111-111111111111';
 const eventId = '22222222-2222-4222-8222-222222222222';
@@ -21,18 +21,19 @@ const showcase = (over: Partial<ShowcaseEvent> = {}): ShowcaseEvent => ({
 describe('events locations', () => {
   it('reads the feed and one event, and falls back to the feed for anything else', () => {
     expect(readWorkspaceLocation(`/organizations/${organization}/events`))
-      .toEqual({ organizationId: organization, section: 'events', draftId: null, events: { view: 'feed', eventId: null } });
-    expect(readWorkspaceLocation(`/organizations/${organization}/events/${eventId}`).events).toEqual({ view: 'event', eventId });
-    expect(readWorkspaceLocation(`/organizations/${organization}/events/${eventId.toUpperCase()}`).events).toEqual({ view: 'event', eventId });
+      .toEqual({ organizationId: organization, section: 'events', draftId: null });
+    expect(readEventsAddress(`/organizations/${organization}/events`)).toEqual({ view: 'feed', eventId: null });
+    expect(readEventsAddress(`/organizations/${organization}/events/${eventId}`)).toEqual({ view: 'event', eventId });
+    expect(readEventsAddress(`/organizations/${organization}/events/${eventId.toUpperCase()}`)).toEqual({ view: 'event', eventId });
     for (const tail of ['new', 'not-an-event', `${eventId}/extra`, '12345'])
-      expect(readWorkspaceLocation(`/organizations/${organization}/events/${tail}`).events).toEqual({ view: 'feed', eventId: null });
-    expect(readWorkspaceLocation(`/organizations/${organization}/sourcing`)).not.toHaveProperty('events');
+      expect(readEventsAddress(`/organizations/${organization}/events/${tail}`)).toEqual({ view: 'feed', eventId: null });
+    expect(readEventsAddress(`/organizations/${organization}/sourcing`)).toBeNull();
   });
 
   it('builds addresses that read back to the same location and survive sign-in', () => {
     for (const location of [{ view: 'feed', eventId: null }, { view: 'event', eventId }] as const) {
       const path = eventsPath(organization, location);
-      expect(readWorkspaceLocation(path).events).toEqual(location);
+      expect(readEventsAddress(path)).toEqual(location);
       expect(safeWorkspaceDestination(path)).toBe(path);
     }
     expect(eventsPath(organization, { view: 'event', eventId: 'javascript:alert(1)' })).toBe(`/organizations/${organization}/events`);

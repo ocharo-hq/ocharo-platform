@@ -1,4 +1,5 @@
 import { defineComponent, h, nextTick } from 'vue';
+import { RouterView } from 'vue-router';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,11 +7,13 @@ import { ColorModeProvider } from '@wow-two-beta/fe/foundation/primitives';
 import { DefaultRetryPolicy } from '@wow-two-beta/fe/foundation/resilience';
 import { createQueryClient, queryPlugin } from '@wow-two-beta/fe/query';
 
-import { loadOcharoApps, ocharoAppsPlugin } from '@/application/shared/UseOcharoApps';
-import { provideUiLocale, useUiLocale } from '@/application/shared/UseUiLocale';
-import { useAccess } from '@/application/workspace/UseAccess';
-import DeskFrame from '@/presentation/workspace/frame/DeskFrame.vue';
-import WorkspacePage from '@/presentation/workspace/WorkspacePage.vue';
+import { loadOcharoApps, ocharoAppsPlugin } from '@/application/common/hooks/UseOcharoApps';
+import { provideUiLocale, useUiLocale } from '@/application/common/hooks/UseUiLocale';
+import { useAccess } from '@/application/common/hooks/UseAccess';
+import AccountSettings from '@/presentation/access/AccountSettings.vue';
+
+import { installDeskGuards } from '@/bootstrap/router/DeskGuards';
+import { DeskLayoutRoute } from '@/bootstrap/router/DeskRoutes';
 
 import { deskRouter } from './helpers/DeskRouter';
 
@@ -82,7 +85,10 @@ async function renderAt(
           role: 'owner',
           permissions: ['desk:edit', 'desk:approve'],
         };
-        return () => h(ColorModeProvider, { storageKey: 'ocharo.desk.theme.test' }, () => h(WorkspacePage, { access }));
+        installDeskGuards(router, access);
+        // The routed frame, rendered as AppRoot renders it once the session is resolved.
+        return () => h(ColorModeProvider, { storageKey: 'ocharo.desk.theme.test' }, () =>
+          h(RouterView, null, { default: ({ Component }: { Component: unknown }) => Component ? h(Component as never, { access }) : null }));
       },
     }),
     { global: { plugins: [queryPlugin(client), router, ...ocharoApps] }, attachTo: document.body },
@@ -214,6 +220,28 @@ describe('Ocharo frame in Desk', () => {
     expect(wrapper!.get('nav[aria-label="Desk sections"] [aria-current="page"]').text()).toBe('Media');
     expect(assign).not.toHaveBeenCalled();
   });
+
+  it('opens the not-found page inside the frame for an address outside every place', async () => {
+    await renderAt(`/organizations/${ORG}/unknown`, 1440);
+
+    expect(wrapper!.get('h1').text()).toBe('Page not found');
+    expect(wrapper!.find('nav[aria-label="Desk sections"] [aria-current="page"]').exists()).toBe(false);
+    expect(document.title).toBe('Page not found · Ocharo Desk');
+  });
+
+  it('keeps the frame and offers a retry when a place’s code fails to load', async () => {
+    const { router } = await renderAt(`/organizations/${ORG}/brands`, 1440);
+    router.addRoute(DeskLayoutRoute, {
+      path: `organizations/:organizationId/broken`,
+      component: () => Promise.reject(new Error('Failed to fetch dynamically imported module')),
+    });
+
+    await router.push(`/organizations/${ORG}/broken`).catch(() => undefined);
+    await flushPromises();
+
+    expect(wrapper!.get('[role="alert"] h1').text()).toBe('Could not open this page');
+    expect(wrapper!.find('nav[aria-label="Desk sections"]').exists()).toBe(true);
+  });
 });
 
 describe('account menu in Desk', () => {
@@ -242,7 +270,7 @@ describe('account menu in Desk', () => {
     accountRow(await openAccountMenu(), 'Account settings').click();
     await settle();
 
-    expect(wrapper!.findComponent(DeskFrame).emitted('settings')).toHaveLength(1);
+    expect(wrapper!.findComponent(AccountSettings).exists()).toBe(true);
   });
 
   it('switches organization by replacing the document, and keeps a long membership list in its own band', async () => {

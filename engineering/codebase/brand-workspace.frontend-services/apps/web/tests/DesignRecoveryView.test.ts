@@ -1,10 +1,10 @@
 import { computed, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 import { describe, expect, it, vi } from 'vitest';
-import DesignRecovery from '@/presentation/workspace/DesignRecovery.vue';
-import type { DesignRecoveryControls } from '@/application/workspace/UseDesignRecovery';
-import type { DesignRecoveryRecord } from '@/domain/workspace/DesignRecovery';
-import { createCardTemplate } from '@/domain/workspace/Templates';
+import DesignRecovery from '@/presentation/design/core/DesignRecovery.vue';
+import type { DesignRecoveryControls } from '@/application/design/hooks/UseDesignRecovery';
+import type { DesignRecoveryRecord } from '@/domain/design/DesignRecovery';
+import { createCardTemplate } from '@/domain/design/Templates';
 function controls() {
   return { supported: computed(() => true), enabled: ref(false), available: ref<DesignRecoveryRecord | null>(null), hasStored: ref(false), status: ref('Off in this tab'), error: ref(''), enable: vi.fn(), disable: vi.fn(), discard: vi.fn(), restore: vi.fn() };
 }

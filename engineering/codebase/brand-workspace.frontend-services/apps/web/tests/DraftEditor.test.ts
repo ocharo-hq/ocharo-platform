@@ -1,4 +1,4 @@
-import { feedbackBus } from '@/application/shared/UseFeedback';
+import { feedbackBus } from '@/application/common/hooks/UseFeedback';
 import { computed, ref } from 'vue';
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,10 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
-import type { AccessControls } from '@/application/workspace/UseAccess';
-import type { WorkspaceControls } from '@/application/workspace/UseWorkspace';
-import type { Draft } from '@/domain/workspace/Models';
-import DraftEditorPage from '@/presentation/workspace/DraftEditorPage.vue';
+import type { AccessControls } from '@/application/common/hooks/UseAccess';
+import type { WorkspaceControls } from '@/application/common/hooks/UseWorkspace';
+import type { Draft } from '@/domain/common/models/Workspace';
+import DraftEditorPage from '@/presentation/content/pages/DraftEditorPage.vue';
 
 const orgId = '10000000-0000-0000-0000-000000000001';
 const draft: Draft = {

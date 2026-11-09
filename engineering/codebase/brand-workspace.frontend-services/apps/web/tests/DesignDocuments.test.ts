@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { validateSnapshot } from '@/domain/workspace/EditorModels';
-import { createCatalogueTemplate, createCardTemplate } from '@/domain/workspace/Templates';
+import { validateSnapshot } from '@/domain/common/models/EditorModels';
+import { createCatalogueTemplate, createCardTemplate } from '@/domain/design/Templates';
 
 describe('portable design templates', () => {
   it.each(['uz', 'ru', 'en'] as const)('validates the actual %s catalogue and card payloads', (locale) => {

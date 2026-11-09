@@ -35,7 +35,7 @@ def main() -> None:
     repo = Path(__file__).resolve().parents[2]
     app = repo / 'engineering/codebase/brand-workspace.frontend-services/apps/web'
     public = app / 'public/templates/ocharo'
-    seeds = app / 'src/domain/workspace/templates'
+    seeds = app / 'src/domain/design/templates'
     public.mkdir(parents=True, exist_ok=True)
     seeds.mkdir(parents=True, exist_ok=True)
     for name, file in [('body', 'och-body.ttf'), ('bold', 'och-bold.ttf'), ('serif', 'och-didot.ttf'), ('photo', 'och-photo.ttf')]:
