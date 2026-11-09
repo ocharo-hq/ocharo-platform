@@ -176,6 +176,12 @@ Evidence caveats: D-24 counts `NpgsqlCommand|CreateCommand` matches; D-28, D-29 
 - `deploy.yml:12` runs every service as .NET `Production`; `dotnetEnvironment: true` is only a "should" (`deployment/descriptor/deploy-descriptor.md:50`) and depends on Desk's `appsettings.Development.json` (D-13).
 - Both companions pin `@wow-two-beta/fe` 0.0.32 (latest tag `fe-v0.0.41`) and be sdk `10.0.105-beta` (latest tag `v10.0.106-beta`); a re-pin takes B-24/C-28 and the BFF route alignment (`fix!` in fe 0.0.41).
 
+## Status
+
+As of 2026-11-09 every row is fixed in v0.2 or kept as an exception below, except D-31 (Desk's retired identity
+tables, which deletes data and waits for the owner's go) and B-7–B-9, C-7–C-9 (PostgreSQL for Brand and Catalogue,
+v0.2 Iteration 13).
+
 ## Exceptions
 
 Rows kept in part while fixing them in v0.2, each with what lifts it.
@@ -186,6 +192,7 @@ Rows kept in part while fixing them in v0.2, each with what lifts it.
 | D-40 | Desk's Vite dev server stays HTTPS-only through mkcert, with no `VITE_HTTPS=false` mode or `*-http` launch entry | Ocharo's local transport override (`ocharo-ws/docs/local-development.md`) removes plaintext Vite modes for every Ocharo app | Ocharo drops its HTTPS-only override |
 | D-13 | Both environments run as .NET `Production` (no `dotnetEnvironment`); Desk's loopback defaults stay in `appsettings.json` | the flag also switches the descriptor's `identity` service, whose WoW2 image turns on ephemeral signing keys in its Development file | the identity lane confirms Ocharo's dev Identity overrides both key flags |
 | D-14 | `jobs` and `image-worker` have no `configCheck:` item | neither answers `config check`: the be sdk `ServiceHost` covers web hosts only, and the image worker is Python | the be sdk offers a worker host with `config check` |
+| D-32 | Desk stamps migration history with the version minus its `+commit` build metadata | the be sdk history `version` column is `varchar(20)` | the be sdk widens the column |
 
 Fixed in the be sdk (`10.0.108-beta`, 2026-11-09): the wire preset keeps dictionary keys as written, and `UseApiDefaults`
 maps OpenAPI anonymously. Brand and Catalogue re-pinned and dropped their own OpenAPI mapping (B-2, C-2) and
