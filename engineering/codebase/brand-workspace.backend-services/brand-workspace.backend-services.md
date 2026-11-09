@@ -31,7 +31,8 @@ connection string with its password, either as `ConnectionStrings__Database` or 
 { "ConnectionStrings": { "Database": "Host=127.0.0.1;Port=8270;Database=brand_workspace;Username=brand_workspace;Password=<local password>" } }
 ```
 
-Passwords never go in committed settings. A local run keeps its Data Protection keys under the user's
+Committed `appsettings.json` holds no connection string or allowed hosts: a deployed target gets both from
+Wheelhouse, and a local run from the ignored local file. Passwords never go in committed settings. A local run keeps its Data Protection keys under the user's
 application-data folder unless `DataProtection:KeysPath` names one; any other run requires it.
 
 From this directory, after a build:
