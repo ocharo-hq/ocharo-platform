@@ -217,7 +217,7 @@ services:
         # A viewer reads every app's media as a member, and that read reaches Files with the viewer's own token.
         Identity:Organizations:Roles:viewer:0: { default: "files:read" }
         # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
-        # 2 catalogue, 3 marketing, 4 editorial and 5 studio. Each secret
+        # 2 catalogue, 3 marketing, 4 editorial, 5 studio, 6 public-build and 7 assets-release. Each secret but 7's
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
         # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
         # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
@@ -281,6 +281,15 @@ services:
         Identity:Server:Clients:6:Grants:0: { default: client_credentials }
         Identity:Server:Clients:6:Resources:0: { default: editorial }
         Identity:Server:Clients:6:Scopes:0: { default: editorial.export }
+        # Client 7, assets-release: ocharo-assets' release workflow uploads the garment release to Files as public files
+        # (planning/files-adoption.md #14, #33). Its secret is typed, not generated, since the same value is that
+        # repository's GitHub Actions secret OCHARO_ASSETS_CLIENT_SECRET; it signs in only as itself.
+        Identity:Server:Clients:7:ClientId: { default: assets-release }
+        Identity:Server:Clients:7:DisplayName: { default: Ocharo assets release }
+        Identity:Server:Clients:7:ClientSecret: { secret: true, required: true }
+        Identity:Server:Clients:7:Grants:0: { default: client_credentials }
+        Identity:Server:Clients:7:Resources:0: { default: files }
+        Identity:Server:Clients:7:Scopes:0: { default: files.write }
         # Files (planning/files-adoption.md #15–#18): each app reaches `files` for a person by token exchange, and as
         # itself by client credentials for its seeds, jobs and public-media redirects; Studio only for a person. A Grants
         # list replaces "empty means the code flow alone", so authorization_code comes first. Clients 0–5 reuse their
