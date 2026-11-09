@@ -11,7 +11,7 @@ without logos. OpenAPI is served on a local run only.
 Runtime config: `RuntimeConfig/` serves `GET /api/runtime-config` from the optional `OcharoApps:{Desk,Catalogue,Studio,
 Marketing,Editorial,Brand,Atlas,Wear,Blog}` settings as `OCHARO_*_URL` keys, the same agreement as Desk and Catalogue.
 Every address is optional; a value that is not a plain absolute HTTPS address is left out and named in one startup
-warning. `SystemStatus/` serves `GET /api/system/status`; `/api/system/version` is retained. Both are anonymous,
+warning. `SystemStatus/` serves `GET /api/system/status`, anonymous,
 `no-store` and listed in `HostConfiguration.Sso.cs` as public SSO requests.
 
 Tests use `BrandHost` (in `RuntimeConfigTests.cs`): a temp SQLite file and blob folder, a missing seed folder, and

@@ -5,8 +5,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OcharoBrand.Api.RuntimeConfig.Settings;
+using Serilog.Core;
+using Serilog.Events;
+using Serilog.Formatting.Display;
 
 namespace OcharoBrand.Tests;
 
@@ -118,7 +120,7 @@ public sealed class RuntimeConfigTests
 
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/runtime-config")).StatusCode);
 
-        var warning = Assert.Single(logs.Entries, entry => entry.Level == LogLevel.Warning && entry.Message.StartsWith("Runtime config"));
+        var warning = Assert.Single(logs.Entries, entry => entry.Level == LogEventLevel.Warning && entry.Message.StartsWith("Runtime config"));
         Assert.Equal("Runtime config leaves out OcharoApps:Desk, OcharoApps:Brand: each must be a plain HTTPS address.", warning.Message);
     }
 
@@ -187,7 +189,7 @@ internal sealed class BrandHost : IAsyncDisposable
             builder.ConfigureServices(services =>
             {
                 BrandTestIdentity.Use(services);
-                if (logs is not null) services.AddSingleton<ILoggerProvider>(logs);
+                if (logs is not null) services.AddSingleton<ILogEventSink>(logs);
             });
         });
         return new BrandHost(root, factory);
@@ -200,22 +202,18 @@ internal sealed class BrandHost : IAsyncDisposable
     }
 }
 
-/// <summary>Records every host log entry, so a test can count the warnings startup writes.</summary>
-internal sealed class CapturedLogs : ILoggerProvider
+/// <summary>Records every host log event, rendered as the console renders it, so a test can count the warnings startup
+/// writes; the be sdk's Serilog reads sinks from the host's services.</summary>
+internal sealed class CapturedLogs : ILogEventSink
 {
-    public ConcurrentQueue<(LogLevel Level, string Message)> Entries { get; } = new();
+    private static readonly MessageTemplateTextFormatter Message = new("{Message:lj}");
 
-    public ILogger CreateLogger(string categoryName) => new Logger(Entries);
+    public ConcurrentQueue<(LogEventLevel Level, string Message)> Entries { get; } = new();
 
-    public void Dispose() { }
-
-    private sealed class Logger(ConcurrentQueue<(LogLevel Level, string Message)> entries) : ILogger
+    public void Emit(LogEvent logEvent)
     {
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
-            entries.Enqueue((logLevel, formatter(state, exception)));
+        using var text = new StringWriter();
+        Message.Format(logEvent, text);
+        Entries.Enqueue((logEvent.Level, text.ToString()));
     }
 }

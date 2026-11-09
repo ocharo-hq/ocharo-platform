@@ -1,5 +1,4 @@
 using System.Text.RegularExpressions;
-using OcharoBrand.Application.Abstractions;
 using OcharoBrand.Domain.Brand;
 
 namespace OcharoBrand.Application.Brand;
@@ -8,7 +7,7 @@ namespace OcharoBrand.Application.Brand;
 /// The single place brand identity and logos change: a revision-checked draft, logo versions per slot, immutable
 /// releases that consumers read, and scheduled appearances that temporarily override logos.
 /// </summary>
-public sealed partial class BrandService(IBrandRepository repository, IMediaStore media, IClock clock)
+public sealed partial class BrandService(IBrandRepository repository, IMediaStore media, TimeProvider time)
 {
     public const string DraftId = "brand";
 
@@ -44,7 +43,7 @@ public sealed partial class BrandService(IBrandRepository repository, IMediaStor
         if (existing is not null) return existing;
         var version = new LogoVersion(Guid.NewGuid().ToString("N")[..12], slot, stored.Sha256, SafeName(fileName), stored.ContentType, stored.ByteLength,
             // A file in WoW2 Files always has its preview: Files makes it as a variant.
-            stored.Width, stored.Height, stored.PreviewPath is not null || stored.FileId is not null, status, Clean(note, 500), sourcePath, clock.UtcNow);
+            stored.Width, stored.Height, stored.PreviewPath is not null || stored.FileId is not null, status, Clean(note, 500), sourcePath, time.GetUtcNow());
         await repository.SaveLogoVersionAsync(new LogoVersionRecord { Id = version.Id, Slot = slot, Sha256 = version.Sha256, UploadedAt = version.UploadedAt,
             Json = BrandJson.Write(version) }, ct);
         return version;
@@ -89,7 +88,7 @@ public sealed partial class BrandService(IBrandRepository repository, IMediaStor
         var latest = await repository.FindLatestReleaseAsync(ct);
         var changes = latest is null ? ["Birinchi nashr"] : Differences(BrandJson.Read<BrandRelease>(latest.Json), draft, versions.Values.ToList());
         if (latest is not null && changes.Count == 0) throw BrandException.Conflict("Nothing changed since the last release.");
-        var release = new BrandRelease((latest?.Version ?? 0) + 1, clock.UtcNow, Clean(input.Note, 500) ?? string.Join("; ", changes), draft.Identity, logos);
+        var release = new BrandRelease((latest?.Version ?? 0) + 1, time.GetUtcNow(), Clean(input.Note, 500) ?? string.Join("; ", changes), draft.Identity, logos);
         await repository.InsertReleaseAsync(new ReleaseRecord { Version = release.Version, PublishedAt = release.PublishedAt, Json = BrandJson.Write(release) }, ct);
         return new ReleaseSummary(release.Version, release.PublishedAt, release.Note, changes);
     }
@@ -177,7 +176,7 @@ public sealed partial class BrandService(IBrandRepository repository, IMediaStor
         return changes;
     }
 
-    public DraftRecord Record(BrandDraft draft, int revision) => new() { Id = DraftId, Revision = revision, UpdatedAt = clock.UtcNow, Json = BrandJson.Write(draft) };
+    public DraftRecord Record(BrandDraft draft, int revision) => new() { Id = DraftId, Revision = revision, UpdatedAt = time.GetUtcNow(), Json = BrandJson.Write(draft) };
 
     private static AppearanceRecord ToRecord(BrandAppearance a) =>
         new() { Id = a.Id, StartsAt = a.StartsAt, EndsAt = a.EndsAt, Status = a.Status, Json = BrandJson.Write(a) };

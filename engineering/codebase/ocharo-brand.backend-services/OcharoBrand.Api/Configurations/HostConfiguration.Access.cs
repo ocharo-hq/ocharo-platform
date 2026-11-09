@@ -1,12 +1,10 @@
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Microsoft.AspNetCore.DataProtection.Repositories;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OcharoBrand.Api.Access;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Identity.Authorization;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
+using WoW.Two.Sdk.Beta.Be.Web.DataProtection;
 
 namespace OcharoBrand.Api.Configurations;
 
@@ -24,29 +22,26 @@ public static partial class HostConfiguration
         builder.Services.AddOptions<BrandAccessOptions>().BindConfiguration(BrandAccessOptions.Section)
             .Validate(options => options.OrganizationId != Guid.Empty, "Brand:OrganizationId must name the Ocharo organization Brand serves.")
             .ValidateOnStart();
-        // Resolve final configuration after test/deployment overrides have been applied.
-        builder.Services.AddDataProtection();
-        builder.Services.AddOptions<KeyManagementOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
+        // Today's application name and key path, unchanged, so existing sessions stay readable. Resolved from the final
+        // configuration, after test and deployment overrides; a local run without a path keeps its per-machine folder.
+        builder.Services.AddPersistentDataProtection(_ => { });
+        builder.Services.AddOptions<PersistentDataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
         {
-            var path = configuration["DataProtection:KeysPath"];
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                if (!environment.IsLocalRun(configuration)) throw new InvalidOperationException("DataProtection:KeysPath must name durable storage.");
-                path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ocharo-brand", environment.EnvironmentName, "keys");
-            }
-            options.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(path), NullLoggerFactory.Instance);
+            options.ApplicationName = configuration["DataProtection:ApplicationName"] ?? $"ocharo-brand:{environment.EnvironmentName}";
+            options.KeyDirectory = configuration["DataProtection:KeysPath"] is { } path && !string.IsNullOrWhiteSpace(path) ? path
+                : environment.IsLocalRun(configuration)
+                    ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ocharo-brand", environment.EnvironmentName, "keys")
+                    : null;
         });
-        builder.Services.AddOptions<DataProtectionOptions>().Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
-            options.ApplicationDiscriminator = configuration["DataProtection:ApplicationName"] ?? $"ocharo-brand:{environment.EnvironmentName}");
         return builder;
     }
 
     /// <summary>Configures the session pipeline after routing: HTTPS for the session routes, the BFF (authentication, the
     /// <c>X-Csrf-Token</c> check, authorization), then the bound-organization membership and permission check.</summary>
-    private static WebApplication UseAccess(this WebApplication app)
+    private static IApplicationBuilder UseAccess(this IApplicationBuilder app)
     {
         // A deployed host without a durable key path fails here, at boot, rather than at the first sign-in.
-        _ = app.Services.GetRequiredService<IOptions<KeyManagementOptions>>().Value;
+        _ = app.ApplicationServices.GetRequiredService<IOptions<KeyManagementOptions>>().Value;
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.StartsWithSegments("/api/identity") && !context.Request.IsHttps)

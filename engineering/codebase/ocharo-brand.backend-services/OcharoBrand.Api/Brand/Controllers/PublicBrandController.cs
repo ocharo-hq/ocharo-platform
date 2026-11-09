@@ -1,15 +1,18 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OcharoBrand.Application.Brand;
+using WoW.Two.Sdk.Beta.Be.Web.SecureHeaders;
 
 namespace OcharoBrand.Api.Brand.Controllers;
 
 /// <summary>
 /// The kit every Ocharo app reads. Send <c>X-Ocharo-App: catalogue</c> (or <c>?app=</c>) to appear on the Brand
-/// "consumers" panel. Stable logo URLs follow publishes and appearances; media URLs are immutable.
+/// "consumers" panel. Stable logo URLs follow publishes and appearances; media URLs are immutable. Other origins embed
+/// its logos, media and tokens without CORS (an image, a stylesheet, a social card), so every route allows it.
 /// </summary>
 [ApiController]
 [AllowAnonymous]
+[AllowCrossOriginEmbedding]
 [Route("api/public/brand")]
 public sealed class PublicBrandController(PublicBrandService brand, IMediaStore media) : ControllerBase
 {

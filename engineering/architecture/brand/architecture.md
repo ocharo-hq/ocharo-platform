@@ -35,8 +35,8 @@ flowchart LR
 - `GET /api/runtime-config` — anonymous, `no-store`: the suite's `OCHARO_*_URL` app links from the optional `OcharoApps:*`
   settings (Desk, Catalogue, Studio, Marketing, Editorial, Brand, Atlas, Wear, Blog). Only absolute HTTPS values without
   credentials, query or fragment are served; startup logs one warning naming every rejected setting.
-- `GET /api/system/status` — anonymous, `no-store`: `{ service, status: "live", version }`. `GET /api/system/version`
-  stays for existing callers. Both, and runtime config, are exempt from the Ocharo SSO boundary; with SSO off they stay
+- `GET /api/system/status` — anonymous, `no-store`: `{ service, status: "live", version }`. It, `/health` (the be sdk's,
+  with the database readiness check) and runtime config are exempt from the Ocharo SSO boundary; with SSO off they stay
   behind the pilot boundary like every other route.
 
 ## Operator frame

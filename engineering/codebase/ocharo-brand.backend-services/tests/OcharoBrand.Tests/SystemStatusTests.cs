@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace OcharoBrand.Tests;
 
-/// <summary>The conventional status endpoint reports the running version, anonymously, beside the retained version route.</summary>
+/// <summary>The conventional status endpoint reports the running version, anonymously; the retired version route is gone.</summary>
 public sealed class SystemStatusTests
 {
     [Fact]
@@ -22,8 +22,7 @@ public sealed class SystemStatusTests
         Assert.Equal("OcharoBrand", body.GetProperty("service").GetString());
         Assert.Equal("live", body.GetProperty("status").GetString());
         Assert.False(string.IsNullOrWhiteSpace(body.GetProperty("version").GetString()));
-        Assert.Equal(HttpStatusCode.OK, version.StatusCode);
-        Assert.Equal(body.GetProperty("version").GetString(),
-            (await version.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("version").GetString());
+        // An unknown private route now, so it asks for a session like any other.
+        Assert.Equal(HttpStatusCode.Unauthorized, version.StatusCode);
     }
 }

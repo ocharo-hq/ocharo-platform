@@ -5,16 +5,21 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using SkiaSharp;
 
 namespace OcharoBrand.Tests;
 
 /// <summary>Full HTTP pipeline over a temp store, seeded from generated stand-ins for the approved logo files, as the
-/// organization's owner (<see cref="BrandTestIdentity.Owner"/>) with the session's CSRF token.</summary>
+/// organization's owner (<see cref="BrandTestIdentity.Owner"/>) with the session's CSRF token. The host's clock stands
+/// still (<see cref="FakeTimeProvider"/>), so appearance boundaries and cache lifetimes are exact.</summary>
 public sealed class BrandApiTests : IAsyncDisposable
 {
     private readonly string root = Path.Combine(Path.GetTempPath(), "ocharo-brand-tests", Guid.NewGuid().ToString("N"));
+    private readonly FakeTimeProvider time = new(DateTimeOffset.UtcNow);
     private readonly WebApplicationFactory<Program> factory;
 
     public BrandApiTests()
@@ -34,6 +39,7 @@ public sealed class BrandApiTests : IAsyncDisposable
                 ["Brand:SeedLogoRoot"] = logos,
             }));
             builder.ConfigureServices(BrandTestIdentity.Use);
+            builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(time));
         });
     }
 
@@ -72,6 +78,7 @@ public sealed class BrandApiTests : IAsyncDisposable
         Assert.Equal("/api/public/brand/logo/on-light", kit.GetProperty("logos").GetProperty("on-light").GetProperty("url").GetString());
         Assert.Equal(HttpStatusCode.OK, favicon.StatusCode);
         Assert.Equal(HttpStatusCode.OK, social.StatusCode);
+        Assert.Equal("cross-origin", social.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
         Assert.Equal(Sha(Png(10)), Sha(await social.Content.ReadAsByteArrayAsync()));
         Assert.Equal("catalogue", consumers[0].GetProperty("app").GetString());
         Assert.True(consumers[0].GetProperty("current").GetBoolean());
@@ -127,7 +134,7 @@ public sealed class BrandApiTests : IAsyncDisposable
         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
         form.Add(file, "file", "navruz-on-light.png");
         var festive = await (await client.PostAsync("/api/brand/logos/on-light", form)).Content.ReadFromJsonAsync<JsonElement>();
-        var now = DateTimeOffset.UtcNow;
+        var now = time.GetUtcNow();
 
         var saved = await client.PostAsJsonAsync("/api/brand/appearances", new
         {
@@ -166,7 +173,7 @@ public sealed class BrandApiTests : IAsyncDisposable
         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
         form.Add(file, "file", "collection-launch.png");
         var upload = await (await client.PostAsync("/api/brand/logos/on-light", form)).Content.ReadFromJsonAsync<JsonElement>();
-        var startsAt = DateTimeOffset.UtcNow.AddSeconds(40);
+        var startsAt = time.GetUtcNow().AddSeconds(40);
 
         var saved = await client.PostAsJsonAsync("/api/brand/appearances", new
         {
@@ -180,7 +187,7 @@ public sealed class BrandApiTests : IAsyncDisposable
         });
         var badgeOnly = await client.PostAsJsonAsync("/api/brand/appearances", new
         {
-            name = "Open studio", startsAt = DateTimeOffset.UtcNow.AddMinutes(-1), endsAt = startsAt.AddSeconds(-1),
+            name = "Open studio", startsAt = time.GetUtcNow().AddMinutes(-1), endsAt = startsAt.AddSeconds(-1),
             linkLabel = "Open studio", linkUrl = "https://t.me/Ocharo_Style",
         });
         var kit = await client.GetAsync("/api/public/brand");
@@ -194,8 +201,9 @@ public sealed class BrandApiTests : IAsyncDisposable
         Assert.Equal("Open studio", active.GetProperty("linkLabel").GetString());
         Assert.Equal("https://t.me/Ocharo_Style", active.GetProperty("linkUrl").GetString());
         Assert.DoesNotContain(Sha(artwork), await kit.Content.ReadAsStringAsync());
-        Assert.InRange(logo.Headers.CacheControl!.MaxAge!.Value.TotalSeconds, 1, 40);
-        Assert.InRange(kit.Headers.CacheControl!.MaxAge!.Value.TotalSeconds, 1, 40);
+        // The next boundary is the badge's end, 39 seconds out.
+        Assert.Equal(TimeSpan.FromSeconds(39), logo.Headers.CacheControl!.MaxAge);
+        Assert.Equal(TimeSpan.FromSeconds(39), kit.Headers.CacheControl!.MaxAge);
     }
 
     [Fact]

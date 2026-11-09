@@ -32,7 +32,7 @@ WORKDIR /src/ocharo-brand.backend-services
 COPY ocharo-brand.backend-services/ ./
 # the built SPA lands in wwwroot so `dotnet publish` bundles it into the output.
 COPY --from=spa /spa/apps/web/dist ./OcharoBrand.Api/wwwroot
-RUN dotnet publish OcharoBrand.Api/OcharoBrand.Api.csproj -c Release -o /app -p:RestoreLockedMode=true -p:UseAppHost=false
+RUN dotnet publish OcharoBrand.Api/OcharoBrand.Api.csproj -c Release -o /app -p:RestoreLockedMode=true -p:UseAppHost=false -p:BuildSpa=false
 
 # ---- Stage 3: runtime ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final

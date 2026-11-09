@@ -1,7 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OcharoBrand.Application.Abstractions;
 using OcharoBrand.Application.Brand;
 using OcharoBrand.Domain.Brand;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
@@ -37,7 +36,7 @@ public sealed class FilesMediaStore(
     IFileStoreBroker store,
     MediaStore local,
     IOptions<BrandOptions> options,
-    IClock clock) : IMediaStore
+    TimeProvider time) : IMediaStore
 {
     public async Task<MediaBlobRecord> StoreAsync(byte[] bytes, CancellationToken ct)
     {
@@ -86,7 +85,7 @@ public sealed class FilesMediaStore(
             FileId = file.Id.ToString(),
             Width = width,
             Height = height,
-            StoredAt = clock.UtcNow,
+            StoredAt = time.GetUtcNow(),
         };
         await repository.SaveMediaAsync(record, ct);
         return record;

@@ -1,9 +1,6 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
-using OcharoBrand.Application.Abstractions;
-
 using OcharoBrand.Application.Brand;
-
 using OcharoBrand.Domain.Brand;
 using SkiaSharp;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
@@ -13,7 +10,7 @@ namespace OcharoBrand.Infrastructure.Brand;
 /// <summary>Stores originals once per SHA-256 and a WebP preview (alpha preserved) for fast grids, in the local blob
 /// folder. It serves a run with no WoW2 Files (<c>Files:BaseUrl</c> unset), and <see cref="FilesMediaStore"/> reads
 /// through it the files stored before Files until the migration fills their ids (planning/files-adoption.md #23).</summary>
-public sealed class MediaStore(IBrandRepository repository, IBlobRepository blobs, IOptions<BrandOptions> options, IClock clock) : IMediaStore
+public sealed class MediaStore(IBrandRepository repository, IBlobRepository blobs, IOptions<BrandOptions> options, TimeProvider time) : IMediaStore
 {
     public async Task<MediaBlobRecord> StoreAsync(byte[] bytes, CancellationToken ct)
     {
@@ -53,7 +50,7 @@ public sealed class MediaStore(IBrandRepository repository, IBlobRepository blob
             PreviewPath = previewPath,
             Width = width,
             Height = height,
-            StoredAt = clock.UtcNow,
+            StoredAt = time.GetUtcNow(),
         };
         await repository.SaveMediaAsync(record, ct);
         return record;

@@ -7,6 +7,7 @@
 **/*.Api/wwwroot/
 *.tsbuildinfo
 coverage/
+**/logs/
 test-results/
 playwright-report/
 

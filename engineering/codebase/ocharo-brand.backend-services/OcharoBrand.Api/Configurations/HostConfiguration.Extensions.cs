@@ -1,30 +1,30 @@
-using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using OcharoBrand.Api.Brand;
 using OcharoBrand.Api.RuntimeConfig.Settings;
 using OcharoBrand.Application;
-using OcharoBrand.Application.Abstractions;
 using OcharoBrand.Application.Brand;
 using OcharoBrand.Infrastructure.Brand;
-using OcharoBrand.Infrastructure.Time;
 using OcharoBrand.Persistence;
 using OcharoBrand.Persistence.Brand;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Mediator;
+using WoW.Two.Sdk.Beta.Be.Observability.HealthChecks;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
-using WoW.Two.Sdk.Beta.Be.Web.Hosting;
+using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
 using WoW.Two.Sdk.Beta.Be.Files.Client;
+using WoW.Two.Sdk.Beta.Be.Meta;
 
 namespace OcharoBrand.Api.Configurations;
 
 public static partial class HostConfiguration
 {
-    /// <summary>Registers the SQLite context with final host configuration and content-root-relative storage.</summary>
+    /// <summary>Registers the SQLite context with final host configuration and content-root-relative storage, and its
+    /// readiness check on the bundle's <c>/health</c>.</summary>
     private static WebApplicationBuilder AddSqliteDatabase(this WebApplicationBuilder builder)
     {
         builder.Services.AddDbContext<OcharoBrandDbContext>((provider, options) =>
@@ -37,6 +37,7 @@ public static partial class HostConfiguration
                 connection.DataSource = Path.Combine(contentRoot, file);
             options.UseSqlite(connection.ToString());
         });
+        builder.Services.AddHealthChecks().AddDatabaseReadinessCheck<OcharoBrandDbContext>();
         return builder;
     }
 
@@ -44,7 +45,6 @@ public static partial class HostConfiguration
     private static WebApplicationBuilder AddBrand(this WebApplicationBuilder builder)
     {
         builder.Services.AddScoped<IBrandRepository, BrandRepository>();
-        builder.Services.AddSingleton<IClock, SystemClock>();
         builder.Services.AddOptions<BrandOptions>().Bind(builder.Configuration.GetSection(BrandOptions.Section));
         // Resolve final options after host/test overrides; retain the host content-root anchor.
         var contentRoot = builder.Environment.ContentRootPath;
@@ -115,51 +115,34 @@ public static partial class HostConfiguration
             app.Logger.LogWarning("Runtime config leaves out {Settings}: each must be a plain HTTPS address.", string.Join(", ", rejected));
     }
 
-    /// <summary>Registers forwarded headers trusted only from loopback and <c>Deployment:TrustedProxies</c>, controller
-    /// delivery, OpenAPI and JSON errors for the HTTP surface.</summary>
+    /// <summary>Registers controller delivery and JSON errors for the HTTP surface, whatever the client accepts; the boot
+    /// floor holds forwarded headers (loopback and <c>Deployment:TrustedProxies</c>) and OpenAPI.</summary>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
-        // Behind the TLS-terminating ingress, same-origin write checks need the forwarded scheme; any other sender keeps its own.
-        var proxies = builder.Configuration.GetSection("Deployment:TrustedProxies").Get<string[]>() ?? [];
-        builder.Services.AddProxyAwareHosting(options =>
-        {
-            foreach (var proxy in proxies)
-                options.TrustedProxies.Add(proxy);
-        });
         builder.Services.AddHttpProblemDetails();
         builder.Services.AddControllers();
-        builder.Services.AddOpenApi();
         return builder;
     }
 
-    /// <summary>Configures the brand API middleware, the Identity session routes, technical endpoints and operator SPA.
-    /// Static files, the SPA fallback and the public routes (<see cref="Access.BrandAccess.IsPublic"/>) answer anonymously.</summary>
+    /// <summary>Configures the SDK pipeline — secure headers, compression, the operator SPA, <c>/health</c> and the SPA
+    /// fallback, whose unknown <c>/api</c> routes answer a JSON 404 — with Brand's errors, headers and access between
+    /// routing and the endpoints, then the brand API and the Identity session routes. Static files, the SPA fallback and
+    /// the public routes (<see cref="Access.BrandAccess.IsPublic"/>) answer anonymously; an unknown private route needs a
+    /// session too, so it discloses nothing to an anonymous caller.</summary>
     private static WebApplication ConfigureHttpSurface(this WebApplication app)
     {
-        app.UseProxyAwareHosting();
-        app.UseHttpProblemDetails();
-
-        app.UseMiddleware<BrandExceptionMiddleware>();
-        app.UseMiddleware<BrandResponseHeadersMiddleware>();
-        app.UseDefaultFiles();
-        app.UseStaticFiles();
-        app.UseRouting();
-        app.UseAccess();
+        app.UseApiDefaults(pipeline =>
+        {
+            pipeline.UseHttpProblemDetails();
+            pipeline.UseMiddleware<BrandExceptionMiddleware>();
+            pipeline.UseMiddleware<BrandResponseHeadersMiddleware>();
+            pipeline.UseAccess();
+        });
         if (app.Environment.IsLocalRun(app.Configuration))
             app.MapOpenApi().AllowAnonymous();
         app.WarnAboutRejectedRuntimeConfig();
         app.MapControllers();
         app.MapIdentityBffEndpoints();
-        // Retained for existing callers; `GET api/system/status` is the conventional status endpoint.
-        app.MapGet("/api/system/version", (HttpContext context) =>
-        {
-            context.Response.Headers.CacheControl = "no-store";
-            return Results.Ok(new { service = "OcharoBrand", version = BuildIdentity.Version });
-        }).AllowAnonymous();
-        app.MapGet("/health", () => Results.Ok(new { status = "healthy", service = "OcharoBrand" })).AllowAnonymous();
-        // An unknown private route needs a session too, so it discloses nothing to an anonymous caller.
-        app.MapFallback("/api/{**slug}", () => Results.Problem(statusCode: 404, title: "API route not found"));
-        app.MapFallbackToFile("index.html").AllowAnonymous();
         return app;
     }
 

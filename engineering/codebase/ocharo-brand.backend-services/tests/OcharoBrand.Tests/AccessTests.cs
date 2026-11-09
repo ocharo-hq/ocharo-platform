@@ -18,7 +18,6 @@ public sealed class AccessTests
     [InlineData("/api/public/brand/tokens.css", HttpStatusCode.NotFound)]
     [InlineData("/api/runtime-config", HttpStatusCode.OK)]
     [InlineData("/api/system/status", HttpStatusCode.OK)]
-    [InlineData("/api/system/version", HttpStatusCode.OK)]
     [InlineData("/health", HttpStatusCode.OK)]
     public async Task PublicRoutes_ShouldAnswerWithoutASession(string path, HttpStatusCode expected)
     {
@@ -144,6 +143,18 @@ public sealed class AccessTests
     }
 
     [Fact]
+    public async Task Health_ShouldReportTheDatabaseReadyWithoutASession()
+    {
+        await using var host = BrandHost.Create(new Dictionary<string, string?>());
+        using var client = BrandTestIdentity.Anonymous(host.Factory);
+
+        using var health = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, health.StatusCode);
+        Assert.Equal("Healthy", await health.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task ApiResponses_ShouldStayUncachedAndThePublicKitOpenToEveryOrigin()
     {
         await using var host = BrandHost.Create(new Dictionary<string, string?>());
@@ -156,6 +167,9 @@ public sealed class AccessTests
         Assert.Equal("nosniff", draft.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("*", kit.Headers.GetValues("Access-Control-Allow-Origin").Single());
         Assert.False(draft.Headers.Contains("Access-Control-Allow-Origin"));
+        // Other origins embed the kit's files without CORS; the private API stays same-origin.
+        Assert.Equal("cross-origin", kit.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
+        Assert.Equal("same-origin", draft.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
     }
 
     [Theory]

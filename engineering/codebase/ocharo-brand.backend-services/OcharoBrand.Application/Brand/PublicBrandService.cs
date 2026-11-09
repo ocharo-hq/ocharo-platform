@@ -1,5 +1,4 @@
 using System.Text;
-using OcharoBrand.Application.Abstractions;
 using OcharoBrand.Domain.Brand;
 
 namespace OcharoBrand.Application.Brand;
@@ -8,14 +7,14 @@ namespace OcharoBrand.Application.Brand;
 /// What every Ocharo app reads: the latest release with the active appearance applied. Stable logo URLs resolve
 /// here, so one publish (or one scheduled appearance) changes the logo everywhere those URLs are embedded.
 /// </summary>
-public sealed class PublicBrandService(IBrandRepository repository, IClock clock)
+public sealed class PublicBrandService(IBrandRepository repository, TimeProvider time)
 {
     public async Task<BrandRelease?> LatestAsync(CancellationToken ct) =>
         await repository.FindLatestReleaseAsync(ct) is { } record ? BrandJson.Read<BrandRelease>(record.Json) : null;
 
     public async Task<BrandAppearance?> ActiveAppearanceAsync(CancellationToken ct)
     {
-        var now = clock.UtcNow;
+        var now = time.GetUtcNow();
         return (await repository.GetAppearancesAsync(ct)).Select(r => BrandJson.Read<BrandAppearance>(r.Json))
             .Where(a => a.IsActive(now)).OrderByDescending(a => a.StartsAt).FirstOrDefault();
     }
@@ -48,7 +47,7 @@ public sealed class PublicBrandService(IBrandRepository repository, IClock clock
             palette, release.Identity.Typography, release.Identity.Links, logos,
             appearance is null ? null : new PublicAppearance(appearance.Id, appearance.Name, appearance.StartsAt, appearance.EndsAt, appearance.AccentHex,
                 appearance.LinkLabel, appearance.LinkUrl),
-            clock.UtcNow);
+            time.GetUtcNow());
     }
 
     /// <summary>The logo a stable URL serves right now: an active appearance override, else the released file.</summary>
@@ -67,7 +66,7 @@ public sealed class PublicBrandService(IBrandRepository repository, IClock clock
     {
         foreach (var record in await repository.GetReleasesAsync(ct))
             if (BrandJson.Read<BrandRelease>(record.Json).Logos.Values.Any(l => l.Sha256 == sha256)) return true;
-        var now = clock.UtcNow;
+        var now = time.GetUtcNow();
         var started = (await repository.GetAppearancesAsync(ct)).Select(r => BrandJson.Read<BrandAppearance>(r.Json))
             .Where(a => a.Status == AppearanceStatus.Scheduled && a.StartsAt <= now);
         foreach (var id in started.SelectMany(a => a.Overrides.Values).Distinct())
@@ -78,7 +77,7 @@ public sealed class PublicBrandService(IBrandRepository repository, IClock clock
     /// <summary>Seconds until the kit changes on its own (an appearance starts or ends); caps public cache lifetimes.</summary>
     public async Task<int?> SecondsToNextBoundaryAsync(CancellationToken ct)
     {
-        var now = clock.UtcNow;
+        var now = time.GetUtcNow();
         var next = (await repository.GetAppearancesAsync(ct)).Select(r => BrandJson.Read<BrandAppearance>(r.Json))
             .Where(a => a.Status == AppearanceStatus.Scheduled)
             .SelectMany(a => new[] { a.StartsAt, a.EndsAt })
@@ -104,7 +103,7 @@ public sealed class PublicBrandService(IBrandRepository repository, IClock clock
     {
         var name = app?.Trim();
         if (string.IsNullOrEmpty(name) || name.Length > 40 || !name.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_')) return;
-        await repository.TouchConsumerAsync(new ConsumerRecord { App = name.ToLowerInvariant(), LastSeenAt = clock.UtcNow, LastRelease = release, LastPath = path }, ct);
+        await repository.TouchConsumerAsync(new ConsumerRecord { App = name.ToLowerInvariant(), LastSeenAt = time.GetUtcNow(), LastRelease = release, LastPath = path }, ct);
     }
 
     public async Task<IReadOnlyList<ConsumerView>> ConsumersAsync(CancellationToken ct)
