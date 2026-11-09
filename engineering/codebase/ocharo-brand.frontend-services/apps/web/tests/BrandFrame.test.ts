@@ -140,14 +140,20 @@ describe('Ocharo frame in Brand', () => {
     await arrive(router, '/identity');
     expect(sidebar().get('[aria-current="page"]').text()).toBe('Identity');
     expect(document.title).toBe('Identity · Ocharo Brand');
-    expect(wrapper!.get('main').find('#name').exists()).toBe(true);
+    expect(wrapper!.get('main').find('input[name="name"]').exists()).toBe(true);
   });
 
-  it('opens the overview for an unknown address, inside the frame', async () => {
-    await renderAt('/no-such-place', 1440);
+  it('says an unknown address is not found, inside the frame, with the way back to the overview', async () => {
+    const { router } = await renderAt('/no-such-place', 1440);
 
+    expect(sidebar().find('[aria-current="page"]').exists()).toBe(false);
+    expect(wrapper!.get('main h1').text()).toBe('Page not found.');
+    expect(wrapper!.get('nav[aria-label="You are here"]').text()).toBe('Page not found');
+    expect(document.title).toBe('Page not found · Ocharo Brand');
+
+    await wrapper!.get('main a[href="/"]').trigger('click');
+    await arrive(router, '/');
     expect(sidebar().get('[aria-current="page"]').text()).toBe('Overview');
-    expect(document.title).toBe('Overview · Ocharo Brand');
   });
 
   it('keeps the sidebar rail choice this browser stored, and stores a change under the same key', async () => {

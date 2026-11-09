@@ -3,13 +3,65 @@ html,
 body {
   background: #f5f6fa;
   color: #181b25;
+  color-scheme: light;
   min-height: 100%;
 }
 html.dark,
 html.dark body {
   background: #141416;
   color: #f4f2f5;
+  color-scheme: dark;
 }
 body {
   margin: 0;
+}
+
+/* The splash's static twin, equal to the mounted SDK SplashScreen: the overlay on the page colour, the 240px wordmark,
+   and the small 12rem progress bar (muted track, primary fill) at the first boot stage, one third. */
+.boot-splash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 0 1.5rem;
+  background: #f5f6fa;
+  text-align: center;
+}
+html.dark .boot-splash {
+  background: #141416;
+}
+.boot-splash-logo {
+  display: block;
+  width: 240px;
+  height: auto;
+}
+.boot-splash-logo-reverse,
+html.dark .boot-splash-logo-ink {
+  display: none;
+}
+html.dark .boot-splash-logo-reverse {
+  display: block;
+}
+.boot-splash-bar {
+  width: 12rem;
+  max-width: 100%;
+  height: 0.25rem;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: #eef0f6;
+}
+html.dark .boot-splash-bar {
+  background: #262629;
+}
+.boot-splash-fill {
+  width: 33.3333%;
+  height: 100%;
+  border-radius: 9999px;
+  background: #8b2459;
+}
+html.dark .boot-splash-fill {
+  background: #c24783;
 }

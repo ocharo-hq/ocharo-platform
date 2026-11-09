@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Card } from '@wow-two-beta/fe/presentation/display';
 import { useBrand } from '../../application/brand';
 import { slotLabels, slots } from '../../domain/brand/BrandModels';
 
@@ -24,8 +25,8 @@ const cssSnippet = computed(() => `<link rel="stylesheet" href="${origin.value}$
         o‘zgarmas media manzilidan foydalaning.
       </p>
     </div>
-    <section class="panel">
-      <h2 class="font-editorial text-2xl">Barqaror logotip manzillari</h2>
+    <Card v-bind="{ role: 'region', 'aria-labelledby': 'connect-urls-heading' }" radius="2xl" padding="xl">
+      <h2 id="connect-urls-heading" class="font-editorial text-2xl">Barqaror logotip manzillari</h2>
       <table class="mt-3 w-full text-sm">
         <tbody>
           <tr v-for="slot in slots" :key="slot" class="border-t border-border">
@@ -36,9 +37,14 @@ const cssSnippet = computed(() => `<link rel="stylesheet" href="${origin.value}$
           </tr>
         </tbody>
       </table>
-    </section>
-    <section class="panel space-y-3 text-sm">
-      <h2 class="font-editorial text-2xl">Ma’lumot va uslub</h2>
+    </Card>
+    <Card
+      v-bind="{ role: 'region', 'aria-labelledby': 'connect-kit-heading' }"
+      radius="2xl"
+      padding="xl"
+      class="space-y-3 text-sm"
+    >
+      <h2 id="connect-kit-heading" class="font-editorial text-2xl">Ma’lumot va uslub</h2>
       <p>
         <span class="font-semibold">JSON to‘plam:</span>
         <code class="break-all text-xs">{{ origin }}{{ brand.urls.kit }}?locale=uz</code> (ru, en ham)
@@ -57,11 +63,16 @@ const cssSnippet = computed(() => `<link rel="stylesheet" href="${origin.value}$
         Ilova o‘zini “Umumiy” sahifasida ko‘rsatishi uchun <code>X-Ocharo-App: nomi</code> sarlavhasini yoki
         <code>?app=nomi</code> ni yuboradi.
       </p>
-    </section>
-    <section class="panel space-y-3">
-      <h2 class="font-editorial text-2xl">Namuna kod</h2>
+    </Card>
+    <Card
+      v-bind="{ role: 'region', 'aria-labelledby': 'connect-code-heading' }"
+      radius="2xl"
+      padding="xl"
+      class="space-y-3"
+    >
+      <h2 id="connect-code-heading" class="font-editorial text-2xl">Namuna kod</h2>
       <pre class="overflow-x-auto rounded-lg bg-muted p-3 text-xs"><code>{{ snippet }}</code></pre>
       <pre class="overflow-x-auto rounded-lg bg-muted p-3 text-xs"><code>{{ cssSnippet }}</code></pre>
-    </section>
+    </Card>
   </section>
 </template>

@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createApiClient, wowTwoEnvelope } from '@wow-two-beta/fe/foundation/http';
 import { createBrandApi, describeFailure } from '../src/integration/brand';
+
+/** Brand's endpoints over the SDK client, as `brandHttp` builds it, on a mocked transport. */
+function brandApiOver(fetch: unknown) {
+  return createBrandApi(
+    createApiClient({ envelope: wowTwoEnvelope, retry: false, fetch: fetch as typeof globalThis.fetch }),
+  );
+}
 
 function reply(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -10,8 +18,7 @@ function reply(status: number, body: unknown) {
 
 describe('brand api', () => {
   it('maps publish conflict to safe localized feedback', async () => {
-    const api = createBrandApi((async () =>
-      reply(409, { detail: 'Nothing changed since the last release.' })) as unknown as typeof fetch);
+    const api = brandApiOver(async () => reply(409, { detail: 'Nothing changed since the last release.' }));
     const result = await api.publish(3, null);
     expect(result.ok).toBe(false);
     if (!result.ok) {
@@ -29,7 +36,7 @@ describe('brand api', () => {
         reply(200, { data: { draft: {}, revision: 5 } })
       ),
     );
-    const api = createBrandApi(fetch as unknown as typeof globalThis.fetch);
+    const api = brandApiOver(fetch);
     await api.setCurrent('on-light', 4, 'abc');
     const [url, init] = fetch.mock.calls[0]!;
     expect(String(url)).toContain('/api/brand/logos/on-light/current');
@@ -42,7 +49,7 @@ describe('brand api', () => {
         ? reply(200, { name: 'Ocharo', release: 2, logos: {} })
         : reply(200, { data: { revision: 7, logos: [] } }),
     );
-    const api = createBrandApi(fetch as unknown as typeof globalThis.fetch);
+    const api = brandApiOver(fetch);
     const draft = await api.draft();
     const kit = await api.publicKit();
     expect(draft.ok && draft.value.revision).toBe(7);
@@ -62,7 +69,7 @@ describe('brand api', () => {
         })
       ),
     );
-    const api = createBrandApi(fetch as unknown as typeof globalThis.fetch);
+    const api = brandApiOver(fetch);
     const result = await api.upload('on-light', new File(['x'], 'notes.txt', { type: 'text/plain' }), 'note');
     const [url, init] = fetch.mock.calls[0]!;
     expect(String(url)).toContain('/api/brand/logos/on-light');

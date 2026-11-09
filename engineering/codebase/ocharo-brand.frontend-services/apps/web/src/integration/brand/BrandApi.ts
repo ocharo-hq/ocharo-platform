@@ -1,5 +1,4 @@
-import { identitySession } from '../common/IdentitySessionClient';
-import { ApiFailureFactory, createApiClient, wowTwoEnvelope, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
+import { ApiFailureFactory, type ApiClient, type ApiFailure } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 import type {
   BrandAppearance,
@@ -10,6 +9,7 @@ import type {
   PublicBrand,
   ReleaseSummary,
 } from '../../domain/brand/BrandModels';
+import { brandHttp } from '../common/IdentitySession';
 
 function shape<T>(check: (value: unknown) => boolean) {
   return (value: unknown) =>
@@ -30,30 +30,40 @@ export function describeFailure(failure: ApiFailure): string {
 }
 
 /**
- * Same-origin brand endpoints; mutations are never retried automatically. The private API answers in the SDK envelope
- * (`{ data }`) and fails with SDK problem details; the public kit is read bare, as every Ocharo app reads it.
+ * Same-origin brand endpoints over `client`, by default the session's {@link brandHttp}; mutations are never retried
+ * automatically. The private API answers in the SDK envelope (`{ data }`) and fails with SDK problem details; the public
+ * kit is read bare, as every Ocharo app reads it. Reads take the caller's cancellation signal.
  */
-export function createBrandApi(fetchImplementation: typeof fetch = globalThis.fetch) {
-  const client = createApiClient({ envelope: wowTwoEnvelope, retry: false, fetch: fetchImplementation });
+export function createBrandApi(client: ApiClient = brandHttp) {
   const root = '/api/brand';
   return {
-    draft: () => client.get<DraftView>(`${root}/draft`, { decode: shape(isObject) }),
+    /** `GET /api/brand/draft`: the draft, its revision, every logo version and what waits to be published. */
+    draft: (signal?: AbortSignal) => client.get<DraftView>(`${root}/draft`, { signal, decode: shape(isObject) }),
+    /** `PUT /api/brand/identity`: saves the draft identity against the revision it was edited from. */
     saveIdentity: (expectedRevision: number, identity: BrandIdentity) =>
       client.put<DraftView>(`${root}/identity`, { body: { expectedRevision, identity }, decode: shape(isObject) }),
+    /** `POST /api/brand/logos/{slot}/current`: makes a version the slot's draft file. */
     setCurrent: (slot: string, expectedRevision: number, versionId: string) =>
       client.post<DraftView>(`${root}/logos/${encodeURIComponent(slot)}/current`, {
         body: { expectedRevision, versionId },
         decode: shape(isObject),
       }),
+    /** `POST /api/brand/logos/versions/{id}/status`: approves a version or returns it to draft. */
     setStatus: (id: string, status: string) =>
       client.post<LogoVersion>(`${root}/logos/versions/${encodeURIComponent(id)}/status`, {
         body: { status },
         decode: shape(isObject),
       }),
+    /** `POST /api/brand/publish`: publishes the draft as the next release. */
     publish: (expectedRevision: number, note: string | null) =>
       client.post<ReleaseSummary>(`${root}/publish`, { body: { expectedRevision, note }, decode: shape(isObject) }),
-    releases: () => client.get<ReleaseSummary[]>(`${root}/releases`, { decode: shape(isArray) }),
-    appearances: () => client.get<BrandAppearance[]>(`${root}/appearances`, { decode: shape(isArray) }),
+    /** `GET /api/brand/releases`: every published release, newest first. */
+    releases: (signal?: AbortSignal) =>
+      client.get<ReleaseSummary[]>(`${root}/releases`, { signal, decode: shape(isArray) }),
+    /** `GET /api/brand/appearances`: every scheduled, running, ended or cancelled event look. */
+    appearances: (signal?: AbortSignal) =>
+      client.get<BrandAppearance[]>(`${root}/appearances`, { signal, decode: shape(isArray) }),
+    /** `POST /api/brand/appearances`: schedules a new event look or edits a scheduled one. */
     saveAppearance: (body: {
       id: string | null;
       name: string;
@@ -65,15 +75,19 @@ export function createBrandApi(fetchImplementation: typeof fetch = globalThis.fe
       linkLabel: string | null;
       linkUrl: string | null;
     }) => client.post<BrandAppearance>(`${root}/appearances`, { body, decode: shape(isObject) }),
+    /** `POST /api/brand/appearances/{id}/cancel`: cancels a scheduled event look. */
     cancelAppearance: (id: string) =>
       client.post<BrandAppearance>(`${root}/appearances/${encodeURIComponent(id)}/cancel`, {
         body: {},
         decode: shape(isObject),
       }),
-    consumers: () => client.get<ConsumerView[]>(`${root}/consumers`, { decode: shape(isArray) }),
-    /** The public kit is not enveloped. */
-    publicKit: () => client.get<PublicBrand>('/api/public/brand', { unwrap: false, decode: shape(isObject) }),
-    /** Multipart upload: the client sends `FormData` as it is, with the browser's boundary. */
+    /** `GET /api/brand/consumers`: the apps that read the brand and the release each last saw. */
+    consumers: (signal?: AbortSignal) =>
+      client.get<ConsumerView[]>(`${root}/consumers`, { signal, decode: shape(isArray) }),
+    /** `GET /api/public/brand`: the published kit, anonymous and not enveloped. */
+    publicKit: (signal?: AbortSignal) =>
+      client.get<PublicBrand>('/api/public/brand', { signal, unwrap: false, decode: shape(isObject) }),
+    /** `POST /api/brand/logos/{slot}`: a multipart upload; the client sends `FormData` as it is, with the browser's boundary. */
     upload(slot: string, file: File, note: string | null) {
       const form = new FormData();
       form.append('file', file);
@@ -86,7 +100,7 @@ export function createBrandApi(fetchImplementation: typeof fetch = globalThis.fe
   } as const;
 }
 
-export const brandApi = createBrandApi(identitySession.fetch);
+export const brandApi = createBrandApi();
 
 export const brandUrls = {
   logo: (slot: string) => `/api/public/brand/logo/${slot}`,

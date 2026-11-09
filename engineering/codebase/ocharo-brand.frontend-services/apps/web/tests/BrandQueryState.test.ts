@@ -1,7 +1,16 @@
-import { mount, flushPromises } from '@vue/test-utils';
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { nextTick } from 'vue';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DraftView } from '../src/domain/brand/BrandModels';
+import { slots } from '../src/domain/brand/BrandModels';
+import AppearancesPage from '../src/presentation/brand/AppearancesPage.vue';
+import ConnectPage from '../src/presentation/brand/ConnectPage.vue';
+import IdentityPage from '../src/presentation/brand/IdentityPage.vue';
+import LogosPage from '../src/presentation/brand/LogosPage.vue';
+import OverviewPage from '../src/presentation/brand/OverviewPage.vue';
+import BrandQueryState from '../src/presentation/common/BrandQueryState.vue';
+import { mountBrand, mountInBrand } from './helpers/BrandApp';
+import { settleBrandReads } from './helpers/BrandFixtures';
 
 const api = vi.hoisted(() => ({
   draft: vi.fn(),
@@ -42,21 +51,18 @@ function draft(name = 'Ocharo', revision = 1): DraftView {
     unpublishedChanges: [],
   };
 }
-const failed = { ok: false, failure: { code: 'transport' } };
+const failed = { ok: false, failure: { code: 'transport', status: 0 } };
+const mounted: VueWrapper[] = [];
 
-/** Signs the freshly imported session client in as the organization's owner, as startup does before mounting. */
-async function signInAsOwner() {
-  const { OwnerSession } = await import('./helpers/BrandApp');
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ data: OwnerSession })));
-  const { identitySession } = await import('../src/integration/common/IdentitySessionClient');
-  await identitySession.initialize(true);
+/** Mounts `content` under the session and the query client, as the frame does, and keeps it for the clean-up. */
+async function host(content?: Parameters<typeof mountInBrand>[0]) {
+  const result = await mountInBrand(content);
+  mounted.push(result.wrapper);
+  return result;
 }
 
-beforeEach(async () => {
-  vi.resetModules();
-  vi.useFakeTimers();
+beforeEach(() => {
   vi.clearAllMocks();
-  await signInAsOwner();
   api.draft.mockResolvedValue({ ok: true, value: draft() });
   api.releases.mockResolvedValue({ ok: true, value: [] });
   api.appearances.mockResolvedValue({ ok: true, value: [] });
@@ -65,63 +71,63 @@ beforeEach(async () => {
   api.saveIdentity.mockResolvedValue({ ok: true, value: draft() });
 });
 afterEach(() => {
-  vi.useRealTimers();
+  for (const wrapper of mounted.splice(0)) wrapper.unmount();
+  document.body.innerHTML = '';
+  vi.unstubAllGlobals();
 });
-
-async function settle(read: Promise<void>) {
-  await flushPromises();
-  await vi.advanceTimersByTimeAsync(400);
-  await read;
-  await nextTick();
-}
 
 describe('Brand read outcomes', () => {
   it('distinguishes a failed first administrative read from a successful empty collection', async () => {
     api.releases.mockResolvedValue(failed);
-    const { useBrand } = await import('../src/application/brand');
-    const brand = useBrand();
-    await settle(brand.refresh());
+    const { brand } = await host();
+    await flushPromises();
     expect(brand.queryState.value).toBe('unavailable');
     expect(brand.draft.value).toBeNull();
     expect(brand.refreshing.value).toBe(false);
-    expect(brand.loaded.value).toBe(true);
     expect(brand.error.value).toContain('So‘rov bajarilmadi');
   });
 
   it('coalesces refreshes and preserves the complete last snapshot if a read fails', async () => {
-    const { useBrand } = await import('../src/application/brand');
-    const brand = useBrand();
-    const first = brand.refresh();
-    expect(brand.refresh()).toBe(first);
-    await settle(first);
+    const { brand } = await host();
+    await flushPromises();
+    expect(api.draft).toHaveBeenCalledTimes(1);
     const lastGood = brand.draft.value;
     expect(brand.queryState.value).toBe('success');
-    expect(api.draft).toHaveBeenCalledTimes(1);
     api.draft.mockResolvedValue({ ok: true, value: draft('New server identity', 2) });
     api.consumers.mockResolvedValue(failed);
     const refresh = brand.refresh();
+    expect(brand.refresh()).toBe(refresh);
     await flushPromises();
     expect(brand.refreshing.value).toBe(true);
     expect(brand.draft.value).toBe(lastGood);
-    await settle(refresh);
+    await refresh;
+    expect(api.draft).toHaveBeenCalledTimes(2);
     expect(brand.draft.value).toBe(lastGood);
     expect(brand.queryState.value).toBe('success');
+    expect(brand.refreshing.value).toBe(false);
+  });
+
+  it('keeps the published kit of the last read when only the kit fails', async () => {
+    api.publicKit.mockResolvedValue({ ok: true, value: { name: 'Ocharo', release: 2, logos: {} } });
+    const { brand } = await host();
+    await flushPromises();
+    expect(brand.kit.value?.release).toBe(2);
+    api.publicKit.mockResolvedValue(failed);
+    await brand.refresh();
+    expect(brand.kit.value?.release).toBe(2);
   });
 });
 
 describe('Brand acknowledged projection', () => {
   it('starts a new read after a save when an older refresh is already running', async () => {
-    const { useBrand } = await import('../src/application/brand');
-    const brand = useBrand();
-    await settle(brand.refresh());
+    const { brand } = await host();
+    await flushPromises();
     const olderRead = brand.refresh();
     await flushPromises();
     const identity = structuredClone(draft('Saved identity').draft.identity);
     const saved = brand.saveIdentity(identity, draft().revision);
-    await flushPromises();
     api.draft.mockResolvedValue({ ok: true, value: draft('Saved identity', 2) });
-    await settle(olderRead);
-    await vi.advanceTimersByTimeAsync(400);
+    await olderRead;
     expect(await saved).toMatchObject({ revision: draft().revision });
     expect(api.draft).toHaveBeenCalledTimes(3);
     expect(brand.draft.value?.draft.identity.name).toBe('Saved identity');
@@ -130,9 +136,8 @@ describe('Brand acknowledged projection', () => {
 
 describe('Brand command lock', () => {
   it('blocks overlapping commands and user refresh until the acknowledged read settles', async () => {
-    const { useBrand } = await import('../src/application/brand');
-    const brand = useBrand();
-    await settle(brand.refresh());
+    const { brand } = await host();
+    await flushPromises();
     const identity = structuredClone(draft('Saved identity').draft.identity);
     const saved = brand.saveIdentity(identity, draft().revision);
     await flushPromises();
@@ -144,10 +149,23 @@ describe('Brand command lock', () => {
     const reads = api.draft.mock.calls.length;
     await brand.refresh();
     expect(api.draft).toHaveBeenCalledTimes(reads);
-    await vi.advanceTimersByTimeAsync(400);
     expect(await saved).toMatchObject({ revision: draft().revision });
     expect(brand.mutating.value).toBe(false);
     expect(brand.busy.value).toBe(false);
+  });
+});
+
+describe('Brand session lifetime', () => {
+  it('drops the cached reads when the session ends, and reads them again for the next one', async () => {
+    const { brand } = await host();
+    await flushPromises();
+    expect(brand.draft.value).not.toBeNull();
+    const { identityBridge } = await import('../src/integration/common/IdentitySession');
+    api.draft.mockReturnValue(new Promise(() => {}));
+    identityBridge.expire();
+    await flushPromises();
+    expect(brand.draft.value).toBeNull();
+    expect(brand.queryState.value).toBe('loading');
   });
 });
 
@@ -160,15 +178,12 @@ describe('Identity query rendering', () => {
         answerFirstRead = resolve;
       }),
     );
-    // The whole app through its real route table and frame; imported after the module reset, like the store.
-    const { mountBrand } = await import('./helpers/BrandApp');
-    const { useBrand } = await import('../src/application/brand');
-    const brand = useBrand();
     const { wrapper } = await mountBrand('/identity');
+    mounted.push(wrapper);
     expect(wrapper.findComponent({ name: 'IdentityFormSkeleton' }).exists()).toBe(true);
     expect(wrapper.findAll('h2').map((heading) => heading.text())).toContain('Rasmiy havolalar');
     answerFirstRead(failed);
-    await settle(brand.refresh());
+    await flushPromises();
     expect(wrapper.text()).toContain('Identitet ma’lumotlari hozir mavjud emas.');
     expect(wrapper.text()).not.toContain('Hali identitet ma’lumotlari yo‘q.');
     expect(
@@ -177,80 +192,80 @@ describe('Identity query rendering', () => {
         .findAll('button')
         .filter((button) => button.text().includes('Qayta urinish')),
     ).toHaveLength(0);
-    expect(wrapper.find('header').text()).toContain('Yangilash');
+    const refresh = () =>
+      wrapper
+        .get('header')
+        .findAll('button')
+        .find((button) => button.text().includes('Yangilash'))!;
+    expect(refresh().exists()).toBe(true);
     api.draft.mockResolvedValue({ ok: true, value: draft() });
-    await settle(brand.refresh());
-    const nameInput = wrapper.get('#name').element;
-    const refresh = brand.refresh();
+    await refresh().trigger('click');
+    await settleBrandReads();
+    const nameInput = wrapper.get('input[name="name"]').element;
+    await refresh().trigger('click');
     await nextTick();
-    expect(wrapper.get('#name').element).toBe(nameInput);
-    expect(wrapper.get('#name').isVisible()).toBe(true);
+    expect(wrapper.get('input[name="name"]').element).toBe(nameInput);
+    expect(wrapper.get('input[name="name"]').isVisible()).toBe(true);
     expect(wrapper.find('main').find('button').attributes('disabled')).toBeDefined();
-    expect(wrapper.find('header').text()).toContain('Yangilash');
-    await settle(refresh);
-    wrapper.unmount();
-    document.body.innerHTML = '';
-    vi.unstubAllGlobals();
+    expect(refresh().exists()).toBe(true);
+    await settleBrandReads();
   });
 
   it('retains edited fields when refreshed server identity changes', async () => {
-    const { useBrand } = await import('../src/application/brand');
-    const brand = useBrand();
-    await settle(brand.refresh());
-    const { default: IdentityPage } = await import('../src/presentation/brand/IdentityPage.vue');
-    const wrapper = mount(IdentityPage);
-    await wrapper.get('#name').setValue('Unsaved local name');
+    const { wrapper, brand } = await host(IdentityPage);
+    await flushPromises();
+    await wrapper.get('input[name="name"]').setValue('Unsaved local name');
     api.draft.mockResolvedValue({ ok: true, value: draft('Changed server name', 2) });
-    await settle(brand.refresh());
-    expect((wrapper.get('#name').element as HTMLInputElement).value).toBe('Unsaved local name');
+    await brand.refresh();
+    expect((wrapper.get('input[name="name"]').element as HTMLInputElement).value).toBe('Unsaved local name');
     expect(wrapper.find('button').attributes('disabled')).toBeUndefined();
-    wrapper.unmount();
   });
 
   it('keeps the baseline revision after dirty refresh so intervening server changes conflict', async () => {
-    const { useBrand } = await import('../src/application/brand');
-    const brand = useBrand();
-    await settle(brand.refresh());
-    const { default: IdentityPage } = await import('../src/presentation/brand/IdentityPage.vue');
-    const wrapper = mount(IdentityPage);
-    await wrapper.get('#name').setValue('Unsaved local name');
+    const { wrapper, brand } = await host(IdentityPage);
+    await flushPromises();
+    await wrapper.get('input[name="name"]').setValue('Unsaved local name');
     api.draft.mockResolvedValue({ ok: true, value: draft('Intervening server name', 2) });
-    await settle(brand.refresh());
+    await brand.refresh();
     expect(brand.draft.value?.revision).toBe(2);
     api.saveIdentity.mockResolvedValue({ ok: false, failure: { code: 'http', status: 409 } });
     await wrapper.find('button').trigger('click');
     await flushPromises();
     expect(api.saveIdentity.mock.calls[0]?.[0]).toBe(1);
     expect(api.saveIdentity.mock.calls[0]?.[1].name).toBe('Unsaved local name');
-    expect((wrapper.get('#name').element as HTMLInputElement).value).toBe('Unsaved local name');
+    expect((wrapper.get('input[name="name"]').element as HTMLInputElement).value).toBe('Unsaved local name');
     expect(brand.error.value).toContain('So‘rov bajarilmadi');
     expect(brand.draft.value?.draft.identity.name).toBe('Intervening server name');
-    wrapper.unmount();
   });
 
   it('acknowledges only the submitted values when editing continues during save', async () => {
-    const { useBrand } = await import('../src/application/brand');
-    const brand = useBrand();
-    await settle(brand.refresh());
-    const { default: IdentityPage } = await import('../src/presentation/brand/IdentityPage.vue');
-    const wrapper = mount(IdentityPage);
-    await wrapper.get('#name').setValue('Submitted name');
+    const { wrapper } = await host(IdentityPage);
+    await flushPromises();
+    await wrapper.get('input[name="name"]').setValue('Submitted name');
     await wrapper.find('button').trigger('click');
     await flushPromises();
-    await wrapper.get('#name').setValue('Later unsaved name');
-    await vi.advanceTimersByTimeAsync(400);
-    await flushPromises();
+    await wrapper.get('input[name="name"]').setValue('Later unsaved name');
+    await settleBrandReads();
     expect(api.saveIdentity.mock.calls[0]?.[1].name).toBe('Submitted name');
-    expect((wrapper.get('#name').element as HTMLInputElement).value).toBe('Later unsaved name');
+    expect((wrapper.get('input[name="name"]').element as HTMLInputElement).value).toBe('Later unsaved name');
     expect(wrapper.find('button').attributes('disabled')).toBeUndefined();
-    wrapper.unmount();
   });
 });
 
 describe('Brand initial route geometry', () => {
+  /** The page under the brand store with its reads settled, beside its first-read placeholder. */
+  async function pair(
+    page: Parameters<typeof mountInBrand>[0],
+    kind: 'overview' | 'logos' | 'appearances' | 'connect',
+  ) {
+    const { wrapper } = await host(page);
+    await flushPromises();
+    const loading = mount(BrandQueryState, { props: { state: 'loading', kind } });
+    mounted.push(loading);
+    return { loaded: wrapper, loading };
+  }
+
   it('matches the six logo sections, triptych previews and responsive version grids', async () => {
-    const { useBrand } = await import('../src/application/brand');
-    const { slots } = await import('../src/domain/brand/BrandModels');
     const value = draft();
     value.logos = Array.from({ length: 3 }, (_, index) => ({
       id: `logo-${index}`,
@@ -267,30 +282,22 @@ describe('Brand initial route geometry', () => {
     }));
     value.draft.currentLogos.master = 'logo-0';
     api.draft.mockResolvedValue({ ok: true, value });
-    await settle(useBrand().refresh());
-    const { default: LogosPage } = await import('../src/presentation/brand/LogosPage.vue');
-    const { default: BrandQueryState } = await import('../src/presentation/common/BrandQueryState.vue');
-    const loaded = mount(LogosPage);
-    const loading = mount(BrandQueryState, { props: { state: 'loading', kind: 'logos' } });
-    expect(loading.findAll('section[aria-labelledby^="loading-slot-"]')).toHaveLength(
-      loaded.findAll('section.panel').length,
+    const { loaded, loading } = await pair(LogosPage, 'logos');
+    const sections = loaded.findAll('[aria-labelledby^="slot-"]');
+    const placeholders = loading.findAll('[aria-labelledby^="loading-slot-"]');
+    expect(placeholders).toHaveLength(sections.length);
+    expect(placeholders.map((section) => section.attributes('aria-labelledby')?.replace('loading-slot-', ''))).toEqual(
+      slots,
     );
-    expect(
-      loading
-        .findAll('section[aria-labelledby^="loading-slot-"]')
-        .map((section) => section.attributes('aria-labelledby')?.replace('loading-slot-', '')),
-    ).toEqual(slots);
-    const actual = loaded.get('section.panel');
-    const placeholder = loading.get('section[aria-labelledby="loading-slot-master"]');
+    expect(placeholders[0]!.classes()).toEqual(sections[0]!.classes());
+    const actual = loaded.get('[aria-labelledby="slot-master"]');
+    const placeholder = loading.get('[aria-labelledby="loading-slot-master"]');
     expect(placeholder.get('.grid-cols-3').element.children).toHaveLength(actual.findAll('[class*="aspect-"]').length);
     expect(placeholder.get('ul').classes()).toEqual(actual.get('ul').classes());
     expect(placeholder.findAll('li')).toHaveLength(actual.findAll('li').length);
-    loaded.unmount();
-    loading.unmount();
   });
 
   it('matches the overview consumer grid and ordered release rows', async () => {
-    const { useBrand } = await import('../src/application/brand');
     api.consumers.mockResolvedValue({
       ok: true,
       value: Array.from({ length: 3 }, (_, index) => ({
@@ -310,11 +317,7 @@ describe('Brand initial route geometry', () => {
         changes: ['Identity'],
       })),
     });
-    await settle(useBrand().refresh());
-    const { default: OverviewPage } = await import('../src/presentation/brand/OverviewPage.vue');
-    const { default: BrandQueryState } = await import('../src/presentation/common/BrandQueryState.vue');
-    const loaded = mount(OverviewPage);
-    const loading = mount(BrandQueryState, { props: { state: 'loading', kind: 'overview' } });
+    const { loaded, loading } = await pair(OverviewPage, 'overview');
     const consumers = loaded.get('[aria-labelledby="consumers-heading"] ul');
     const releases = loaded.get('[aria-labelledby="releases-heading"] ol');
     const consumerSkeleton = loading.get('[aria-label="Brendni o‘qiyotgan ilovalar"] ul');
@@ -325,12 +328,9 @@ describe('Brand initial route geometry', () => {
     expect(releaseSkeleton.classes()).toEqual(releases.classes());
     expect(releaseSkeleton.findAll('li')).toHaveLength(releases.findAll('li').length);
     expect(loading.find('table').exists()).toBe(false);
-    loaded.unmount();
-    loading.unmount();
   });
 
   it('matches full-width appearance rows without inventing an editor form', async () => {
-    const { useBrand } = await import('../src/application/brand');
     api.appearances.mockResolvedValue({
       ok: true,
       value: Array.from({ length: 3 }, (_, index) => ({
@@ -342,28 +342,17 @@ describe('Brand initial route geometry', () => {
         overrides: {},
       })),
     });
-    await settle(useBrand().refresh());
-    const { default: AppearancesPage } = await import('../src/presentation/brand/AppearancesPage.vue');
-    const { default: BrandQueryState } = await import('../src/presentation/common/BrandQueryState.vue');
-    const loaded = mount(AppearancesPage);
-    const loading = mount(BrandQueryState, { props: { state: 'loading', kind: 'appearances' } });
+    const { loaded, loading } = await pair(AppearancesPage, 'appearances');
     const actual = loaded.get('ul');
     const placeholder = loading.get('ul');
     expect(placeholder.classes()).toEqual(actual.classes());
-    expect(placeholder.findAll('li')).toHaveLength(actual.findAll('li').length);
-    expect(placeholder.get('li').classes()).toEqual(actual.get('li').classes());
+    expect(placeholder.findAll(':scope > li')).toHaveLength(actual.findAll(':scope > li').length);
+    expect(placeholder.get('li > *').classes()).toEqual(actual.get('li > *').classes());
     expect(loading.find('input').exists()).toBe(false);
-    loaded.unmount();
-    loading.unmount();
   });
 
   it('matches the connection table rows and columns with fixed slot labels visible', async () => {
-    const { useBrand } = await import('../src/application/brand');
-    await settle(useBrand().refresh());
-    const { default: ConnectPage } = await import('../src/presentation/brand/ConnectPage.vue');
-    const { default: BrandQueryState } = await import('../src/presentation/common/BrandQueryState.vue');
-    const loaded = mount(ConnectPage);
-    const loading = mount(BrandQueryState, { props: { state: 'loading', kind: 'connect' } });
+    const { loaded, loading } = await pair(ConnectPage, 'connect');
     const actual = loaded.get('table');
     const placeholder = loading.get('table');
     expect(placeholder.classes()).toEqual(actual.classes());
@@ -372,7 +361,5 @@ describe('Brand initial route geometry', () => {
     expect(placeholder.findAll('tr').map((row) => row.get('td').text())).toEqual(
       actual.findAll('tr').map((row) => row.get('td').text()),
     );
-    loaded.unmount();
-    loading.unmount();
   });
 });

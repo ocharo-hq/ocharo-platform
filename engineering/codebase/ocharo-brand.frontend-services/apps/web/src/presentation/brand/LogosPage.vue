@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { useIdentitySession } from '../../application/common/UseIdentitySession';
-const { canEdit } = useIdentitySession();
 import { ref } from 'vue';
 import { Check, Upload } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
+import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Badge, Card } from '@wow-two-beta/fe/presentation/display';
+import { TextInput } from '@wow-two-beta/fe/presentation/forms';
 import { useBrand } from '../../application/brand';
+import { useIdentitySession } from '../../application/common/UseIdentitySession';
 import { slotLabels, slots } from '../../domain/brand/BrandModels';
 import LogoSwatch from './LogoSwatch.vue';
 
 /** Every logo slot: its current (draft) file, all uploaded versions, and uploads with a note. */
 defineOptions({ name: 'LogosPage' });
 const brand = useBrand();
+const { canEdit } = useIdentitySession();
 const notes = ref<Record<string, string>>({});
 const inputs = ref<Record<string, HTMLInputElement | null>>({});
 async function onFile(slot: string, event: Event) {
@@ -35,7 +38,13 @@ function size(bytes: number) {
         “Nashr qilish” bosilganda barcha ilovalar yangi logotipni oladi. Faqat PNG, JPEG, WebP.
       </p>
     </div>
-    <section v-for="slot in slots" :key="slot" class="panel" :aria-labelledby="`slot-${slot}`">
+    <Card
+      v-for="slot in slots"
+      :key="slot"
+      v-bind="{ role: 'region', 'aria-labelledby': `slot-${slot}` }"
+      radius="2xl"
+      padding="xl"
+    >
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 :id="`slot-${slot}`" class="font-editorial text-2xl">{{ slotLabels[slot]!.label }}</h2>
@@ -44,15 +53,22 @@ function size(bytes: number) {
           </p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <input
-            v-model="notes[slot]"
-            class="field w-56"
+          <TextInput
+            :model-value="notes[slot] ?? ''"
+            class="w-56"
             placeholder="Izoh (ixtiyoriy)"
             :aria-label="`${slotLabels[slot]!.label} izohi`"
+            @update:model-value="notes[slot] = $event"
           />
-          <button class="btn-outline" :disabled="!canEdit || brand.busy.value" @click="inputs[slot]?.click()">
-            <Icon :icon="Upload" :size="14" />Yuklash
-          </button>
+          <Button
+            variant="outline"
+            tone="neutral"
+            :is-disabled="!canEdit || brand.busy.value"
+            @click="inputs[slot]?.click()"
+          >
+            <template #leading><Icon :icon="Upload" :size="14" /></template>
+            Yuklash
+          </Button>
           <input
             :ref="(el) => (inputs[slot] = el as HTMLInputElement | null)"
             type="file"
@@ -98,37 +114,35 @@ function size(bytes: number) {
             <p class="truncate font-semibold">{{ v.fileName }}</p>
             <p class="text-muted-foreground">{{ v.width }}×{{ v.height }} · {{ size(v.byteLength) }}</p>
             <p v-if="v.note" class="mt-1 line-clamp-2 text-muted-foreground">{{ v.note }}</p>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span
-                :class="[
-                  'chip',
-                  v.status === 'approved'
-                    ? 'bg-success-soft text-success-soft-foreground'
-                    : 'bg-muted text-muted-foreground',
-                ]"
-              >
+            <div class="mt-2 flex flex-wrap items-center gap-1">
+              <Badge :variant="v.status === 'approved' ? 'success' : 'neutral'" size="sm">
                 {{ v.status === 'approved' ? 'tasdiqlangan' : 'qoralama' }}
-              </span>
-              <button
+              </Badge>
+              <Button
                 v-if="brand.draft.value?.draft.currentLogos[slot] !== v.id"
-                class="chip bg-primary text-primary-foreground"
-                :disabled="!canEdit || brand.busy.value"
+                tone="primary"
+                size="xs"
+                :is-disabled="!canEdit || brand.busy.value"
                 @click="brand.setCurrent(slot, v.id)"
               >
                 Joriy qilish
-              </button>
-              <span v-else class="chip bg-primary-soft text-primary"><Icon :icon="Check" :size="11" />joriy</span>
-              <button
-                class="chip bg-secondary text-secondary-foreground"
-                :disabled="!canEdit || brand.busy.value"
+              </Button>
+              <Badge v-else variant="brand" size="sm">
+                <template #leading><Icon :icon="Check" :size="11" /></template>
+                joriy
+              </Badge>
+              <Button
+                tone="neutral"
+                size="xs"
+                :is-disabled="!canEdit || brand.busy.value"
                 @click="brand.setStatus(v.id, v.status === 'approved' ? 'draft' : 'approved')"
               >
                 {{ v.status === 'approved' ? 'Tasdiqni olish' : 'Tasdiqlash' }}
-              </button>
+              </Button>
             </div>
           </div>
         </li>
       </ul>
-    </section>
+    </Card>
   </section>
 </template>

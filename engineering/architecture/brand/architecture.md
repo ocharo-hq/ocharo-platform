@@ -47,11 +47,15 @@ flowchart LR
 The SPA wears the Ocharo suite frame, as Desk and Catalogue do
 ([suite agreement](../../../../../docs/architecture.md#suite-frame-and-app-links)):
 
-- `bootstrap/AppLayout.vue`, mounted through a layout route, holds every place; Brand has no public SPA route.
+- `bootstrap/AppLayout.vue`, mounted through a layout route, holds every place; Brand has no public SPA route. The
+  route's guard awaits the Identity BFF session (SDK `createBffStrategy` and `AuthProvider`) and sends a visit without
+  one to sign-in; an unknown path opens a not-found place inside the frame.
+- First paint: `index.html` links the Ocharo symbol as the tab icon (ink, reverse for a dark tab strip) and the app tile
+  as `apple-touch-icon.png`, and carries the static twin of the SDK `SplashScreen` (wordmark and bar), which lifts once
+  the session and the first place settle.
 - Top bar: the SDK `AppSwitcherMenu` (current `brand`, the "O" mark), the app version, the breadcrumb from route
   metadata, the release the draft stands on with Refresh, and the SDK `AccountMenu` last — appearance, the Brand and API
-  versions, and with an Ocharo session the Desk account link (a new tab), the operator's Desk name and email (else
-  "Signed in through Ocharo Desk") and sign-out.
+  versions, the person Identity names (name, then email or phone; else "Signed in to Ocharo") and sign-out.
 - Sidebar (SDK `SidebarMenu`, rail state in `ocharo.brand.sidebar-collapsed`): Overview, Identity, Logos and Appearances,
   then Connect under Admin. Phones get the SDK `BottomNavMenu` with the first four and a full-screen More dialog.
 - App links resolve runtime config first, then build-time `VITE_OCHARO_*_URL`, then the local-run defaults; a malformed
@@ -72,5 +76,5 @@ The SPA wears the Ocharo suite frame, as Desk and Catalogue do
 
 ## SDK usage and extraction candidates
 
-- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.106-beta` (host and API defaults, mediator with `AppResult`, problem details and error mapping, controller JSON, blob storage, validated settings) and `@wow-two-beta/fe 0.0.32` (HTTP client, config, router, error boundary, icons, colour mode, Ocharo theme and glass, app shell, app switcher, account menu and link rows, sidebar and bottom nav).
+- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.106-beta` (host and API defaults, mediator with `AppResult`, problem details and error mapping, controller JSON, blob storage, validated settings) and `@wow-two-beta/fe 0.0.41` (HTTP client, BFF session strategy and auth provider, session-bound query client, config, router and guard, error boundary, splash, icons, colour mode, Ocharo theme and glass, app shell, app switcher, account menu, sidebar and bottom nav, buttons, cards, badges and form fields).
 - Candidates for SDK extraction (shared with Catalogue/Blog): revisioned document store, content-addressed media store with previews, local-pilot boundary middleware, a generic "published kit" client with cache + fallback.

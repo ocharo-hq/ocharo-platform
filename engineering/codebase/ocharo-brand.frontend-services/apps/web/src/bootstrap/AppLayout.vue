@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
 import { ChevronRight, RefreshCw, X } from 'lucide-vue-next';
 import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
 import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
+import { Card } from '@wow-two-beta/fe/presentation/display';
 import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 import {
   AppShell,
@@ -25,7 +26,6 @@ import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
 import { useBrand } from '../application/brand';
 import { useBuildIdentity } from '../application/common/UseBuildIdentity';
-import { notifyError } from '../application/common/UseFeedback';
 import { useIdentitySession } from '../application/common/UseIdentitySession';
 import { useOcharoApps } from '../application/shared/UseOcharoApps';
 import { useUiLocale } from '../application/shared/UseUiLocale';
@@ -52,7 +52,7 @@ defineOptions({ name: 'AppLayout' });
 const { t } = useUiLocale();
 const route = useRoute();
 const brand = useBrand();
-const { session: identity, signingOut, signOut } = useIdentitySession();
+const { isAuthenticated, person, signingOut, signOut } = useIdentitySession();
 const { backendVersion, refresh: refreshBackendVersion } = useBuildIdentity();
 const apps = useOcharoApps();
 const appVersion = __APP_VERSION__;
@@ -85,7 +85,9 @@ const crumbs = computed(() => {
   const labels = [group, entry?.label ?? null, place].filter((label): label is string => Boolean(label));
   return labels.filter((label, index) => labels.indexOf(label) === index).map((label) => t(label));
 });
-/** The first-read placeholder each place shows until the draft arrives; Identity keeps its own editor mounted. */
+/** Whether the open place waits for the draft: Identity keeps its own editor mounted, and a not-found place needs none. */
+const needsDraft = computed(() => section.value !== null && section.value !== 'identity');
+/** The first-read placeholder each place shows until the draft arrives. */
 const queryKind = computed(() =>
   section.value === 'logos' || section.value === 'appearances' || section.value === 'connect'
     ? section.value
@@ -103,16 +105,15 @@ const accountOpen = ref(false);
 /** Who is signed in, from Identity: the name, then the email or, for a phone sign-in, the number; sign-out with it. A
  *  person Identity names by neither still says where the session came from. */
 const accountIdentity = computed(() => {
-  const { authenticated, person } = identity.value;
-  if (!authenticated || !person) return {};
-  const contact = person.email ?? person.phoneNumber;
-  const avatar = person.picture ? { avatarSrc: person.picture } : {};
-  if (!person.name && !contact) return { description: t('Signed in to Ocharo'), ...avatar, onSignOut: signOut };
+  const signedIn = person.value;
+  if (!isAuthenticated.value || !signedIn) return {};
+  const name = signedIn.name?.trim() || null;
+  const contact = signedIn.email?.trim() || signedIn.phoneNumber?.trim() || null;
+  if (!name && !contact) return { description: t('Signed in to Ocharo'), onSignOut: signOut };
   return {
-    ...(person.name ? { name: person.name } : {}),
+    ...(name ? { name } : {}),
     // A person without a display name is named by their contact; it is not repeated under itself.
-    ...(contact && contact !== person.name ? { description: contact } : {}),
-    ...avatar,
+    ...(contact && contact !== name ? { description: contact } : {}),
     onSignOut: signOut,
   };
 });
@@ -127,15 +128,6 @@ const versions = computed<AccountMenuVersion[]>(() => {
 watch(accountOpen, (open) => {
   if (open) void refreshBackendVersion();
 });
-watch(
-  brand.error,
-  (message) => {
-    if (message) notifyError(message);
-  },
-  { immediate: true },
-);
-
-onMounted(() => void brand.refresh());
 </script>
 
 <template>
@@ -225,21 +217,34 @@ onMounted(() => void brand.refresh());
           class="no-print mb-6 flex items-start justify-between gap-4 rounded-xl border border-success/20 bg-success-soft px-5 py-4 text-sm text-success-soft-foreground"
         >
           <p class="leading-6">{{ brand.notice.value }}</p>
-          <button class="shrink-0 rounded p-1" :aria-label="t('Close')" @click="brand.notice.value = null">
+          <Button
+            variant="ghost"
+            tone="success"
+            shape="square"
+            size="sm"
+            class="shrink-0"
+            :aria-label="t('Close')"
+            @click="brand.notice.value = null"
+          >
             <Icon :icon="X" :size="15" />
-          </button>
+          </Button>
         </div>
         <IdentityConnection />
         <AppErrorBoundary>
           <RouterView v-slot="{ Component }">
-            <component :is="Component" v-if="brand.draft.value || section === 'identity'" :key="route.fullPath" />
+            <component :is="Component" v-if="brand.draft.value || !needsDraft" :key="route.fullPath" />
             <BrandQueryState v-else :state="brand.queryState.value" :kind="queryKind" />
           </RouterView>
           <template #fallback="{ reset }">
-            <section class="panel p-10 text-center">
-              <h1 class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
-              <button class="btn-primary mt-5" @click="reset">{{ t('Retry') }}</button>
-            </section>
+            <Card
+              v-bind="{ role: 'region', 'aria-labelledby': 'page-error-heading' }"
+              radius="2xl"
+              padding="2xl"
+              class="text-center"
+            >
+              <h1 id="page-error-heading" class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
+              <Button tone="primary" class="mt-5" @click="reset">{{ t('Retry') }}</Button>
+            </Card>
           </template>
         </AppErrorBoundary>
       </AppShellContent>

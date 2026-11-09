@@ -1,8 +1,9 @@
+import { flushPromises } from '@vue/test-utils';
 import { vi } from 'vitest';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
 
-import { useBrand } from '../../src/application/brand';
+import { RefreshMinimumMs } from '../../src/application/brand/UseBrand';
 import type { DraftView } from '../../src/domain/brand/BrandModels';
 import { brandApi } from '../../src/integration/brand';
 
@@ -30,14 +31,8 @@ export function draftView(latestRelease: number | null = 3, changes: string[] = 
   };
 }
 
-/** Serves every Brand read from the fixtures above and clears the shared store, so each test starts from nothing. */
+/** Serves every Brand read from the fixtures above. Each mount starts from an empty cache: the query client is new. */
 export function serveBrandReads(draft: DraftView = draftView()): void {
-  const brand = useBrand();
-  brand.draft.value = null;
-  brand.kit.value = null;
-  brand.notice.value = null;
-  brand.error.value = null;
-  brand.queryState.value = 'loading';
   vi.spyOn(brandApi, 'draft').mockResolvedValue(ResultExtensions.ok(draft));
   vi.spyOn(brandApi, 'releases').mockResolvedValue(ResultExtensions.ok([]));
   vi.spyOn(brandApi, 'appearances').mockResolvedValue(ResultExtensions.ok([]));
@@ -45,7 +40,9 @@ export function serveBrandReads(draft: DraftView = draftView()): void {
   vi.spyOn(brandApi, 'publicKit').mockResolvedValue(ResultExtensions.fail(ApiFailureFactory.create('protocol')));
 }
 
-/** Waits for the frame's first read, which holds a short minimum so the skeleton never flickers. */
+/** Waits out an asked-for read, which holds a short minimum so the skeleton never flickers. */
 export async function settleBrandReads(): Promise<void> {
-  await useBrand().refresh();
+  await flushPromises();
+  await new Promise((resolve) => setTimeout(resolve, RefreshMinimumMs));
+  await flushPromises();
 }

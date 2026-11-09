@@ -7,18 +7,34 @@ Defer to `wow-two-ws/conventions/development/frontend/`.
 ## Workspace
 
 - Frontend root: `engineering/codebase/ocharo-brand.frontend-services/`.
-- Product app: private `@ocharobrand/web` under `apps/web/`, on `@wow-two-beta/fe 0.0.32`.
+- Product app: private `@ocharobrand/web` under `apps/web/`, on `@wow-two-beta/fe 0.0.41` with its optional peer
+  `@tanstack/vue-query` and `temporal-polyfill` (the SDK date-time field's values).
 - Runtime: Node `24.11.0` from `.nvmrc`; package manager: `pnpm@10.33.2`.
 - Shared packages use `packages/*` only when there is shared code; no runtime federation is configured.
 - App source uses `bootstrap`, `presentation`, `application`, `domain`, and `integration` layers.
 - `integration/brand/BrandApi.ts` reads the private API through the SDK envelope (`wowTwoEnvelope`, `{ data }`) and the
-  public kit bare (`unwrap: false`); models type an omitted null as an optional member. A 403 problem's `brandCode`
-  (`organization_access_required`) marks a session of another organization.
+  public kit bare (`unwrap: false`); models type an omitted null as an optional member. A 403 re-reads the session, and
+  a 403 problem's `brandCode` (`organization_access_required`) marks a session of another organization.
+- Session: `integration/common/IdentitySession.ts` holds the SDK `createBffStrategy` (`/api/identity`: `GET /session`,
+  `GET /sign-in?returnUrl=`, `POST /sign-out`, tab sync, refresh before `expiresAt`), the `createAuthBridge` keyed by
+  person and organization, and `brandHttp`, the one `createApiClient` every private call rides (CSRF token on unsafe
+  requests, the session's request scope, 401 to the bridge). `AppRoot.vue` mounts the SDK `AuthProvider`;
+  `UseIdentitySession.ts` reads it through `useBffAuth`. The layout route's guard (`requireBrandSession` in
+  `BrandRouter.ts`) awaits the session and sends a visit without one to sign-in; a `signInError` return opens the frame,
+  which says so. An expiry later in the visit keeps the page and offers sign-in in another tab.
+- Server reads: `application/brand/UseBrand.ts` reads one snapshot (draft, releases, appearances, consumers, kit) through
+  the SDK query capability (`useAppQuery`, key `BrandQueryKeys.snapshot`); `bootstrap/BrandQueryClient.ts` pins the
+  client to the bridge's scope, so sign-out, expiry or another person or organization clears it. Reads do not retry on
+  their own; the bar's Refresh re-reads, held 400 ms. Commands stay serialized and are acknowledged by a new read.
+- Controls: SDK `Button`, `Card`, `Badge` and form fields (`Field`, `TextInput`, `TextAreaInput`, `DateTimeInput`,
+  `ColorInput`, `ColorPicker`, `SelectPicker`); `index.css` keeps no hand-styled control utilities. The two hidden file
+  inputs behind the upload buttons are the browser's file dialog.
 
 ## Frame
 
 - `src/bootstrap/AppLayout.vue` is the Ocharo suite frame, mounted through the layout route in `BrandRouter.ts`; every
   place renders inside it. Route metadata carries the English `label` and the sidebar `section`.
+- An unknown path opens `presentation/brand/NotFoundPage.vue` inside the frame, outside every section.
 - Sections live in `src/domain/shared/BrandSections.ts`; the sidebar (`presentation/frame/BrandNav.vue`) and the phone
   bar (`PhoneNav.vue`) both read them. Adding a place means a route with `place(label, section)` and, for a new
   section, an entry there plus its icon in `ShellIcons.ts`.
@@ -61,14 +77,15 @@ pnpm build
 ```
 
 Typecheck includes the Vue SFC compiler. Tests cover the frame (landmarks, apps menu, sections, breadcrumb, rail,
-phone bar), the account menu with and without an Ocharo session and the Desk name and email, the app-link config seam,
-the first paint, frame
-translations, brand read states, the session client, the brand API client and architecture imports.
-`tests/helpers/BrandApp.ts` mounts the whole app through the real route table.
+phone bar, not-found place), the account menu and the SDK BFF session (sign-in redirect, failed sign-in, sign-out, CSRF,
+expiry, refusals), the app-link config seam, the first paint (icons, splash twin), frame translations, the query-backed
+brand store, the brand API client and architecture imports. `tests/helpers/BrandApp.ts` mounts the whole app through
+the real route table; `tests/tests.md` lists the suites.
 
 ## Delivery
 
-`pnpm build` produces `apps/web/dist/` with `theme.js`. `pnpm deploy` rebuilds and replaces the generated API `wwwroot/`
+`pnpm build` produces `apps/web/dist/` with `theme.js`, the Ocharo symbol icons (`favicon.png`, `favicon-dark.png`,
+`apple-touch-icon.png`) and the splash wordmarks under `brand/`; `index.html` carries the splash's static twin. `pnpm deploy` rebuilds and replaces the generated API `wwwroot/`
 artifact. Run `deploy` only when replacing that generated frontend is intended.
 Docker installs from the workspace lockfile and copies the same `apps/web/dist/` artifact into the .NET image.
 API calls remain same-origin in development and production.
