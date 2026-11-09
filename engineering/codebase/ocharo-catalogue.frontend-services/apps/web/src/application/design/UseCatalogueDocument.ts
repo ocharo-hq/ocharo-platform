@@ -9,7 +9,7 @@ import {
   type PreparedRelease,
   type ReleaseSummary,
 } from '../../integration/design/DesignApi';
-import { sessionStorageBroker } from '../../integration/common/SessionStorageBroker';
+import { sessionStorageStorageBroker } from '@wow-two-beta/fe/foundation/storage';
 import { inspectDesign } from '../../integration/design/DesignPreflight';
 import { describeFailure } from '../../integration/catalogue/CatalogueApi';
 import { uiMessages } from '../../domain/shared/UiMessages';
@@ -113,14 +113,14 @@ export function useCatalogueDocument() {
       loadedIdentity = id();
       source.value = library.value;
       recovery.value = null;
-      const stored = sessionStorageBroker.read<{ title: string; snapshot: unknown }>(key());
+      const stored = sessionStorageStorageBroker.read<{ title: string; snapshot: unknown }>(key());
       if (stored)
         try {
           const checked = validateSnapshot(stored.snapshot);
           if (JSON.stringify({ title: stored.title, snapshot: checked }) !== baseline.value)
             recovery.value = { title: stored.title, snapshot: checked };
         } catch {
-          sessionStorageBroker.remove(key());
+          sessionStorageStorageBroker.remove(key());
         }
     } catch (cause) {
       if (run === generation && !controller.signal.aborted) fail(cause);
@@ -197,7 +197,7 @@ export function useCatalogueDocument() {
       const detail = await designApi.get(saved.value.id);
       if (!detail.ok) return fail(detail.failure);
       accept(detail.value);
-      sessionStorageBroker.remove(key());
+      sessionStorageStorageBroker.remove(key());
       recovery.value = null;
       notice.value = t('Catalogue saved.');
     });
@@ -374,7 +374,7 @@ export function useCatalogueDocument() {
     [snapshot, title],
     () => {
       // A full store never blocks editing: the broker reports the write as failed and the edit goes on.
-      if (dirty.value) sessionStorageBroker.write(key(), { title: title.value, snapshot: snapshot.value });
+      if (dirty.value) sessionStorageStorageBroker.write(key(), { title: title.value, snapshot: snapshot.value });
     },
     { deep: true },
   );
@@ -436,7 +436,7 @@ export function useCatalogueDocument() {
     },
     dismissRecovery() {
       recovery.value = null;
-      sessionStorageBroker.remove(key());
+      sessionStorageStorageBroker.remove(key());
     },
   };
 }

@@ -167,6 +167,7 @@ watch(
         <AccountMenu
           :name="accountName"
           :description="accountEmail"
+          :avatar-src="user?.picture ?? null"
           :organizations="memberships"
           :organization="organization?.id ?? ''"
           :locales="UiLanguages"

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initializeUiLocale, useUiLocale } from '../src/application/shared/UseUiLocale';
-import { sessionStorageBroker } from '../src/integration/common/SessionStorageBroker';
+import { sessionStorageStorageBroker } from '@wow-two-beta/fe/foundation/storage';
 
 /** Where the operator's interface language is remembered. */
 const LocaleKey = 'ocharo.operator.locale';
@@ -39,21 +39,21 @@ describe('Catalogue local state through the SDK storage seam', () => {
   });
 
   it('keeps a designer recovery copy in this tab only, and degrades a broken one to a miss', () => {
-    expect(sessionStorageBroker.write('recovery', { title: 'Draft', snapshot: { pages: [] } })).toBe(true);
-    expect(sessionStorageBroker.read('recovery')).toEqual({ title: 'Draft', snapshot: { pages: [] } });
+    expect(sessionStorageStorageBroker.write('recovery', { title: 'Draft', snapshot: { pages: [] } })).toBe(true);
+    expect(sessionStorageStorageBroker.read('recovery')).toEqual({ title: 'Draft', snapshot: { pages: [] } });
     expect(localStorage.length).toBe(0);
     sessionStorage.setItem('broken', '{');
-    expect(sessionStorageBroker.read('broken')).toBeNull();
-    expect(sessionStorageBroker.remove('recovery')).toBe(true);
-    expect(sessionStorageBroker.read('recovery')).toBeNull();
+    expect(sessionStorageStorageBroker.read('broken')).toBeNull();
+    expect(sessionStorageStorageBroker.remove('recovery')).toBe(true);
+    expect(sessionStorageStorageBroker.read('recovery')).toBeNull();
   });
 
   it('answers a miss and a refused write when the browser withholds the tab’s storage', () => {
     vi.spyOn(window, 'sessionStorage', 'get').mockImplementation(() => {
       throw new Error('Storage denied');
     });
-    expect(sessionStorageBroker.read('recovery')).toBeNull();
-    expect(sessionStorageBroker.write('recovery', { title: 'Draft' })).toBe(false);
-    expect(sessionStorageBroker.remove('recovery')).toBe(false);
+    expect(sessionStorageStorageBroker.read('recovery')).toBeNull();
+    expect(sessionStorageStorageBroker.write('recovery', { title: 'Draft' })).toBe(false);
+    expect(sessionStorageStorageBroker.remove('recovery')).toBe(false);
   });
 });

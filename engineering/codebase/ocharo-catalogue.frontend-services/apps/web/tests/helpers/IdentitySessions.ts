@@ -16,7 +16,7 @@ export const SignedOutSessionData = { isAuthenticated: false } as const;
 
 /** The owner's session as the SDK strategy decodes it: every test starts signed in with it (`tests/setup.ts`). */
 export const OwnerUser: BffUser = {
-  person: { sub: OwnerSessionData.person.sub, name: null, email: null, phoneNumber: null },
+  person: { sub: OwnerSessionData.person.sub, name: null, picture: null, email: null, phoneNumber: null },
   organization: { id: OwnerSessionData.organization.id, role: OwnerSessionData.organization.role },
   permissions: [...OwnerSessionData.permissions],
   expiresAt: OwnerSessionData.expiresAt,

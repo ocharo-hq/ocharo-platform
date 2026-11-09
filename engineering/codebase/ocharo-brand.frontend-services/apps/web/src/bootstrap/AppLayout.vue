@@ -108,12 +108,14 @@ const accountIdentity = computed(() => {
   const signedIn = person.value;
   if (!isAuthenticated.value || !signedIn) return {};
   const name = signedIn.name?.trim() || null;
+  const avatarSrc = signedIn.picture;
   const contact = signedIn.email?.trim() || signedIn.phoneNumber?.trim() || null;
-  if (!name && !contact) return { description: t('Signed in to Ocharo'), onSignOut: signOut };
+  if (!name && !contact) return { description: t('Signed in to Ocharo'), avatarSrc, onSignOut: signOut };
   return {
     ...(name ? { name } : {}),
     // A person without a display name is named by their contact; it is not repeated under itself.
     ...(contact && contact !== name ? { description: contact } : {}),
+    avatarSrc,
     onSignOut: signOut,
   };
 });
