@@ -86,3 +86,23 @@ The detailed [build contract][design] remains the analysis source. Its framework
 to the current shared Vue frontend standard, recorded in this repository's template audit.
 
 [design]: /Users/max/Projects/10x-ws/workbench/fam/mft-10x-ws/context/domains/external/work/ventures/ocharo/platform/och-platform-content-publishing-build.md
+
+## Suite frame and Desk constraints
+
+- Every Ocharo operator app shares one top bar and a per-app sidebar; the logo, app name and chevron form the app
+  button, and on phones the app menu opens full screen. The Ink and Raspberry (light) and Neutral graphite (dark)
+  palette is the single `ocharo` theme from `@wow-two-beta/fe`; the public catalogue reader renders without the frame.
+- App links come from runtime config, never build values: Desk and Catalogue serve `GET /api/runtime-config` from
+  optional `OcharoApps:*` settings, and an app with a malformed address is omitted from the menu.
+- `Ocharo.Sso` returns the operator's `name` and `email` from `GET /api/sso/session`; nothing new is stored.
+- Both deployed environments run as .NET `Production`; `deploy.yml` requires `Deployment:TrustedProxies`
+  (`["172.30.0.2"]` on the VPS), and jobs start after Desk is healthy.
+- A session expiry replaces the document and sign-in renders in place at the same address, so `feedbackSessionExpiry`
+  and `signInRedirect` stay unwired.
+- Launch profiles stay HTTPS-only and set `LOCAL_SETTINGS`.
+- Brand's pages stay Uzbek and only its frame is translated, so its account menu offers no language until the pages
+  are localized; logo backgrounds use fixed artwork tokens that dark mode never overrides.
+- Desk's sourcing view preferences are browser-local presentation data; photos and PDFs never establish confirmed
+  material or offer facts, and structured materials, quotations and samples are separate domain work.
+- The public reader consumes only explicitly published releases; draft edits never publish themselves. Archiving or
+  withdrawing a catalogue removes its public availability, keeps its history, and republishing needs fresh preparation.
