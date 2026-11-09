@@ -1,3 +1,5 @@
+using BrandWorkspace.Application.Foundation.Constants;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Security.Cryptography;
 using AwesomeAssertions;
 using BrandWorkspace.Application.Preparation.Models;
@@ -33,7 +35,7 @@ public sealed class PreparationImageTests
     public void Validate_ShouldRejectTraversalOrControlNames(string name)
     {
         var act = () => _validator.Validate(name, ImageBytes("png"));
-        act.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        act.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 
     [Fact]
@@ -50,13 +52,13 @@ public sealed class PreparationImageTests
         foreach (var bytes in invalid)
         {
             var act = () => _validator.Validate("image.png", bytes);
-            act.Should().Throw<PreparationException>();
+            act.Should().Throw<AppException>();
         }
         var corrupt = ImageBytes("png");
         var idat = corrupt.AsSpan().IndexOf("IDAT"u8);
         corrupt[idat + 4] ^= 0xff;
         var corruptAct = () => _validator.Validate("image.png", corrupt);
-        corruptAct.Should().Throw<PreparationException>();
+        corruptAct.Should().Throw<AppException>();
     }
 
     [Fact]
@@ -64,13 +66,13 @@ public sealed class PreparationImageTests
     {
         var oversized = new byte[ImageValidationService.MaximumBytes + 1];
         var tooBig = () => _validator.Validate("image.png", oversized);
-        tooBig.Should().Throw<PreparationException>().Which.Code.Should().Be("too-large");
+        tooBig.Should().Throw<AppException>().Which.Error.Metadata![DeskErrorReasons.Key].Should().Be(DeskErrorReasons.TooLarge);
         using var wide = new SKBitmap(ImageValidationService.MaximumDimension + 1, 1);
         wide.Erase(SKColors.Blue);
         using var wideImage = SKImage.FromBitmap(wide);
         using var output = wideImage.Encode(SKEncodedImageFormat.Png, 100);
         var tooWide = () => _validator.Validate("wide.png", output.ToArray());
-        tooWide.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        tooWide.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 
     private static byte[] ImageBytes(string extension)

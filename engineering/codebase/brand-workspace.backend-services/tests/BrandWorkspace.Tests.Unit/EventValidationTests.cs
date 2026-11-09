@@ -1,3 +1,5 @@
+using BrandWorkspace.Application.Events.Models;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using AwesomeAssertions;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Infrastructure.Events.Services;
@@ -71,7 +73,7 @@ public sealed class EventValidationTests
     public void Event_ShouldRejectInconsistentDates(string? startsOn, string? endsOn, string? precision)
     {
         Action act = () => _validation.Event(Fields(startsOn: startsOn, endsOn: endsOn, datePrecision: precision));
-        act.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        act.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 
     [Theory]
@@ -97,7 +99,7 @@ public sealed class EventValidationTests
             _ => Fields() with { ApplicationDeadline = value }
         };
         Action act = () => _validation.Event(fields);
-        act.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        act.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 
     [Fact]
@@ -105,7 +107,7 @@ public sealed class EventValidationTests
     {
         _validation.Event(Fields(cost: "Stand: 1 200 USD\nRegistration: 100 USD")).Cost.Should().Be("Stand: 1 200 USD\nRegistration: 100 USD");
         Action act = () => _validation.Event(Fields(title: "Two\nlines"));
-        act.Should().Throw<PreparationException>();
+        act.Should().Throw<AppException>();
     }
 
     [Fact]
@@ -120,14 +122,14 @@ public sealed class EventValidationTests
         filter.To.Should().BeNull();
         filter.IncludeUndated.Should().BeFalse();
         Action act = () => _validation.Filter(null, "galactic", null, null, null, null, true);
-        act.Should().Throw<PreparationException>();
+        act.Should().Throw<AppException>();
     }
 
     [Fact]
     public void Filter_ShouldRejectAReversedDateRange()
     {
         Action act = () => _validation.Filter(null, null, null, null, "2026-11-01", "2026-10-01", true);
-        act.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        act.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
         _validation.Filter(null, null, null, null, "2026-10-01", "2026-10-01", true)
             .From.Should().Be(new DateOnly(2026, 10, 1));
     }
@@ -137,7 +139,7 @@ public sealed class EventValidationTests
     {
         _validation.Key("tfw-2026").Should().Be("tfw-2026");
         Action act = () => _validation.Key("TFW 2026");
-        act.Should().Throw<PreparationException>();
+        act.Should().Throw<AppException>();
     }
 
     private static EventFields Fields(

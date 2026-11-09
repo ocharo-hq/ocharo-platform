@@ -15,7 +15,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function decodeStatus(value: unknown): Result<SystemStatus, ApiFailure> {
   if (isRecord(value) && value.service === 'brand-workspace' && value.stage === 'foundation' &&
       value.persistence === 'PostgreSQL' && isRecord(value.worker)) {
-    const { state, lastSeenAtUtc } = value.worker;
+    // The wire leaves the timestamp out while no heartbeat exists.
+    const { state } = value.worker;
+    const lastSeenAtUtc = value.worker.lastSeenAtUtc ?? null;
     const validTimestamp = typeof lastSeenAtUtc === 'string' &&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|\+00:00)$/.test(lastSeenAtUtc) &&
       Number.isFinite(Date.parse(lastSeenAtUtc));

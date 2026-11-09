@@ -1,4 +1,6 @@
-using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Foundation.Errors;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
@@ -56,6 +58,6 @@ public sealed class EventService(IEventRepository repository, EventValidationSer
 
     private static void RequireEditor(OrganizationAccess access)
     {
-        if (!access.CanEdit) throw new PreparationException("forbidden", "An editor or owner role is required.");
+        if (!access.CanEdit) throw DeskErrors.Forbidden("An editor or owner role is required.").ToException();
     }
 }

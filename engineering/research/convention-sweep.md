@@ -175,3 +175,12 @@ Evidence caveats: D-24 counts `NpgsqlCommand|CreateCommand` matches; D-28, D-29 
 - Brand and Catalogue share 15 rows in kind: B-1/C-1, B-2/C-2, B-3/C-3, B-4/C-4, B-5/C-5, B-6/C-6, B-7/C-7, B-8/C-8, B-9/C-9, B-10/C-10, B-11/C-11, B-12/C-12, B-14/C-15, B-15/C-16, B-16/C-17. One host-composition fix serves both.
 - `deploy.yml:12` runs every service as .NET `Production`; `dotnetEnvironment: true` is only a "should" (`deployment/descriptor/deploy-descriptor.md:50`) and depends on Desk's `appsettings.Development.json` (D-13).
 - Both companions pin `@wow-two-beta/fe` 0.0.32 (latest tag `fe-v0.0.41`) and be sdk `10.0.105-beta` (latest tag `v10.0.106-beta`); a re-pin takes B-24/C-28 and the BFF route alignment (`fix!` in fe 0.0.41).
+
+## Exceptions
+
+Rows kept in part while fixing them in v0.2, each with what lifts it. The be sdk gaps go to the SDK as rows of its own.
+
+| id | kept | why | lifts when |
+|---|---|---|---|
+| D-21 | Desk's commerce and public brand routes serialize with `CommerceJson`, not the SDK preset | the be sdk preset sets `DictionaryKeyPolicy` to camelCase, which rewrites data keys such as size labels (`XL` → `xl`) and corrupts them on save; Marketing and Blog read those fields | the be sdk keeps dictionary keys verbatim |
+| B-2, C-2 | Brand and Catalogue map OpenAPI themselves, anonymously, on a local run only (`ExposeOpenApi = false`) | `UseApiDefaults` maps OpenAPI without `AllowAnonymous`, so default-deny answers 401 | the be sdk maps OpenAPI anonymously |

@@ -11,7 +11,8 @@ conversion and reference-fit grading are later slices. The app records outreach;
 Placement was decided on 2026-10-08: a Desk section (`/organizations/{organizationId}/sourcing`), not a
 separate loopback app. Every rule of the [preparation contract](preparation-contract.md) applies:
 membership filter, organization-scoped queries, composite foreign keys, 404 for foreign rows,
-`X-CSRF-TOKEN` on unsafe requests, `{ data }` envelopes and `PreparationException` problem codes.
+`X-CSRF-TOKEN` on unsafe requests, `{ data }` envelopes on the SDK JSON (null members left out; the types below show them as `null`, which the
+frontend decoders restore) and SDK problem details, whose `code` names the error kind.
 
 ## Records
 
@@ -23,7 +24,7 @@ membership filter, organization-scoped queries, composite foreign keys, 404 for 
 | Media | `(organization_id, id)`; `sha256` unique per organization | supplierId (null = inbox), capture, caption | Bytes are immutable and content-addressed; `capture`: `original` · `screenshot` · `derived` |
 
 Every mutable row carries `revision` (starts at 1). Updates and deletes send `expectedRevision`;
-a mismatch returns 409 `conflict`. Text limits: names 1–160, role/label/city 120, destination 512,
+a mismatch returns 409 `Conflict`. Text limits: names 1–160, role/label/city 120, destination 512,
 URLs 2048, notes 8000 (supplier) / 4000 (person, route), caption 2000, source label 200.
 Country is ISO 3166-1 alpha-2 upper case. Blank optional strings normalize to `null`; notes and caption to `""`.
 
@@ -69,7 +70,7 @@ Base: `/api/organizations/{organizationId}/sourcing`. Reads need membership; wri
 
 Setting `isPrimary` on a route clears the supplier's previous primary in the same transaction.
 `personId` and `supplierId` values must belong to the route's supplier / the organization, or the
-request fails with 400 `validation` (never 404, which would leak other organizations' identifiers).
+request fails with 400 `Validation` (never 404, which would leak other organizations' identifiers).
 
 ### Response shapes (camelCase JSON)
 

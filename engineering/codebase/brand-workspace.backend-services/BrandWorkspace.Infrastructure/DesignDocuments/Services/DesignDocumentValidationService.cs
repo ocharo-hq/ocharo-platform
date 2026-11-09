@@ -1,5 +1,9 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using BrandWorkspace.Application.Foundation.Errors;
 using System.Text;
-using BrandWorkspace.Application.Commerce;
+using BrandWorkspace.Application.Commerce.Models;
+using BrandWorkspace.Application.Commerce.Repositories;
+using BrandWorkspace.Infrastructure.Commerce.Services;
 using System.Text.Json;
 using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 using BrandWorkspace.Application.DesignDocuments.Models;
@@ -31,7 +35,7 @@ public sealed class DesignDocumentValidationService
         if (input.Snapshot.ValueKind != JsonValueKind.Object)
             throw Invalid("Snapshot must be a JSON object.");
         if (Encoding.UTF8.GetByteCount(input.Snapshot.GetRawText()) > MaximumSnapshotBytes)
-            throw new PreparationException("too-large", "Snapshot must contain at most 1 MiB of JSON.");
+            throw DeskErrors.TooLarge("Snapshot must contain at most 1 MiB of JSON.").ToException();
         var nodes = 0;
         try
         {
@@ -43,7 +47,7 @@ public sealed class DesignDocumentValidationService
             throw Invalid("Snapshot contains an invalid Unicode value.");
         }
         if (JsonSerializer.SerializeToUtf8Bytes(input.Snapshot, StoredJsonConstants.Default).Length > MaximumSnapshotBytes)
-            throw new PreparationException("too-large", "Snapshot must contain at most 1 MiB of stored JSON.");
+            throw DeskErrors.TooLarge("Snapshot must contain at most 1 MiB of stored JSON.").ToException();
         return new DesignDocumentInput(input.Title.Trim(), input.Snapshot.Clone());
     }
 
@@ -186,8 +190,8 @@ public sealed class DesignDocumentValidationService
         }
     }
 
-    private static PreparationException Invalid(string message)
+    private static AppException Invalid(string message)
     {
-        return new PreparationException("validation", message);
+        return DeskErrors.Invalid(message).ToException();
     }
 }

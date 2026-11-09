@@ -336,7 +336,7 @@ public sealed class MediaProcessingEndpointTests
         response.Headers.CacheControl!.NoStore.Should().BeTrue();
         var body = JsonSerializer.Deserialize<JsonElement>(await response.Content.ReadAsStringAsync());
         body.GetProperty("available").GetBoolean().Should().BeFalse();
-        body.GetProperty("model").ValueKind.Should().Be(JsonValueKind.Null);
+        body.TryGetProperty("model", out _).Should().BeFalse();
         host.Worker.StatusCalls.Should().Be(1);
         host.Worker.RemoveCalls.Should().Be(0);
     }

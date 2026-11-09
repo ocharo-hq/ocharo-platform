@@ -31,7 +31,7 @@ describe('sourcing upload queue', () => {
       'same.png': () => ResultExtensions.ok({ media: media('m2', 'sup'), duplicate: true, nearDuplicateIds: [] }),
       'elsewhere.webp': () => ResultExtensions.ok({ media: media('m3', null), duplicate: true, nearDuplicateIds: [] }),
       'similar.jpg': () => ResultExtensions.ok({ media: media('m4', 'sup'), duplicate: false, nearDuplicateIds: ['m1', 'm9'] }),
-      'broken.pdf': () => ResultExtensions.fail(ApiFailureFactory.create('http', { status: 400, headers: new Headers() }, { title: 'The file is not a PDF.', code: 'validation' })),
+      'broken.pdf': () => ResultExtensions.fail(ApiFailureFactory.create('http', { status: 400, headers: new Headers() }, { detail: 'The file is not a PDF.', code: 'Validation' })),
     };
     const uploadMedia = vi.fn((upload: File) => new Promise(resolve => {
       inFlight += 1;

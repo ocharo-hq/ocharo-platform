@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <!-- The mediator's commands, queries and results, and the error catalog. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be" />
     <ProjectReference Include="../BrandWorkspace.Domain/BrandWorkspace.Domain.csproj" />
   </ItemGroup>
 </Project>

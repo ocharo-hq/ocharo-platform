@@ -1,5 +1,7 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using AwesomeAssertions;
-using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
@@ -26,8 +28,8 @@ public sealed class EventImportTests
             var importer = new EventImportService(new UnusedRepository(), new EventValidationService());
             var owner = new OrganizationAccess(Guid.NewGuid(), "test-owner", "owner", true, true);
             Func<Task> act = () => importer.ImportAsync(owner, file, false, CancellationToken.None);
-            PreparationException failure = (await act.Should().ThrowAsync<PreparationException>()).Which;
-            failure.Code.Should().Be("validation");
+            AppException failure = (await act.Should().ThrowAsync<AppException>()).Which;
+            failure.Error.Type.Should().Be(AppErrorType.Validation);
             failure.Message.Should().Contain("nothing was imported");
         }
         finally { File.Delete(file); }

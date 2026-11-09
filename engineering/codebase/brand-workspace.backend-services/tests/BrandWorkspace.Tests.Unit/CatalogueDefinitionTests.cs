@@ -1,13 +1,15 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AwesomeAssertions;
-using BrandWorkspace.Application.Commerce;
+using BrandWorkspace.Application.Commerce.Models;
+using BrandWorkspace.Application.Commerce.Repositories;
+using BrandWorkspace.Infrastructure.Commerce.Services;
 using BrandWorkspace.Application.DesignDocuments.Models;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.Commerce;
 using BrandWorkspace.Domain.DesignDocuments.Models;
-using BrandWorkspace.Infrastructure.Commerce;
 using BrandWorkspace.Infrastructure.DesignDocuments.Services;
 using OcharoBrand.Domain.Brand;
 using OcharoCatalogue.Domain.Catalogue.Models;
@@ -47,7 +49,7 @@ public sealed class CatalogueDefinitionTests
         result.Edition.Slug.Should().Be("summer");
         files["page-mixed.png"]=Png();files["page-mixed.pdf"]=Pdf;
         Action includesHiddenPage=()=>CatalogueEditionBuilder.Build(Design(snapshot),brand,files,DateTimeOffset.UtcNow,Products());
-        includesHiddenPage.Should().Throw<PreparationException>();
+        includesHiddenPage.Should().Throw<AppException>();
     }
     [Fact]
     public void EmptyOutputs_CanSaveDraft_ButCannotPrepareAnEmptyEdition()
@@ -55,7 +57,7 @@ public sealed class CatalogueDefinitionTests
         var brand=Guid.NewGuid();var snapshot=Snapshot(brand);snapshot["pages"]=new JsonArray();snapshot["catalogue"]!["outputs"]!["pdf"]=false;snapshot["catalogue"]!["web"]!["pages"]=new JsonArray();
         var design=Design(snapshot);var validation=new DesignDocumentValidationService();
         Action save=()=>validation.ValidateInput(new DesignDocumentInput(design.Title,design.Snapshot));save.Should().NotThrow();
-        Action prepare=()=>CatalogueEditionBuilder.Build(design,brand,new Dictionary<string,byte[]>(),DateTimeOffset.UtcNow,Products());prepare.Should().Throw<PreparationException>();
+        Action prepare=()=>CatalogueEditionBuilder.Build(design,brand,new Dictionary<string,byte[]>(),DateTimeOffset.UtcNow,Products());prepare.Should().Throw<AppException>();
     }
     [Fact]
     public void WebOnly_PreparesNoArtifacts_AndRejectsUnknownProductReferences()
@@ -64,7 +66,7 @@ public sealed class CatalogueDefinitionTests
         var result=CatalogueEditionBuilder.Build(Design(snapshot),brand,new Dictionary<string,byte[]>(),DateTimeOffset.UtcNow,Products());
         result.Edition.PdfSha256.Should().BeNull();result.Blobs.Should().BeEmpty();
         snapshot["catalogue"]!["web"]!["pages"]![0]!["productIds"]=new JsonArray("another-brand-product");
-        Action foreign=()=>CatalogueEditionBuilder.Build(Design(snapshot),brand,new Dictionary<string,byte[]>(),DateTimeOffset.UtcNow,Products());foreign.Should().Throw<PreparationException>();
+        Action foreign=()=>CatalogueEditionBuilder.Build(Design(snapshot),brand,new Dictionary<string,byte[]>(),DateTimeOffset.UtcNow,Products());foreign.Should().Throw<AppException>();
     }
     [Fact]
     public void WebPresentation_PreservesCopyPricesAndSelectedApprovedImageGroup()
@@ -103,6 +105,6 @@ public sealed class CatalogueDefinitionTests
             case "page-scalar":snapshot["catalogue"]!["web"]!["pages"]![0]=1;break;
         }
         Action save=()=>new DesignDocumentValidationService().ValidateInput(new DesignDocumentInput("Summer",JsonSerializer.SerializeToElement(snapshot)));
-        save.Should().Throw<PreparationException>();
+        save.Should().Throw<AppException>();
     }
 }

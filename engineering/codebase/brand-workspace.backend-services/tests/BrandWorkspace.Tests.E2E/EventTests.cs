@@ -1,8 +1,11 @@
+using BrandWorkspace.Application.Events.Models;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AwesomeAssertions;
-using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Infrastructure.Events.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,25 +34,24 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         }));
         Guid id = created.GetProperty("id").GetGuid();
         created.EnumerateObject().Select(property => property.Name).Should().Equal(
-            "id", "key", "title", "organizer", "scope", "format", "country", "city", "venue", "startsOn", "endsOn", "datePrecision",
-            "applicationDeadline", "participation", "cost", "website", "sourceUrl", "status", "priority", "notes", "revision",
-            "createdAt", "updatedAt");
-        created.GetProperty("key").ValueKind.Should().Be(JsonValueKind.Null);
+            "id", "title", "organizer", "scope", "format", "country", "city", "startsOn", "endsOn", "datePrecision", "participation",
+            "website", "status", "priority", "notes", "revision", "createdAt", "updatedAt");
+        created.TryGetProperty("key", out _).Should().BeFalse();
         created.GetProperty("title").GetString().Should().Be("Tashkent Fashion Week");
         created.GetProperty("country").GetString().Should().Be("UZ");
-        created.GetProperty("venue").ValueKind.Should().Be(JsonValueKind.Null);
-        created.GetProperty("cost").ValueKind.Should().Be(JsonValueKind.Null);
+        created.TryGetProperty("venue", out _).Should().BeFalse();
+        created.TryGetProperty("cost", out _).Should().BeFalse();
         created.GetProperty("startsOn").GetString().Should().Be("2026-10-20");
         created.GetProperty("endsOn").GetString().Should().Be("2026-10-24");
         created.GetProperty("datePrecision").GetString().Should().Be("day");
-        created.GetProperty("applicationDeadline").ValueKind.Should().Be(JsonValueKind.Null);
+        created.TryGetProperty("applicationDeadline", out _).Should().BeFalse();
         created.GetProperty("status").GetString().Should().Be("shortlisted");
         created.GetProperty("priority").GetString().Should().Be("normal");
         created.GetProperty("revision").GetInt32().Should().Be(1);
 
         JsonElement undated = await DataAsync(await client.PostAsJsonAsync(path, new { title = "Somewhere fair", scope = "international", format = "trade-fair" }));
         undated.GetProperty("datePrecision").GetString().Should().Be("unknown");
-        undated.GetProperty("startsOn").ValueKind.Should().Be(JsonValueKind.Null);
+        undated.TryGetProperty("startsOn", out _).Should().BeFalse();
         undated.GetProperty("participation").GetString().Should().BeEmpty();
 
         (await DataAsync(await client.GetAsync($"{path}/{id}"))).GetProperty("notes").GetString()
@@ -63,22 +65,22 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         }));
         updated.GetProperty("revision").GetInt32().Should().Be(2);
         updated.GetProperty("datePrecision").GetString().Should().Be("month");
-        updated.GetProperty("endsOn").ValueKind.Should().Be(JsonValueKind.Null);
+        updated.TryGetProperty("endsOn", out _).Should().BeFalse();
         updated.GetProperty("applicationDeadline").GetString().Should().Be("2026-10-15");
         updated.GetProperty("status").GetString().Should().Be("applying");
         updated.GetProperty("priority").GetString().Should().Be("high");
-        updated.GetProperty("website").ValueKind.Should().Be(JsonValueKind.Null);
+        updated.TryGetProperty("website", out _).Should().BeFalse();
 
         await ProblemAsync(await client.PutAsJsonAsync($"{path}/{id}", new
         {
             expectedRevision = 1, title = "Stale", scope = "local", format = "runway"
-        }), HttpStatusCode.Conflict, "conflict");
-        await ProblemAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=1"), HttpStatusCode.Conflict, "conflict");
+        }), HttpStatusCode.Conflict, "Conflict");
+        await ProblemAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=1"), HttpStatusCode.Conflict, "Conflict");
         (await DataAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=2"))).GetProperty("id").GetGuid().Should().Be(id);
-        await ProblemAsync(await client.GetAsync($"{path}/{id}"), HttpStatusCode.NotFound, "not-found");
+        await ProblemAsync(await client.GetAsync($"{path}/{id}"), HttpStatusCode.NotFound, "NotFound");
         await ProblemAsync(await client.PutAsJsonAsync($"{path}/{id}", new { expectedRevision = 2, title = "Gone", scope = "local", format = "runway" }),
-            HttpStatusCode.NotFound, "not-found");
-        await ProblemAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=2"), HttpStatusCode.NotFound, "not-found");
+            HttpStatusCode.NotFound, "NotFound");
+        await ProblemAsync(await client.DeleteAsync($"{path}/{id}?expectedRevision=2"), HttpStatusCode.NotFound, "NotFound");
     }
 
     [Fact]
@@ -110,10 +112,10 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         (await TitlesAsync(client, $"{path}?includeUndated=false")).Should().Equal("aardvark fair", "Alpha Runway", "Bravo Market", "Charlie Expo");
         (await TitlesAsync(client, $"{path}?limit=2&offset=1")).Should().Equal("Alpha Runway", "Bravo Market");
 
-        await ProblemAsync(await client.GetAsync($"{path}?scope=galactic"), HttpStatusCode.BadRequest, "validation");
-        await ProblemAsync(await client.GetAsync($"{path}?status=won"), HttpStatusCode.BadRequest, "validation");
-        await ProblemAsync(await client.GetAsync($"{path}?from=2026-13-01"), HttpStatusCode.BadRequest, "validation");
-        await ProblemAsync(await client.GetAsync($"{path}?limit=501"), HttpStatusCode.BadRequest, "validation");
+        await ProblemAsync(await client.GetAsync($"{path}?scope=galactic"), HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(await client.GetAsync($"{path}?status=won"), HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(await client.GetAsync($"{path}?from=2026-13-01"), HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(await client.GetAsync($"{path}?limit=501"), HttpStatusCode.BadRequest, "Validation");
     }
 
     [Fact]
@@ -161,7 +163,7 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
             .Should().Equal("Closes today", "In two days", "Mid October", "November", "December");
         summary.GetProperty("upcomingDeadlines")[0].GetProperty("applicationDeadline").GetString().Should().Be("2026-10-08");
 
-        await ProblemAsync(await client.GetAsync($"{path}/summary?today=tomorrow"), HttpStatusCode.BadRequest, "validation");
+        await ProblemAsync(await client.GetAsync($"{path}/summary?today=tomorrow"), HttpStatusCode.BadRequest, "Validation");
     }
 
     [Theory]
@@ -185,7 +187,7 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         using HttpClient client = await fixture.LoginAsync(owner);
         using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
-        await ProblemAsync(await client.PostAsync(Path(owner), content), HttpStatusCode.BadRequest, "validation");
+        await ProblemAsync(await client.PostAsync(Path(owner), content), HttpStatusCode.BadRequest, "Validation");
         (await DataAsync(await client.GetAsync(Path(owner)))).GetArrayLength().Should().Be(0);
     }
 
@@ -201,12 +203,12 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
 
         (await strangerClient.GetAsync(Path(owner))).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await strangerClient.GetAsync($"{Path(owner)}/{id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ProblemAsync(await strangerClient.GetAsync($"{Path(stranger)}/{id}"), HttpStatusCode.NotFound, "not-found");
+        await ProblemAsync(await strangerClient.GetAsync($"{Path(stranger)}/{id}"), HttpStatusCode.NotFound, "NotFound");
         await ProblemAsync(await strangerClient.PutAsJsonAsync($"{Path(stranger)}/{id}", new
         {
             expectedRevision = 1, title = "Taken", scope = "local", format = "market"
-        }), HttpStatusCode.NotFound, "not-found");
-        await ProblemAsync(await strangerClient.DeleteAsync($"{Path(stranger)}/{id}?expectedRevision=1"), HttpStatusCode.NotFound, "not-found");
+        }), HttpStatusCode.NotFound, "NotFound");
+        await ProblemAsync(await strangerClient.DeleteAsync($"{Path(stranger)}/{id}?expectedRevision=1"), HttpStatusCode.NotFound, "NotFound");
         (await DataAsync(await strangerClient.GetAsync(Path(stranger)))).GetArrayLength().Should().Be(0);
         (await DataAsync(await strangerClient.GetAsync($"{Path(stranger)}/summary"))).GetProperty("byStatus")
             .GetProperty("shortlisted").GetInt32().Should().Be(0);
@@ -216,12 +218,12 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
         (await DataAsync(await client.GetAsync($"{Path(owner)}/summary"))).GetProperty("byStatus")
             .GetProperty("shortlisted").GetInt32().Should().Be(1);
         await ProblemAsync(await client.PostAsJsonAsync(Path(owner), new { title = "Blocked", scope = "local", format = "market" }),
-            HttpStatusCode.Forbidden, "forbidden");
+            HttpStatusCode.Forbidden, "Forbidden");
         await ProblemAsync(await client.PutAsJsonAsync($"{Path(owner)}/{id}", new
         {
             expectedRevision = 1, title = "Blocked", scope = "local", format = "market"
-        }), HttpStatusCode.Forbidden, "forbidden");
-        await ProblemAsync(await client.DeleteAsync($"{Path(owner)}/{id}?expectedRevision=1"), HttpStatusCode.Forbidden, "forbidden");
+        }), HttpStatusCode.Forbidden, "Forbidden");
+        await ProblemAsync(await client.DeleteAsync($"{Path(owner)}/{id}?expectedRevision=1"), HttpStatusCode.Forbidden, "Forbidden");
     }
 
     [Fact]
@@ -254,7 +256,7 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
             tfw.GetProperty("country").GetString().Should().Be("UZ");
             events[1].GetProperty("status").GetString().Should().Be("shortlisted");
             events[2].GetProperty("datePrecision").GetString().Should().Be("estimated");
-            events[2].GetProperty("cost").ValueKind.Should().Be(JsonValueKind.Null);
+            events[2].TryGetProperty("cost", out _).Should().BeFalse();
             (await TitlesAsync(client, $"{path}?query=cafw")).Should().Equal("Central Asia Fashion Week");
 
             Guid tfwId = tfw.GetProperty("id").GetGuid();
@@ -281,14 +283,14 @@ public sealed class EventTests(PreparationDatabaseFixture fixture) : IClassFixtu
             ];
             string invalid = await WriteBundleAsync(directory, "invalid.json", invalidEvents);
             Func<Task> rejected = () => ImportAsync(owner, invalid, dryRun: false);
-            string message = (await rejected.Should().ThrowAsync<PreparationException>()).Which.Message;
+            string message = (await rejected.Should().ThrowAsync<AppException>()).Which.Message;
             message.Should().Contain("nothing was imported").And.Contain("events[1] backwards").And.Contain("repeated").And.Contain("key is required");
             (await DataAsync(await client.GetAsync(path))).GetArrayLength().Should().Be(3);
 
             string wrongFormat = System.IO.Path.Combine(directory, "wrong.json");
             await File.WriteAllTextAsync(wrongFormat, """{"format":"ocharo.sourcing-import.v1","events":[]}""", Token);
             Func<Task> wrong = () => ImportAsync(owner, wrongFormat, dryRun: false);
-            (await wrong.Should().ThrowAsync<PreparationException>()).Which.Message.Should().Contain(EventImportService.Format);
+            (await wrong.Should().ThrowAsync<AppException>()).Which.Message.Should().Contain(EventImportService.Format);
         }
         finally
         {

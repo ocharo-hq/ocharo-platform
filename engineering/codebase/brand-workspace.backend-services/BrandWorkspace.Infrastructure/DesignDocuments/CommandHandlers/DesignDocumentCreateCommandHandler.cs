@@ -1,0 +1,19 @@
+using BrandWorkspace.Application.DesignDocuments.Commands;
+using BrandWorkspace.Application.DesignDocuments.Models;
+using BrandWorkspace.Domain.DesignDocuments.Models;
+using BrandWorkspace.Infrastructure.DesignDocuments.Services;
+using WoW.Two.Sdk.Beta.Be.Mediator.Cqrs;
+using WoW.Two.Sdk.Beta.Be.Mediator.Result;
+
+namespace BrandWorkspace.Infrastructure.DesignDocuments.CommandHandlers;
+
+/// <summary>Handles <see cref="DesignDocumentCreateCommand"/>.</summary>
+public sealed class DesignDocumentCreateCommandHandler(DesignDocumentService service)
+    : ICommandHandler<DesignDocumentCreateCommand, AppResult<DesignDocument>>
+{
+    /// <inheritdoc />
+    public async ValueTask<AppResult<DesignDocument>> HandleAsync(DesignDocumentCreateCommand request, CancellationToken cancellationToken)
+    {
+        return AppResult<DesignDocument>.Ok(await service.CreateDocumentAsync(request.Access, request.Kind, request.Input, cancellationToken));
+    }
+}

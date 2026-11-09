@@ -1,7 +1,10 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using BrandWorkspace.Application.Foundation.Errors;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
-using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Sourcing.Models;
 using BrandWorkspace.Application.Sourcing.Repositories;
@@ -27,7 +30,7 @@ public sealed partial class SourcingImportService(
     public async Task<SourcingImportReport> ImportAsync(
         OrganizationAccess access, string bundlePath, bool dryRun, CancellationToken token)
     {
-        if (!access.CanEdit) throw new PreparationException("forbidden", "An editor or owner role is required.");
+        if (!access.CanEdit) throw DeskErrors.Forbidden("An editor or owner role is required.").ToException();
         PlannedBundle plan = await ReadAsync(bundlePath, token);
         var report = new SourcingImportReport(dryRun, plan.Source);
         var supplierIds = new Dictionary<string, Guid>(StringComparer.Ordinal);
@@ -91,7 +94,7 @@ public sealed partial class SourcingImportService(
                 byte[] bytes = await File.ReadAllBytesAsync(media.Path, token);
                 InspectedMedia content = await inspector.InspectAsync(bytes, token);
                 if (media.Sha256 is not null && media.Sha256 != content.Sha256)
-                    throw new PreparationException("validation", "The file's SHA-256 differs from the bundle.");
+                    throw DeskErrors.Invalid("The file's SHA-256 differs from the bundle.").ToException();
                 if (await repository.FindMediaBySha256Async(access.OrganizationId, content.Sha256, token) is not null)
                 {
                     report.Media.Existing++;
@@ -107,7 +110,7 @@ public sealed partial class SourcingImportService(
                 report.Media.Created++;
                 report.Media.Bytes += bytes.Length;
             }
-            catch (Exception exception) when (exception is PreparationException or IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is AppException or IOException or UnauthorizedAccessException)
             {
                 report.Media.Failed++;
                 report.Failures.Add(new SourcingImportFailure(media.Reference, exception.Message));
@@ -120,8 +123,8 @@ public sealed partial class SourcingImportService(
     private async Task<PlannedBundle> ReadAsync(string bundlePath, CancellationToken token)
     {
         var file = new FileInfo(bundlePath);
-        if (!file.Exists) throw new PreparationException("validation", "The bundle file was not found.");
-        if (file.Length > MaximumBundleBytes) throw new PreparationException("too-large", "The bundle exceeds 16 MiB.");
+        if (!file.Exists) throw DeskErrors.Invalid("The bundle file was not found.").ToException();
+        if (file.Length > MaximumBundleBytes) throw DeskErrors.TooLarge("The bundle exceeds 16 MiB.").ToException();
         BundleDocument? document;
         try
         {
@@ -130,10 +133,10 @@ public sealed partial class SourcingImportService(
         }
         catch (JsonException exception)
         {
-            throw new PreparationException("validation", "The bundle is not valid JSON: " + exception.Message);
+            throw DeskErrors.Invalid("The bundle is not valid JSON: " + exception.Message).ToException();
         }
         if (document is null || document.Format != Format)
-            throw new PreparationException("validation", $"The bundle format must be {Format}.");
+            throw DeskErrors.Invalid($"The bundle format must be {Format}.").ToException();
         string root = file.DirectoryName!;
         var errors = new List<string>();
         var suppliers = new List<PlannedSupplier>();
@@ -144,35 +147,35 @@ public sealed partial class SourcingImportService(
             string reference = $"suppliers[{index}]";
             try
             {
-                string key = validation.Key(item.Key) ?? throw new PreparationException("validation", "A supplier key is required.");
-                if (!keys.Add(key)) throw new PreparationException("validation", $"Supplier key '{key}' is repeated.");
+                string key = validation.Key(item.Key) ?? throw DeskErrors.Invalid("A supplier key is required.").ToException();
+                if (!keys.Add(key)) throw DeskErrors.Invalid($"Supplier key '{key}' is repeated.").ToException();
                 SupplierInput input = validation.Supplier(item.Name, item.Stage, item.Country, item.City, item.Website, item.Notes);
                 if (input.Stage == "qualified")
-                    throw new PreparationException("validation", "Imports never mark a supplier qualified; review it in Desk.");
+                    throw DeskErrors.Invalid("Imports never mark a supplier qualified; review it in Desk.").ToException();
                 var people = new List<PlannedPerson>();
                 var personKeys = new HashSet<string>(StringComparer.Ordinal);
                 foreach (BundlePerson person in item.People ?? [])
                 {
-                    string personKey = validation.Key(person.Key) ?? throw new PreparationException("validation", "A person key is required.");
-                    if (!personKeys.Add(personKey)) throw new PreparationException("validation", $"Person key '{personKey}' is repeated.");
+                    string personKey = validation.Key(person.Key) ?? throw DeskErrors.Invalid("A person key is required.").ToException();
+                    if (!personKeys.Add(personKey)) throw DeskErrors.Invalid($"Person key '{personKey}' is repeated.").ToException();
                     people.Add(new PlannedPerson(personKey, validation.Person(person.Name, person.Role, person.Notes)));
                 }
                 var routes = new List<PlannedRoute>();
                 foreach (BundleRoute route in item.Routes ?? [])
                 {
                     if (route.PersonKey is not null && !personKeys.Contains(route.PersonKey))
-                        throw new PreparationException("validation", $"Route person '{route.PersonKey}' is not a person of this supplier.");
+                        throw DeskErrors.Invalid($"Route person '{route.PersonKey}' is not a person of this supplier.").ToException();
                     RouteInput routeInput = validation.Route(route.Channel, route.Destination, route.Label, route.SourceUrl,
                         route.Verified, route.IsPrimary, null, route.Notes);
                     if (routes.Any(existing => existing.Input.Channel == routeInput.Channel && existing.Input.Destination == routeInput.Destination))
-                        throw new PreparationException("validation", $"Route {routeInput.Channel} {routeInput.Destination} is repeated.");
+                        throw DeskErrors.Invalid($"Route {routeInput.Channel} {routeInput.Destination} is repeated.").ToException();
                     routes.Add(new PlannedRoute(routeInput, route.PersonKey));
                 }
                 if (routes.Count(route => route.Input.IsPrimary) > 1)
-                    throw new PreparationException("validation", "A supplier has at most one primary route.");
+                    throw DeskErrors.Invalid("A supplier has at most one primary route.").ToException();
                 suppliers.Add(new PlannedSupplier(key, input, people, routes));
             }
-            catch (PreparationException exception) { errors.Add($"{reference}: {exception.Message}"); }
+            catch (AppException exception) { errors.Add($"{reference}: {exception.Message}"); }
         }
         var media = new List<PlannedMedia>();
         for (int index = 0; index < (document.Media?.Count ?? 0); index++)
@@ -182,10 +185,10 @@ public sealed partial class SourcingImportService(
             try
             {
                 if (item.SupplierKey is not null && !keys.Contains(item.SupplierKey))
-                    throw new PreparationException("validation", $"Supplier '{item.SupplierKey}' is not in the bundle.");
-                if (string.IsNullOrWhiteSpace(item.Path)) throw new PreparationException("validation", "A media path is required.");
+                    throw DeskErrors.Invalid($"Supplier '{item.SupplierKey}' is not in the bundle.").ToException();
+                if (string.IsNullOrWhiteSpace(item.Path)) throw DeskErrors.Invalid("A media path is required.").ToException();
                 if (item.Sha256 is not null && !Sha256Pattern().IsMatch(item.Sha256))
-                    throw new PreparationException("validation", "SHA-256 must be 64 lowercase hexadecimal characters.");
+                    throw DeskErrors.Invalid("SHA-256 must be 64 lowercase hexadecimal characters.").ToException();
                 media.Add(new PlannedMedia(
                     reference,
                     item.SupplierKey,
@@ -198,11 +201,11 @@ public sealed partial class SourcingImportService(
                     validation.SourceMessageId(item.SourceMessageId),
                     item.ReceivedAt?.ToUniversalTime()));
             }
-            catch (PreparationException exception) { errors.Add($"{reference}: {exception.Message}"); }
+            catch (AppException exception) { errors.Add($"{reference}: {exception.Message}"); }
         }
         if (errors.Count > 0)
-            throw new PreparationException("validation", "The bundle is invalid; nothing was imported." + Environment.NewLine
-                + string.Join(Environment.NewLine, errors.Take(50)));
+            throw DeskErrors.Invalid("The bundle is invalid; nothing was imported." + Environment.NewLine
+                + string.Join(Environment.NewLine, errors.Take(50))).ToException();
         return new PlannedBundle(document.Source, suppliers, media);
     }
 
@@ -228,27 +231,3 @@ public sealed partial class SourcingImportService(
         string? SupplierKey, string? Path, string? Sha256, string? Capture, string? OriginalName, string? Caption,
         string? SourceLabel, string? SourceMessageId, DateTimeOffset? ReceivedAt);
 }
-
-/// <summary>Counts what an import created, found already present, or could not store.</summary>
-public sealed class SourcingImportReport(bool dryRun, string? source)
-{
-    public bool DryRun { get; } = dryRun;
-    public string? Source { get; } = source;
-    public SourcingImportCounts Suppliers { get; } = new();
-    public SourcingImportCounts People { get; } = new();
-    public SourcingImportCounts Routes { get; } = new();
-    public SourcingImportCounts Media { get; } = new();
-    public List<SourcingImportFailure> Failures { get; } = [];
-}
-
-/// <summary>Created, existing and failed totals for one record kind.</summary>
-public sealed class SourcingImportCounts
-{
-    public int Created { get; set; }
-    public int Existing { get; set; }
-    public int Failed { get; set; }
-    public long Bytes { get; set; }
-}
-
-/// <summary>One bundle item that was not stored, with the reason.</summary>
-public sealed record SourcingImportFailure(string Item, string Reason);

@@ -2181,7 +2181,8 @@
       "brandworkspace.application": {
         "type": "Project",
         "dependencies": {
-          "BrandWorkspace.Domain": "[0.0.0, )"
+          "BrandWorkspace.Domain": "[0.0.0, )",
+          "WoW2.Sdk.Beta.Be": "[10.0.106-beta, )"
         }
       },
       "brandworkspace.domain": {

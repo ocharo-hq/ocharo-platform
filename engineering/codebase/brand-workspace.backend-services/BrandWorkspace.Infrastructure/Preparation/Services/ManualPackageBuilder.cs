@@ -1,3 +1,4 @@
+using BrandWorkspace.Application.Foundation.Errors;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
@@ -14,7 +15,7 @@ public sealed class ManualPackageBuilder : IManualPackageBuilder
     public byte[] Build(PackageSnapshot snapshot)
     {
         if (snapshot.Media.Count > 10 || snapshot.Media.Sum(media => media.Asset.ByteLength) > 25L * 1024 * 1024)
-            throw new PreparationException("too-large", "A package supports at most 10 images totalling 25 MiB.");
+            throw DeskErrors.TooLarge("A package supports at most 10 images totalling 25 MiB.").ToException();
         if (snapshot.Draft.Approval?.Revision != snapshot.Draft.Revision
             || !snapshot.Draft.Media.SequenceEqual(snapshot.Media.Select(media => media.Asset)))
             throw new InvalidDataException("The package must contain the exact approved ordered media snapshot.");

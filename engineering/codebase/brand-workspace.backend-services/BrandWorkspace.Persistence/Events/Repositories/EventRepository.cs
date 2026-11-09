@@ -1,3 +1,5 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using BrandWorkspace.Application.Foundation.Errors;
 using Npgsql;
 using NpgsqlTypes;
 using BrandWorkspace.Application.Events.Models;
@@ -160,7 +162,7 @@ public sealed class EventRepository(NpgsqlDataSource dataSource, TimeProvider ti
         reader.GetFieldValue<DateTimeOffset>(21),
         reader.GetFieldValue<DateTimeOffset>(22));
 
-    private static async Task<PreparationException> MissingOrConflictAsync(
+    private static async Task<AppException> MissingOrConflictAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string table, Guid organizationId, Guid id, string noun,
         CancellationToken token)
     {
@@ -188,7 +190,7 @@ public sealed class EventRepository(NpgsqlDataSource dataSource, TimeProvider ti
         }
         catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation && duplicateMessage is not null)
         {
-            throw new PreparationException("conflict", duplicateMessage);
+            throw DeskErrors.Conflict(duplicateMessage).ToException();
         }
     }
 
@@ -199,10 +201,10 @@ public sealed class EventRepository(NpgsqlDataSource dataSource, TimeProvider ti
 
     private static string EscapeLike(string value) => value.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
 
-    private static PreparationException NotFound(string noun) => new("not-found", $"The {noun} was not found.");
+    private static AppException NotFound(string noun) => DeskErrors.NotFound($"The {noun} was not found.").ToException();
 
-    private static PreparationException Conflict(string noun) =>
-        new("conflict", $"The {noun} changed since it was loaded. Reload it before saving again.");
+    private static AppException Conflict(string noun) =>
+        DeskErrors.Conflict($"The {noun} changed since it was loaded. Reload it before saving again.").ToException();
 
     private static NpgsqlCommand Command(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, params object?[] values)

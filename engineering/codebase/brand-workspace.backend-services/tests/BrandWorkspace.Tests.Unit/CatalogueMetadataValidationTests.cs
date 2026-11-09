@@ -1,3 +1,4 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using AwesomeAssertions;
@@ -63,7 +64,7 @@ public sealed class CatalogueMetadataValidationTests
             case "business-card": source["kind"] = "business-card"; break;
         }
         Action action = () => Validate(source);
-        action.Should().Throw<PreparationException>();
+        action.Should().Throw<AppException>();
     }
 
     [Fact]

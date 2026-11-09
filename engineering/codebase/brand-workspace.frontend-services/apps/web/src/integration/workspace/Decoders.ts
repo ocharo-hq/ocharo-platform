@@ -2,6 +2,7 @@ import { validateSnapshot, type DesignDocument, type DesignSummary } from '@/dom
 import type { DesignRevision } from '@/domain/workspace/DesignRevisions';
 import { ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
+import { withNulls } from '@/integration/shared/WireNulls';
 
 import {
   organizationRoles,
@@ -20,10 +21,13 @@ const record = (v: unknown): v is Record<string, unknown> => typeof v === 'objec
 const strings = (v: Record<string, unknown>, keys: string[]) => keys.every((key) => typeof v[key] === 'string');
 /** @internal Checks a positive revision integer. */
 const revision = (v: unknown): v is number => Number.isSafeInteger(v) && Number(v) > 0;
-/** @internal Builds a runtime decoder rather than casting server payloads. */
-function decoder<T>(guard: (value: unknown) => value is T): ApiDecoder<T> {
-  return (value) =>
-    guard(value) ? ResultExtensions.ok(value) : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
+/** @internal Builds a runtime decoder rather than casting server payloads; `normalize` restores the null members the
+ * wire leaves out before the check. */
+function decoder<T>(guard: (value: unknown) => value is T, normalize: (value: unknown) => unknown = (value) => value): ApiDecoder<T> {
+  return (value) => {
+    const normalized = normalize(value);
+    return guard(normalized) ? ResultExtensions.ok(normalized) : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
+  };
 }
 /** @internal The BFF's session payload; the person and organization are absent while signed out. */
 const isBffSession = (v: unknown): v is Record<string, unknown> =>
@@ -93,7 +97,7 @@ export const isExport = (v: unknown): v is ManualExport =>
   v.publicationStatus === 'unverified';
 export const brandDecoder = decoder(isBrand);
 export const mediaDecoder = decoder(isMedia);
-export const draftDecoder = decoder(isDraft);
+export const draftDecoder = decoder(isDraft, (value) => withNulls(value, ['requestedReviewRevision', 'approval']));
 export const exportDecoder = decoder(isExport);
 /** Validates every element of a server collection. */
 export function listDecoder<T>(guard: (value: unknown) => value is T): ApiDecoder<T[]> {

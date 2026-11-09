@@ -1,3 +1,5 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using BrandWorkspace.Application.Foundation.Errors;
 using System.Security.Cryptography;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Sourcing.Models;
@@ -17,19 +19,19 @@ public sealed class SourcingMediaInspector(IImageService images)
 
     public async Task<InspectedMedia> InspectAsync(byte[] bytes, CancellationToken token)
     {
-        if (bytes.Length == 0) throw new PreparationException("validation", "The file is empty.");
+        if (bytes.Length == 0) throw DeskErrors.Invalid("The file is empty.").ToException();
         string sha256 = Convert.ToHexStringLower(SHA256.HashData(bytes));
         if (bytes.AsSpan().StartsWith("%PDF-"u8))
         {
-            if (bytes.Length > MaximumPdfBytes) throw new PreparationException("too-large", "PDFs must be at most 25 MiB.");
+            if (bytes.Length > MaximumPdfBytes) throw DeskErrors.TooLarge("PDFs must be at most 25 MiB.").ToException();
             return new InspectedMedia(bytes, sha256, "application/pdf", null, null, null, null, false, null);
         }
         if (bytes.Length >= 12 && bytes.AsSpan(4, 4).SequenceEqual("ftyp"u8))
         {
-            if (bytes.Length > MaximumVideoBytes) throw new PreparationException("too-large", "Videos must be at most 64 MiB.");
+            if (bytes.Length > MaximumVideoBytes) throw DeskErrors.TooLarge("Videos must be at most 64 MiB.").ToException();
             return new InspectedMedia(bytes, sha256, "video/mp4", null, null, null, null, false, null);
         }
-        if (bytes.Length > MaximumImageBytes) throw new PreparationException("too-large", "Images must be at most 20 MiB.");
+        if (bytes.Length > MaximumImageBytes) throw DeskErrors.TooLarge("Images must be at most 20 MiB.").ToException();
         try
         {
             ImageProbeResult probe = await images.ProbeAsync(new MemoryStream(bytes, false), token);
@@ -40,10 +42,10 @@ public sealed class SourcingMediaInspector(IImageService images)
                 ImageFormat.Webp => "image/webp",
                 _ => throw Unsupported()
             };
-            if (probe.FrameCount > 1) throw new PreparationException("validation", "Animated images are not supported.");
+            if (probe.FrameCount > 1) throw DeskErrors.Invalid("Animated images are not supported.").ToException();
             if (probe.Width is < 1 or > MaximumDimension || probe.Height is < 1 or > MaximumDimension
                 || (long)probe.Width * probe.Height > MaximumPixels)
-                throw new PreparationException("validation", "Use an image up to 8192 pixels per side and 50 megapixels.");
+                throw DeskErrors.Invalid("Use an image up to 8192 pixels per side and 50 megapixels.").ToException();
             ImageResult thumbnail = await images.EditAsync(new MemoryStream(bytes, false), new ImageEditSpec
             {
                 AutoOrient = true,
@@ -76,6 +78,6 @@ public sealed class SourcingMediaInspector(IImageService images)
         catch (ImageRejectedException) { return null; }
     }
 
-    private static PreparationException Unsupported() =>
-        new("validation", "Only JPEG, PNG and WebP images, PDFs and MP4 videos are supported.");
+    private static AppException Unsupported() =>
+        DeskErrors.Invalid("Only JPEG, PNG and WebP images, PDFs and MP4 videos are supported.").ToException();
 }

@@ -1,11 +1,6 @@
-using BrandWorkspace.Api.MediaProcessing;
-using BrandWorkspace.Api.Commerce;
-using BrandWorkspace.Api.DesignDocuments;
-using BrandWorkspace.Api.Access;
-using BrandWorkspace.Api.Preparation;
-using BrandWorkspace.Api.Sourcing;
-using BrandWorkspace.Api.Events;
+using BrandWorkspace.Api.Events.Verbs;
 using BrandWorkspace.Api.Foundation;
+using BrandWorkspace.Api.Sourcing.Verbs;
 using BrandWorkspace.Infrastructure.Preparation.Services;
 using WoW.Two.Sdk.Beta.Be.Meta;
 
@@ -24,7 +19,7 @@ public static partial class HostConfiguration
         builder.AddApiDefaults(options => builder.AddExplicitEnvironment().ConfigureApiDefaults(options));
 
         return builder.AddPostgresDatabase().AddFoundation().AddAccess()
-            .AddDeskFiles().AddPreparation().AddDesignDocuments().AddCommerce().AddSourcing().AddEvents().AddMediaProcessing().AddRuntimeConfig().AddHttpSurface();
+            .AddDeskFiles().AddPreparation().AddDesignDocuments().AddCommerce().AddSourcing().AddEvents().AddMediaProcessing().AddRuntimeConfig().AddMediator().AddHttpSurface();
     }
 
     /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>
@@ -41,8 +36,7 @@ public static partial class HostConfiguration
     /// <summary>Configures middleware and endpoints, without startup tasks.</summary>
     /// <param name="app">The built web application to configure.</param>
     public static WebApplication Configure(this WebApplication app) =>
-        app.UseHttpSurface().MapAccessEndpoints().MapPreparationEndpoints().MapDesignDocumentEndpoints().MapCommerceEndpoints().MapSourcingEndpoints()
-            .MapEventEndpoints().MapMediaProcessingEndpoints().MapControllerEndpoints();
+        app.UseHttpSurface().MapIdentityRoutes().MapControllerEndpoints();
 
     /// <summary>
     /// Adds Desk's own verbs beside the be sdk's <c>migrate</c> and <c>config check</c>: <c>import sourcing</c> and
@@ -56,8 +50,8 @@ public static partial class HostConfiguration
         return verbs
             .AddHostVerb(ImportVerb, (services, verb, ct) => verb.Arguments switch
             {
-                [SourcingImportCommand.Name, .. var arguments] => SourcingImportCommand.RunAsync(services, arguments, verb.Output, verb.Error, ct),
-                [EventImportCommand.Name, .. var arguments] => EventImportCommand.RunAsync(services, arguments, verb.Output, verb.Error, ct),
+                [SourcingImportVerb.Name, .. var arguments] => SourcingImportVerb.RunAsync(services, arguments, verb.Output, verb.Error, ct),
+                [EventImportVerb.Name, .. var arguments] => EventImportVerb.RunAsync(services, arguments, verb.Output, verb.Error, ct),
                 _ => throw new ArgumentException(ImportUsage),
             })
             .AddHostVerb(MediaVerb, (services, verb, _) => verb.Arguments is [MediaVerifyArgument]

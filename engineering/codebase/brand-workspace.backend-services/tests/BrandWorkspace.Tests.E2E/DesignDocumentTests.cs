@@ -1,10 +1,12 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
 using Npgsql;
-using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.DesignDocuments.Models;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.DesignDocuments.Models;
@@ -171,13 +173,13 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         OrganizationAccess owner = await fixture.CreateOwnerAsync();
         DesignDocumentService service = Service();
         DesignDocument original = await service.CreateDocumentAsync(owner, "catalogue", Input("Original"), Token);
-        Task<(DesignDocument? Value, PreparationException? Error)> first = CaptureAsync(() =>
+        Task<(DesignDocument? Value, AppException? Error)> first = CaptureAsync(() =>
             service.SaveDocumentAsync(owner, original.Id, 1, Input("First"), Token));
-        Task<(DesignDocument? Value, PreparationException? Error)> second = CaptureAsync(() =>
+        Task<(DesignDocument? Value, AppException? Error)> second = CaptureAsync(() =>
             service.SaveDocumentAsync(owner, original.Id, 1, Input("Second"), Token));
-        (DesignDocument? Value, PreparationException? Error)[] outcomes = await Task.WhenAll(first, second);
+        (DesignDocument? Value, AppException? Error)[] outcomes = await Task.WhenAll(first, second);
         outcomes.Count(item => item.Error is null).Should().Be(1);
-        outcomes.Single(item => item.Error is not null).Error!.Code.Should().Be("conflict");
+        outcomes.Single(item => item.Error is not null).Error!.Error.Type.Should().Be(AppErrorType.Conflict);
         DesignDocument current = await service.GetDocumentAsync(owner, original.Id, Token);
         current.Revision.Should().Be(2);
         (await service.GetRevisionAsync(owner, original.Id, 1, Token)).Title.Should().Be("Original");
@@ -200,7 +202,7 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
             title = "Stale", snapshot = Snapshot("Stale"), expectedRevision = 1
         });
         conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await conflict.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("conflict");
+        (await conflict.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("Conflict");
         (await service.GetDocumentAsync(owner, original.Id, Token)).Title.Should().Be(current.Title);
     }
 
@@ -242,7 +244,8 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
     {
         return new DesignDocumentService(
             new DesignDocumentRepository(fixture.DataSource, TimeProvider.System),
-            new DesignDocumentValidationService(), new BrandWorkspace.Persistence.Commerce.CommerceRepository(fixture.DataSource, TimeProvider.System));
+            new DesignDocumentValidationService(), new BrandWorkspace.Persistence.Commerce.Repositories.CommerceRepository(fixture.DataSource, TimeProvider.System,
+                new BrandWorkspace.Infrastructure.Commerce.Services.CommerceRuleSet()));
     }
 
     private static string Path(OrganizationAccess owner)
@@ -265,10 +268,10 @@ public sealed class DesignDocumentTests(PreparationDatabaseFixture fixture) : IC
         return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("data");
     }
 
-    private static async Task<(DesignDocument? Value, PreparationException? Error)> CaptureAsync(
+    private static async Task<(DesignDocument? Value, AppException? Error)> CaptureAsync(
         Func<Task<DesignDocument>> action)
     {
         try { return (await action(), null); }
-        catch (PreparationException exception) { return (null, exception); }
+        catch (AppException exception) { return (null, exception); }
     }
 }

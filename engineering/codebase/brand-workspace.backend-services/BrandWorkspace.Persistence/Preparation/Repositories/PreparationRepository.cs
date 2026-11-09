@@ -1,7 +1,11 @@
+using BrandWorkspace.Application.Foundation.Errors;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using BrandWorkspace.Application.Files;
+using BrandWorkspace.Application.Files.Constants;
+using BrandWorkspace.Application.Files.Models;
+using BrandWorkspace.Application.Files.Services;
+using BrandWorkspace.Application.Files.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Preparation.Repositories;
 using BrandWorkspace.Application.Preparation.Services;
@@ -95,7 +99,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             $"SELECT {MediaColumns},COALESCE(m.file_id,f.file_id) FROM preparation.media m {MediaFileJoin} WHERE m.organization_id=$1 AND m.id=$2",
             organizationId, mediaId);
         await using var reader = await command.ExecuteReaderAsync(token);
-        if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The image was not found.");
+        if (!await reader.ReadAsync(token)) throw DeskErrors.NotFound("The image was not found.").ToException();
         return new PreparationMediaFile(ReadMedia(reader, organizationId), reader.IsDBNull(7) ? null : reader.GetString(7));
     }
 
@@ -149,7 +153,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             media.Add(item);
             total += item.ByteLength;
         }
-        if (total > 25L * 1024 * 1024) throw new PreparationException("too-large", "Selected media must total at most 25 MiB.");
+        if (total > 25L * 1024 * 1024) throw DeskErrors.TooLarge("Selected media must total at most 25 MiB.").ToException();
         var now = time.GetUtcNow();
         if (draftId is null)
         {
@@ -200,7 +204,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
                 break;
             case ReviewAction.Approve:
                 if (draft.RequestedReviewRevision != expectedRevision)
-                    throw new PreparationException("conflict", "Request review for this revision before approving it.");
+                    throw DeskErrors.Conflict("Request review for this revision before approving it.").ToException();
                 if (draft.Approval is null)
                 {
                     var approvalId = Guid.NewGuid();
@@ -215,7 +219,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
                 }
                 break;
             case ReviewAction.Revoke:
-                if (draft.Approval is null) throw new PreparationException("conflict", "This revision has no active approval.");
+                if (draft.Approval is null) throw DeskErrors.Conflict("This revision has no active approval.").ToException();
                 await using (var revoke = Command(connection, transaction,
                     "UPDATE preparation.approvals SET revoked_at=$3,revoked_by=$4,reason=$5 WHERE organization_id=$1 AND id=$2",
                     organizationId, draft.Approval.Id, now, actor, reason))
@@ -252,14 +256,14 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             if (await reader.ReadAsync(token))
             {
                 if (reader.GetString(4) != requestHash)
-                    throw new PreparationException("conflict", "The idempotency key was already used for different content.");
+                    throw DeskErrors.Conflict("The idempotency key was already used for different content.").ToException();
                 // This is an existing prepared copy, not a new export after revocation.
                 return Export(organizationId, reader.GetGuid(0), reader.GetGuid(1), reader.GetInt32(2), reader.GetFieldValue<DateTimeOffset>(3));
             }
         }
         var draft = await ReadDraftAsync(connection, transaction, organizationId, draftId, lockHead: true, token);
         RequireRevision(draft, expectedRevision);
-        if (draft.Approval is null) throw new PreparationException("conflict", "Approve this exact revision before exporting it.");
+        if (draft.Approval is null) throw DeskErrors.Conflict("Approve this exact revision before exporting it.").ToException();
         var media = new List<MediaContent>();
         foreach (var asset in draft.Media)
             media.Add(await ReadMediaContentAsync(connection, transaction, organizationId, asset.Id, token));
@@ -302,7 +306,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             WHERE e.organization_id=$1 AND e.id=$2
             """, organizationId, exportId);
         await using var reader = await command.ExecuteReaderAsync(token);
-        if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The export was not found.");
+        if (!await reader.ReadAsync(token)) throw DeskErrors.NotFound("The export was not found.").ToException();
         return (reader.IsDBNull(0) ? null : reader.GetFieldValue<byte[]>(0), reader.IsDBNull(1) ? null : reader.GetString(1), reader.GetString(2));
     }
 
@@ -315,7 +319,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             await using var head = Command(connection, transaction,
                 "SELECT id FROM preparation.drafts WHERE organization_id=$1 AND id=$2 FOR UPDATE", organizationId, draftId);
             if (await head.ExecuteScalarAsync(token) is null)
-                throw new PreparationException("not-found", "The draft was not found.");
+                throw DeskErrors.NotFound("The draft was not found.").ToException();
         }
         await using var command = Command(connection, transaction,
             """
@@ -327,7 +331,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             WHERE d.organization_id=$1 AND d.id=$2
             """, organizationId, draftId);
         await using var reader = await command.ExecuteReaderAsync(token);
-        if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The draft was not found.");
+        if (!await reader.ReadAsync(token)) throw DeskErrors.NotFound("The draft was not found.").ToException();
         var revision = reader.GetInt32(1);
         int? requested = reader.IsDBNull(2) ? null : reader.GetInt32(2);
         var content = JsonSerializer.Deserialize<DraftContent>(reader.GetString(4), StoredJsonConstants.Default)
@@ -353,7 +357,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
             organizationId, mediaId))
         await using (var reader = await command.ExecuteReaderAsync(token))
         {
-            if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The image was not found.");
+            if (!await reader.ReadAsync(token)) throw DeskErrors.NotFound("The image was not found.").ToException();
             asset = ReadMedia(reader, organizationId);
             bytes = reader.IsDBNull(7) ? null : reader.GetFieldValue<byte[]>(7);
             fileId = reader.IsDBNull(8) ? null : reader.GetString(8);
@@ -368,7 +372,7 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
         await using var command = Command(connection, transaction,
             $"SELECT {MediaColumns} FROM preparation.media m WHERE m.organization_id=$1 AND m.id=$2", organizationId, mediaId);
         await using var reader = await command.ExecuteReaderAsync(token);
-        if (!await reader.ReadAsync(token)) throw new PreparationException("not-found", "The image was not found.");
+        if (!await reader.ReadAsync(token)) throw DeskErrors.NotFound("The image was not found.").ToException();
         return ReadMedia(reader, organizationId);
     }
 
@@ -382,13 +386,13 @@ public sealed partial class PreparationRepository(NpgsqlDataSource dataSource, T
         await using var command = Command(connection, transaction,
             "SELECT 1 FROM preparation.brands WHERE organization_id=$1 AND id=$2", organizationId, brandId);
         if (await command.ExecuteScalarAsync(token) is null)
-            throw new PreparationException("not-found", "The brand was not found.");
+            throw DeskErrors.NotFound("The brand was not found.").ToException();
     }
 
     private static void RequireRevision(Draft draft, int expected)
     {
         if (draft.Revision != expected)
-            throw new PreparationException("conflict", $"The draft changed. Current revision is {draft.Revision}; preserve your work and reload.");
+            throw DeskErrors.Conflict($"The draft changed. Current revision is {draft.Revision}; preserve your work and reload.").ToException();
     }
 
     private static ManualExport Export(Guid organizationId, Guid id, Guid draftId, int revision, DateTimeOffset createdAt) =>

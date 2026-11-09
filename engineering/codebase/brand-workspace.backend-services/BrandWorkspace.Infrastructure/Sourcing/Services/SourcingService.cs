@@ -1,5 +1,12 @@
-using BrandWorkspace.Application.Access;
-using BrandWorkspace.Application.Files;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using BrandWorkspace.Application.Foundation.Errors;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
+using BrandWorkspace.Application.Files.Constants;
+using BrandWorkspace.Application.Files.Models;
+using BrandWorkspace.Application.Files.Services;
+using BrandWorkspace.Application.Files.Repositories;
+using BrandWorkspace.Infrastructure.Files.Services;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Sourcing.Models;
 using BrandWorkspace.Application.Sourcing.Repositories;
@@ -92,7 +99,7 @@ public sealed class SourcingService(
     {
         validation.Page(limit, offset);
         if (supplierId is not null && unassigned)
-            throw new PreparationException("validation", "Filter by a supplier or by the inbox, not both.");
+            throw DeskErrors.Invalid("Filter by a supplier or by the inbox, not both.").ToException();
         return repository.GetMediaAsync(access.OrganizationId, supplierId, unassigned, limit, offset, token);
     }
 
@@ -176,11 +183,11 @@ public sealed class SourcingService(
     }
 
     /// <summary>Refuses a row whose bytes only WoW2 Files holds, in a run without it.</summary>
-    private static PreparationException Unavailable() =>
-        new("unavailable", "This file is stored in WoW2 Files, which this run does not reach.");
+    private static AppException Unavailable() =>
+        DeskErrors.Unavailable("This file is stored in WoW2 Files, which this run does not reach.").ToException();
 
     private static void RequireEditor(OrganizationAccess access)
     {
-        if (!access.CanEdit) throw new PreparationException("forbidden", "An editor or owner role is required.");
+        if (!access.CanEdit) throw DeskErrors.Forbidden("An editor or owner role is required.").ToException();
     }
 }

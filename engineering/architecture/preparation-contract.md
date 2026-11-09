@@ -39,7 +39,9 @@ Desk creates no accounts or organizations; tests use reserved example.test addre
 
 ## HTTP conventions
 
-Success JSON is `{ "data": T }`; errors are ProblemDetails, with `code` where useful. System diagnostics
+Success JSON is `{ "data": T }` on the SDK JSON, which leaves null members out; errors are the SDK's problem details:
+`detail` carries the message and `code` the error kind (`Validation`, `NotFound`, `Conflict`, `Forbidden`, …), and an
+upload over its limit answers 413, an unreachable WoW2 Files 503 and a refusing one 502. System diagnostics
 retain their existing bare JSON contracts. All user/workspace responses use Cache-Control:no-store.
 Mutating inputs are bounded and validated; backend conflicts return 409 and preserve the old state.
 Identifiers are UUID strings except framework Identity user IDs (opaque strings).
@@ -118,12 +120,13 @@ Protected API authority always remains on the server. Keep foundation diagnostic
 
 - Access implementation owns all backend Access namespaces, migration `002-access`, identity/session
   tests, central package/solution changes, and shared host wiring. It exposes
-  `BrandWorkspace.Application.Access.OrganizationAccess` (OrganizationId,UserId,Role,CanEdit,CanApprove)
-  and `BrandWorkspace.Api.Access.OrganizationAccessFilter.GetAccess(HttpContext)`; the filter resolves
-  live membership and puts trusted context on organization route groups.
+  `BrandWorkspace.Application.Access.Models.OrganizationAccess` (OrganizationId,UserId,Role,CanEdit,CanApprove)
+  and `BrandWorkspace.Api.Access.Filters.OrganizationAccessFilter.GetAccess(HttpContext)`; the filter, applied by
+  `[OrganizationAccess]` on each organization-scoped controller, resolves live membership and puts trusted context
+  on the request.
 - Preparation implementation owns backend Preparation namespaces, migration `003-preparation`, and
-  preparation tests. It exposes `AddPreparationServices(IServiceCollection)` and
-  `MapPreparationEndpoints(WebApplication)` for the host owner to call.
+  preparation tests. Its `PreparationController` sends
+  the mediator's commands and queries, whose handlers sit in Infrastructure.
 - Frontend implementation owns the frontend tree only.
 - Root owns deployment, root/project docs, runtime verification, and commits. No agent commits alone.
 

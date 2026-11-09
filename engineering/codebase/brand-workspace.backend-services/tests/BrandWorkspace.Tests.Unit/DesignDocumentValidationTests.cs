@@ -1,3 +1,5 @@
+using BrandWorkspace.Application.Foundation.Constants;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Text.Json;
 using AwesomeAssertions;
 using BrandWorkspace.Application.DesignDocuments.Models;
@@ -28,7 +30,7 @@ public sealed class DesignDocumentValidationTests
     public void ValidateKind_ShouldRejectUnknownKinds(string? kind)
     {
         Action action = () => _validation.ValidateKind(kind);
-        action.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        action.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 
     [Fact]
@@ -58,7 +60,7 @@ public sealed class DesignDocumentValidationTests
     {
         using JsonDocument source = JsonDocument.Parse(json);
         Action action = () => _validation.ValidateInput(new DesignDocumentInput("Title", source.RootElement));
-        action.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        action.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 
     [Theory]
@@ -70,7 +72,7 @@ public sealed class DesignDocumentValidationTests
     {
         JsonElement snapshot = JsonSerializer.SerializeToElement(new { version = 1 });
         Action action = () => _validation.ValidateInput(new DesignDocumentInput(title, snapshot));
-        action.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        action.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 
     [Fact]
@@ -78,20 +80,20 @@ public sealed class DesignDocumentValidationTests
     {
         JsonElement empty = JsonSerializer.SerializeToElement(new { });
         Action longTitle = () => _validation.ValidateInput(new DesignDocumentInput(new string('x', 161), empty));
-        longTitle.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        longTitle.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
         JsonElement longText = JsonSerializer.SerializeToElement(new { text = new string('x', 65537) });
         Action text = () => _validation.ValidateInput(new DesignDocumentInput("Title", longText));
-        text.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        text.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
         JsonElement manyItems = JsonSerializer.SerializeToElement(new { items = new int[2001] });
         Action collection = () => _validation.ValidateInput(new DesignDocumentInput("Title", manyItems));
-        collection.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        collection.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
         string deep = string.Concat(Enumerable.Repeat("{\"n\":", 33)) + "0" + new string('}', 33);
         using JsonDocument nested = JsonDocument.Parse(deep);
         Action depth = () => _validation.ValidateInput(new DesignDocumentInput("Title", nested.RootElement));
-        depth.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        depth.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
         JsonElement large = JsonSerializer.SerializeToElement(new { texts = Enumerable.Repeat(new string('x', 65536), 17) });
         Action total = () => _validation.ValidateInput(new DesignDocumentInput("Title", large));
-        total.Should().Throw<PreparationException>().Which.Code.Should().Be("too-large");
+        total.Should().Throw<AppException>().Which.Error.Metadata![DeskErrorReasons.Key].Should().Be(DeskErrorReasons.TooLarge);
     }
 
     [Theory]
@@ -101,6 +103,6 @@ public sealed class DesignDocumentValidationTests
     public void ValidateRevision_ShouldRejectMissingNegativeAndOverflowingRevisions(int revision)
     {
         Action action = () => _validation.ValidateRevision(revision);
-        action.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        action.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 }

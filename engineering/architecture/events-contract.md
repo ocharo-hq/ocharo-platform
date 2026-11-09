@@ -14,7 +14,8 @@ registers or pays on Ocharo's behalf.
 Placement: a Desk section (`/organizations/{organizationId}/events`), built like
 [Sourcing](sourcing-contract.md). Every rule of the [preparation contract](preparation-contract.md)
 applies: membership filter, organization-scoped queries, composite keys, 404 for foreign rows,
-`X-CSRF-TOKEN` on unsafe requests, `{ data }` envelopes and `PreparationException` problem codes.
+`X-CSRF-TOKEN` on unsafe requests, `{ data }` envelopes on the SDK JSON (null members left out; the types below show them as `null`, which the
+frontend decoders restore) and SDK problem details, whose `code` names the error kind.
 
 ## Record
 

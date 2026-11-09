@@ -1,30 +1,11 @@
+using BrandWorkspace.Application.Foundation.Errors;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Application.Preparation.Models;
 
 namespace BrandWorkspace.Infrastructure.Events.Services;
-
-/// <summary>Unvalidated event fields as an operator or an import bundle sent them; dates are ISO <c>YYYY-MM-DD</c> strings.</summary>
-public sealed record EventFields(
-    string? Title,
-    string? Organizer,
-    string? Scope,
-    string? Format,
-    string? Country,
-    string? City,
-    string? Venue,
-    string? StartsOn,
-    string? EndsOn,
-    string? DatePrecision,
-    string? ApplicationDeadline,
-    string? Participation,
-    string? Cost,
-    string? Website,
-    string? SourceUrl,
-    string? Status,
-    string? Priority,
-    string? Notes);
 
 /// <summary>Normalizes and bounds event fields before they reach organization-scoped persistence.</summary>
 public sealed partial class EventValidationService
@@ -208,7 +189,7 @@ public sealed partial class EventValidationService
         return text;
     }
 
-    private static PreparationException Invalid(string message) => new("validation", message);
+    private static AppException Invalid(string message) => DeskErrors.Invalid(message).ToException();
 
     [GeneratedRegex("^[a-z0-9][a-z0-9-]{0,63}$")]
     private static partial Regex KeyPattern();

@@ -92,7 +92,7 @@ describe('published SDK workspace transport', () => {
   });
 
   it('preserves expectedRevision and export idempotency on the tenant route', async () => {
-    const fetch = vi.fn().mockResolvedValue(Response.json({ code: 'conflict' }, { status: 409 }));
+    const fetch = vi.fn().mockResolvedValue(Response.json({ code: 'Conflict' }, { status: 409 }));
     vi.stubGlobal('fetch', fetch);
     const result = await createWorkspaceApi(() => 'token').createExport(
       'org',

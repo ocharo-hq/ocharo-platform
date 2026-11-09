@@ -1,6 +1,9 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Text.Json;
 using AwesomeAssertions;
-using BrandWorkspace.Application.Commerce;
+using BrandWorkspace.Application.Commerce.Models;
+using BrandWorkspace.Application.Commerce.Repositories;
+using BrandWorkspace.Infrastructure.Commerce.Services;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.Commerce;
 using OcharoBrand.Domain.Brand;
@@ -68,7 +71,7 @@ public sealed class CommerceLocalizationTests
     {
         var product = Product() with { Translations = new Dictionary<string, ProductLocale> { [language] = new("draft", "Title", null, null, null) } };
         Action action = () => CommerceRules.Validate(Snapshot(product));
-        action.Should().Throw<PreparationException>();
+        action.Should().Throw<AppException>();
     }
 
     [Fact]
@@ -92,7 +95,7 @@ public sealed class CommerceLocalizationTests
         if (fault == "reference") product = product with { Document = product.Document with { Media = [product.Document.Media[0] with { Role = "reference" }] } };
         product = product with { MediaGroups = [new("photos", "Photos", fault == "category" ? "other" : "product", fault == "foreign" ? ["another-product"] : fault == "duplicate" ? ["front", "front"] : ["front"])] };
         Action action = () => CommerceRules.Validate(Snapshot(product));
-        action.Should().Throw<PreparationException>();
+        action.Should().Throw<AppException>();
     }
 
     [Fact]
@@ -126,13 +129,13 @@ public sealed class CommerceLocalizationTests
         Action unchanged=()=>CommerceRules.ValidateEditedPrices(Snapshot(legacy),Snapshot(legacy));
         unchanged.Should().NotThrow();
         Action createLegacy=()=>CommerceRules.ValidateEditedPrices(Snapshot(legacy),null);
-        createLegacy.Should().Throw<PreparationException>();
+        createLegacy.Should().Throw<AppException>();
         var fixedPrice=product with {Document=product.Document with {Pricing=new("UZS","draft",[new(1,9,130000),new(10,null,100000)],null)}};
         Action edited=()=>CommerceRules.ValidateEditedPrices(Snapshot(fixedPrice),Snapshot(legacy));
         edited.Should().NotThrow();
         var wrongBounds=fixedPrice with {Document=fixedPrice.Document with {Pricing=fixedPrice.Document.Pricing! with {Tiers=[new(1,1,130000),new(10,null,100000)]}}};
         Action wrong=()=>CommerceRules.ValidateEditedPrices(Snapshot(wrongBounds),Snapshot(legacy));
-        wrong.Should().Throw<PreparationException>();
+        wrong.Should().Throw<AppException>();
     }
     [Fact]
     public void IncompleteFixedPrices_SaveOnlyAsDraft_AndNeverAppearAsPublicPrices()
@@ -146,7 +149,7 @@ public sealed class CommerceLocalizationTests
         view.GetProperty("price").ValueKind.Should().Be(JsonValueKind.Null);
         var confirmed=incomplete with {Document=incomplete.Document with {Pricing=incomplete.Document.Pricing! with {Status="confirmed"}}};
         Action confirmIncomplete=()=>CommerceRules.ValidateEditedPrices(Snapshot(confirmed),Snapshot(incomplete));
-        confirmIncomplete.Should().Throw<PreparationException>().WithMessage("*positive UZS amounts for both price tiers*");
+        confirmIncomplete.Should().Throw<AppException>().WithMessage("*positive UZS amounts for both price tiers*");
         var complete=confirmed with {Document=confirmed.Document with {Pricing=confirmed.Document.Pricing! with {Tiers=[new(1,9,130000),new(10,null,100000)]}}};
         Action confirmComplete=()=>CommerceRules.ValidateEditedPrices(Snapshot(complete),Snapshot(incomplete));
         confirmComplete.Should().NotThrow();

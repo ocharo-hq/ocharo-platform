@@ -141,11 +141,11 @@ catalogue activity or archiving a design does not silently replace an earlier pu
 | Concern | Implementation |
 |---|---|
 | Document and summary models | [DesignDocumentSummary.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Domain/DesignDocuments/Models/DesignDocumentSummary.cs) |
-| Metadata and references | [CatalogueDefinition.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Application/Commerce/CatalogueDefinition.cs) |
-| Preparation and selected artifacts | [CatalogueEditionBuilder.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Infrastructure/Commerce/CatalogueEditionBuilder.cs) |
-| Web settings and approved image selection | [CatalogueWebSettings.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Application/Commerce/CatalogueWebSettings.cs) |
-| Pricing and publication eligibility | [CommerceRules.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Application/Commerce/CommerceRules.cs) |
-| Public response | [PublicProjection.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Application/Commerce/PublicProjection.cs) |
+| Metadata and references | [CatalogueDefinition.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Infrastructure/Commerce/Services/CatalogueDefinition.cs) |
+| Preparation and selected artifacts | [CatalogueEditionBuilder.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Infrastructure/Commerce/Services/CatalogueEditionBuilder.cs) |
+| Web settings and approved image selection | [CatalogueWebSettings.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Infrastructure/Commerce/Services/CatalogueWebSettings.cs) |
+| Pricing and publication eligibility | [CommerceRules.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Infrastructure/Commerce/Services/CommerceRules.cs) |
+| Public response | [PublicProjection.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Infrastructure/Commerce/Services/PublicProjection.cs) |
 | Gallery and separate designers | [CatalogueGalleryPage.vue](../codebase/brand-workspace.frontend-services/apps/web/src/presentation/workspace/CatalogueGalleryPage.vue), [CatalogueWorkspacePage.vue](../codebase/brand-workspace.frontend-services/apps/web/src/presentation/workspace/CatalogueWorkspacePage.vue) |
 | Canonical navigation | [EditorNavigation.ts](../codebase/brand-workspace.frontend-services/apps/web/src/domain/workspace/EditorNavigation.ts) |
 | Retained pilot bridge | [OcharoApps.ts](../codebase/ocharo-catalogue.frontend-services/apps/web/src/domain/shared/OcharoApps.ts), [CatalogueDeskEntry.vue](../codebase/ocharo-catalogue.frontend-services/apps/web/src/presentation/common/CatalogueDeskEntry.vue) |

@@ -23,11 +23,11 @@ export interface UploadItem {
 export interface UploadTarget { supplierId: string | null; capture: MediaCapture }
 export interface PickerRejection { file: File; reason: string }
 
-/** @internal Server titles of 4xx problems are bounded application messages; others stay hidden. */
+/** @internal Server details of 4xx problems are bounded application messages; others stay hidden. */
 function problemDetail(failure: ApiFailure): string | null {
-  const title = failure.problem?.title;
+  const detail = failure.problem?.detail;
   return failure.status >= 400 && failure.status < 500 && failure.status !== 401 && failure.status !== 403 &&
-    typeof title === 'string' && title.trim() ? title.trim().slice(0, 300) : null;
+    typeof detail === 'string' && detail.trim() ? detail.trim().slice(0, 300) : null;
 }
 function uploadFailure(failure: ApiFailure): string {
   if (failure.status === 413) return 'This file is larger than the limit for its type.';

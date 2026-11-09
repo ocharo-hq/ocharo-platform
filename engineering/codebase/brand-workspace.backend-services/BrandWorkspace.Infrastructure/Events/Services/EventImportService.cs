@@ -1,6 +1,9 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using BrandWorkspace.Application.Foundation.Errors;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
@@ -21,7 +24,7 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
     public async Task<EventImportReport> ImportAsync(
         OrganizationAccess access, string bundlePath, bool dryRun, CancellationToken token)
     {
-        if (!access.CanEdit) throw new PreparationException("forbidden", "An editor or owner role is required.");
+        if (!access.CanEdit) throw DeskErrors.Forbidden("An editor or owner role is required.").ToException();
         PlannedBundle plan = await ReadAsync(bundlePath, token);
         var report = new EventImportReport(dryRun, plan.Source);
         foreach (PlannedEvent planned in plan.Events)
@@ -38,7 +41,7 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
                     await repository.CreateEventAsync(access.OrganizationId, access.UserId, planned.Key, planned.Input, token);
                 report.Created++;
             }
-            catch (PreparationException exception)
+            catch (AppException exception)
             {
                 report.Failures.Add(new EventImportFailure(planned.Reference, exception.Message));
             }
@@ -50,8 +53,8 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
     private async Task<PlannedBundle> ReadAsync(string bundlePath, CancellationToken token)
     {
         var file = new FileInfo(bundlePath);
-        if (!file.Exists) throw new PreparationException("validation", "The bundle file was not found.");
-        if (file.Length > MaximumBundleBytes) throw new PreparationException("too-large", "The bundle exceeds 16 MiB.");
+        if (!file.Exists) throw DeskErrors.Invalid("The bundle file was not found.").ToException();
+        if (file.Length > MaximumBundleBytes) throw DeskErrors.TooLarge("The bundle exceeds 16 MiB.").ToException();
         BundleDocument? document;
         try
         {
@@ -60,12 +63,12 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
         }
         catch (JsonException exception)
         {
-            throw new PreparationException("validation", "The bundle is not valid JSON: " + exception.Message);
+            throw DeskErrors.Invalid("The bundle is not valid JSON: " + exception.Message).ToException();
         }
         if (document is null || document.Format != Format)
-            throw new PreparationException("validation", $"The bundle format must be {Format}.");
+            throw DeskErrors.Invalid($"The bundle format must be {Format}.").ToException();
         if (document.Events is null)
-            throw new PreparationException("validation", "The bundle must contain an events array; nothing was imported.");
+            throw DeskErrors.Invalid("The bundle must contain an events array; nothing was imported.").ToException();
         var errors = new List<string>();
         var events = new List<PlannedEvent>();
         var keys = new HashSet<string>(StringComparer.Ordinal);
@@ -75,20 +78,20 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
             string reference = $"events[{index}] {item?.Key}".TrimEnd();
             try
             {
-                if (item is null) throw new PreparationException("validation", "Each event must be an object.");
-                string key = validation.Key(item.Key) ?? throw new PreparationException("validation", "An event key is required.");
-                if (!keys.Add(key)) throw new PreparationException("validation", $"Event key '{key}' is repeated.");
+                if (item is null) throw DeskErrors.Invalid("Each event must be an object.").ToException();
+                string key = validation.Key(item.Key) ?? throw DeskErrors.Invalid("An event key is required.").ToException();
+                if (!keys.Add(key)) throw DeskErrors.Invalid($"Event key '{key}' is repeated.").ToException();
                 ShowcaseEventInput input = validation.Event(new EventFields(
                     item.Title, item.Organizer, item.Scope, item.Format, item.Country, item.City, item.Venue, item.StartsOn,
                     item.EndsOn, item.DatePrecision, item.ApplicationDeadline, item.Participation, item.Cost, item.Website,
                     item.SourceUrl, item.Status, item.Priority, item.Notes), EventValidationService.ImportedStatus);
                 events.Add(new PlannedEvent(reference, key, input));
             }
-            catch (PreparationException exception) { errors.Add($"{reference}: {exception.Message}"); }
+            catch (AppException exception) { errors.Add($"{reference}: {exception.Message}"); }
         }
         if (errors.Count > 0)
-            throw new PreparationException("validation", "The bundle is invalid; nothing was imported." + Environment.NewLine
-                + string.Join(Environment.NewLine, errors.Take(50)));
+            throw DeskErrors.Invalid("The bundle is invalid; nothing was imported." + Environment.NewLine
+                + string.Join(Environment.NewLine, errors.Take(50))).ToException();
         return new PlannedBundle(document.Source, events);
     }
 
@@ -101,16 +104,3 @@ public sealed class EventImportService(IEventRepository repository, EventValidat
         string? StartsOn, string? EndsOn, string? DatePrecision, string? ApplicationDeadline, string? Participation, string? Cost,
         string? Website, string? SourceUrl, string? Status, string? Priority, string? Notes);
 }
-
-/// <summary>Counts what an import created or found already present, and the events it could not store.</summary>
-public sealed class EventImportReport(bool dryRun, string? source)
-{
-    public bool DryRun { get; } = dryRun;
-    public string? Source { get; } = source;
-    public int Created { get; set; }
-    public int Existing { get; set; }
-    public List<EventImportFailure> Failures { get; } = [];
-}
-
-/// <summary>One bundle event that was not stored, with the reason.</summary>
-public sealed record EventImportFailure(string Item, string Reason);

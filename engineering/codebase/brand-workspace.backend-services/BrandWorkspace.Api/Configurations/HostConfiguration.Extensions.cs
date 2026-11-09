@@ -1,10 +1,16 @@
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
-using BrandWorkspace.Api.MediaProcessing;
-using BrandWorkspace.Api.Commerce;
-using BrandWorkspace.Api.DesignDocuments;
 using BrandWorkspace.Api.Access;
+using BrandWorkspace.Api.Foundation.Mappers;
+using BrandWorkspace.Api.MediaProcessing.Constants;
+using BrandWorkspace.Application.Commerce.Services;
+using BrandWorkspace.Infrastructure;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using WoW.Two.Sdk.Beta.Be.Mediator;
+using WoW.Two.Sdk.Beta.Be.Mediator.Logging;
+using WoW.Two.Sdk.Beta.Be.Web.ErrorMapping;
+using WoW.Two.Sdk.Beta.Be.Web.Json;
 using BrandWorkspace.Api.Foundation;
 using BrandWorkspace.Infrastructure.Preparation.Services;
 using BrandWorkspace.Application.Preparation.Repositories;
@@ -13,23 +19,25 @@ using BrandWorkspace.Persistence.Preparation.Repositories;
 using BrandWorkspace.Application.DesignDocuments.Repositories;
 using BrandWorkspace.Infrastructure.DesignDocuments.Services;
 using BrandWorkspace.Persistence.DesignDocuments.Repositories;
-using BrandWorkspace.Application.Commerce;
-using BrandWorkspace.Infrastructure.Commerce;
-using BrandWorkspace.Persistence.Commerce;
-using BrandWorkspace.Api.Sourcing;
+using BrandWorkspace.Application.Commerce.Models;
+using BrandWorkspace.Application.Commerce.Repositories;
+using BrandWorkspace.Infrastructure.Commerce.Services;
+using BrandWorkspace.Persistence.Commerce.Repositories;
+using BrandWorkspace.Persistence.Commerce.Serializers;
 using BrandWorkspace.Application.Sourcing.Repositories;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
 using BrandWorkspace.Persistence.Sourcing.Repositories;
-using BrandWorkspace.Api.Events;
 using BrandWorkspace.Api.RuntimeConfig.Settings;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Infrastructure.Events.Services;
 using BrandWorkspace.Persistence.Events.Repositories;
 using WoW.Two.Sdk.Beta.Be.Media.Images;
 using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
-using BrandWorkspace.Api.Preparation;
-using BrandWorkspace.Application.Access;
-using BrandWorkspace.Persistence.Access;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
+using BrandWorkspace.Persistence.Access.DataContexts;
+using BrandWorkspace.Persistence.Access.Models;
+using BrandWorkspace.Persistence.Access.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -46,12 +54,15 @@ using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using Npgsql;
 using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
 using WoW.Two.Sdk.Beta.Be.Data.Migrations.Bespoke;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 using WoW.Two.Sdk.Beta.Be.Files.Client;
-using BrandWorkspace.Application.Files;
-using BrandWorkspace.Application.Preparation.Models;
-using BrandWorkspace.Infrastructure.Files;
-using BrandWorkspace.Persistence.Files;
+using BrandWorkspace.Application.Files.Constants;
+using BrandWorkspace.Application.Files.Models;
+using BrandWorkspace.Application.Files.Services;
+using BrandWorkspace.Application.Files.Repositories;
+using BrandWorkspace.Infrastructure.Files.Services;
+using BrandWorkspace.Persistence.Files.Repositories;
 using WoW.Two.Sdk.Beta.Be.Meta;
 using WoW.Two.Sdk.Beta.Be.Web.DataProtection;
 
@@ -149,7 +160,6 @@ public static partial class HostConfiguration
         builder.Services.AddIdentityCore<AccessUser>(options => options.User.RequireUniqueEmail = true)
             .AddEntityFrameworkStores<AccessDbContext>();
         builder.Services.AddSingleton<IAccessRepository, AccessRepository>();
-        builder.Services.AddScoped<OrganizationAccessFilter>();
         builder.Services.AddIdentityBff();
         // The BFF keeps sign-in sessions in IDistributedCache: a table in Desk's own database, so a restart or deploy
         // keeps everyone signed in; its `distributed_cache` set migrates beside Desk's own.
@@ -256,7 +266,7 @@ public static partial class HostConfiguration
         {
             await scope.ServiceProvider.GetRequiredService<DeskFilesBackfill>().RunAsync(limit.Token);
         }
-        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or InvalidOperationException or PreparationException)
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or InvalidOperationException or AppException)
         {
             app.Logger.LogWarning(exception, "Desk's file ids stay unfilled: WoW2 Files could not be reached at boot.");
         }
@@ -285,6 +295,7 @@ public static partial class HostConfiguration
     /// <summary>Registers commerce persistence and preserved source adoption.</summary>
     private static WebApplicationBuilder AddCommerce(this WebApplicationBuilder builder)
     {
+        builder.Services.AddSingleton<ICommerceRules, CommerceRuleSet>();
         builder.Services.AddSingleton<ICommerceRepository, CommerceRepository>();
         builder.Services.AddSingleton<LegacyCommerceReader>();
         builder.Services.AddScoped<CommerceMediaFiles>();
@@ -328,8 +339,8 @@ public static partial class HostConfiguration
             options.AllowPrivateNetworkHttp = true;
         });
         // The bearer scheme alone, so Desk's BFF cookie never opens these routes.
-        builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingEndpoints.Policy, policy => policy
-            .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme).RequireScope(MediaProcessingEndpoints.Scope));
+        builder.Services.AddAuthorizationBuilder().AddPolicy(MediaProcessingPolicy.Name, policy => policy
+            .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme).RequireScope(MediaProcessingPolicy.Scope));
         return builder;
     }
 
@@ -341,7 +352,16 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Maps the controllers — runtime config and system status — and warns once about any runtime-config address left out.</summary>
+    /// <summary>Maps the Identity session routes, and the revocation signals route when <c>Identity:Resource:SignalUrl</c> is set.</summary>
+    private static WebApplication MapIdentityRoutes(this WebApplication app)
+    {
+        app.MapIdentityBffEndpoints();
+        if (!string.IsNullOrEmpty(app.Configuration[$"{IdentityResourceSettings.SectionName}:{nameof(IdentityResourceSettings.SignalUrl)}"]))
+            app.MapIdentitySignals(IdentityResourceSettings.SignalPath);
+        return app;
+    }
+
+    /// <summary>Maps the controllers and warns once about any runtime-config address left out.</summary>
     private static WebApplication MapControllerEndpoints(this WebApplication app)
     {
         var rejected = app.Services.GetRequiredService<OcharoAppsSettings>().RejectedSettings();
@@ -351,18 +371,30 @@ public static partial class HostConfiguration
         return app;
     }
 
-    /// <summary>Registers the HTTP surface: JSON errors and the controllers.</summary>
+    /// <summary>Registers the mediator over the handler-bearing assembly: exception-to-result outermost, then logging.</summary>
+    private static WebApplicationBuilder AddMediator(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddMediator(typeof(InfrastructureAssembly).Assembly);
+        builder.Services.AddMediatorLoggingInterceptor();
+        return builder;
+    }
+
+    /// <summary>Registers the HTTP surface: problem details with Desk's status mapping, and the controllers on the SDK wire
+    /// contract.</summary>
+    /// <remarks>A missing body member binds as null, as before, for the handlers to refuse with their own message.</remarks>
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpProblemDetails();
-        builder.Services.AddControllers();
+        builder.Services.Replace(ServiceDescriptor.Singleton<IErrorHttpStatusCodeMapper, DeskErrorHttpStatusCodeMapper>());
+        builder.Services.AddControllersWithSdkJson()
+            .AddMvcOptions(options => options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
         return builder;
     }
 
     /// <summary>Configures the HTTP pipeline: Desk's JSON errors, then the SDK's (forwarded headers, secure headers, compression,
     /// the SPA bundle, <c>/health</c> and the SPA fallback, whose unknown <c>/api</c> paths answer a JSON 404), with Desk's
     /// sign-in in its identity slot after routing. Public brand routes stay embeddable cross-origin
-    /// (<see cref="CommerceEndpoints"/>).</summary>
+    /// (<see cref="Commerce.Controllers.PublicBrandsController"/>).</summary>
     private static WebApplication UseHttpSurface(this WebApplication app)
     {
         app.UseHttpProblemDetails();

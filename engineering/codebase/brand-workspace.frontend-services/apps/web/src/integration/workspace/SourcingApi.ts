@@ -1,6 +1,7 @@
 import { createApiClient, ApiFailureFactory, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
 import type { SessionTransport } from './WorkspaceApi';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
+import { eachWithNulls, memberWithNulls, withNulls } from '@/integration/shared/WireNulls';
 
 import {
   isContactChannel, isMediaCapture, isSupplierStage,
@@ -16,8 +17,12 @@ const nullableStrings = (v: Record<string, unknown>, keys: string[]) => keys.eve
 const count = (v: unknown) => Number.isSafeInteger(v) && Number(v) >= 0;
 const revision = (v: unknown) => Number.isSafeInteger(v) && Number(v) > 0;
 const nullableNumber = (v: unknown) => v === null || (typeof v === 'number' && Number.isFinite(v));
-function decode<T>(guard: (v: unknown) => v is T): ApiDecoder<T> {
-  return value => guard(value) ? ResultExtensions.ok(value) : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
+/** @internal Restores the null members the wire leaves out, then checks the result. */
+function decode<T>(guard: (v: unknown) => v is T, normalize: (v: unknown) => unknown = v => v): ApiDecoder<T> {
+  return value => {
+    const normalized = normalize(value);
+    return guard(normalized) ? ResultExtensions.ok(normalized) : ResultExtensions.fail(ApiFailureFactory.create('protocol'));
+  };
 }
 const list = <T>(guard: (v: unknown) => v is T) => (v: unknown): v is T[] => Array.isArray(v) && v.every(guard);
 
@@ -44,6 +49,15 @@ const isUpload = (v: unknown): v is SourcingUploadResult => record(v) && isSourc
 const isDeleted = (v: unknown): v is { id: string } => record(v) && typeof v.id === 'string';
 const isAssigned = (v: unknown): v is { updated: number } => record(v) && count(v.updated);
 
+/** @internal The members of each record the wire leaves out when null. */
+const supplierSummary = (v: unknown) => withNulls(v, ['key', 'country', 'city', 'coverMediaId', 'primaryRoute']);
+const person = (v: unknown) => withNulls(v, ['role']);
+const route = (v: unknown) => withNulls(v, ['personId', 'label', 'sourceUrl']);
+const supplier = (v: unknown) => memberWithNulls(memberWithNulls(withNulls(v, ['key', 'country', 'city', 'website']),
+  'people', people => eachWithNulls(people, person)), 'routes', routes => eachWithNulls(routes, route));
+const media = (v: unknown) => withNulls(v, ['supplierId', 'width', 'height', 'sourceLabel', 'sourceMessageId', 'receivedAt', 'takenAt']);
+const upload = (v: unknown) => memberWithNulls(v, 'media', media);
+
 export interface UploadOptions { supplierId: string | null; capture: MediaCapture; caption: string }
 
 /** Creates the Sourcing transport. It records outreach only; nothing here contacts a supplier. */
@@ -59,24 +73,24 @@ export function createSourcingApi(csrf: () => string, session: SessionTransport 
       if (filter.stage) query.set('stage', filter.stage);
       query.set('limit', String(filter.limit));
       query.set('offset', String(filter.offset));
-      return client.get(`${base(o)}/suppliers?${query}`, { signal, decode: decode(list(isSupplierSummary)) });
+      return client.get(`${base(o)}/suppliers?${query}`, { signal, decode: decode(list(isSupplierSummary), v => eachWithNulls(v, supplierSummary)) });
     },
     createSupplier: (o: string, input: SupplierInput, signal: AbortSignal) =>
-      client.post(`${base(o)}/suppliers`, { ...write(signal), body: input, decode: decode(isSupplier) }),
+      client.post(`${base(o)}/suppliers`, { ...write(signal), body: input, decode: decode(isSupplier, supplier) }),
     getSupplier: (o: string, supplierId: string, signal: AbortSignal) =>
-      client.get(`${base(o)}/suppliers/${id(supplierId)}`, { signal, decode: decode(isSupplier) }),
+      client.get(`${base(o)}/suppliers/${id(supplierId)}`, { signal, decode: decode(isSupplier, supplier) }),
     updateSupplier: (o: string, supplierId: string, expectedRevision: number, input: SupplierInput, signal: AbortSignal) =>
-      client.put(`${base(o)}/suppliers/${id(supplierId)}`, { ...write(signal), body: { expectedRevision, ...input }, decode: decode(isSupplier) }),
+      client.put(`${base(o)}/suppliers/${id(supplierId)}`, { ...write(signal), body: { expectedRevision, ...input }, decode: decode(isSupplier, supplier) }),
     createPerson: (o: string, supplierId: string, input: PersonInput, signal: AbortSignal) =>
-      client.post(`${base(o)}/suppliers/${id(supplierId)}/people`, { ...write(signal), body: input, decode: decode(isSupplierPerson) }),
+      client.post(`${base(o)}/suppliers/${id(supplierId)}/people`, { ...write(signal), body: input, decode: decode(isSupplierPerson, person) }),
     updatePerson: (o: string, personId: string, expectedRevision: number, input: PersonInput, signal: AbortSignal) =>
-      client.put(`${base(o)}/people/${id(personId)}`, { ...write(signal), body: { expectedRevision, ...input }, decode: decode(isSupplierPerson) }),
+      client.put(`${base(o)}/people/${id(personId)}`, { ...write(signal), body: { expectedRevision, ...input }, decode: decode(isSupplierPerson, person) }),
     deletePerson: (o: string, personId: string, expectedRevision: number, signal: AbortSignal) =>
       client.delete(`${base(o)}/people/${id(personId)}?expectedRevision=${expectedRevision}`, { ...write(signal), decode: decode(isDeleted) }),
     createRoute: (o: string, supplierId: string, input: RouteInput, signal: AbortSignal) =>
-      client.post(`${base(o)}/suppliers/${id(supplierId)}/routes`, { ...write(signal), body: input, decode: decode(isContactRoute) }),
+      client.post(`${base(o)}/suppliers/${id(supplierId)}/routes`, { ...write(signal), body: input, decode: decode(isContactRoute, route) }),
     updateRoute: (o: string, routeId: string, expectedRevision: number, input: RouteInput, signal: AbortSignal) =>
-      client.put(`${base(o)}/routes/${id(routeId)}`, { ...write(signal), body: { expectedRevision, ...input }, decode: decode(isContactRoute) }),
+      client.put(`${base(o)}/routes/${id(routeId)}`, { ...write(signal), body: { expectedRevision, ...input }, decode: decode(isContactRoute, route) }),
     deleteRoute: (o: string, routeId: string, expectedRevision: number, signal: AbortSignal) =>
       client.delete(`${base(o)}/routes/${id(routeId)}?expectedRevision=${expectedRevision}`, { ...write(signal), decode: decode(isDeleted) }),
     listMedia: (o: string, filter: MediaFilter, page: { limit: number; offset: number }, signal: AbortSignal) => {
@@ -85,7 +99,7 @@ export function createSourcingApi(csrf: () => string, session: SessionTransport 
       else if (filter.kind === 'inbox') query.set('unassigned', 'true');
       query.set('limit', String(page.limit));
       query.set('offset', String(page.offset));
-      return client.get(`${base(o)}/media?${query}`, { signal, decode: decode(list(isSourcingMedia)) });
+      return client.get(`${base(o)}/media?${query}`, { signal, decode: decode(list(isSourcingMedia), v => eachWithNulls(v, media)) });
     },
     mediaSummary: (o: string, signal: AbortSignal) => client.get(`${base(o)}/media/summary`, { signal, decode: decode(isSummary) }),
     uploadMedia: (o: string, file: File, options: UploadOptions, signal: AbortSignal) => {
@@ -94,10 +108,10 @@ export function createSourcingApi(csrf: () => string, session: SessionTransport 
       if (options.supplierId) body.append('supplierId', options.supplierId);
       body.append('capture', options.capture);
       if (options.caption) body.append('caption', options.caption);
-      return client.post(`${base(o)}/media`, { ...write(signal), body, decode: decode(isUpload) });
+      return client.post(`${base(o)}/media`, { ...write(signal), body, decode: decode(isUpload, upload) });
     },
     updateMedia: (o: string, mediaId: string, expectedRevision: number, input: MediaUpdateInput, signal: AbortSignal) =>
-      client.put(`${base(o)}/media/${id(mediaId)}`, { ...write(signal), body: { expectedRevision, ...input }, decode: decode(isSourcingMedia) }),
+      client.put(`${base(o)}/media/${id(mediaId)}`, { ...write(signal), body: { expectedRevision, ...input }, decode: decode(isSourcingMedia, media) }),
     assignMedia: (o: string, mediaIds: string[], supplierId: string | null, signal: AbortSignal) =>
       client.post(`${base(o)}/media/assign`, { ...write(signal), body: { mediaIds, supplierId }, decode: decode(isAssigned) }),
     deleteMedia: (o: string, mediaId: string, expectedRevision: number, signal: AbortSignal) =>

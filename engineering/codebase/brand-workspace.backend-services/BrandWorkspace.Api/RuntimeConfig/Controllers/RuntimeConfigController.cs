@@ -1,3 +1,4 @@
+using BrandWorkspace.Api.RuntimeConfig.Models;
 using BrandWorkspace.Api.RuntimeConfig.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ public sealed class RuntimeConfigController(OcharoAppsSettings apps) : Controlle
     /// <summary>Gets the public runtime settings.</summary>
     [HttpGet]
     [AllowAnonymous]
-    public ActionResult<IReadOnlyDictionary<string, string>> Get()
+    public ActionResult<RuntimeConfigDto> Get()
     {
         Response.Headers.CacheControl = "no-store";
         return Ok(apps.ToRuntimeConfig());

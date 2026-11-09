@@ -1,3 +1,5 @@
+using BrandWorkspace.Application.Sourcing.Models;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -5,7 +7,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
-using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,7 +38,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         created.GetProperty("name").GetString().Should().Be("Sun Woollen Industries");
         created.GetProperty("country").GetString().Should().Be("IN");
         created.GetProperty("revision").GetInt32().Should().Be(1);
-        created.GetProperty("key").ValueKind.Should().Be(JsonValueKind.Null);
+        created.TryGetProperty("key", out _).Should().BeFalse();
         await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Kashmir Weaves", stage = "quoted" }));
 
         JsonElement updated = await DataAsync(await client.PutAsJsonAsync($"{path}/suppliers/{id}", new
@@ -44,13 +47,13 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
             website = (string?)null, notes = ""
         }));
         updated.GetProperty("revision").GetInt32().Should().Be(2);
-        updated.GetProperty("website").ValueKind.Should().Be(JsonValueKind.Null);
+        updated.TryGetProperty("website", out _).Should().BeFalse();
 
         using HttpResponseMessage stale = await client.PutAsJsonAsync($"{path}/suppliers/{id}", new
         {
             expectedRevision = 1, name = "Stale", stage = "lead"
         });
-        await ProblemAsync(stale, HttpStatusCode.Conflict, "conflict");
+        await ProblemAsync(stale, HttpStatusCode.Conflict, "Conflict");
 
         JsonElement byCity = await DataAsync(await client.GetAsync($"{path}/suppliers?query=ludh"));
         byCity.EnumerateArray().Select(item => item.GetProperty("id").GetGuid()).Should().Equal(id);
@@ -59,10 +62,10 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         JsonElement wildcard = await DataAsync(await client.GetAsync($"{path}/suppliers?query=%25"));
         wildcard.GetArrayLength().Should().Be(0);
 
-        await ProblemAsync(await client.GetAsync($"{path}/suppliers?stage=signed"), HttpStatusCode.BadRequest, "validation");
-        await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = " " }), HttpStatusCode.BadRequest, "validation");
+        await ProblemAsync(await client.GetAsync($"{path}/suppliers?stage=signed"), HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = " " }), HttpStatusCode.BadRequest, "Validation");
         await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers", new { name = "Bad site", website = "javascript:alert(1)" }),
-            HttpStatusCode.BadRequest, "validation");
+            HttpStatusCode.BadRequest, "Validation");
     }
 
     [Fact]
@@ -98,27 +101,27 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         whatsappRevision.Should().Be(2);
 
         await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new { channel = "email", destination = "sales@example.test" }),
-            HttpStatusCode.Conflict, "conflict");
+            HttpStatusCode.Conflict, "Conflict");
         await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new
         {
             channel = "phone", destination = "+910000000002", personId = foreignPerson
-        }), HttpStatusCode.BadRequest, "validation");
+        }), HttpStatusCode.BadRequest, "Validation");
         await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new { channel = "website", destination = "not a url" }),
-            HttpStatusCode.BadRequest, "validation");
+            HttpStatusCode.BadRequest, "Validation");
         await ProblemAsync(await client.PostAsJsonAsync($"{path}/suppliers/{supplier}/routes", new { channel = "pigeon", destination = "x" }),
-            HttpStatusCode.BadRequest, "validation");
+            HttpStatusCode.BadRequest, "Validation");
 
         // The same destination may serve another supplier (a shared route).
         await DataAsync(await client.PostAsJsonAsync($"{path}/suppliers/{other}/routes", new { channel = "whatsapp", destination = "+910000000001" }));
 
         using HttpResponseMessage staleDelete = await client.DeleteAsync($"{path}/people/{personId}?expectedRevision=9");
-        await ProblemAsync(staleDelete, HttpStatusCode.Conflict, "conflict");
+        await ProblemAsync(staleDelete, HttpStatusCode.Conflict, "Conflict");
         await DataAsync(await client.DeleteAsync($"{path}/people/{personId}?expectedRevision=1"));
         JsonElement afterRemoval = await DataAsync(await client.GetAsync($"{path}/suppliers/{supplier}"));
         afterRemoval.GetProperty("people").GetArrayLength().Should().Be(0);
         JsonElement keptRoute = afterRemoval.GetProperty("routes").EnumerateArray()
             .Single(route => route.GetProperty("channel").GetString() == "whatsapp");
-        keptRoute.GetProperty("personId").ValueKind.Should().Be(JsonValueKind.Null);
+        keptRoute.TryGetProperty("personId", out _).Should().BeFalse();
         keptRoute.GetProperty("revision").GetInt32().Should().Be(3);
 
         Guid emailId = email.GetProperty("id").GetGuid();
@@ -137,15 +140,15 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
             .GetProperty("id").GetGuid();
 
         (await strangerClient.GetAsync($"{Path(owner)}/suppliers")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        await ProblemAsync(await strangerClient.GetAsync($"{Path(stranger)}/suppliers/{supplier}"), HttpStatusCode.NotFound, "not-found");
+        await ProblemAsync(await strangerClient.GetAsync($"{Path(stranger)}/suppliers/{supplier}"), HttpStatusCode.NotFound, "NotFound");
         (await DataAsync(await strangerClient.GetAsync($"{Path(stranger)}/suppliers"))).GetArrayLength().Should().Be(0);
         await ProblemAsync(await strangerClient.PostAsync($"{Path(stranger)}/media/assign",
-            JsonContent.Create(new { mediaIds = new[] { Guid.NewGuid() }, supplierId = supplier })), HttpStatusCode.BadRequest, "validation");
+            JsonContent.Create(new { mediaIds = new[] { Guid.NewGuid() }, supplierId = supplier })), HttpStatusCode.BadRequest, "Validation");
 
         await fixture.SetRoleAsync(owner, "viewer");
         (await DataAsync(await client.GetAsync($"{Path(owner)}/suppliers/{supplier}"))).GetProperty("name").GetString().Should().Be("Private");
-        await ProblemAsync(await client.PostAsJsonAsync($"{Path(owner)}/suppliers", new { name = "Blocked" }), HttpStatusCode.Forbidden, "forbidden");
-        await ProblemAsync(await UploadAsync(client, owner, Png(SKColors.Red), "red.png"), HttpStatusCode.Forbidden, "forbidden");
+        await ProblemAsync(await client.PostAsJsonAsync($"{Path(owner)}/suppliers", new { name = "Blocked" }), HttpStatusCode.Forbidden, "Forbidden");
+        await ProblemAsync(await UploadAsync(client, owner, Png(SKColors.Red), "red.png"), HttpStatusCode.Forbidden, "Forbidden");
     }
 
     [Fact]
@@ -161,7 +164,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         JsonElement media = first.GetProperty("media");
         Guid mediaId = media.GetProperty("id").GetGuid();
         first.GetProperty("duplicate").GetBoolean().Should().BeFalse();
-        media.GetProperty("supplierId").ValueKind.Should().Be(JsonValueKind.Null);
+        media.TryGetProperty("supplierId", out _).Should().BeFalse();
         media.GetProperty("sha256").GetString().Should().Be(Convert.ToHexStringLower(SHA256.HashData(png)));
         media.GetProperty("contentType").GetString().Should().Be("image/png");
         media.GetProperty("width").GetInt32().Should().Be(900);
@@ -174,7 +177,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         JsonElement again = await DataAsync(await UploadAsync(client, owner, png, "same.png", supplier));
         again.GetProperty("duplicate").GetBoolean().Should().BeTrue();
         again.GetProperty("media").GetProperty("id").GetGuid().Should().Be(mediaId);
-        again.GetProperty("media").GetProperty("supplierId").ValueKind.Should().Be(JsonValueKind.Null);
+        again.GetProperty("media").TryGetProperty("supplierId", out _).Should().BeFalse();
 
         using HttpResponseMessage original = await client.GetAsync($"{path}/media/{mediaId}/content");
         original.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -204,12 +207,12 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         captioned.GetProperty("revision").GetInt32().Should().Be(3);
         captioned.GetProperty("capture").GetString().Should().Be("screenshot");
         await ProblemAsync(await client.PutAsJsonAsync($"{path}/media/{mediaId}", new { expectedRevision = 2, supplierId = supplier, capture = "original", caption = "" }),
-            HttpStatusCode.Conflict, "conflict");
+            HttpStatusCode.Conflict, "Conflict");
         await ProblemAsync(await client.PutAsJsonAsync($"{path}/media/{mediaId}", new { expectedRevision = 3, supplierId = Guid.NewGuid(), capture = "original", caption = "" }),
-            HttpStatusCode.BadRequest, "validation");
+            HttpStatusCode.BadRequest, "Validation");
 
         await DataAsync(await client.DeleteAsync($"{path}/media/{mediaId}?expectedRevision=3"));
-        await ProblemAsync(await client.GetAsync($"{path}/media/{mediaId}/content"), HttpStatusCode.NotFound, "not-found");
+        await ProblemAsync(await client.GetAsync($"{path}/media/{mediaId}/content"), HttpStatusCode.NotFound, "NotFound");
         (await DataAsync(await UploadAsync(client, owner, png, "returned.png"))).GetProperty("duplicate").GetBoolean().Should().BeFalse();
     }
 
@@ -224,7 +227,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
             .GetProperty("media");
         pdf.GetProperty("contentType").GetString().Should().Be("application/pdf");
         pdf.GetProperty("hasThumbnail").GetBoolean().Should().BeFalse();
-        await ProblemAsync(await client.GetAsync($"{path}/media/{pdf.GetProperty("id").GetGuid()}/thumbnail"), HttpStatusCode.NotFound, "not-found");
+        await ProblemAsync(await client.GetAsync($"{path}/media/{pdf.GetProperty("id").GetGuid()}/thumbnail"), HttpStatusCode.NotFound, "NotFound");
         byte[] video = [0, 0, 0, 24, .. "ftypmp42"u8, 0, 0, 0, 0, .. "mp42isom"u8];
         JsonElement mp4 = (await DataAsync(await UploadAsync(client, owner, video, "rack.mp4"))).GetProperty("media");
         mp4.GetProperty("contentType").GetString().Should().Be("video/mp4");
@@ -242,8 +245,8 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         JsonElement distinct = await DataAsync(await UploadAsync(client, owner, Gradient(horizontal: false, marker: false), "vertical.png"));
         distinct.GetProperty("nearDuplicateIds").EnumerateArray().Select(item => item.GetGuid()).Should().NotContain(gradientId);
 
-        await ProblemAsync(await UploadAsync(client, owner, Encoding.UTF8.GetBytes("plain text"), "notes.txt"), HttpStatusCode.BadRequest, "validation");
-        await ProblemAsync(await UploadAsync(client, owner, [], "empty.png"), HttpStatusCode.RequestEntityTooLarge, "too-large");
+        await ProblemAsync(await UploadAsync(client, owner, Encoding.UTF8.GetBytes("plain text"), "notes.txt"), HttpStatusCode.BadRequest, "Validation");
+        await ProblemAsync(await UploadAsync(client, owner, [], "empty.png"), HttpStatusCode.RequestEntityTooLarge, "Validation");
     }
 
     [Fact]
@@ -302,7 +305,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
 
             string qualified = await WriteBundleAsync(directory, "qualified", Convert.ToHexStringLower(SHA256.HashData(photo)));
             Func<Task> rejected = () => ImportAsync(owner, qualified, dryRun: false);
-            (await rejected.Should().ThrowAsync<PreparationException>()).Which.Message.Should().Contain("qualified");
+            (await rejected.Should().ThrowAsync<AppException>()).Which.Message.Should().Contain("qualified");
         }
         finally
         {

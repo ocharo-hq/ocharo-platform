@@ -1,6 +1,12 @@
+using BrandWorkspace.Application.Foundation.Errors;
 using System.Text.RegularExpressions;
-using BrandWorkspace.Application.Access;
-using BrandWorkspace.Application.Files;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
+using BrandWorkspace.Application.Files.Constants;
+using BrandWorkspace.Application.Files.Models;
+using BrandWorkspace.Application.Files.Services;
+using BrandWorkspace.Application.Files.Repositories;
+using BrandWorkspace.Infrastructure.Files.Services;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Preparation.Repositories;
 using BrandWorkspace.Domain.Preparation.Models;
@@ -19,7 +25,7 @@ public sealed class PreparationService(IPreparationRepository repository, ImageV
         Text(name, "Brand name", 120);
         Text(timeZone, "Timezone", 100);
         if (timeZone != "UTC" && !TimeZoneInfo.TryConvertIanaIdToWindowsId(timeZone, out _))
-            throw new PreparationException("validation", "Choose a valid IANA timezone.");
+            throw DeskErrors.Invalid("Choose a valid IANA timezone.").ToException();
         return repository.CreateBrandAsync(access.OrganizationId, name.Trim(), timeZone, token);
     }
 
@@ -46,17 +52,17 @@ public sealed class PreparationService(IPreparationRepository repository, ImageV
     {
         RequireEditor(access);
         if (draftId is not null) Revision(expectedRevision ?? 0);
-        if (input.BrandId == Guid.Empty) throw new PreparationException("validation", "Choose a brand.");
+        if (input.BrandId == Guid.Empty) throw DeskErrors.Invalid("Choose a brand.").ToException();
         Text(input.Title, "Title", 200);
         Text(input.Caption, "Caption", 10000);
         Text(input.Language, "Language", 35);
         if (!Regex.IsMatch(input.Language, "^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$", RegexOptions.CultureInvariant))
-            throw new PreparationException("validation", "Use a language tag such as uz, uz-Latn, or en.");
+            throw DeskErrors.Invalid("Use a language tag such as uz, uz-Latn, or en.").ToException();
         Text(input.Destination, "Destination", 200);
         Text(input.SourceNotes, "Source notes", 4000, required: false);
         if (input.MediaIds is null || input.MediaIds.Length > 10 || input.MediaIds.Contains(Guid.Empty)
             || input.MediaIds.Distinct().Count() != input.MediaIds.Length)
-            throw new PreparationException("validation", "Choose up to 10 distinct images.");
+            throw DeskErrors.Invalid("Choose up to 10 distinct images.").ToException();
         return repository.SaveDraftAsync(access.OrganizationId, access.UserId, draftId, expectedRevision, input, token);
     }
 
@@ -72,7 +78,7 @@ public sealed class PreparationService(IPreparationRepository repository, ImageV
     {
         RequireEditor(access);
         Revision(expectedRevision);
-        if (idempotencyKey == Guid.Empty) throw new PreparationException("validation", "Provide an idempotency key.");
+        if (idempotencyKey == Guid.Empty) throw DeskErrors.Invalid("Provide an idempotency key.").ToException();
         return repository.CreateExportAsync(access.OrganizationId, access.UserId, draftId, expectedRevision, idempotencyKey, token);
     }
 
@@ -90,22 +96,22 @@ public sealed class PreparationService(IPreparationRepository repository, ImageV
 
     private static void Revision(int revision)
     {
-        if (revision < 1 || revision == int.MaxValue) throw new PreparationException("validation", "Provide a valid expected revision.");
+        if (revision < 1 || revision == int.MaxValue) throw DeskErrors.Invalid("Provide a valid expected revision.").ToException();
     }
 
     private static void RequireEditor(OrganizationAccess access)
     {
-        if (!access.CanEdit) throw new PreparationException("forbidden", "An editor or owner role is required.");
+        if (!access.CanEdit) throw DeskErrors.Forbidden("An editor or owner role is required.").ToException();
     }
 
     private static void RequireOwner(OrganizationAccess access)
     {
-        if (!access.CanApprove) throw new PreparationException("forbidden", "An owner role is required.");
+        if (!access.CanApprove) throw DeskErrors.Forbidden("An owner role is required.").ToException();
     }
 
     private static void Text(string? value, string field, int maximum, bool required = true)
     {
         if (value is null || value.Length > maximum || (required && string.IsNullOrWhiteSpace(value)) || value.Contains('\0'))
-            throw new PreparationException("validation", $"{field} must contain {(required ? "1" : "0")} to {maximum} characters.");
+            throw DeskErrors.Invalid($"{field} must contain {(required ? "1" : "0")} to {maximum} characters.").ToException();
     }
 }

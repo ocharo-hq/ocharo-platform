@@ -1,9 +1,12 @@
+using BrandWorkspace.Api.RuntimeConfig.Models;
+
 namespace BrandWorkspace.Api.RuntimeConfig.Settings;
 
 /// <summary>Projects the Ocharo app addresses onto the runtime-config keys the Desk SPA declares.</summary>
 public static class OcharoAppsSettingsExtensions
 {
-    /// <summary>Pairs each setting with its runtime-config key, in the app menu's order.</summary>
+    /// <summary>Pairs each setting with its runtime-config key, in the app menu's order; <see cref="RuntimeConfigDto"/>
+    /// names the same keys.</summary>
     private static readonly (string Setting, string Key, Func<OcharoAppsSettings, string?> Read)[] Addresses =
     [
         (nameof(OcharoAppsSettings.Desk), "OCHARO_DESK_URL", settings => settings.Desk),
@@ -17,16 +20,22 @@ public static class OcharoAppsSettingsExtensions
         (nameof(OcharoAppsSettings.Blog), "OCHARO_BLOG_URL", settings => settings.Blog),
     ];
 
-    /// <summary>Returns the configured, plain HTTPS addresses keyed for runtime config; any other value is left out.</summary>
-    public static IReadOnlyDictionary<string, string> ToRuntimeConfig(this OcharoAppsSettings settings)
+    /// <summary>Returns the configured, plain HTTPS addresses under their runtime-config names; any other value is left out.</summary>
+    public static RuntimeConfigDto ToRuntimeConfig(this OcharoAppsSettings settings)
     {
-        var values = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var (_, key, read) in Addresses)
+        string? Public(Func<OcharoAppsSettings, string?> read) => read(settings) is { } value && IsPublicAddress(value) ? value : null;
+        return new RuntimeConfigDto
         {
-            if (read(settings) is { } value && IsPublicAddress(value))
-                values[key] = value;
-        }
-        return values;
+            Desk = Public(apps => apps.Desk),
+            Catalogue = Public(apps => apps.Catalogue),
+            Studio = Public(apps => apps.Studio),
+            Marketing = Public(apps => apps.Marketing),
+            Editorial = Public(apps => apps.Editorial),
+            Brand = Public(apps => apps.Brand),
+            Atlas = Public(apps => apps.Atlas),
+            Wear = Public(apps => apps.Wear),
+            Blog = Public(apps => apps.Blog),
+        };
     }
 
     /// <summary>Names the settings that are configured but not plain HTTPS addresses, so the host can warn about them.</summary>

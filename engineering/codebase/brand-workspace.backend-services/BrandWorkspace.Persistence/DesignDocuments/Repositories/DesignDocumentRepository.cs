@@ -1,3 +1,5 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using BrandWorkspace.Application.Foundation.Errors;
 using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
@@ -182,7 +184,7 @@ public sealed class DesignDocumentRepository(NpgsqlDataSource dataSource, TimePr
             connection, transaction, organizationId, documentId, null, true, token);
         RequireRevision(current, expectedRevision);
         if (current.Archived)
-            throw new PreparationException("conflict", "Archived documents cannot be edited.");
+            throw DeskErrors.Conflict("Archived documents cannot be edited.").ToException();
         DesignDocument updated = current with
         {
             Title = input.Title!,
@@ -332,14 +334,12 @@ public sealed class DesignDocumentRepository(NpgsqlDataSource dataSource, TimePr
     private static void RequireRevision(DesignDocument document, int expected)
     {
         if (document.Revision != expected)
-            throw new PreparationException(
-                "conflict",
-                $"The document changed. Current revision is {document.Revision}; preserve your work and reload.");
+            throw DeskErrors.Conflict($"The document changed. Current revision is {document.Revision}; preserve your work and reload.").ToException();
     }
 
-    private static PreparationException NotFound()
+    private static AppException NotFound()
     {
-        return new PreparationException("not-found", "The document or revision was not found.");
+        return DeskErrors.NotFound("The document or revision was not found.").ToException();
     }
 
     private static NpgsqlCommand Command(

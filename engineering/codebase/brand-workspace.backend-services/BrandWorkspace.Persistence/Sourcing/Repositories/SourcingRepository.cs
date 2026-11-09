@@ -1,3 +1,5 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using BrandWorkspace.Application.Foundation.Errors;
 using Npgsql;
 using NpgsqlTypes;
 using BrandWorkspace.Application.Preparation.Models;
@@ -528,7 +530,7 @@ public sealed class SourcingRepository(NpgsqlDataSource dataSource, TimeProvider
         await using NpgsqlCommand command = Command(connection, transaction,
             "SELECT 1 FROM sourcing.people WHERE organization_id=$1 AND supplier_id=$2 AND id=$3", organizationId, supplierId, personId);
         if (await command.ExecuteScalarAsync(token) is null)
-            throw new PreparationException("validation", "Choose a person who belongs to this supplier.");
+            throw DeskErrors.Invalid("Choose a person who belongs to this supplier.").ToException();
     }
 
     private static async Task RequireSupplierReferenceAsync(
@@ -538,7 +540,7 @@ public sealed class SourcingRepository(NpgsqlDataSource dataSource, TimeProvider
         await using NpgsqlCommand command = Command(connection, transaction,
             "SELECT 1 FROM sourcing.suppliers WHERE organization_id=$1 AND id=$2", organizationId, supplierId);
         if (await command.ExecuteScalarAsync(token) is null)
-            throw new PreparationException("validation", "Choose a supplier from this organization.");
+            throw DeskErrors.Invalid("Choose a supplier from this organization.").ToException();
     }
 
     private static async Task ClearPrimaryAsync(
@@ -552,7 +554,7 @@ public sealed class SourcingRepository(NpgsqlDataSource dataSource, TimeProvider
         await command.ExecuteNonQueryAsync(token);
     }
 
-    private static async Task<PreparationException> MissingOrConflictAsync(
+    private static async Task<AppException> MissingOrConflictAsync(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string table, Guid organizationId, Guid id, string noun,
         CancellationToken token)
     {
@@ -580,7 +582,7 @@ public sealed class SourcingRepository(NpgsqlDataSource dataSource, TimeProvider
         }
         catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation && duplicateMessage is not null)
         {
-            throw new PreparationException("conflict", duplicateMessage);
+            throw DeskErrors.Conflict(duplicateMessage).ToException();
         }
     }
 
@@ -589,7 +591,7 @@ public sealed class SourcingRepository(NpgsqlDataSource dataSource, TimeProvider
         try { await command.ExecuteNonQueryAsync(token); }
         catch (PostgresException exception) when (exception.SqlState == PostgresErrorCodes.UniqueViolation)
         {
-            throw new PreparationException("conflict", duplicateMessage);
+            throw DeskErrors.Conflict(duplicateMessage).ToException();
         }
     }
 
@@ -597,10 +599,10 @@ public sealed class SourcingRepository(NpgsqlDataSource dataSource, TimeProvider
 
     private static string EscapeLike(string value) => value.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
 
-    private static PreparationException NotFound(string noun) => new("not-found", $"The {noun} was not found.");
+    private static AppException NotFound(string noun) => DeskErrors.NotFound($"The {noun} was not found.").ToException();
 
-    private static PreparationException Conflict(string noun) =>
-        new("conflict", $"The {noun} changed since it was loaded. Reload it before saving again.");
+    private static AppException Conflict(string noun) =>
+        DeskErrors.Conflict($"The {noun} changed since it was loaded. Reload it before saving again.").ToException();
 
     private static NpgsqlCommand Command(
         NpgsqlConnection connection, NpgsqlTransaction? transaction, string sql, params object?[] values)

@@ -114,6 +114,16 @@ output caching, the embedder policy and the HTTPS redirect stay off, as before. 
 headers, `Cross-Origin-Resource-Policy: same-origin` included; the public brand routes (`/api/public/v1/brands/{slug}/…`)
 answer `cross-origin` instead, because Blog and Marketing pages embed their media and edition files.
 
+Every route is a sealed controller under its domain's `Controllers/` that sends the mediator's commands and queries
+(Application) to handlers (Infrastructure) returning `AppResult<T>`. Organization routes run `[OrganizationAccess]`, which
+resolves the member's access from the Identity claims and projects them into Desk. Answers are `{ "data": … }` on the SDK
+JSON (`AddControllersWithSdkJson`: camelCase, null members left out, enums as camelCase strings); failures are the SDK's
+problem details, `detail` the message and `code` the error kind (`Validation`, `NotFound`, `Conflict`, `Forbidden`, …).
+Desk's status mapper answers 413 for an oversized body, 415 for an unsupported image type and 502 for a call WoW2 Files
+refused. The commerce and public brand routes keep commerce's own JSON (nulls written, case-sensitive dictionary keys
+such as size labels), which Marketing and Blog read. Below the handlers, validators and repositories raise catalog errors
+(`DeskErrors`) that the mediator's exception-mapping interceptor returns as failures.
+
 - `GET /health`: the boot bundle's endpoint, anonymous: `200 Healthy` once PostgreSQL answers and Desk's
   schema is in place, else `503 Unhealthy`. No schema creation occurs during this check.
 - `GET /api/system/status` (`SystemController`): HTTP `200` with this schema when persistence is ready, `503`
@@ -124,10 +134,12 @@ answer `cross-origin` instead, because Blog and Marketing pages embed their medi
   "service": "brand-workspace",
   "stage": "foundation",
   "persistence": "PostgreSQL",
-  "worker": { "state": "waiting", "lastSeenAtUtc": null },
+  "worker": { "state": "waiting" },
   "version": "0.4.2+0123456789abcdef0123456789abcdef01234567"
 }
 ```
+
+`worker.lastSeenAtUtc` is left out while no heartbeat exists.
 
 The worker stores a heartbeat every five seconds. No heartbeat means `waiting`;
 one within 30 seconds means `healthy`; an older or future timestamp means `stale`.

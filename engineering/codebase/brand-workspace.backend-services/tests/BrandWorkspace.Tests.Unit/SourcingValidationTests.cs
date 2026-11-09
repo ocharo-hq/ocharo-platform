@@ -1,3 +1,4 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using AwesomeAssertions;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
@@ -30,7 +31,7 @@ public sealed class SourcingValidationTests
     public void Route_ShouldRejectUnusableDestinations(string channel, string destination)
     {
         Action act = () => _validation.Route(channel, destination, null, null, false, false, null, null);
-        act.Should().Throw<PreparationException>().Which.Code.Should().Be("validation");
+        act.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
     }
 
     [Fact]
@@ -60,6 +61,6 @@ public sealed class SourcingValidationTests
     {
         _validation.Key("lucky-alternate").Should().Be("lucky-alternate");
         Action act = () => _validation.Key("Lucky Alternate");
-        act.Should().Throw<PreparationException>();
+        act.Should().Throw<AppException>();
     }
 }

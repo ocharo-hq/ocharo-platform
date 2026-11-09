@@ -1,3 +1,5 @@
+using BrandWorkspace.Application.Foundation.Errors;
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Text.RegularExpressions;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Application.Sourcing.Models;
@@ -176,7 +178,7 @@ public sealed partial class SourcingValidationService
         return text;
     }
 
-    private static PreparationException Invalid(string message) => new("validation", message);
+    private static AppException Invalid(string message) => DeskErrors.Invalid(message).ToException();
 
     [GeneratedRegex("^[a-z0-9][a-z0-9-]{0,63}$")]
     private static partial Regex KeyPattern();

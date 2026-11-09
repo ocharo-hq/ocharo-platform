@@ -1,8 +1,12 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Text.Json;
 using AwesomeAssertions;
-using BrandWorkspace.Application.Commerce;
+using BrandWorkspace.Application.Commerce.Models;
+using BrandWorkspace.Application.Commerce.Repositories;
+using BrandWorkspace.Infrastructure.Commerce.Services;
 using BrandWorkspace.Domain.Commerce;
-using BrandWorkspace.Persistence.Commerce;
+using BrandWorkspace.Persistence.Commerce.Repositories;
+using BrandWorkspace.Persistence.Commerce.Serializers;
 using OcharoBrand.Domain.Brand;
 using OcharoCatalogue.Domain.Catalogue.Models;
 using Xunit;
@@ -24,7 +28,7 @@ public sealed class CommerceSerializationTests
     public void CreativeInput_RejectsNegativeRevision()
     {
         var validate = () => CommerceRules.ValidateCreativeInput(Input(-1));
-        validate.Should().Throw<BrandWorkspace.Application.Preparation.Models.PreparationException>();
+        validate.Should().Throw<AppException>();
     }
     private static CreativeImportInput Input(int revision) => new(Guid.NewGuid(),null,
         new("ocharo-studio","workspace","look",revision),[],[],new(Guid.NewGuid(),new string('a',64),"image/png"),null);

@@ -1,3 +1,4 @@
+using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
@@ -5,7 +6,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
-using BrandWorkspace.Application.Access;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
 using BrandWorkspace.Application.Preparation.Models;
 using BrandWorkspace.Domain.Preparation.Models;
 using Npgsql;
@@ -26,7 +28,7 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
         var (input, media, bytes) = await CreateInputAsync(owner);
         var draft = await fixture.Service.SaveDraftAsync(owner, null, null, input, Token);
         var beforeReview = () => fixture.Service.ReviewAsync(owner, draft.Id, 1, ReviewAction.Approve, null, Token);
-        (await beforeReview.Should().ThrowAsync<PreparationException>()).Which.Code.Should().Be("conflict");
+        (await beforeReview.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Conflict);
         draft = await ApproveAsync(owner, draft);
         var key = Guid.NewGuid();
         var exports = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ =>
@@ -50,11 +52,11 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
         }
         await fixture.Service.ReviewAsync(owner, draft.Id, 1, ReviewAction.Revoke, "Replace the caption", Token);
         var newExport = () => fixture.Service.CreateExportAsync(owner, draft.Id, 1, Guid.NewGuid(), Token);
-        (await newExport.Should().ThrowAsync<PreparationException>()).Which.Code.Should().Be("conflict");
+        (await newExport.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Conflict);
         (await fixture.Service.CreateExportAsync(owner, draft.Id, 1, key, Token)).Id.Should().Be(export.Id);
         (await fixture.Service.GetExportContentAsync(owner, export.Id, Token)).Should().Equal(package);
         var misuse = () => fixture.Service.CreateExportAsync(owner, draft.Id, 2, key, Token);
-        (await misuse.Should().ThrowAsync<PreparationException>()).Which.Code.Should().Be("conflict");
+        (await misuse.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Conflict);
         using var client = await fixture.LoginAsync(owner);
         var downloaded = await client.GetAsync(export.DownloadUrl);
         downloaded.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -77,10 +79,10 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
             () => fixture.Service.SaveDraftAsync(second, null, null, input, Token)
         ];
         foreach (var operation in forbidden)
-            (await operation.Should().ThrowAsync<PreparationException>()).Which.Code.Should().Be("not-found");
+            (await operation.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.NotFound);
         var ownBrand = await fixture.Service.CreateBrandAsync(second, "Other brand", "UTC", Token);
         var foreignMedia = () => fixture.Service.SaveDraftAsync(second, null, null, input with { BrandId = ownBrand.Id }, Token);
-        (await foreignMedia.Should().ThrowAsync<PreparationException>()).Which.Code.Should().Be("not-found");
+        (await foreignMedia.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.NotFound);
         await using var sql = fixture.DataSource.CreateCommand(
             "INSERT INTO preparation.draft_media(organization_id,draft_id,revision,position,media_id) VALUES($1,$2,1,0,$3)");
         sql.Parameters.AddWithValue(second.OrganizationId);
@@ -129,7 +131,7 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
             input with { Title = "Second edit", BrandId = nextBrand.Id }, Token));
         var results = await Task.WhenAll(first, second);
         results.Count(result => result.Error is null).Should().Be(1);
-        results.Single(result => result.Error is not null).Error!.Code.Should().Be("conflict");
+        results.Single(result => result.Error is not null).Error!.Error.Type.Should().Be(AppErrorType.Conflict);
         var current = await fixture.Service.GetDraftAsync(owner, draft.Id, Token);
         current.Revision.Should().Be(2);
         current.Status.Should().Be("draft");
@@ -173,10 +175,10 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
                 using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
                 (await ReadEntryAsync(archive, "caption.txt")).Should().Equal(Encoding.UTF8.GetBytes("Changed"));
             }
-            else exported.Error.Code.Should().Be("conflict");
+            else exported.Error!.Error.Type.Should().Be(AppErrorType.Conflict);
             (await fixture.Service.GetDraftAsync(owner, draft.Id, Token)).Approval.Should().BeNull();
             var afterRevocation = () => fixture.Service.CreateExportAsync(owner, draft.Id, 2, Guid.NewGuid(), Token);
-            (await afterRevocation.Should().ThrowAsync<PreparationException>()).Which.Code.Should().Be("conflict");
+            (await afterRevocation.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Conflict);
         }
     }
 
@@ -193,7 +195,7 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
             CaptureAsync(() => fixture.Service.CreateExportAsync(owner, first.Id, 1, key, Token)),
             CaptureAsync(() => fixture.Service.CreateExportAsync(owner, second.Id, 1, key, Token)));
         results.Count(result => result.Error is null).Should().Be(1);
-        results.Single(result => result.Error is not null).Error!.Code.Should().Be("conflict");
+        results.Single(result => result.Error is not null).Error!.Error.Type.Should().Be(AppErrorType.Conflict);
         var export = results.Single(result => result.Error is null).Value!;
         var bytes = await fixture.Service.GetExportContentAsync(owner, export.Id, Token);
         using var archive = new ZipArchive(new MemoryStream(bytes), ZipArchiveMode.Read);
@@ -255,7 +257,7 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         response.Content.Headers.ContentType!.MediaType.Should().Be("application/problem+json");
         response.Headers.CacheControl!.NoStore.Should().BeTrue();
-        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("validation");
+        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().Should().Be("Validation");
         (await fixture.Service.GetMediaAsync(owner, Token)).Should().BeEmpty();
     }
 
@@ -292,9 +294,9 @@ public sealed class PreparationTests(PreparationDatabaseFixture fixture) : IClas
         return output.ToArray();
     }
 
-    private static async Task<(T? Value, PreparationException? Error)> CaptureAsync<T>(Func<Task<T>> action)
+    private static async Task<(T? Value, AppException? Error)> CaptureAsync<T>(Func<Task<T>> action)
     {
         try { return (await action(), null); }
-        catch (PreparationException exception) { return (default, exception); }
+        catch (AppException exception) { return (default, exception); }
     }
 }

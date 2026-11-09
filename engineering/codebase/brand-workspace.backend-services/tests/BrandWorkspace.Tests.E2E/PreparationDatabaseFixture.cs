@@ -1,8 +1,13 @@
 using AwesomeAssertions;
 using BrandWorkspace.Api;
 using BrandWorkspace.Api.Configurations;
-using BrandWorkspace.Application.Access;
-using BrandWorkspace.Application.Files;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
+using BrandWorkspace.Application.Files.Constants;
+using BrandWorkspace.Application.Files.Models;
+using BrandWorkspace.Application.Files.Services;
+using BrandWorkspace.Application.Files.Repositories;
+using BrandWorkspace.Infrastructure.Files.Services;
 using BrandWorkspace.Infrastructure.Preparation.Services;
 using BrandWorkspace.Persistence.Preparation.Repositories;
 using Microsoft.AspNetCore.Builder;

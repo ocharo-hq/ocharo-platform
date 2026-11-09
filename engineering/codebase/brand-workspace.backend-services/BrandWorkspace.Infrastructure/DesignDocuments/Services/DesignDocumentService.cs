@@ -1,5 +1,9 @@
-using BrandWorkspace.Application.Access;
-using BrandWorkspace.Application.Commerce;
+using BrandWorkspace.Application.Foundation.Errors;
+using BrandWorkspace.Application.Access.Models;
+using BrandWorkspace.Application.Access.Repositories;
+using BrandWorkspace.Application.Commerce.Models;
+using BrandWorkspace.Application.Commerce.Repositories;
+using BrandWorkspace.Infrastructure.Commerce.Services;
 using System.Text.Json;
 using BrandWorkspace.Application.DesignDocuments.Models;
 using BrandWorkspace.Application.DesignDocuments.Repositories;
@@ -128,6 +132,6 @@ public sealed class DesignDocumentService(
     private static void RequireEditor(OrganizationAccess access)
     {
         if (!access.CanEdit)
-            throw new PreparationException("forbidden", "An editor or owner role is required.");
+            throw DeskErrors.Forbidden("An editor or owner role is required.").ToException();
     }
 }
