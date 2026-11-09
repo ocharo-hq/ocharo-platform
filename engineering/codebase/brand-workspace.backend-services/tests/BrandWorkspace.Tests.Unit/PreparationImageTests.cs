@@ -1,4 +1,3 @@
-using BrandWorkspace.Application.Foundation.Constants;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Security.Cryptography;
 using AwesomeAssertions;
@@ -68,9 +67,9 @@ public sealed class PreparationImageTests
         var tooBig = () => _validator.Validate("image.png", oversized);
         tooBig
             .Should()
-            .Throw<AppException>().Which.Error.Metadata![DeskErrorReasons.Key]
+            .Throw<AppException>().Which.Error.Type
             .Should()
-            .Be(DeskErrorReasons.TooLarge);
+            .Be(AppErrorType.PayloadTooLarge);
         using var wide = new SKBitmap(ImageValidationService.MaximumDimension + 1, 1);
         wide.Erase(SKColors.Blue);
         using var wideImage = SKImage.FromBitmap(wide);

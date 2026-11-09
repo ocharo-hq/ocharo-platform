@@ -2,14 +2,11 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using BrandWorkspace.Api.Access;
-using BrandWorkspace.Api.Foundation.Mappers;
 using BrandWorkspace.Api.MediaProcessing.Constants;
 using BrandWorkspace.Application.Commerce.Services;
 using BrandWorkspace.Infrastructure;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Mediator.Logging;
-using WoW.Two.Sdk.Beta.Be.Web.ErrorMapping;
 using WoW.Two.Sdk.Beta.Be.Web.Json;
 using BrandWorkspace.Api.Foundation;
 using BrandWorkspace.Infrastructure.Preparation.Services;
@@ -454,8 +451,6 @@ public static partial class HostConfiguration
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpProblemDetails();
-        builder.Services.Replace(
-            ServiceDescriptor.Singleton<IErrorHttpStatusCodeMapper, DeskErrorHttpStatusCodeMapper>());
         builder.Services.AddControllersWithSdkJson()
             .AddMvcOptions(options => options.SuppressImplicitRequiredAttributeForNonNullableReferenceTypes = true);
         return builder;

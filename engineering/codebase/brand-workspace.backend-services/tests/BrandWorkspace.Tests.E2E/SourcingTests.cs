@@ -352,7 +352,7 @@ public sealed class SourcingTests(PreparationDatabaseFixture fixture) : IClassFi
         await ProblemAsync(
             await UploadAsync(client, owner, [], "empty.png"),
             HttpStatusCode.RequestEntityTooLarge,
-            "Validation");
+            "PayloadTooLarge");
     }
 
     [Fact]

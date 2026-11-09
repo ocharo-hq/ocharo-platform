@@ -1,4 +1,3 @@
-using BrandWorkspace.Application.Foundation.Constants;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 using System.Text.Json;
 using AwesomeAssertions;
@@ -98,9 +97,9 @@ public sealed class DesignDocumentValidationTests
         Action total = () => _validation.ValidateInput(new DesignDocumentInput("Title", large));
         total
             .Should()
-            .Throw<AppException>().Which.Error.Metadata![DeskErrorReasons.Key]
+            .Throw<AppException>().Which.Error.Type
             .Should()
-            .Be(DeskErrorReasons.TooLarge);
+            .Be(AppErrorType.PayloadTooLarge);
     }
 
     [Theory]

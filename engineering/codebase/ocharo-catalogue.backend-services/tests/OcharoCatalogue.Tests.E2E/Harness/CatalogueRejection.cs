@@ -1,5 +1,5 @@
-using OcharoCatalogue.Api.Catalogue.Core.Mappers;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
+using WoW.Two.Sdk.Beta.Be.Web.ErrorMapping;
 
 namespace OcharoCatalogue.Tests.Harness;
 
@@ -10,5 +10,5 @@ public sealed class CatalogueRejection(AppError error) : Exception(error.Message
     public AppError Error { get; } = error;
 
     /// <summary>The status the API maps the refusal to.</summary>
-    public int StatusCode { get; } = new CatalogueErrorHttpStatusCodeMapper().ToStatusCode(error);
+    public int StatusCode { get; } = new ErrorHttpStatusCodeMapper().ToStatusCode(error);
 }

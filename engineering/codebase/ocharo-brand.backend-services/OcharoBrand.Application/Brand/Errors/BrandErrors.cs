@@ -24,11 +24,11 @@ public static class BrandErrors
 
     /// <summary>An upload that is empty or larger than <paramref name="maximumBytes"/>.</summary>
     public static AppError ImageTooLarge(long maximumBytes) =>
-        Coded(AppErrorType.Validation, $"Choose a non-empty image up to {maximumBytes / 1024 / 1024} MB.", BrandErrorCodes.ImageTooLarge);
+        Coded(AppErrorType.PayloadTooLarge, $"Choose a non-empty image up to {maximumBytes / 1024 / 1024} MB.", BrandErrorCodes.ImageTooLarge);
 
     /// <summary>An upload that is not a PNG, JPEG or WebP image.</summary>
     public static AppError ImageTypeUnsupported() =>
-        Coded(AppErrorType.Validation, "Only PNG, JPEG and WebP images are accepted.", BrandErrorCodes.ImageTypeUnsupported);
+        Coded(AppErrorType.UnsupportedMediaType, "Only PNG, JPEG and WebP images are accepted.", BrandErrorCodes.ImageTypeUnsupported);
 
     /// <summary>A stored file WoW2 Files no longer holds.</summary>
     public static AppError FilesGone() => AppErrorFactory.NotFound("The file is gone from WoW2 Files.");
@@ -38,7 +38,7 @@ public static class BrandErrors
 
     /// <summary>A WoW2 Files refusal Brand has no closer kind for.</summary>
     public static AppError FilesRefused(string message) =>
-        Coded(AppErrorType.Unexpected, $"WoW2 Files refused the call: {message}", BrandErrorCodes.FilesRefused);
+        Coded(AppErrorType.ExternalRejected, $"WoW2 Files refused the call: {message}", BrandErrorCodes.FilesRefused);
 
     /// <summary>A private API request without a session.</summary>
     public static AppError SignInRequired() =>

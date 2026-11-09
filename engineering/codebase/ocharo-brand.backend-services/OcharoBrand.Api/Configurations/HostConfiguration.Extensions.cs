@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using OcharoBrand.Api.Brand;
-using OcharoBrand.Api.Brand.Mappers;
 using OcharoBrand.Api.RuntimeConfig.Settings;
 using OcharoBrand.Application.Brand.Repositories;
 using OcharoBrand.Application.Brand.Services;
@@ -24,7 +23,6 @@ using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Observability.HealthChecks;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
-using WoW.Two.Sdk.Beta.Be.Web.ErrorMapping;
 using WoW.Two.Sdk.Beta.Be.Web.Json;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
@@ -183,7 +181,6 @@ public static partial class HostConfiguration
     private static WebApplicationBuilder AddHttpSurface(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpProblemDetails();
-        builder.Services.AddSingleton<IErrorHttpStatusCodeMapper, BrandErrorHttpStatusCodeMapper>();
         builder.Services.AddControllersWithSdkJson();
         return builder;
     }

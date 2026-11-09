@@ -1,11 +1,10 @@
 using System.Runtime.CompilerServices;
-using BrandWorkspace.Application.Foundation.Constants;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 
 namespace BrandWorkspace.Application.Foundation.Errors;
 
 /// <summary>Creates Desk's application errors; each message is safe to show the caller, and the HTTP boundary maps each
-/// kind, or its <see cref="DeskErrorReasons"/>, to a status.</summary>
+/// kind to a status.</summary>
 public static class DeskErrors
 {
     /// <summary>A request refused on its input.</summary>
@@ -25,7 +24,7 @@ public static class DeskErrors
         [CallerFilePath] string file = "",
         [CallerLineNumber] int line = 0)
     {
-        return AppError.Of(AppErrorType.Validation, message, Reason(DeskErrorReasons.TooLarge), member, file, line);
+        return AppError.Of(AppErrorType.PayloadTooLarge, message, null, member, file, line);
     }
 
     /// <summary>A body whose content type the route does not accept.</summary>
@@ -35,13 +34,7 @@ public static class DeskErrors
         [CallerFilePath] string file = "",
         [CallerLineNumber] int line = 0)
     {
-        return AppError.Of(
-            AppErrorType.Validation,
-            message,
-            Reason(DeskErrorReasons.UnsupportedMediaType),
-            member,
-            file,
-            line);
+        return AppError.Of(AppErrorType.UnsupportedMediaType, message, null, member, file, line);
     }
 
     /// <summary>A record missing from the caller's organization.</summary>
@@ -111,18 +104,6 @@ public static class DeskErrors
         [CallerFilePath] string file = "",
         [CallerLineNumber] int line = 0)
     {
-        return AppError.Of(
-            AppErrorType.ExternalUnavailable,
-            message,
-            Reason(DeskErrorReasons.Upstream),
-            member,
-            file,
-            line);
-    }
-
-    /// <summary>Builds the metadata that names <paramref name="reason"/>.</summary>
-    private static Dictionary<string, object?> Reason(string reason)
-    {
-        return new Dictionary<string, object?>(StringComparer.Ordinal) { [DeskErrorReasons.Key] = reason };
+        return AppError.Of(AppErrorType.ExternalRejected, message, null, member, file, line);
     }
 }

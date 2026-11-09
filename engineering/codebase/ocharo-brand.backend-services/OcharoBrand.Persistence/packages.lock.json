@@ -36,9 +36,9 @@
       },
       "WoW2.Sdk.Beta.Be": {
         "type": "Direct",
-        "requested": "[10.0.108-beta, )",
-        "resolved": "10.0.108-beta",
-        "contentHash": "KxBZgUTmxrT8IIMFj/r2ZPla0I0o9FOdkXb5PEZKWmxl4R6knyW++YzrZgrEs9MnWN21+AO/13AZrU3W9otmQQ==",
+        "requested": "[10.0.109-beta, )",
+        "resolved": "10.0.109-beta",
+        "contentHash": "m5m0KxsbWLv+7SxpTkhCE5494EwHeFsSpAEP881BmhRIPaExnF+rB9e/P3ioDpPtCigVZMF/L91kWBHscoaekw==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -172,8 +172,8 @@
           "System.Security.Cryptography.Pkcs": "10.0.13",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.108-beta",
-          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.108-beta",
+          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.109-beta",
+          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.109-beta",
           "YamlDotNet": "16.3.0",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",
@@ -2118,13 +2118,13 @@
       },
       "WoW2.Sdk.Beta.Be.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.108-beta",
-        "contentHash": "iBkHLLbqg/xfu7rdUY9YyAcBK2JCh0GJoqVyMhrcc909YNwBjI7cy212bmdLmAJ/LF78ZeoYDJsGqpN9TQtZ3g=="
+        "resolved": "10.0.109-beta",
+        "contentHash": "oJzAl/vSh1G5OoaHH1UCMLJBfT4nlUYqzwFAtJwGz9xospL9VPF2oQZgTT0PPivZ5xlC7xH2qHT8kWGe2jRbyQ=="
       },
       "WoW2.Sdk.Beta.Be.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.108-beta",
-        "contentHash": "DHgNSvbEfFVL8SB3uwdMZu/F4GaJNlyb/mwTNnMFhja4kmt2ZDwZFi2glZcccfkvs1R4sSgaj00mWMaIdMNq/Q=="
+        "resolved": "10.0.109-beta",
+        "contentHash": "7h9mgXgY9GCSAIlQQv9758rIhnDgvHga2s1YEwqr8Uv58TCqWqXKF+X0ovAIId9JXkzm6d0XlagT3roOiEYeSQ=="
       },
       "YamlDotNet": {
         "type": "Transitive",
@@ -2145,7 +2145,7 @@
         "type": "Project",
         "dependencies": {
           "OcharoBrand.Domain": "[0.0.0, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.108-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.109-beta, )"
         }
       },
       "ocharobrand.domain": {

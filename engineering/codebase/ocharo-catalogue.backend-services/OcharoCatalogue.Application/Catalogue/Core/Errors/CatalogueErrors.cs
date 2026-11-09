@@ -46,20 +46,14 @@ public static class CatalogueErrors
     /// <param name="message">The limit, as the person reads it.</param>
     public static AppError TooLarge(string message)
     {
-        return Reasoned(
-            AppErrorType.Validation,
-            message,
-            CatalogueErrorReasons.PayloadTooLarge);
+        return AppError.Of(AppErrorType.PayloadTooLarge, message);
     }
 
     /// <summary>Creates the error of an upload in a format the catalogue does not accept.</summary>
     /// <param name="message">The accepted formats, as the person reads them.</param>
     public static AppError UnsupportedMediaType(string message)
     {
-        return Reasoned(
-            AppErrorType.Validation,
-            message,
-            CatalogueErrorReasons.UnsupportedMediaType);
+        return AppError.Of(AppErrorType.UnsupportedMediaType, message);
     }
 
     /// <summary>Creates the error of WoW2 Files being unreachable just now.</summary>
@@ -73,21 +67,6 @@ public static class CatalogueErrors
     /// <param name="message">The refusal, as the person reads it.</param>
     public static AppError FilesRefused(string message)
     {
-        return Reasoned(
-            AppErrorType.ExternalUnavailable,
-            message,
-            CatalogueErrorReasons.UpstreamRefused);
-    }
-
-    private static AppError Reasoned(
-        AppErrorType type,
-        string message,
-        string reason)
-    {
-        var metadata = new Dictionary<string, object?> { [CatalogueErrorReasons.Key] = reason };
-        return AppError.Of(
-            type,
-            message,
-            metadata);
+        return AppError.Of(AppErrorType.ExternalRejected, message);
     }
 }

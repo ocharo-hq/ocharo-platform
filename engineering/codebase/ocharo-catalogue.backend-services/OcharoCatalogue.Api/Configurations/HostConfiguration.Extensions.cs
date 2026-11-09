@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using OcharoCatalogue.Api.Catalogue.Core.Mappers;
 using OcharoCatalogue.Api.Catalogue.Core.Middlewares;
 using OcharoCatalogue.Api.Catalogue.Core.Services;
 using OcharoCatalogue.Api.RuntimeConfig.Settings;
@@ -37,7 +36,6 @@ using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Observability.HealthChecks;
 using WoW.Two.Sdk.Beta.Be.Storage.Core;
 using WoW.Two.Sdk.Beta.Be.Storage.FileSystem;
-using WoW.Two.Sdk.Beta.Be.Web.ErrorMapping;
 using WoW.Two.Sdk.Beta.Be.Web.Json;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
 
@@ -168,7 +166,6 @@ public static partial class HostConfiguration
     private static WebApplicationBuilder AddControllers(this WebApplicationBuilder builder)
     {
         builder.Services.AddHttpProblemDetails();
-        builder.Services.AddSingleton<IErrorHttpStatusCodeMapper, CatalogueErrorHttpStatusCodeMapper>();
         builder.Services.AddControllersWithSdkJson();
         return builder;
     }
