@@ -28,7 +28,7 @@ public sealed class AccessIdentityTests(PreparationDatabaseFixture fixture) : IC
 
     [Theory]
     [InlineData("/api/organizations")]
-    [InlineData("/api/organizations/00000000-0000-0000-0000-000000000001/events")]
+    [InlineData("/api/organizations/00000000-0000-0000-0000-000000000001/brands")]
     public async Task OrganizationRoutes_ShouldReturn401_WhenAnonymous(string path)
     {
         using var client = DeskTestHost.CreateClient(fixture.Factory);
@@ -71,10 +71,10 @@ public sealed class AccessIdentityTests(PreparationDatabaseFixture fixture) : IC
         var other = await fixture.CreateOwnerAsync();
         using var client = await fixture.LoginAsync(owner);
 
-        using var own = await client.GetAsync($"/api/organizations/{owner.OrganizationId}/events");
-        using var foreign = await client.GetAsync($"/api/organizations/{other.OrganizationId}/events");
+        using var own = await client.GetAsync($"/api/organizations/{owner.OrganizationId}/brands");
+        using var foreign = await client.GetAsync($"/api/organizations/{other.OrganizationId}/brands");
         await fixture.SetRoleAsync(owner, null);
-        using var withoutMembership = await client.GetAsync($"/api/organizations/{owner.OrganizationId}/events");
+        using var withoutMembership = await client.GetAsync($"/api/organizations/{owner.OrganizationId}/brands");
 
         own.StatusCode.Should().Be(HttpStatusCode.OK, await own.Content.ReadAsStringAsync());
         foreign.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -91,7 +91,7 @@ public sealed class AccessIdentityTests(PreparationDatabaseFixture fixture) : IC
         (await Projection(subject)).Should().BeNull("Desk has not met this person yet");
         using var client = DeskTestHost.CreateClient(fixture.Factory, subject);
 
-        using var response = await client.GetAsync($"/api/organizations/{owner.OrganizationId}/events");
+        using var response = await client.GetAsync($"/api/organizations/{owner.OrganizationId}/brands");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
         (await Projection(subject)).Should().Be(("Projected editor", email));
@@ -126,7 +126,7 @@ public sealed class AccessIdentityTests(PreparationDatabaseFixture fixture) : IC
         using var client = DeskTestHost.CreateClient(fixture.Factory, subject);
 
         var listed = await Data(await client.GetAsync("/api/organizations"));
-        using var scoped = await client.GetAsync($"/api/organizations/{organization}/events");
+        using var scoped = await client.GetAsync($"/api/organizations/{organization}/brands");
 
         listed
             .GetArrayLength()

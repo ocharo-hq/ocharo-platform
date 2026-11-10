@@ -44,12 +44,12 @@ public sealed class EventValidationTests
     [Fact]
     public void Event_ShouldDefaultToUnknownPrecisionAndTheGivenStatus_WhenItHasNoDates()
     {
-        var input = _validation.Event(Fields(), EventValidationService.ImportedStatus);
+        var input = _validation.Event(Fields(), "candidate");
         input.DatePrecision.Should().Be("unknown");
         input.StartsOn.Should().BeNull();
         input.Status.Should().Be("candidate");
         _validation
-            .Event(Fields(status: "attended"), EventValidationService.ImportedStatus).Status
+            .Event(Fields(status: "attended"), "candidate").Status
             .Should()
             .Be("attended");
     }
@@ -149,14 +149,6 @@ public sealed class EventValidationTests
         act.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
         _validation.Filter(null, null, null, null, "2026-10-01", "2026-10-01", true)
             .From.Should().Be(new DateOnly(2026, 10, 1));
-    }
-
-    [Fact]
-    public void Key_ShouldAcceptOnlyLowercaseSlugs()
-    {
-        _validation.Key("tfw-2026").Should().Be("tfw-2026");
-        Action act = () => _validation.Key("TFW 2026");
-        act.Should().Throw<AppException>();
     }
 
     private static EventFields Fields(

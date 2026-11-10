@@ -60,7 +60,7 @@ public sealed class EventService(IEventRepository repository, EventValidationSer
         CancellationToken token)
     {
         RequireEditor(access);
-        return repository.CreateEventAsync(access.OrganizationId, access.UserId, null, input, token);
+        return repository.CreateEventAsync(access.OrganizationId, access.UserId, input, token);
     }
 
     public Task<Result<ShowcaseEvent>> UpdateEventAsync(

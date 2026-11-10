@@ -4,25 +4,16 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Application.Preparation.Models;
-using Microsoft.Extensions.Options;
 using WoW.Two.Sdk.Beta.Be.Events;
 
 namespace BrandWorkspace.Infrastructure.Events.Services;
 
 /// <summary>
-/// Normalizes and bounds event fields before they reach organization-scoped persistence: Desk's own table, or WoW2
-/// Events once <c>Events:BaseUrl</c> is set, whose wider name limits then apply, so a tracking save that sends an
-/// imported event's facts back is never refused for a length Events accepted (events-adoption.md #8).
+/// Normalizes and bounds event fields before they reach WoW2 Events, at Events' own limits, so a tracking save that
+/// sends an event's facts back is never refused for a length Events accepted (events-adoption.md #8).
 /// </summary>
-/// <param name="events">Which store serves Desk's page; none means Desk's own table.</param>
-public sealed partial class EventValidationService(IOptions<EventsServiceOptions>? events = null)
+public sealed partial class EventValidationService
 {
-    /// <summary>Holds the organizer limit of Desk's own table (<c>showcase_events.organizer</c>).</summary>
-    public const int TableOrganizerLength = 160;
-
-    /// <summary>Holds the city limit of Desk's own table (<c>showcase_events.city</c>).</summary>
-    public const int TableCityLength = 120;
-
     public static readonly IReadOnlyList<string> Scopes = ["local", "regional", "international"];
     public static readonly IReadOnlyList<string> Formats =
         ["runway", "trade-fair", "market", "exhibition", "competition", "festival", "conference", "other"];
@@ -33,25 +24,18 @@ public sealed partial class EventValidationService(IOptions<EventsServiceOptions
     public static readonly DateOnly EarliestDate = new(2000, 1, 1);
     public static readonly DateOnly LatestDate = new(2100, 12, 31);
     public const string DefaultStatus = "shortlisted";
-    public const string ImportedStatus = "candidate";
     public const int MaximumLimit = 500;
 
-    /// <summary>Tells whether WoW2 Events, not Desk's own table, stores the events.</summary>
-    private bool ServedByEvents => !string.IsNullOrWhiteSpace(events?.Value.BaseUrl);
-
-    private int OrganizerLength => ServedByEvents ? EventsConstants.MaxNameLength : TableOrganizerLength;
-
-    private int CityLength => ServedByEvents ? EventsConstants.MaxNameLength : TableCityLength;
 
     /// <summary>Validates every field; a blank status falls back to <paramref name="defaultStatus"/>.</summary>
     public ShowcaseEventInput Event(EventFields fields, string defaultStatus = DefaultStatus)
     {
         string title = Required(fields.Title, "Title", 200);
-        string? organizer = Optional(fields.Organizer, "Organizer", OrganizerLength);
+        string? organizer = Optional(fields.Organizer, "Organizer", EventsConstants.MaxNameLength);
         string scope = Scope(fields.Scope);
         string format = Format(fields.Format);
         string? country = Country(fields.Country);
-        string? city = Optional(fields.City, "City", CityLength);
+        string? city = Optional(fields.City, "City", EventsConstants.MaxNameLength);
         string? venue = Optional(fields.Venue, "Venue", 200);
         DateOnly? startsOn = Date(fields.StartsOn, "Start date");
         DateOnly? endsOn = Date(fields.EndsOn, "End date");
@@ -142,13 +126,6 @@ public sealed partial class EventValidationService(IOptions<EventsServiceOptions
     /// <summary>Parses an optional ISO date for the summary; null means the caller uses today's UTC date.</summary>
     public DateOnly? Today(string? value) => Date(value, "Today");
 
-    public string? Key(string? value)
-    {
-        if (value is null) return null;
-        return KeyPattern().IsMatch(value) ? value
-            : throw Invalid("Import keys use 1–64 lowercase letters, digits and hyphens.");
-    }
-
     public void Page(int limit, int offset)
     {
         if (limit is < 1 or > MaximumLimit || offset is < 0 or > 1000000)
@@ -238,9 +215,6 @@ public sealed partial class EventValidationService(IOptions<EventsServiceOptions
     }
 
     private static AppException Invalid(string message) => DeskErrors.Invalid(message).ToException();
-
-    [GeneratedRegex("^[a-z0-9][a-z0-9-]{0,63}$")]
-    private static partial Regex KeyPattern();
 
     [GeneratedRegex("^[A-Z]{2}$")]
     private static partial Regex CountryPattern();

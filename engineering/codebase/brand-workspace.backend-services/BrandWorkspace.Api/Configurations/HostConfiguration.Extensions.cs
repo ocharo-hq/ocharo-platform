@@ -27,9 +27,7 @@ using BrandWorkspace.Persistence.Sourcing.Repositories;
 using BrandWorkspace.Api.RuntimeConfig.Settings;
 using BrandWorkspace.Application.Events.Repositories;
 using BrandWorkspace.Infrastructure.Events.Services;
-using BrandWorkspace.Persistence.Events.Repositories;
 using WoW.Two.Sdk.Beta.Be.Events.Client;
-using WoW.Two.Sdk.Beta.Be.Http.Auth.OAuth2TokenExchange;
 using WoW.Two.Sdk.Beta.Be.Media.Images;
 using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using BrandWorkspace.Application.Access.Models;
@@ -66,11 +64,8 @@ namespace BrandWorkspace.Api.Configurations;
 
 public static partial class HostConfiguration
 {
-    /// <summary>Holds the verb that imports a bundle: <c>import sourcing</c> or <c>import events</c>.</summary>
+    /// <summary>Holds the verb that imports a bundle: <c>import sourcing</c>.</summary>
     private const string ImportVerb = "import";
-
-    /// <summary>Holds the verb that writes a WoW2 Events import bundle from Desk's events: <c>export events</c>.</summary>
-    private const string ExportVerb = "export";
 
     /// <summary>Holds the verb of the media runtime probe the image build runs: <c>media verify</c>.</summary>
     private const string MediaVerb = "media";
@@ -79,7 +74,7 @@ public static partial class HostConfiguration
     private const string MediaVerifyArgument = "verify";
 
     private const string ImportUsage =
-        "Use import sourcing|events --bundle <bundle.json> --organization <organization-id> "
+        "Use import sourcing --bundle <bundle.json> --organization <organization-id> "
         + "--actor <identity-user-id|email> [--dry-run].";
 
     private const string MediaUsage = "Use media verify alone.";
@@ -296,10 +291,6 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>Tells whether WoW2 Events serves this run's Events page.</summary>
-    private static bool UsesEvents(IServiceProvider provider) =>
-        provider.GetRequiredService<IConfiguration>()[EventsBaseUrlKey] is { Length: > 0 };
-
     /// <summary>Tells whether this run stores media in WoW2 Files.</summary>
     private static bool UsesFiles(IServiceProvider provider) =>
         provider.GetRequiredService<IConfiguration>()[FilesBaseUrlKey] is { Length: > 0 };
@@ -372,46 +363,41 @@ public static partial class HostConfiguration
         return builder;
     }
 
-    /// <summary>
-    /// Holds the root URL of the WoW2 Events service that serves Desk's Events page; unset, Desk reads and writes its own
-    /// <c>events.showcase_events</c> table, which stays as the rollback copy (events-adoption.md #7).
-    /// </summary>
+    /// <summary>Holds the root URL of the WoW2 Events service that serves Desk's Events page (events-adoption.md #8).</summary>
     private const string EventsBaseUrlKey = "Events:BaseUrl";
 
     /// <summary>
-    /// Registers the showcase events feed: WoW2 Events through its published client when <see cref="EventsBaseUrlKey"/>
-    /// is set, by the signed-in person's token exchanged within their BFF session for one with Events' audience, else
-    /// Desk's own table and its explicit bundle import. Both read at resolve time, so a test host's settings decide.
+    /// Registers the showcase events feed on WoW2 Events through its published client, whose person flow exchanges the
+    /// signed-in person's BFF session token for one with Events' audience by Desk's own Identity client. Desk keeps no
+    /// events store of its own since v0.3 Iteration 5: a deployed run refuses to start without <see
+    /// cref="EventsBaseUrlKey"/>, a local run without it answers 503 on the Events routes. Settings read at resolve time,
+    /// so a test host's settings decide.
     /// </summary>
     private static WebApplicationBuilder AddEvents(this WebApplicationBuilder builder)
     {
-        builder.Services.AddOptions<EventsServiceOptions>().BindConfiguration(EventsServiceOptions.SectionName);
-        builder.Services.AddEventsClient(_ => { }).AddOAuth2TokenExchange(_ => { });
+        builder.Services.AddOptions<EventsServiceOptions>()
+            .BindConfiguration(EventsServiceOptions.SectionName)
+            .Validate<IConfiguration, IHostEnvironment>(
+                (events, configuration, environment) =>
+                    !string.IsNullOrWhiteSpace(events.BaseUrl) || environment.IsLocalRun(configuration),
+                $"{EventsBaseUrlKey} is required: WoW2 Events serves Desk's Events page, and Desk keeps no events store.")
+            .ValidateOnStart();
+        builder.Services.AddEventsClient(_ => { });
         builder.Services.AddOptions<EventsClientOptions>().Configure<IConfiguration>((events, configuration) =>
         {
-            if (configuration[EventsBaseUrlKey] is { Length: > 0 } url) events.BaseAddress = new Uri(url);
+            if (configuration[EventsBaseUrlKey] is not { Length: > 0 } url) return;
+            events.BaseAddress = new Uri(url);
+            if (Uri.TryCreate(configuration["Identity:Client:Authority"], UriKind.Absolute, out var authority))
+                events.Identity = new EventsClientIdentityOptions
+                {
+                    TokenEndpoint = new Uri(authority, "connect/token"),
+                    ClientId = configuration["Identity:Client:ClientId"] ?? string.Empty,
+                    ClientSecret = configuration["Identity:Client:ClientSecret"] ?? string.Empty,
+                };
         });
-        builder.Services.AddOptions<OAuth2TokenExchangeOptions>(EventsClientConstants.HttpClientName)
-            .Configure<IConfiguration>((exchange, configuration) =>
-            {
-                if (configuration[EventsBaseUrlKey] is not { Length: > 0 } url
-                    || !Uri.TryCreate(configuration["Identity:Client:Authority"], UriKind.Absolute, out var authority))
-                    return;
-                exchange.TokenEndpoint = new Uri(authority, "connect/token");
-                exchange.ClientId = configuration["Identity:Client:ClientId"] ?? string.Empty;
-                exchange.ClientSecret = configuration["Identity:Client:ClientSecret"] ?? string.Empty;
-                exchange.Resource = url.EndsWith('/') ? url : url + "/";
-            });
-        builder.Services.AddSingleton<EventRepository>();
-        builder.Services.AddSingleton<IEventRecordsReader>(provider => provider.GetRequiredService<EventRepository>());
-        builder.Services.AddScoped<EventsServiceRepository>();
-        builder.Services.AddScoped<IEventRepository>(provider => UsesEvents(provider)
-            ? provider.GetRequiredService<EventsServiceRepository>()
-            : provider.GetRequiredService<EventRepository>());
+        builder.Services.AddScoped<IEventRepository, EventsServiceRepository>();
         builder.Services.AddSingleton<EventValidationService>();
         builder.Services.AddScoped<EventService>();
-        builder.Services.AddScoped<EventImportService>();
-        builder.Services.AddScoped<EventExportService>();
         return builder;
     }
 

@@ -78,7 +78,7 @@ public sealed class IdentityCutoverTests
                 .Should().Be("Cutover fixture", "the projection keeps every person");
             (await ScalarAsync(
                     dataSource,
-                    "SELECT created_by FROM events.showcase_events WHERE organization_id=$1",
+                    "SELECT created_by FROM sourcing.suppliers WHERE organization_id=$1",
                     organization))
                 .Should().Be(person, "authored records keep their authors");
         }
@@ -158,10 +158,8 @@ public sealed class IdentityCutoverTests
             INSERT INTO access.identity_user_roles("UserId","RoleId") VALUES (@person,'role');
             INSERT INTO access.identity_user_tokens("UserId","LoginProvider","Name","Value")
                 VALUES (@person,'telegram','refresh','token');
-            INSERT INTO events.showcase_events(organization_id,id,title,scope,format,date_precision,participation,status,
-                priority,notes,revision,created_by,created_at,updated_at)
-                VALUES (@organization,gen_random_uuid(),'Cutover fair','local','market','unknown','','candidate',
-                    'normal','',1,@person,now(),now());
+            INSERT INTO sourcing.suppliers(organization_id,id,name,stage,notes,revision,created_by,created_at,updated_at)
+                VALUES (@organization,gen_random_uuid(),'Cutover mill','lead','',1,@person,now(),now());
             """);
         command.Parameters.AddWithValue("person", person);
         command.Parameters.AddWithValue("organization", organization);

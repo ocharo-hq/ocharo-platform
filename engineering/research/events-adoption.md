@@ -21,7 +21,7 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
   - ✅ Registrations pushed (`34f08dc`, `v0.3.1`); `ocharo-dev`'s Identity redeployed healthy with them (#2, #5).
   - ✅ Client 10 `events-console` pushed once ev-wheelhouse typed its three URIs on `ocharo-dev`.
   - ✅ Desk's Events-backed repository built on Events `10.0.0-beta` (`WoW2.Sdk.Beta.Be.Events.Client`), be sdk
-    `10.0.111-beta`: reads, proposals, tracking, the 410 freeze and `import events` refused once `Events:BaseUrl` is set
+    `10.0.111-beta`: reads, proposals, tracking and the 410 freeze once `Events:BaseUrl` is set
     (#7, #8); 16 unit and 2 route tests on an in-memory Events.
   - ✅ Imported on dev 2026-11-10 by ev-wheelhouse through Events' operator verb: dry run 68 created, import 68
     created, rerun 68 unchanged. Reconciled read-only against `events_dev`: 68 of 68 rows equal to the bundle field by
@@ -30,6 +30,8 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
   - ✅ Desk `v0.3.5` on dev (09:08Z), read back in the owner's own session: the Events page lists the 68 with their
     stages, precision, priority and derived scope as stored; the browser calls only Desk's origin; a fact edit and a
     delete answer 410 with the event unchanged; another organization's events path answers 404.
+  - ✅ Old store retired 2026-11-10 (v0.3 Iteration 5): Desk reads only WoW2 Events, on Events Client `10.0.4-beta`,
+    whose own Identity wiring replaced Desk's hand-set token exchange; no rollback to the old table remains.
   - ✅ Done-when (b), 2026-11-10: Events `v0.1.6` published the held Afisha record by automatic review
     (`classifier:filter:ocharo-fashion-v1`), and Desk's dev Events page lists it in the owner's session beside the 68
     (69 in all), "Показ мод The Fashion Show Line 2026", 21 Nov 2026, untracked so `candidate` at revision 1; the
@@ -168,9 +170,10 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
   as Ocharo's owner (`events:admin`; Ocharo's only dev member, also the instance admin), dry-runs, then imports;
   catalog `ocharo-fashion` and Ocharo's workflow come from Events host verbs. Desk's exchange grant stays
   `events.read`, `events.track`, `events.import`.
-- `import events` refuses while `Events:BaseUrl` is set; `events.showcase_events` stays, untouched, as the rollback copy.
-- Rollback until reconciliation passes: unset `Events:BaseUrl`, and Desk reads and writes its own table again.
-- After reconciliation, a later migration drops the table (its `Rollback.sql` already refuses while rows exist).
+- Retired 2026-11-10 once reconciliation passed (v0.3 Iteration 5, the developer: "yes drop completely"): `import
+  events`, `export events`, the table repository and `IEventRecordsReader` are gone, migration `014-events-retire`
+  drops `events.showcase_events`, and `Events:BaseUrl` is required in a deployed run. There is no rollback to Desk's
+  own table; the export bundle stays outside Git, and Events' `events_import_map` keeps the 68 old → new ids.
 
 ### #8 Adapter and screens (`events-integration #27`), revised 2026-11-10
 
@@ -192,7 +195,6 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
   creates) answer 410.
 - Desk's filters, order and paging run in memory over the whole catalog, the rules of its own SQL; Events' query
   takes them over with the fe package.
-- `IEventRecordsReader` keeps the export reading Desk's own table whichever store serves the page.
 - While Events serves Desk, Desk validates organizer and city at Events' 200 characters, not its table's 160 and 120:
   Desk's form sends an event's facts back with every tracking save, so the narrower limits refused stage saves on
   events Events accepted (cross-lane review, 2026-11-10).

@@ -75,37 +75,15 @@ interface ShowcaseEvent {
 }
 ```
 
-## Feed import
+## Served by WoW2 Events
 
-New events enter in bulk through an explicit bundle — the same path for the first seed and for any
-later discovery scan:
+Since v0.3 (2026-11-10) WoW2 Events owns the catalog and tracking; Desk keeps this page, its routes above and
+membership, and serves them from Events through its published client ([events-adoption.md](../research/events-adoption.md)
+#7, #8). A new event is a member proposal in Events; stage, priority, notes, participation and cost are Ocharo's
+tracking there; changing an event's facts or deleting it answers 410 `Gone`, since facts change through Events'
+review.
 
-```bash
-dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- \
-  import events --bundle <bundle.json> --organization <organization-id> --actor <identity-user-id|email> [--dry-run]
-```
-
-Format `ocharo.events-import.v1`: `{ format, source, events: [ { key, …record fields except id/revision/timestamps } ] }`.
-Every event needs a `key`. The command validates the whole bundle before writing, prints a JSON
-summary `{ dryRun, source, created, existing, failures[] }`, and never overwrites an existing key,
-so statuses and notes edited in Desk survive every re-import. Imported events default to `candidate`.
-`--actor` names a person Desk has seen sign in through Ocharo's Identity: their Identity user id (`sub`),
-or the email their sign-in carried when one person holds it. Ocharo people sign in by phone and carry no email, so
-the id is what works for them. Identity keeps every role, and a verb runs without a sign-in, so the person imports as
-an editor of an organization Desk knows; an unknown person or organization refuses.
-
-## Move to WoW2 Events
-
-Events move onto WoW2 Events, which owns the catalog and tracking; Desk keeps this page and proxies it
-([events-adoption.md](../research/events-adoption.md), v0.3). The move starts from an export:
-
-```bash
-dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- \
-  export events --organization <organization-id> --out <bundle.json>
-```
-
-It writes Events' `wow2.events-import.v1` (events-adoption.md #6): one row per event keyed by its Desk id
-(`legacyId`), its facts with `und` titles, `yyyy-MM` months and `estimated` kept, Ocharo's tracking with participation
-and cost as fields, and the whole stored row as `legacy`. It reads Desk, writes only the new file, refuses an existing
-one, and prints the counts by stage and precision that reconciliation compares. Bundles stay out of Git, like the
-import's.
+Desk keeps no events store of its own (v0.3 Iteration 5): the `import events` and `export events` verbs, the
+`ocharo.events-import.v1` bundle and table `events.showcase_events` are gone, migration `014-events-retire` drops the
+table, and new events reach Events through its own intake and import. A deployed Desk refuses to start without
+`Events:BaseUrl`; a local run without it answers 503 on these routes.

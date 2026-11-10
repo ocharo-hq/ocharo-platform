@@ -3720,7 +3720,7 @@
           "BrandWorkspace.Infrastructure": "[0.0.0, )",
           "BrandWorkspace.Persistence": "[0.0.0, )",
           "WoW2.Sdk.Beta.Be": "[10.0.111-beta, )",
-          "WoW2.Sdk.Beta.Be.Events.Client": "[10.0.3-beta, )",
+          "WoW2.Sdk.Beta.Be.Events.Client": "[10.0.4-beta, )",
           "WoW2.Sdk.Beta.Be.Files.Client": "[10.0.6-beta, )",
           "WoW2.Sdk.Beta.Be.Identity.Client": "[10.0.30-beta, )"
         }
@@ -3748,7 +3748,7 @@
           "SkiaSharp": "[4.152.1, )",
           "SkiaSharp.NativeAssets.Linux": "[4.152.1, )",
           "WoW2.Sdk.Beta.Be": "[10.0.111-beta, )",
-          "WoW2.Sdk.Beta.Be.Events.Abstractions": "[10.0.3-beta, )",
+          "WoW2.Sdk.Beta.Be.Events.Abstractions": "[10.0.4-beta, )",
           "WoW2.Sdk.Beta.Be.Files.Abstractions": "[10.0.6-beta, )"
         }
       },
@@ -3985,21 +3985,21 @@
       },
       "WoW2.Sdk.Beta.Be.Events.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[10.0.3-beta, )",
-        "resolved": "10.0.3-beta",
-        "contentHash": "MuvJlpALWL/azDyjPqeJoWSKBM82EjMPF7MxdyH75/SOv2nLGUGaBTKvnlMzJDcCCl31jjiDZGMOqwvDb3CNpg==",
+        "requested": "[10.0.4-beta, )",
+        "resolved": "10.0.4-beta",
+        "contentHash": "u7R57S9FEFDGFg06xQvdxKqc4k5TZywpjKzrGRhHI8tiAAh4+9UfdZBybryU2vHYKHSsPRX+lL5TNNdwffd7vw==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be.Abstractions": "10.0.111-beta"
         }
       },
       "WoW2.Sdk.Beta.Be.Events.Client": {
         "type": "CentralTransitive",
-        "requested": "[10.0.3-beta, )",
-        "resolved": "10.0.3-beta",
-        "contentHash": "tkGoYMQoj/HanCydKke74xb/eELPqn0i0ei95KYI2Ick9tc9wDyBSkAQXKkuxAZl/+I1NdCthZU1ycU1IGFpMQ==",
+        "requested": "[10.0.4-beta, )",
+        "resolved": "10.0.4-beta",
+        "contentHash": "dmTrUdQ8MkoWNlmlxtp09DyNtj+FyIav2wn/ftJyuh58DTRlInFVXB7UuLO9awM/HeWnrr9bm9pAZS3lkGQ+cg==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be": "10.0.111-beta",
-          "WoW2.Sdk.Beta.Be.Events.Abstractions": "10.0.3-beta"
+          "WoW2.Sdk.Beta.Be.Events.Abstractions": "10.0.4-beta"
         }
       },
       "WoW2.Sdk.Beta.Be.Files.Abstractions": {

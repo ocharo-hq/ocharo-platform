@@ -2,7 +2,6 @@ using System.Text.Json;
 using AwesomeAssertions;
 using BrandWorkspace.Api.Configurations;
 using BrandWorkspace.Application.Access.Models;
-using BrandWorkspace.Infrastructure.Events.Services;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
 using Microsoft.Extensions.Configuration;
 using WoW.Two.Sdk.Beta.Be.Meta;
@@ -11,41 +10,12 @@ using Xunit;
 namespace BrandWorkspace.Tests.E2E;
 
 /// <summary>
-/// The <c>import events</c> and <c>import sourcing</c> verbs, run as the image runs them, resolve <c>--actor</c> to a
-/// person Desk projected from Identity, by Identity user id or by email, and refuse anyone else.
+/// The <c>import sourcing</c> verb, run as the image runs it, resolves <c>--actor</c> to a
+/// person Desk projected from Identity, by Identity user id or by email, and refuses anyone else; Desk's events live
+/// in WoW2 Events, so <c>import events</c> is gone (v0.3 Iteration 5).
 /// </summary>
 public sealed class ImportVerbTests(PreparationDatabaseFixture fixture) : IClassFixture<PreparationDatabaseFixture>
 {
-    [Fact]
-    public async Task ImportEvents_ShouldAuthorAsThePersonTheActorNames_ByIdentityUserIdOrEmail()
-    {
-        var owner = await fixture.CreateOwnerAsync();
-        var directory = Directory.CreateTempSubdirectory("events-verb-");
-        try
-        {
-            var bundle = Path.Combine(directory.FullName, "events.json");
-            await File.WriteAllTextAsync(bundle, JsonSerializer.Serialize(new
-            {
-                format = EventImportService.Format,
-                source = "verb fixture",
-                events = new[] { new { key = "verb-fair", title = "Verb fair", scope = "local", format = "market" } },
-            }));
-
-            var email = (await EmailAsync(owner)).ToUpperInvariant();
-            var byId = await RunAsync("events", bundle, owner.OrganizationId, owner.UserId);
-            var byEmail = await RunAsync("events", bundle, owner.OrganizationId, email, "--dry-run");
-
-            byId.Exit.Should().Be(0, byId.Error);
-            Report(byId).GetProperty("created").GetInt32().Should().Be(1);
-            (await AuthorAsync("SELECT created_by FROM events.showcase_events WHERE organization_id=$1", owner))
-                .Should().Be(owner.UserId);
-            byEmail.Exit.Should().Be(0, byEmail.Error);
-            Report(byEmail).GetProperty("dryRun").GetBoolean().Should().BeTrue();
-            Report(byEmail).GetProperty("existing").GetInt32().Should().Be(1);
-        }
-        finally { directory.Delete(true); }
-    }
-
     [Fact]
     public async Task ImportSourcing_ShouldAuthorAsThePersonTheActorNames()
     {
@@ -87,7 +57,6 @@ public sealed class ImportVerbTests(PreparationDatabaseFixture fixture) : IClass
     }
 
     [Theory]
-    [InlineData("events")]
     [InlineData("sourcing")]
     public async Task Import_ShouldRefuse_WhenDeskNeverSawTheActorOrTheOrganization(string verb)
     {

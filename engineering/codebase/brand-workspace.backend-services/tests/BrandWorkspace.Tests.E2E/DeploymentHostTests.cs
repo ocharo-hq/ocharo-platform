@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using System.Net;
 using AwesomeAssertions;
 using BrandWorkspace.Api;
@@ -46,6 +47,21 @@ public sealed class DeploymentHostTests
             await using var command =
                 dataSource.CreateCommand("SELECT count(*) FROM public.migration_history WHERE applied_by = 'startup'");
             ((long)(await command.ExecuteScalarAsync())!).Should().BePositive();
+        }
+        finally { keys.Delete(true); }
+    }
+
+    [Fact]
+    public async Task Startup_ShouldFail_WhenADeployedDeskHasNoEventsService()
+    {
+        var keys = Directory.CreateTempSubdirectory("brand-workspace-deployed-keys-");
+        try
+        {
+            var start = () => StartBehindIngressAsync(trustedProxy: null, keys.FullName, withEvents: false);
+
+            (await start.Should().ThrowAsync<OptionsValidationException>(
+                    "Desk keeps no events store of its own, so a deployed Desk without WoW2 Events never starts"))
+                .Which.Message.Should().Contain("Events:BaseUrl is required");
         }
         finally { keys.Delete(true); }
     }
@@ -116,7 +132,8 @@ public sealed class DeploymentHostTests
     }
 
     /// <summary>A Production host with only the settings a target supplies; no launch profile, no local run.</summary>
-    private static WebApiTestHost<ApiAssemblyMarker> DeployedFactory(string connection, string keys)
+    private static WebApiTestHost<ApiAssemblyMarker> DeployedFactory(
+        string connection, string keys, string? eventsUrl = "https://events.example.test")
     {
         var factory = new WebApiTestHost<ApiAssemblyMarker>
         {
@@ -132,7 +149,8 @@ public sealed class DeploymentHostTests
                     ["ConnectionStrings:Database"] = connection,
                     ["AllowedHosts"] = "desk.example.test;localhost",
                     ["DataProtection:KeysPath"] = keys,
-                    ["DataProtection:ApplicationName"] = "brand-workspace:deployed-tests"
+                    ["DataProtection:ApplicationName"] = "brand-workspace:deployed-tests",
+                    ["Events:BaseUrl"] = eventsUrl
                 })
         };
         factory.Clock.SetUtcNow(DateTimeOffset.UtcNow);
@@ -140,13 +158,14 @@ public sealed class DeploymentHostTests
     }
 
     /// <summary>Starts the HTTP pipeline only; these checks reach no database.</summary>
-    private static async Task<WebApplication> StartBehindIngressAsync(string? trustedProxy, string keys)
+    private static async Task<WebApplication> StartBehindIngressAsync(string? trustedProxy, string keys, bool withEvents = true)
     {
         string[] args =
         [
             "--DEPLOY_ENVIRONMENT=prod", "--AllowedHosts=desk.example.test;localhost",
             "--ConnectionStrings:Database=Host=127.0.0.1;Port=1;Database=unavailable;Username=unused;Timeout=1",
             $"--DataProtection:KeysPath={keys}", "--DataProtection:ApplicationName=brand-workspace:proxy-tests",
+            .. withEvents ? ["--Events:BaseUrl=https://events.example.test"] : Array.Empty<string>(),
             .. DeskTestHost.IdentityClientSettings.Select(setting => $"--{setting.Key}={setting.Value}"),
             .. trustedProxy is null ? Array.Empty<string>() : [$"--Deployment:TrustedProxies:0={trustedProxy}"]
         ];

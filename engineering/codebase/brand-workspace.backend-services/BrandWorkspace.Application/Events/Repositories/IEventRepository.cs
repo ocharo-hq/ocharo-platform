@@ -26,13 +26,10 @@ public interface IEventRepository
     /// <summary>Reads one event; not found when the organization lacks it.</summary>
     Task<Result<ShowcaseEvent>> GetEventAsync(Guid organizationId, Guid eventId, CancellationToken token);
 
-    Task<ShowcaseEvent?> FindEventByKeyAsync(Guid organizationId, string key, CancellationToken token);
-
-    /// <summary>Adds an event; a conflict when its import key is already used.</summary>
+    /// <summary>Adds an event the person proposes.</summary>
     Task<Result<ShowcaseEvent>> CreateEventAsync(
         Guid organizationId,
         string actor,
-        string? key,
         ShowcaseEventInput input,
         CancellationToken token);
 

@@ -99,7 +99,7 @@ services:
         Files:BaseUrl: { from: Identity:Server:Resources:2:Uri }
         # Desk's Events page reads WoW2 Events, catalog `ocharo-fashion`, with the operator's token exchanged within their
         # session (client 0's `ExchangeResources: events`); linked to the Uri this descriptor types for its Events resource.
-        # Unset, Desk reads and writes its own `events.showcase_events`, kept as the rollback copy (research/events-adoption.md #7).
+        # Desk keeps no events store since v0.3 Iteration 5, so a deployed Desk refuses to start without it.
         Events:BaseUrl: { from: Identity:Server:Resources:3:Uri }
         # The Events catalog Desk's page reads; Ocharo's intake and import write `ocharo-fashion`.
         Events:Catalog: { default: ocharo-fashion }

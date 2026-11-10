@@ -117,32 +117,40 @@ public sealed class EventsServiceRouteTests(PreparationDatabaseFixture fixture) 
     }
 
     [Fact]
-    public async Task Host_ShouldExchangeTheSessionTokenForEvents_AndRefuseBundleImports()
+    public async Task Host_ShouldWireEventsByIdentity_WithNoStoreOfItsOwn()
     {
         await using var host = Host(service: null);
         using var anonymous = DeskTestHost.CreateClient(host);
         (await anonymous.GetAsync("/health")).StatusCode.Should().Be(HttpStatusCode.OK);
 
-        host.Services.GetRequiredService<IOptions<EventsClientOptions>>().Value.BaseAddress.Should().Be(new Uri(EventsUrl));
-        OAuth2TokenExchangeOptions exchange = host.Services.GetRequiredService<IOptionsMonitor<OAuth2TokenExchangeOptions>>()
-            .Get(EventsClientConstants.HttpClientName);
-        exchange.TokenEndpoint.Should().Be(new Uri("https://identity.example.test/connect/token"));
-        exchange.ClientId.Should().Be("desk");
-        exchange.Resource.Should().Be(EventsUrl + "/");
+        EventsClientOptions events = host.Services.GetRequiredService<IOptions<EventsClientOptions>>().Value;
+        events.BaseAddress.Should().Be(new Uri(EventsUrl));
+        events.Identity!.TokenEndpoint.Should().Be(new Uri("https://identity.example.test/connect/token"));
+        events.Identity.ClientId.Should().Be("desk");
         host.Services.GetRequiredService<IOAuth2SubjectTokenSource>().GetType().FullName
             .Should().Be("WoW.Two.Sdk.Beta.Be.Identity.Bff.Sessions.BffSubjectTokenSource");
         using var scope = host.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IEventRepository>().Should().BeOfType<EventsServiceRepository>();
-        scope.ServiceProvider.GetRequiredService<IEventRecordsReader>().Should().NotBeOfType<EventsServiceRepository>();
     }
 
-    private WebApiTestHost<ApiAssemblyMarker> Host(FakeEventsService? service)
+    [Fact]
+    public async Task EventsPage_ShouldAnswerUnavailable_InALocalRunWithoutEvents()
+    {
+        OrganizationAccess owner = await fixture.CreateOwnerAsync();
+        await using var host = Host(service: null, eventsUrl: null);
+        using HttpClient client = await fixture.LoginAsync(host, owner);
+
+        (await client.GetAsync($"/api/organizations/{owner.OrganizationId}/events")).StatusCode
+            .Should().Be(HttpStatusCode.ServiceUnavailable);
+    }
+
+    private WebApiTestHost<ApiAssemblyMarker> Host(FakeEventsService? service, string? eventsUrl = EventsUrl)
     {
         var configuration = new Dictionary<string, string?>
         {
             ["ConnectionStrings:Database"] = fixture.ConnectionString,
             ["AllowedHosts"] = "localhost;127.0.0.1",
-            ["Events:BaseUrl"] = EventsUrl,
+            ["Events:BaseUrl"] = eventsUrl,
             ["Identity:Client:ClientSecret"] = "test-secret",
         };
         var factory = new WebApiTestHost<ApiAssemblyMarker>

@@ -154,7 +154,7 @@ public sealed class EventsServiceTests
         var service = new FakeEventsService();
 
         Result<ShowcaseEvent> created = await Repository(service).CreateEventAsync(
-            Organization, "user-1", null, Input("day", new DateOnly(2027, 3, 10)) with { Status = "shortlisted" }, Token);
+            Organization, "user-1", Input("day", new DateOnly(2027, 3, 10)) with { Status = "shortlisted" }, Token);
 
         ShowcaseEvent item = created.Should().BeOfType<Result<ShowcaseEvent>.Success>().Which.Value;
         service.Event(item.Id).Review.Should().Be(EventReviewState.Candidate);
@@ -162,19 +162,6 @@ public sealed class EventsServiceTests
         item.Status.Should().Be("shortlisted");
         item.Revision.Should().Be(2);
         item.SourceUrl.Should().Be("https://example.org/found");
-    }
-
-    [Fact]
-    public async Task Import_ShouldRefuse_OnceEventsServesDesk()
-    {
-        var repository = Repository(new FakeEventsService());
-
-        Func<Task> find = () => repository.FindEventByKeyAsync(Organization, "ambiente-2027", Token);
-        Result<ShowcaseEvent> keyed = await repository.CreateEventAsync(
-            Organization, "user-1", "ambiente-2027", Input("day", new DateOnly(2027, 1, 29)), Token);
-
-        (await find.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Gone);
-        keyed.Should().BeOfType<Result<ShowcaseEvent>.Failure>().Which.Error.Type.Should().Be(AppErrorType.Gone);
     }
 
     [Fact]
@@ -205,26 +192,34 @@ public sealed class EventsServiceTests
     }
 
     [Fact]
-    public void Validation_ShouldTakeEventsNameLimits_OnlyWhileEventsServesDesk()
+    public void Validation_ShouldTakeEventsNameLimits()
     {
         var fields = new EventFields(
             "Ikat Week", new string('o', 180), "local", "festival", "UZ", new string('c', 150), null, null, null,
             "unknown", null, "", null, null, null, "shortlisted", "normal", "");
-        var served = new EventValidationService(Options.Create(new EventsServiceOptions { BaseUrl = "https://events.example.test" }));
-        var table = new EventValidationService();
+        var validation = new EventValidationService();
 
-        ShowcaseEventInput accepted = served.Event(fields);
-        Action refused = () => table.Event(fields);
+        ShowcaseEventInput accepted = validation.Event(fields);
 
         accepted.Organizer.Should().HaveLength(180);
         accepted.City.Should().HaveLength(150);
-        refused.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
-        served.Invoking(service => service.Event(fields with { Organizer = new string('o', 201) }))
-            .Should().Throw<AppException>();
+        validation.Invoking(service => service.Event(fields with { Organizer = new string('o', 201) }))
+            .Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task Read_ShouldAnswerUnavailable_WhenEventsIsNotConfigured()
+    {
+        var repository = new EventsServiceRepository(
+            new FakeEventsService(), new FakeEventsService(), Options.Create(new EventsServiceOptions()));
+
+        Func<Task> read = () => repository.GetEventsAsync(Organization, All, 200, 0, Token);
+
+        (await read.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.ExternalUnavailable);
     }
 
     private static EventsServiceRepository Repository(FakeEventsService service) =>
-        new(service, service, Options.Create(new EventsServiceOptions()));
+        new(service, service, Options.Create(new EventsServiceOptions { BaseUrl = "https://events.example.test" }));
 
     private static EventFacts Facts(string title, string? country, EventWhen starts) => new()
     {

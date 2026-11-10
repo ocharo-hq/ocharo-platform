@@ -17,8 +17,9 @@ public sealed class EventsServiceOptions
     public const string SectionName = "Events";
 
     /// <summary>
-    /// Gets or sets the Events service's root URL; set, Events serves Desk's page, unset, Desk's own table does. The host
-    /// reads it when it registers the client, so the whole section binds here.
+    /// Gets or sets the Events service's root URL, which serves Desk's Events page. A deployed run refuses to start
+    /// without it; a local run without it answers 503 on the Events routes. Desk keeps no events store of its own since
+    /// v0.3 Iteration 5, so there is no fallback.
     /// </summary>
     public string? BaseUrl { get; set; }
 
@@ -27,9 +28,9 @@ public sealed class EventsServiceOptions
 }
 
 /// <summary>
-/// Serves Desk's events port from WoW2 Events once <c>Events:BaseUrl</c> is set (events-adoption.md #7, #8): reads are
-/// the organization's tracking list of the catalog, a new event is a member proposal, stage, priority, notes,
-/// participation and cost are tracking; fact edits, deletes and bundle imports moved to Events and answer Gone.
+/// Serves Desk's events port from WoW2 Events (events-adoption.md #7, #8): reads are the organization's tracking list of
+/// the catalog, a new event is a member proposal, stage, priority, notes, participation and cost are tracking; fact
+/// edits and deletes moved to Events' review and answer Gone.
 /// </summary>
 /// <remarks>
 /// Every call acts for the signed-in person through the brokers' token exchange, so Events scopes the tracking to the
@@ -47,7 +48,10 @@ public sealed class EventsServiceRepository(
 
     private static readonly HashSet<string> ClosedStatuses = new(StringComparer.Ordinal) { "skipped", "rejected" };
 
-    private string Catalog => options.Value.Catalog;
+    /// <summary>Gets the catalog slug; unconfigured, every call answers 503 before reaching Events.</summary>
+    private string Catalog => string.IsNullOrWhiteSpace(options.Value.BaseUrl)
+        ? throw DeskErrors.Unavailable("WoW2 Events is not configured for this Desk (Events:BaseUrl).").ToException()
+        : options.Value.Catalog;
 
     public async Task<IReadOnlyList<ShowcaseEvent>> GetEventsAsync(
         Guid organizationId, ShowcaseEventFilter filter, int limit, int offset, CancellationToken token)
@@ -91,17 +95,10 @@ public sealed class EventsServiceRepository(
         };
     }
 
-    /// <summary>Refuses: bundle imports into Desk stopped when Events took the catalog.</summary>
-    public Task<ShowcaseEvent?> FindEventByKeyAsync(Guid organizationId, string key, CancellationToken token)
-    {
-        throw ImportMoved().ToException();
-    }
-
     /// <summary>Proposes the event to the catalog as a candidate and records this organization's tracking of it.</summary>
     public async Task<Result<ShowcaseEvent>> CreateEventAsync(
-        Guid organizationId, string actor, string? key, ShowcaseEventInput input, CancellationToken token)
+        Guid organizationId, string actor, ShowcaseEventInput input, CancellationToken token)
     {
-        if (key is not null) return Result<ShowcaseEvent>.Fail(ImportMoved());
         Result<EventModel> proposed = await catalogEvents.ProposeAsync(
             Catalog, new EventSpec { Facts = EventsServiceMapper.ToFacts(input) }, token);
         if (proposed is Result<EventModel>.Failure refused) return Result<ShowcaseEvent>.Fail(refused.Error);
@@ -195,7 +192,4 @@ public sealed class EventsServiceRepository(
 
     private static AppError FactsMoved() => DeskErrors.Gone(
         "Event details moved to WoW2 Events; change them through its review. Stage, priority and notes stay editable here.");
-
-    private static AppError ImportMoved() => DeskErrors.Gone(
-        "Event imports moved to WoW2 Events; Desk no longer imports event bundles.");
 }
