@@ -97,6 +97,10 @@ services:
         # backfill and public routes; linked to the Uri this descriptor types for its Files resource. Rows stored before
         # Files keep their bytes until the migration and boot fill their ids (research/files-adoption.md #13, #32).
         Files:BaseUrl: { from: Identity:Server:Resources:2:Uri }
+        # Desk's Events page reads WoW2 Events, catalog `ocharo-fashion`, with the operator's token exchanged within their
+        # session (client 0's `ExchangeResources: events`); linked to the Uri this descriptor types for its Events resource.
+        # Unset, Desk reads and writes its own `events.showcase_events`, kept as the rollback copy (research/events-adoption.md #7).
+        Events:BaseUrl: { from: Identity:Server:Resources:3:Uri }
         # Background removal: the private image worker, a sibling on the platform network. Its address is an owner key
         # typed per environment as `http://ocharo-<environment>-image-worker:8080`, its platform name: the bare service
         # name is an alias every environment's worker would share on that one network, and the descriptor has no template
@@ -420,9 +424,8 @@ services:
         Identity:Server:Clients:10:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:10:PostSignOutRedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:10:SignalUrl: { type: url, required: true }
-        # Its BFF reaches `events` for the signed-in reviewer by token exchange, as Desk reaches Files: Identity 0.5.20
-        # refuses Scopes without a service grant, and the code flow's own token is the console's audience, not Events'.
-        # The console's imports page runs the 68-row Desk import as an Ocharo owner or admin (`events:admin`).
+        # The console is Events' own app and reads the reviewer's `events:*` permissions from the sign-in, so it calls no
+        # other service; Identity 0.5.20 accepts Scopes only beside a service grant, so token_exchange carries the five.
         Identity:Server:Clients:10:Grants:0: { default: authorization_code }
         Identity:Server:Clients:10:Grants:1: { default: token_exchange }
         Identity:Server:Clients:10:ExchangeResources:0: { default: events }

@@ -12,7 +12,8 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Results;
 namespace BrandWorkspace.Persistence.Events.Repositories;
 
 /// <summary>Accesses the showcase events inside one organization.</summary>
-public sealed class EventRepository(IDbConnectionFactory connectionFactory, TimeProvider time) : IEventRepository
+public sealed class EventRepository(IDbConnectionFactory connectionFactory, TimeProvider time)
+    : IEventRepository, IEventRecordsReader
 {
     private const string EventColumns =
         "id, import_key, title, organizer, scope, format, country, city, venue, starts_on, ends_on, date_precision, "

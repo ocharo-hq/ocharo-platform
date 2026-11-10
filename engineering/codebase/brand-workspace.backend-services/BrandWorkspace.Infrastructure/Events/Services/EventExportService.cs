@@ -12,7 +12,7 @@ namespace BrandWorkspace.Infrastructure.Events.Services;
 /// Writes an organization's events as a WoW2 Events import bundle (Events' contract § Imports); it reads Desk and never
 /// writes it (events-adoption.md #6).
 /// </summary>
-public sealed class EventExportService(IEventRepository repository)
+public sealed class EventExportService(IEventRecordsReader repository)
 {
     public const string Format = "wow2.events-import.v1";
     public const string Source = "ocharo-desk";

@@ -3,6 +3,7 @@
     <PackageReference Include="WoW2.Sdk.Beta.Be" />
     <!-- WoW2 Files' brokers, behind Desk's file store and its boot backfill. -->
     <PackageReference Include="WoW2.Sdk.Beta.Be.Files.Abstractions" />
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Events.Abstractions" />
     <PackageReference Include="Microsoft.Data.Sqlite" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="SkiaSharp.NativeAssets.Linux" />

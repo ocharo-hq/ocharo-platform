@@ -69,12 +69,6 @@ public sealed class EventImportTests
             throw Unexpected();
         }
 
-        public Task<IReadOnlyList<ShowcaseEventRecord>> GetEventRecordsAsync(
-            Guid organizationId, CancellationToken token)
-        {
-            throw Unexpected();
-        }
-
         public Task<Result<ShowcaseEvent>> CreateEventAsync(
             Guid organizationId,
             string actor,

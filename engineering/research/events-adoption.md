@@ -20,8 +20,10 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
   - ✅ `export events` writes Events' fixed `wow2.events-import.v1`; local Desk gives 68 of 68 rows (#6).
   - ✅ Registrations pushed (`34f08dc`, `v0.3.1`); `ocharo-dev`'s Identity redeployed healthy with them (#2, #5).
   - ✅ Client 10 `events-console` pushed once ev-wheelhouse typed its three URIs on `ocharo-dev`.
-  - ⬜ The Events-backed repository, import route and freeze wait on the published Events Client and npm
-    package (Events `v0.1.1` image released 2026-11-10; packages pending the developer's publishing steps) (#7, #8, #12).
+  - ✅ Desk's Events-backed repository built on Events `10.0.0-beta` (`WoW2.Sdk.Beta.Be.Events.Client`), be sdk
+    `10.0.111-beta`: reads, proposals, tracking, the 410 freeze and `import events` refused once `Events:BaseUrl` is set
+    (#7, #8); 16 unit and 2 route tests on an in-memory Events.
+  - ⬜ On dev: the 68-row import (ev-wheelhouse, Events' operator verb), then done-when (b) and (c) read back.
 
 ## Data
 
@@ -172,6 +174,13 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 - Built on the published Events Client (`AddEventsClient()` with the be sdk's `AddOAuth2TokenExchange` and
   `BffSubjectTokenSource`); nothing is written against unpublished wire types.
 - The fe package replaces the screens only once it matches the month feed, deadlines, detail and tracking form.
+- Desk's revision is the tracking revision plus one: an untracked event reads as 1, since Desk's screens require a
+  positive revision, and a write at 1 creates the tracking.
+- Fact edits and deletes answer 410 `Gone`; a stale revision 409, as before; bundle imports (`import events`, keyed
+  creates) answer 410.
+- Desk's filters, order and paging run in memory over the whole catalog, the rules of its own SQL; Events' query
+  takes them over with the fe package.
+- `IEventRecordsReader` keeps the export reading Desk's own table whichever store serves the page.
 
 ### #9 Event images (`events-integration #31`), platform input
 

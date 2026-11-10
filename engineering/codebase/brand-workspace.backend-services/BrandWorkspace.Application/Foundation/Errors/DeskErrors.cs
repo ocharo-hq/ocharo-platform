@@ -47,6 +47,16 @@ public static class DeskErrors
         return AppError.Of(AppErrorType.NotFound, message, null, member, file, line);
     }
 
+    /// <summary>A write that moved elsewhere for good, such as an event's facts moving to WoW2 Events.</summary>
+    public static AppError Gone(
+        string message,
+        [CallerMemberName] string member = "",
+        [CallerFilePath] string file = "",
+        [CallerLineNumber] int line = 0)
+    {
+        return AppError.Of(AppErrorType.Gone, message, null, member, file, line);
+    }
+
     /// <summary>A change the current state refuses, such as a stale revision.</summary>
     public static AppError Conflict(
         string message,

@@ -170,6 +170,7 @@ a required key, and Wheelhouse checks each saved value against its type and keep
 | | | `Identity:Client:Authority` | linked to `Sites:identity:Url`, the value identity's issuer takes |
 | | | `Identity:Client:ClientSecret` | linked to identity's `Identity:Server:Clients:0:ClientSecret` |
 | | | `Identity:Client:{ClientId,CookieName,PostSignOutRedirectPath}` | `deploy.yml` defaults: `desk`, `__Host-ocharo-desk`, `/` |
+| | | `Events:BaseUrl` | linked to identity's `Identity:Server:Resources:3:Uri`; set, WoW2 Events (catalog `Events:Catalog`, default `ocharo-fashion`) serves the Events page by client 0's token exchange, and Desk's own table stays as the rollback copy (research/events-adoption.md #7, #8) |
 | | | `ImageProcessing:WorkerBaseUrl` | the owner, per environment: `http://ocharo-<environment>-image-worker:8080` |
 | | | `ImageProcessing:WorkerKey` | linked to the image worker's `ImageWorker:Key` |
 | `jobs` | none | `ConnectionStrings:Database` | the target's PostgreSQL |
