@@ -420,6 +420,17 @@ services:
         Identity:Server:Clients:10:RedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:10:PostSignOutRedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:10:SignalUrl: { type: url, required: true }
+        # Its BFF reaches `events` for the signed-in reviewer by token exchange, as Desk reaches Files: Identity 0.5.20
+        # refuses Scopes without a service grant, and the code flow's own token is the console's audience, not Events'.
+        # The console's imports page runs the 68-row Desk import as an Ocharo owner or admin (`events:admin`).
+        Identity:Server:Clients:10:Grants:0: { default: authorization_code }
+        Identity:Server:Clients:10:Grants:1: { default: token_exchange }
+        Identity:Server:Clients:10:ExchangeResources:0: { default: events }
+        Identity:Server:Clients:10:Scopes:0: { default: events.read }
+        Identity:Server:Clients:10:Scopes:1: { default: events.review }
+        Identity:Server:Clients:10:Scopes:2: { default: events.track }
+        Identity:Server:Clients:10:Scopes:3: { default: events.import }
+        Identity:Server:Clients:10:Scopes:4: { default: events.admin }
         Identity:Server:Resources:0:Name: { default: desk }
         Identity:Server:Resources:0:Uri: { type: url, required: true }
         Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }
