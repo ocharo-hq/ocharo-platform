@@ -261,8 +261,8 @@ services:
         Identity:Organizations:Roles:editor:9: { default: "events:track" }
         Identity:Organizations:Roles:viewer:1: { default: "events:read" }
         # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
-        # 2 catalogue, 3 marketing, 4 editorial, 5 studio, 6 public-build, 7 assets-release, 8 events and
-        # 9 harvest-operator; 10 is kept for events-console, which joins once its URIs are typed. Each secret but 7's
+        # 2 catalogue, 3 marketing, 4 editorial, 5 studio, 6 public-build, 7 assets-release, 8 events,
+        # 9 harvest-operator and 10 events-console. Each secret but 7's
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
         # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
         # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
@@ -383,7 +383,7 @@ services:
         Identity:Server:Clients:0:Scopes:2: { default: events.read }
         Identity:Server:Clients:0:Scopes:3: { default: events.track }
         Identity:Server:Clients:0:Scopes:4: { default: events.import }
-        # Client 8, events: WoW2 Events pulls SCFD's deliveries as itself. Clients 8 and 9 belong to other products
+        # Client 8, events: WoW2 Events pulls SCFD's deliveries as itself. Clients 8–10 belong to other products
         # (Events, SCFD); their generated secrets reach those targets through Wheelhouse's owner link, never typed twice.
         Identity:Server:Clients:8:ClientId: { default: events }
         Identity:Server:Clients:8:DisplayName: { default: WoW2 Events }
@@ -409,6 +409,17 @@ services:
         Identity:Server:Clients:9:Scopes:8: { default: harvest.links-submit }
         Identity:Server:Clients:9:Scopes:9: { default: harvest.entries-write }
         Identity:Server:Clients:9:Scopes:10: { default: harvest.posts-read }
+        # Client 10, events-console: WoW2 Events' review console signs reviewers in through its BFF; a reviewer needs
+        # `events:review` in the catalog's owner organization. Its URIs are owner keys typed per environment from Events'
+        # Uri (`{Uri}api/identity/callback`, `{Uri}`, `{Uri}api/identity/signal`); its secret reaches the Events target
+        # through Wheelhouse's owner link.
+        Identity:Server:Clients:10:ClientId: { default: events-console }
+        Identity:Server:Clients:10:DisplayName: { default: WoW2 Events review }
+        Identity:Server:Clients:10:PermissionNamespace: { default: events }
+        Identity:Server:Clients:10:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:10:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:10:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:10:SignalUrl: { type: url, required: true }
         Identity:Server:Resources:0:Name: { default: desk }
         Identity:Server:Resources:0:Uri: { type: url, required: true }
         Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }

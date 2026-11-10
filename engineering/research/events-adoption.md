@@ -19,7 +19,7 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
 - 🔄 M2 started 2026-11-10 ([v0.3](../planning/version-track/v0.3/v0.3.md)):
   - ✅ `export events` writes Events' fixed `wow2.events-import.v1`; local Desk gives 68 of 68 rows (#6).
   - ✅ Registrations pushed (`34f08dc`, `v0.3.1`); `ocharo-dev`'s Identity redeployed healthy with them (#2, #5).
-  - ⬜ Client 10 `events-console` waits on its three typed URIs.
+  - ✅ Client 10 `events-console` pushed once ev-wheelhouse typed its three URIs on `ocharo-dev`.
   - ⬜ Proxy, proposal and tracking routes, screens, import and freeze wait on `IEventsClient` (#7, #8, #12).
 
 ## Data
@@ -74,7 +74,7 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 | `Resources:4:Scopes:N` | the 11 `harvest.{noun}-{verb}` scopes | renamed under SCFD's resource (`events-integration #16`), such as `harvest.events-read`, `harvest.tenants-manage` |
 | `Clients:8` | `events`, `client_credentials`, `Resources: [harvest]`, `harvest.events-read` only | Events pulls from SCFD as itself |
 | `Clients:9` | `harvest-operator`, `client_credentials`, `Resources: [harvest]`, all 11 scopes | SCFD's operator provisions tenants, sources and subscriptions |
-| `Clients:10` | `events-console`, code flow, namespace `events`, typed redirect, sign-out and signal URIs | the review console's BFF sign-in (`events-integration #30`); a reviewer needs `events:review` in the catalog's owner organization; joins in a follow-up once its URIs are typed, so no Identity deploy waits on the console |
+| `Clients:10` | `events-console`, code flow, namespace `events`, typed redirect, sign-out and signal URIs | the review console's BFF sign-in (`events-integration #30`); a reviewer needs `events:review` in the catalog's owner organization; pushed in a follow-up once its URIs were typed, so no Identity deploy waited on the console |
 | `Clients:0:ExchangeResources:1` | `events` | Desk reaches Events for a person only |
 | `Clients:0:Scopes:2–4` | `events.read`, `events.track`, `events.import` | Desk reads, tracks and imports for a person |
 
@@ -115,8 +115,8 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 - No secret: clients 8–10 generate theirs, and the owner link carries them to the Events and SCFD targets
 - A required untyped key refuses every Identity deploy, so the `deploy.yml` change pushes only after ev-wheelhouse
   confirms these on dev.
-- Pushed 2026-11-10 without client 10 once ev-wheelhouse typed keys 1–3 (resources 3 and 4); client 10 follows its
-  three URIs.
+- Pushed 2026-11-10 without client 10 once ev-wheelhouse typed keys 1–3 (resources 3 and 4); client 10 followed
+  the same day, once its three URIs were typed: `{Uri}api/identity/callback`, `{Uri}`, `{Uri}api/identity/signal`.
 - Desk's `Events:BaseUrl` links `from: Identity:Server:Resources:3:Uri`, so nobody types it.
 
 ### #6 Producer (`events-integration #26`)
