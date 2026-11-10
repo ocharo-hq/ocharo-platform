@@ -30,8 +30,12 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
   - ✅ Desk `v0.3.5` on dev (09:08Z), read back in the owner's own session: the Events page lists the 68 with their
     stages, precision, priority and derived scope as stored; the browser calls only Desk's origin; a fact edit and a
     delete answer 410 with the event unchanged; another organization's events path answers 404.
-  - ⬜ Done-when (b): the Afisha record is a review candidate in Events, which Desk's list leaves out until a reviewer
-    accepts it; then it shows on Desk's page.
+  - ✅ Done-when (b), 2026-11-10: Events `v0.1.6` published the held Afisha record by automatic review
+    (`classifier:filter:ocharo-fashion-v1`), and Desk's dev Events page lists it in the owner's session beside the 68
+    (69 in all), "Показ мод The Fashion Show Line 2026", 21 Nov 2026, untracked so `candidate` at revision 1; the
+    browser called only Desk's origin.
+  - ⬜ Afisha mapping gaps for the scfd lane (`events-integration #18`): the record carries no place, so Desk derives
+    `international` and shows no city, and its kind maps to `other`.
 
 ## Data
 
