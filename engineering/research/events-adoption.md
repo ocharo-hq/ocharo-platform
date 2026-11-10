@@ -91,7 +91,7 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 | `Resources:4:Uri` | owner key, `url`, required | Wheelhouse types SCFD's API site URL with its slash; on dev, product `harvestadapters`' API site (`events-integration #45`) |
 | `Resources:4:Scopes:N` | the 11 `harvest.{noun}-{verb}` scopes | renamed under SCFD's resource (`events-integration #16`), such as `harvest.events-read`, `harvest.tenants-manage` |
 | `Clients:8` | `events`, `client_credentials`, `Resources: [harvest]`, `harvest.events-read` only | Events pulls from SCFD as itself |
-| `Clients:9` | `harvest-operator`, `client_credentials`, `Resources: [harvest]`, all 11 scopes | SCFD's operator provisions tenants, sources and subscriptions |
+| `Clients:9` | removed 2026-11-10, index kept as a gap | SCFD provisions through host verbs, so the operator client had no caller; an unused confidential client is a standing credential |
 | `Clients:10` | `events-console`, code flow plus `token_exchange` to `events` with all 5 `events.*` scopes, namespace `events`, typed redirect, sign-out and signal URIs | the review console's BFF sign-in (`events-integration #30`); a reviewer needs `events:review` in the catalog's owner organization; pushed in a follow-up once its URIs were typed, so no Identity deploy waited on the console |
 | `Clients:0:ExchangeResources:1` | `events` | Desk reaches Events for a person only |
 | `Clients:0:Scopes:2–4` | `events.read`, `events.track`, `events.import` | Desk reads, tracks and imports for a person |
