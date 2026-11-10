@@ -11,7 +11,8 @@ v0.3 Iteration 8.
 
 - ✅ Design #1–#9 picked 2026-11-10.
 - ✅ R1: the service, its app, its Identity client and its deploy entry; `v0.3.11` on dev 2026-11-10, read back.
-- 🔄 R2: Desk's Events page, routes and exchange leave; every app's menu gains Events.
+- ✅ R2: Desk's Events page, routes and exchange left at `v0.3.12`; every app's menu lists Events (marketing `v0.1.18`,
+  studio `v0.1.24`), read on dev 2026-11-10.
 
 ## #1 Shape
 
