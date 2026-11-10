@@ -193,6 +193,9 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 - Desk's filters, order and paging run in memory over the whole catalog, the rules of its own SQL; Events' query
   takes them over with the fe package.
 - `IEventRecordsReader` keeps the export reading Desk's own table whichever store serves the page.
+- While Events serves Desk, Desk validates organizer and city at Events' 200 characters, not its table's 160 and 120:
+  Desk's form sends an event's facts back with every tracking save, so the narrower limits refused stage saves on
+  events Events accepted (cross-lane review, 2026-11-10).
 
 ### #9 Event images (`events-integration #31`), platform input
 

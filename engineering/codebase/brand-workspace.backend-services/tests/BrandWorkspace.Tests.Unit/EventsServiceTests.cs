@@ -204,6 +204,25 @@ public sealed class EventsServiceTests
         summary.UpcomingDeadlines.Select(item => item.Title).Should().Equal("Fair 1", "Fair 2", "Fair 3");
     }
 
+    [Fact]
+    public void Validation_ShouldTakeEventsNameLimits_OnlyWhileEventsServesDesk()
+    {
+        var fields = new EventFields(
+            "Ikat Week", new string('o', 180), "local", "festival", "UZ", new string('c', 150), null, null, null,
+            "unknown", null, "", null, null, null, "shortlisted", "normal", "");
+        var served = new EventValidationService(Options.Create(new EventsServiceOptions { BaseUrl = "https://events.example.test" }));
+        var table = new EventValidationService();
+
+        ShowcaseEventInput accepted = served.Event(fields);
+        Action refused = () => table.Event(fields);
+
+        accepted.Organizer.Should().HaveLength(180);
+        accepted.City.Should().HaveLength(150);
+        refused.Should().Throw<AppException>().Which.Error.Type.Should().Be(AppErrorType.Validation);
+        served.Invoking(service => service.Event(fields with { Organizer = new string('o', 201) }))
+            .Should().Throw<AppException>();
+    }
+
     private static EventsServiceRepository Repository(FakeEventsService service) =>
         new(service, service, Options.Create(new EventsServiceOptions()));
 

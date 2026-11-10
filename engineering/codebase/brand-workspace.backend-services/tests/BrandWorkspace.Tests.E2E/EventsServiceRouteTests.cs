@@ -77,6 +77,46 @@ public sealed class EventsServiceRouteTests(PreparationDatabaseFixture fixture) 
     }
 
     [Fact]
+    public async Task StageSave_ShouldReachEvents_WhenTheEventsNamesExceedDesksOwnTable()
+    {
+        var service = new FakeEventsService();
+        EventModel imported = service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["und"] = "Long-named fair" },
+            Kind = "trade-fair",
+            Organizer = new EventOrganizer { Name = new string('o', 180) },
+            Place = new EventPlace { City = new string('c', 150), Country = "DE" },
+            Starts = new EventWhen { Value = "2027-01-29", Precision = DatePrecision.Day },
+        });
+        OrganizationAccess owner = await fixture.CreateOwnerAsync();
+        await using var host = Host(service);
+        using HttpClient client = await fixture.LoginAsync(host, owner);
+        string path = $"/api/organizations/{owner.OrganizationId}/events";
+        JsonElement listed = (await DataAsync(await client.GetAsync(path))).EnumerateArray().Single();
+
+        JsonElement tracked = await DataAsync(await client.PutAsJsonAsync($"{path}/{imported.Id}", new
+        {
+            expectedRevision = 1,
+            title = listed.GetProperty("title").GetString(),
+            organizer = listed.GetProperty("organizer").GetString(),
+            scope = listed.GetProperty("scope").GetString(),
+            format = listed.GetProperty("format").GetString(),
+            country = listed.GetProperty("country").GetString(),
+            city = listed.GetProperty("city").GetString(),
+            startsOn = listed.GetProperty("startsOn").GetString(),
+            datePrecision = listed.GetProperty("datePrecision").GetString(),
+            participation = listed.GetProperty("participation").GetString(),
+            status = "applying",
+            priority = "high",
+            notes = "Book a stand.",
+        }));
+
+        tracked.GetProperty("status").GetString().Should().Be("applying");
+        tracked.GetProperty("organizer").GetString().Should().HaveLength(180);
+        service.TrackingWrites.Should().ContainSingle().Which.Stage.Should().Be("applying");
+    }
+
+    [Fact]
     public async Task Host_ShouldExchangeTheSessionTokenForEvents_AndRefuseBundleImports()
     {
         await using var host = Host(service: null);
