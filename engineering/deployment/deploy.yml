@@ -246,8 +246,23 @@ services:
         Identity:Organizations:Roles:editor:7: { default: "files:write" }
         # A viewer reads every app's media as a member, and that read reaches Files with the viewer's own token.
         Identity:Organizations:Roles:viewer:0: { default: "files:read" }
+        # WoW2 Events reads only org_permission, through the `events` resource's namespace (events-integration #23,
+        # research/events-adoption.md #4): owner and admin hold every Events right, review included; editors read and
+        # track; viewers read. Billing grants none.
+        Identity:Organizations:Roles:owner:15: { default: "events:read" }
+        Identity:Organizations:Roles:owner:16: { default: "events:track" }
+        Identity:Organizations:Roles:owner:17: { default: "events:review" }
+        Identity:Organizations:Roles:owner:18: { default: "events:admin" }
+        Identity:Organizations:Roles:admin:15: { default: "events:read" }
+        Identity:Organizations:Roles:admin:16: { default: "events:track" }
+        Identity:Organizations:Roles:admin:17: { default: "events:review" }
+        Identity:Organizations:Roles:admin:18: { default: "events:admin" }
+        Identity:Organizations:Roles:editor:8: { default: "events:read" }
+        Identity:Organizations:Roles:editor:9: { default: "events:track" }
+        Identity:Organizations:Roles:viewer:1: { default: "events:read" }
         # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
-        # 2 catalogue, 3 marketing, 4 editorial, 5 studio, 6 public-build and 7 assets-release. Each secret but 7's
+        # 2 catalogue, 3 marketing, 4 editorial, 5 studio, 6 public-build, 7 assets-release, 8 events and
+        # 9 harvest-operator; 10 is kept for events-console, which joins once its URIs are typed. Each secret but 7's
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
         # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
         # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
@@ -362,6 +377,38 @@ services:
         Identity:Server:Clients:5:ExchangeResources:0: { default: files }
         Identity:Server:Clients:5:Scopes:0: { default: files.read }
         Identity:Server:Clients:5:Scopes:1: { default: files.write }
+        # WoW2 Events (events-integration #21–#23, #30; research/events-adoption.md #2): Desk reaches `events` for a person
+        # only, by token exchange, and Events checks a scope plus an `events:*` permission against the token's org_id.
+        Identity:Server:Clients:0:ExchangeResources:1: { default: events }
+        Identity:Server:Clients:0:Scopes:2: { default: events.read }
+        Identity:Server:Clients:0:Scopes:3: { default: events.track }
+        Identity:Server:Clients:0:Scopes:4: { default: events.import }
+        # Client 8, events: WoW2 Events pulls SCFD's deliveries as itself. Clients 8 and 9 belong to other products
+        # (Events, SCFD); their generated secrets reach those targets through Wheelhouse's owner link, never typed twice.
+        Identity:Server:Clients:8:ClientId: { default: events }
+        Identity:Server:Clients:8:DisplayName: { default: WoW2 Events }
+        Identity:Server:Clients:8:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:8:Grants:0: { default: client_credentials }
+        Identity:Server:Clients:8:Resources:0: { default: harvest }
+        Identity:Server:Clients:8:Scopes:0: { default: harvest.events-read }
+        # Client 9, harvest-operator: SCFD's operator provisions tenants, containers, sources, pipelines and
+        # subscriptions as itself, with every SCFD scope.
+        Identity:Server:Clients:9:ClientId: { default: harvest-operator }
+        Identity:Server:Clients:9:DisplayName: { default: SCFD operator }
+        Identity:Server:Clients:9:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:9:Grants:0: { default: client_credentials }
+        Identity:Server:Clients:9:Resources:0: { default: harvest }
+        Identity:Server:Clients:9:Scopes:0: { default: harvest.tenants-manage }
+        Identity:Server:Clients:9:Scopes:1: { default: harvest.containers-manage }
+        Identity:Server:Clients:9:Scopes:2: { default: harvest.sources-manage }
+        Identity:Server:Clients:9:Scopes:3: { default: harvest.pipelines-read }
+        Identity:Server:Clients:9:Scopes:4: { default: harvest.pipelines-run }
+        Identity:Server:Clients:9:Scopes:5: { default: harvest.pipelines-manage }
+        Identity:Server:Clients:9:Scopes:6: { default: harvest.subscriptions-manage }
+        Identity:Server:Clients:9:Scopes:7: { default: harvest.events-read }
+        Identity:Server:Clients:9:Scopes:8: { default: harvest.links-submit }
+        Identity:Server:Clients:9:Scopes:9: { default: harvest.entries-write }
+        Identity:Server:Clients:9:Scopes:10: { default: harvest.posts-read }
         Identity:Server:Resources:0:Name: { default: desk }
         Identity:Server:Resources:0:Uri: { type: url, required: true }
         Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }
@@ -381,6 +428,33 @@ services:
         Identity:Server:Resources:2:Scopes:3: { default: files.admin }
         Identity:Server:Resources:2:PermissionNamespace: { default: files }
         Identity:Server:Resources:2:SignalUrl: { type: url, required: true }
+        # WoW2 Events' audience, typed per environment as `https://events.{domain}/` with its slash; exchanged tokens carry
+        # sid and org_id, so its signals go to `{Uri}signals/identity`.
+        Identity:Server:Resources:3:Name: { default: events }
+        Identity:Server:Resources:3:Uri: { type: url, required: true }
+        Identity:Server:Resources:3:Scopes:0: { default: events.read }
+        Identity:Server:Resources:3:Scopes:1: { default: events.track }
+        Identity:Server:Resources:3:Scopes:2: { default: events.review }
+        Identity:Server:Resources:3:Scopes:3: { default: events.import }
+        Identity:Server:Resources:3:Scopes:4: { default: events.admin }
+        Identity:Server:Resources:3:PermissionNamespace: { default: events }
+        Identity:Server:Resources:3:SignalUrl: { type: url, required: true }
+        # SCFD's audience, typed per environment as its API site URL with the slash (dev: product `harvestadapters`).
+        # Only service tokens reach it, so it has no permission namespace and no signal URL (Identity 0.5.20: null hears
+        # none).
+        Identity:Server:Resources:4:Name: { default: harvest }
+        Identity:Server:Resources:4:Uri: { type: url, required: true }
+        Identity:Server:Resources:4:Scopes:0: { default: harvest.tenants-manage }
+        Identity:Server:Resources:4:Scopes:1: { default: harvest.containers-manage }
+        Identity:Server:Resources:4:Scopes:2: { default: harvest.sources-manage }
+        Identity:Server:Resources:4:Scopes:3: { default: harvest.pipelines-read }
+        Identity:Server:Resources:4:Scopes:4: { default: harvest.pipelines-run }
+        Identity:Server:Resources:4:Scopes:5: { default: harvest.pipelines-manage }
+        Identity:Server:Resources:4:Scopes:6: { default: harvest.subscriptions-manage }
+        Identity:Server:Resources:4:Scopes:7: { default: harvest.events-read }
+        Identity:Server:Resources:4:Scopes:8: { default: harvest.links-submit }
+        Identity:Server:Resources:4:Scopes:9: { default: harvest.entries-write }
+        Identity:Server:Resources:4:Scopes:10: { default: harvest.posts-read }
     sites:
       identity: { paths: [/, /api] }
   brand:

@@ -60,30 +60,32 @@ the only copy found.
 ### #2 Registrations (`events-integration #21`, `#22`)
 
 Ocharo's Identity registry stays in `engineering/deployment/deploy.yml`, as for Files (`files-integration #32`). Indexes
-are fixed, since the seeder deletes a client that leaves the settings. `<…>` marks a name the owning lane supplies.
+are fixed, since the seeder deletes a client that leaves the settings. Names from the events and scfd lanes
+(`events-integration #16`, `#21`, `#22`, `#30`), written into `deploy.yml` on 2026-11-10.
 
 | Key | Value | Why |
 |---|---|---|
 | `Resources:3:Name` | `events` | Events' audience in Ocharo's Identity |
-| `Resources:3:Uri` | owner key, `url`, required | Wheelhouse types `{Events URL}/` per environment |
-| `Resources:3:Scopes:N` | `events.<…>` | from the events lane |
+| `Resources:3:Uri` | owner key, `url`, required | Wheelhouse types `https://events.{domain}/` per environment |
+| `Resources:3:Scopes:N` | `events.read`, `events.track`, `events.review`, `events.import`, `events.admin` | the events lane |
 | `Resources:3:PermissionNamespace` | `events` | an exchanged token carries only `events:*` permissions |
-| `Resources:3:SignalUrl` | owner key, `url`, required | exchanged tokens carry `sid` and `org_id`, so Events hears both signals |
+| `Resources:3:SignalUrl` | owner key, `url`, required | `{Uri}signals/identity`: exchanged tokens carry `sid` and `org_id`, so Events hears both signals |
 | `Resources:4:Name` | `harvest` | SCFD's audience, as FSS kept `files` (scfd lane, 2026-11-10) |
 | `Resources:4:Uri` | owner key, `url`, required | Wheelhouse types SCFD's API site URL with its slash; on dev, product `harvestadapters`' API site (`events-integration #45`) |
 | `Resources:4:Scopes:N` | the 11 `harvest.{noun}-{verb}` scopes | renamed under SCFD's resource (`events-integration #16`), such as `harvest.events-read`, `harvest.tenants-manage` |
 | `Clients:8` | `events`, `client_credentials`, `Resources: [harvest]`, `harvest.events-read` only | Events pulls from SCFD as itself |
-| `Clients:9` | SCFD's operator (id from the scfd lane), `client_credentials`, `Resources: [harvest]`, all 11 scopes | SCFD's operator provisions tenants, sources and subscriptions |
+| `Clients:9` | `harvest-operator`, `client_credentials`, `Resources: [harvest]`, all 11 scopes | SCFD's operator provisions tenants, sources and subscriptions |
+| `Clients:10` | `events-console`, code flow, namespace `events`, typed redirect, sign-out and signal URIs | the review console's BFF sign-in (`events-integration #30`); a reviewer needs `events:review` in the catalog's owner organization; joins in a follow-up once its URIs are typed, so no Identity deploy waits on the console |
 | `Clients:0:ExchangeResources:1` | `events` | Desk reaches Events for a person only |
-| `Clients:0:Scopes:N` | Desk's `events.*` scopes | the read and tracking scopes the events lane names |
+| `Clients:0:Scopes:2–4` | `events.read`, `events.track`, `events.import` | Desk reads, tracks and imports for a person |
 
 - SCFD's resource gets no `PermissionNamespace` and no `SignalUrl`: only service tokens reach it, and no signal revokes one.
+  Identity `v0.5.20` (Ocharo's image) keeps a resource's `SignalUrl` optional: `OidcResourceOptions.SignalUrl` is
+  nullable ("null hears none") and the options validator checks only the URLs named (`events-integration #49`).
 - SCFD maps each client in `Harvest:ServiceAccess:ClientGrantsJson` (`{clientId: {isOperator, tenantId?, scopes}}`),
   which Wheelhouse types on the SCFD target; this repo holds only the Identity side.
-- Clients 8 and 9 take typed secrets (`secret: true, required: true`, no `generate`), like client 7: Events and SCFD
-  deploy as their own products, and `from: { repository, key }` links only inside one product.
-- If the review console signs in through Ocharo's Identity (`events-integration #30`), client 8 adds
-  `authorization_code`, its redirect URIs and a `SignalUrl`; a client registers whole, so that lands with the console.
+- Clients 8–10 generate their secrets on `ocharo-dev`; Wheelhouse's owner link carries each to the Events or SCFD
+  target, since `from: { repository, key }` links only inside one product (ev-wheelhouse, P1).
 - If Events stores images in FSS in P1 (#9), client 8 adds `Resources: files` and `files.write`.
 
 ### #3 Desk → Events for a person (`events-integration #23`)
@@ -99,9 +101,9 @@ are fixed, since the seeder deletes a client that leaves the settings. `<…>` m
 
 | Role | `events:*` |
 |---|---|
-| owner, admin | every permission the events lane names |
-| editor | read and track |
-| viewer | read |
+| owner, admin | `events:read`, `events:track`, `events:review`, `events:admin` |
+| editor | `events:read`, `events:track` |
+| viewer | `events:read` |
 | billing | none |
 
 - Reason: Desk's rule today is reads by membership, writes by an editor or owner; Files gave viewers read the same way.
@@ -110,10 +112,12 @@ are fixed, since the seeder deletes a client that leaves the settings. `<…>` m
 
 - `Identity:Server:Resources:3:Uri`, `Identity:Server:Resources:3:SignalUrl`
 - `Identity:Server:Resources:4:Uri`
-- `Identity:Server:Clients:8:ClientSecret`, `Identity:Server:Clients:9:ClientSecret`, each also typed into the Events
-  or SCFD target that uses it
+- `Identity:Server:Clients:10:RedirectUris:0`, `…:PostSignOutRedirectUris:0`, `…:SignalUrl`: the review console's URIs
+- No secret: clients 8–10 generate theirs, and the owner link carries them to the Events and SCFD targets
 - A required untyped key refuses every Identity deploy, so the `deploy.yml` change pushes only after ev-wheelhouse
   confirms these on dev.
+- Pushed 2026-11-10 without client 10 once ev-wheelhouse typed keys 1–3 (resources 3 and 4); client 10 follows its
+  three URIs.
 - Desk's `Events:BaseUrl` links `from: Identity:Server:Resources:3:Uri`, so nobody types it.
 
 ### #6 Producer (`events-integration #26`)
