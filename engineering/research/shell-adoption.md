@@ -15,7 +15,11 @@ Source: three read-only agents on 2026-11-10, reading each app's `bootstrap/AppL
 ## Status
 
 - ✅ Inventory written 2026-11-10; the gaps in #1 went to the orchestrator for the fe sdk lane.
-- ⬜ Adoption waits for the shell's published version and its migration note.
+- ✅ The shell shipped as `AppFrame` in `@wow-two-beta/fe` `0.0.45`; every need in #1 is answered except #12, declined
+  (Studio takes the frame's drawer on a phone, or keeps its menu in the bar).
+- ✅ Brand pilot 2026-11-10 (`b91f7c8`): the pattern in #6, read locally against fixture data.
+- 🔄 Catalogue, Desk, Marketing, Editorial, Studio and Assets follow the pattern; each repo's version track records its
+  release and the sizes read on dev.
 
 ## #1 What the shared shell must accept
 
@@ -99,3 +103,32 @@ Differences between apps that read as copies drifting, not intent.
 3. Desk: the organization switch, the absent-sidebar state and the app-wide guard.
 4. Studio: the top-bar teleport, the rail default, the CSS variables and the full-bleed main.
 5. Assets: the bare bar.
+
+## #6 The adoption pattern
+
+Fixed on Brand and repeated in every app. An app's `bootstrap/AppLayout.vue` renders `AppFrame` and keeps only what
+is its own.
+
+| Piece | Where it lives now |
+|---|---|
+| Bar, sidebar, rail, page column, their sizes, glass, print rules, safe-area inset, skip link | the frame |
+| Collapse toggle, its persistence, the tablet drawer | the frame; the app passes its existing storage key as `collapse-storage-key`, so nobody's choice resets |
+| App switcher and brand mark | the frame's brand cell; the app passes `apps`, `current-app`, `app-label`, `app-subtitle`, the switcher's phrases and the `O` mark in `#brand` |
+| Version beside the app button | the frame's badge: `version` is the build's, `running-version` follows the API's status through `useRunningVersion`; a `dev` build compares nothing |
+| Sections | the app's nav component in `#nav`, without a collapse control; router links, the active item chosen by the app |
+| Phone bar | the app's component in `#phone-nav`, without placement classes |
+| Trail | `crumbs` as translated strings, `trail-label` |
+| Bar controls | `#bar-end` |
+| Account menu | `account` (identity, versions, busy state), `v-model:account-open`; languages and organizations where the app has them |
+| Connection card, notices | `#notice` |
+| Page, error boundary | the default slot |
+| The frame's own phrases | the app's `provideLocale` map: `AppFrame.collapseLabel`, `.expandLabel`, `.openNavigationLabel`, `.navigationLabel`, `VersionBadge.label`, `.updateLabel` |
+
+Picks:
+
+- Page column: the frame's 1536px in Brand, Desk, Marketing and Editorial (Brand was 1400px, Marketing and Editorial
+  1600px); Catalogue keeps 1800px for its designers; Studio and Assets are full-bleed.
+- The API version is read when the frame mounts and every five minutes after, for the badge; the account menu's
+  version rows still read when the menu opens.
+- Local check without a database or sign-in: the built app served beside fixture answers for its `/api` routes over
+  the machine's mkcert certificate; sizes read with `getBoundingClientRect()` on `header[role="banner"]` and `aside`.
