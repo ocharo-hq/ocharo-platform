@@ -12,7 +12,7 @@ import { SectionIcons } from './ShellIcons';
 
 /**
  * The phone's navigation: a bottom bar of the four sections used most, then More, which opens every other section as
- * a full-screen dialog. The bar sits in the shell's footer row, so the scrolling region ends above it.
+ * a full-screen dialog. The frame places the bar below the scrolling region and hides it from tablets up and in print.
  */
 defineOptions({ name: 'PhoneNav' });
 const props = defineProps<{ organizationId: string; current: DeskSection | null }>();
@@ -25,12 +25,7 @@ const moreIsCurrent = computed(() => moreSections.some((section) => section.id =
 </script>
 
 <template>
-  <BottomNavMenu
-    :is-fixed="false"
-    :aria-label="t('Desk sections')"
-    variant="glass"
-    class="z-sticky [grid-area:footer] md:hidden"
-  >
+  <BottomNavMenu :is-fixed="false" :aria-label="t('Desk sections')" variant="glass">
     <BottomNavMenuItem v-for="section in barSections" :key="section.id" as-child :is-active="props.current === section.id">
       <template #icon><component :is="SectionIcons[section.id]" :size="20" /></template>
       <RouterLink :to="deskSectionPath(props.organizationId, section.id)">{{ t(section.shortLabel) }}</RouterLink>

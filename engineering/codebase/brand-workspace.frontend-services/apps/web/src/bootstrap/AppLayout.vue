@@ -1,44 +1,38 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
-import { ChevronRight, RotateCw, UserCog } from 'lucide-vue-next';
-import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
-import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
+import { RotateCw, UserCog } from 'lucide-vue-next';
+import { useRunningVersion } from '@wow-two-beta/fe/foundation/net';
+import { AppFrame, type AppFrameAccount, type AppFrameSwitcher } from '@wow-two-beta/fe/presentation/layout';
 import {
-  AppShell,
-  AppShellContent,
-  AppShellHeader,
-  AppShellMain,
-  AppShellSidebar,
-} from '@wow-two-beta/fe/presentation/layout';
-import {
-  AccountMenu,
+  AppSwitcherKind,
   MenuItem,
   type AccountMenuLocale,
   type AccountMenuOrganization,
   type AccountMenuVersion,
+  type AppSwitcherItem,
 } from '@wow-two-beta/fe/presentation/nav';
 import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
 import { failureMessage, type AccessControls } from '@/application/common/hooks/UseAccess';
 import { useBuildIdentity } from '@/application/common/hooks/UseBuildIdentity';
 import { notifyError } from '@/application/common/hooks/UseFeedback';
+import { useOcharoApps } from '@/application/common/hooks/UseOcharoApps';
 import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
 import { useWorkspace } from '@/application/common/hooks/UseWorkspace';
 import { DeskGroupLabels, DeskSections } from '@/domain/common/DeskSections';
+import { OcharoAppKind } from '@/domain/common/models/OcharoApps';
 import { readWorkspaceLocation } from '@/domain/common/models/Workspace';
 import AccountSettings from '@/presentation/access/AccountSettings.vue';
 import ContentSkeleton from '@/presentation/common/ContentSkeleton.vue';
 import RouteFailure from '@/presentation/common/RouteFailure.vue';
 import DeskNav from '@/presentation/frame/DeskNav.vue';
-import OcharoAppsMenu from '@/presentation/frame/OcharoAppsMenu.vue';
 import PhoneNav from '@/presentation/frame/PhoneNav.vue';
+import { AppIcons } from '@/presentation/frame/ShellIcons';
 
 import { deskPageProps, readDeskPlace } from './router/DeskPlaces';
 
-/** The sidebar's widths: full, and the icon rail. @internal */
-const SidebarWidth = { Full: '244px', Rail: '68px' } as const;
-/** Where this browser remembers the desktop sidebar's rail choice; existing choices keep reading from it. @internal */
+/** Where this browser remembers the desktop sidebar's rail choice; the key predates the shared frame. @internal */
 const SidebarCollapsedKey = 'ocharo.desk.sidebar-collapsed';
 /** The interface languages, each named in its own language. @internal */
 const UiLanguages: readonly AccountMenuLocale[] = [
@@ -48,9 +42,9 @@ const UiLanguages: readonly AccountMenuLocale[] = [
 ];
 
 /**
- * The Ocharo frame, as Desk wears it, around every place. The glass top bar is the suite's: the app button, where you
- * are, and the account menu. The sidebar is Desk's own sections; it collapses to an icon rail on desktops and is always
- * the rail on tablets. Phones swap it for a bottom bar. Only the main region scrolls.
+ * Desk inside the frame every Ocharo app shares (the fe sdk's `AppFrame`): the bar, the sidebar and the page column are
+ * the suite's. Desk passes what is its own: the app list with the open organization, its sections, where you are, the
+ * refresh, the account with its organizations and languages, and its notices above the page.
  *
  * The frame owns the document's organization reads, so they stay loaded while places swap. Sourcing and Events keep
  * their page across their own views; every other place opens fresh on each navigation, as it did when each move loaded
@@ -60,13 +54,14 @@ const UiLanguages: readonly AccountMenuLocale[] = [
 defineOptions({ name: 'AppLayout' });
 const props = defineProps<{ access: AccessControls }>();
 const { t, uiLocale, setUiLocale } = useUiLocale();
-const { backendVersion, refresh: refreshBackendVersion } = useBuildIdentity();
+const { backendVersion, refresh: refreshBackendVersion, readRunningVersion } = useBuildIdentity();
+const apps = useOcharoApps();
+const appVersion = __APP_VERSION__;
+// The badge beside the app button follows the release the API serves; a local build has no release to compare.
+const { version: runningVersion } = useRunningVersion(() => (appVersion === 'dev' ? null : readRunningVersion()));
 const route = useRoute();
-// The stored choice seeds the first render too, so a collapsed rail never animates in from the full sidebar.
-const collapsed = usePersistentState(SidebarCollapsedKey, localStorageStorageBroker.read<boolean>(SidebarCollapsedKey) === true);
-const breakpoint = useBreakpoint(TailwindBreakpoints);
-const main = useTemplateRef<{ el: HTMLElement | null }>('main');
-const accountOpen = ref(false);
+const frame = useTemplateRef<{ scrollToTop: () => void }>('frame');
+const settingsOpen = ref(false);
 const location = computed(() => readWorkspaceLocation(route.path));
 const workspace = useWorkspace(props.access, location);
 /** The open place's sidebar section; `null` for an address outside every section. */
@@ -83,19 +78,45 @@ const memberships = computed<AccountMenuOrganization[]>(() =>
   (workspace.organizations.value ?? []).map((org) => ({ id: org.id, label: org.name, description: t(org.role) })),
 );
 const versions = computed<AccountMenuVersion[]>(() => [
-  { label: 'Desk', version: __APP_VERSION__ },
+  { label: 'Desk', version: appVersion },
   { label: 'API', version: t(backendVersion.value) },
 ]);
 /** Sections need an organization; the organization chooser shows the frame without them. */
 const hasSections = computed(() => Boolean(organization.value));
-const isDesktop = computed(() => ['lg', 'xl', '2xl'].includes(breakpoint.value ?? ''));
-const isRail = computed(() => !isDesktop.value || collapsed.value.value);
-const sidebarWidth = computed(() => (hasSections.value ? (isRail.value ? SidebarWidth.Rail : SidebarWidth.Full) : '0px'));
 /** Sections without a refresh control of their own reload the shared workspace reads from the top bar. */
 const sharedRefresh = computed(() => hasSections.value && ['media', 'brands', 'content', 'integrations'].includes(section.value ?? ''));
 const refreshDisabled = computed(
   () => props.access.busy.value || props.access.dirty.value || workspace.loading.value || workspace.refreshing.value,
 );
+const items = computed<AppSwitcherItem[]>(() =>
+  apps.map((app) => ({
+    key: app.key,
+    label: t(app.label),
+    description: t(app.summary),
+    href: app.url,
+    icon: AppIcons[app.key],
+    kind: app.kind === OcharoAppKind.Workspace ? AppSwitcherKind.App : AppSwitcherKind.Site,
+  })),
+);
+/** The app menu's own phrases. */
+const switcher = computed<AppFrameSwitcher>(() => ({
+  title: t('Ocharo apps'),
+  sitesLabel: t('Public sites'),
+  closeLabel: t('Close'),
+  newTabLabel: t('(opens in a new tab)'),
+  triggerLabel: t('Ocharo apps — {app}'),
+}));
+/** The account menu: who is signed in, the organizations, the versions, and sign-out while it runs. */
+const account = computed<AppFrameAccount>(() => ({
+  name: accountName.value,
+  description: accountEmail.value,
+  avatarSrc: user.value?.picture ?? null,
+  organizations: memberships.value,
+  locales: UiLanguages,
+  versions: versions.value,
+  isBusy: props.access.busy.value,
+  onSignOut: props.access.logout,
+}));
 /** The section's group, then the place itself. */
 const crumbs = computed(() => {
   const entry = DeskSections.find((item) => item.id === section.value);
@@ -120,99 +141,70 @@ watch(workspace.refreshError, (failure) => {
   if (failure) notifyError('Some workspace information could not refresh. Your design remains open.', 'workspace-refresh');
 });
 /* A new section starts at the top of the scrolling region; a move inside a section keeps its place. */
-watch(section, () => main.value?.el?.scrollTo?.({ top: 0 }));
+watch(section, () => frame.value?.scrollToTop());
 watch(
   () => route.path,
   () => {
-    if (!location.value.organizationId && section.value !== 'system') main.value?.el?.scrollTo?.({ top: 0 });
+    if (!location.value.organizationId && section.value !== 'system') frame.value?.scrollToTop();
   },
 );
 </script>
 
 <template>
-  <AppShell
-    class="desk-frame surface-ambient transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none"
-    sidebar-breakpoint="md"
-    :sidebar-width="sidebarWidth"
+  <AppFrame
+    ref="frame"
+    :organization="organization?.id ?? ''"
+    :locale="uiLocale"
+    :version="appVersion"
+    :running-version="runningVersion"
+    :apps="items"
+    current-app="desk"
+    app-label="Desk"
+    v-bind="organization ? { appSubtitle: organization.name } : {}"
+    :app-switcher="switcher"
+    :has-navigation="hasSections"
+    :crumbs="hasSections || section === 'system' || section === null ? crumbs : []"
+    :trail-label="t('You are here')"
+    :account="account"
+    :collapse-storage-key="SidebarCollapsedKey"
+    @update:organization="switchOrganization"
+    @update:locale="setUiLocale"
   >
-    <AppShellHeader height="auto" variant="glass" class="p-0 pt-[env(safe-area-inset-top)]">
-      <div class="flex min-h-15 w-full min-w-0 items-center gap-3 px-3 sm:px-4">
-        <OcharoAppsMenu current="desk" label="Desk" :subtitle="organization?.name ?? null" />
-        <nav
-          v-if="hasSections || section === 'system' || section === null"
-          :aria-label="t('You are here')"
-          class="hidden min-w-0 items-center gap-1.5 border-s border-border ps-3 text-sm text-muted-foreground md:flex"
-        >
-          <template v-for="(crumb, index) in crumbs" :key="index">
-            <ChevronRight v-if="index > 0" :size="14" class="shrink-0" aria-hidden="true" />
-            <span
-              :class="index === crumbs.length - 1 ? 'truncate font-semibold text-foreground' : 'shrink-0'"
-              :aria-current="index === crumbs.length - 1 ? 'page' : undefined"
-              >{{ crumb }}</span
-            >
-          </template>
-        </nav>
-        <span class="flex-1" />
-        <button
-          v-if="sharedRefresh"
-          type="button"
-          class="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-          :aria-label="t('Refresh')"
-          :title="t('Refresh')"
-          :disabled="refreshDisabled"
-          @click="workspace.refresh()"
-        >
-          <RotateCw :size="18" :class="{ 'animate-spin motion-reduce:animate-none': workspace.refreshing.value }" aria-hidden="true" />
-        </button>
-        <AccountMenu
-          :name="accountName"
-          :description="accountEmail"
-          :avatar-src="user?.picture ?? null"
-          :organizations="memberships"
-          :organization="organization?.id ?? ''"
-          :locales="UiLanguages"
-          :locale="uiLocale"
-          :versions="versions"
-          :is-busy="access.busy.value"
-          variant="glass-menu"
-          @update:organization="switchOrganization"
-          @update:locale="setUiLocale"
-          @sign-out="access.logout"
-        >
-          <template #items>
-            <MenuItem @select="accountOpen = true"><UserCog :size="15" aria-hidden="true" />{{ t('Account settings') }}</MenuItem>
-          </template>
-        </AccountMenu>
-      </div>
-    </AppShellHeader>
-    <AppShellSidebar v-if="hasSections" variant="glass">
-      <DeskNav
-        :organization-id="organization!.id"
-        :current="section"
-        :collapsed="isRail"
-        :can-toggle="isDesktop"
-        @toggle="collapsed.setValue((previous) => !previous)"
-      />
-    </AppShellSidebar>
-    <AppShellMain ref="main" class="min-w-0">
-      <AppShellContent gutter="lg" max-width="2xl" class="pb-12 pt-6 lg:px-8 xl:px-10">
-        <AccountSettings v-if="accountOpen" :access="access" @close="accountOpen = false" />
-        <ContentSkeleton v-if="workspace.initialLoading.value" :variant="skeletonVariant" :label="t('Loading your workspace…')" />
-        <div v-else :key="pageKey" :aria-busy="workspace.loading.value || workspace.refreshing.value">
-          <p v-if="workspace.error.value" role="status" class="query-label">{{ t("Workspace unavailable") }}</p>
-          <section v-else-if="location.organizationId && !organization" role="status" class="query-label">
-            <h1 class="text-xl font-semibold">{{ t("Organization unavailable") }}</h1>
-            <p class="mt-3 text-sm text-muted-foreground">{{ t("Choose one of your current memberships.") }}</p>
-          </section>
-          <AppErrorBoundary v-else>
-            <RouterView v-slot="{ Component, route: current }"
-              ><component :is="Component" v-bind="deskPageProps(current, { access, workspace })"
-            /></RouterView>
-            <template #fallback="{ reset }"><RouteFailure @retry="reset" /></template>
-          </AppErrorBoundary>
-        </div>
-      </AppShellContent>
-    </AppShellMain>
-    <PhoneNav v-if="hasSections" :organization-id="organization!.id" :current="section" />
-  </AppShell>
+    <template #brand><span class="oc-mark">O</span></template>
+    <template #nav="{ isRail }"><DeskNav v-if="organization" :organization-id="organization.id" :current="section" :collapsed="isRail" /></template>
+    <template #bar-end>
+      <button
+        v-if="sharedRefresh"
+        type="button"
+        class="grid size-11 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+        :aria-label="t('Refresh')"
+        :title="t('Refresh')"
+        :disabled="refreshDisabled"
+        @click="workspace.refresh()"
+      >
+        <RotateCw :size="18" :class="{ 'animate-spin motion-reduce:animate-none': workspace.refreshing.value }" aria-hidden="true" />
+      </button>
+    </template>
+    <template #account-items>
+      <MenuItem @select="settingsOpen = true"><UserCog :size="15" aria-hidden="true" />{{ t('Account settings') }}</MenuItem>
+    </template>
+    <template #phone-nav><PhoneNav v-if="organization" :organization-id="organization.id" :current="section" /></template>
+    <template #notice>
+      <AccountSettings v-if="settingsOpen" :access="access" @close="settingsOpen = false" />
+    </template>
+    <ContentSkeleton v-if="workspace.initialLoading.value" :variant="skeletonVariant" :label="t('Loading your workspace…')" />
+    <div v-else :key="pageKey" :aria-busy="workspace.loading.value || workspace.refreshing.value">
+      <p v-if="workspace.error.value" role="status" class="query-label">{{ t("Workspace unavailable") }}</p>
+      <section v-else-if="location.organizationId && !organization" role="status" class="query-label">
+        <h1 class="text-xl font-semibold">{{ t("Organization unavailable") }}</h1>
+        <p class="mt-3 text-sm text-muted-foreground">{{ t("Choose one of your current memberships.") }}</p>
+      </section>
+      <AppErrorBoundary v-else>
+        <RouterView v-slot="{ Component, route: current }"
+          ><component :is="Component" v-bind="deskPageProps(current, { access, workspace })"
+        /></RouterView>
+        <template #fallback="{ reset }"><RouteFailure @retry="reset" /></template>
+      </AppErrorBoundary>
+    </div>
+  </AppFrame>
 </template>

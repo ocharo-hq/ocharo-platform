@@ -14,5 +14,10 @@ export function useBuildIdentity() {
     const result = await buildIdentityApi.getVersion(controller.signal);
     if (!controller.signal.aborted && current === generation) backendVersion.value = result.ok ? result.value : 'Unavailable';
   }
-  return { backendVersion, refresh };
+  /** The API's version for the frame's badge; a failed read answers nothing, so the badge keeps its last answer. */
+  async function readRunningVersion(): Promise<string | null> {
+    const result = await buildIdentityApi.getVersion(controller.signal);
+    return result.ok ? result.value : null;
+  }
+  return { backendVersion, refresh, readRunningVersion };
 }

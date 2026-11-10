@@ -1,23 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
-import { ChevronRight, X } from 'lucide-vue-next';
-import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
+import { X } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
-import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
+import { useRunningVersion } from '@wow-two-beta/fe/foundation/net';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { Card } from '@wow-two-beta/fe/presentation/display';
+import { AppFrame, type AppFrameAccount, type AppFrameSwitcher } from '@wow-two-beta/fe/presentation/layout';
 import {
-  AppShell,
-  AppShellContent,
-  AppShellHeader,
-  AppShellMain,
-  AppShellSidebar,
-} from '@wow-two-beta/fe/presentation/layout';
-import {
-  AccountMenu,
   AppSwitcherKind,
-  AppSwitcherMenu,
   type AccountMenuLocale,
   type AccountMenuVersion,
   type AppSwitcherItem,
@@ -37,9 +28,7 @@ import CatalogueNav from '../presentation/frame/CatalogueNav.vue';
 import PhoneNav from '../presentation/frame/PhoneNav.vue';
 import { AppIcons } from '../presentation/frame/ShellIcons';
 
-/** The sidebar's widths: full, and the icon rail. @internal */
-const SidebarWidth = { Full: '244px', Rail: '68px' } as const;
-/** Where this browser remembers the desktop sidebar's rail choice. @internal */
+/** Where this browser remembers the desktop sidebar's rail choice; the key predates the shared frame. @internal */
 const SidebarCollapsedKey = 'ocharo.catalogue.sidebar-collapsed';
 /** The interface languages, each in its own language. @internal */
 const InterfaceLanguages: readonly AccountMenuLocale[] = [
@@ -49,10 +38,9 @@ const InterfaceLanguages: readonly AccountMenuLocale[] = [
 ];
 
 /**
- * The Ocharo frame, as Catalogue wears it, around every authoring place. The glass top bar is the suite's: the app
- * button with the app version, where you are, notifications and the account menu. The sidebar is Catalogue's sections; it
- * collapses to an icon rail on desktops and is always the rail on tablets. Phones swap it for a bottom bar. Only the
- * main region scrolls.
+ * Catalogue inside the frame every Ocharo app shares (the fe sdk's `AppFrame`): the bar, the sidebar and the page column
+ * are the suite's, at one size in every app. Catalogue passes what is its own: the app list, its sections, where you
+ * are, notifications, the account with the interface languages, and its notices above the page.
  */
 defineOptions({ name: 'AppLayout' });
 const { t, uiLocale, setUiLocale } = useUiLocale();
@@ -62,19 +50,12 @@ const store = useCatalogueStore();
 useCatalogueSettings();
 const { isAuthenticated, person } = useIdentitySession();
 const { signingOut, signOut } = useSessionActions();
-const { backendVersion, refresh: refreshBackendVersion } = useBuildIdentity();
+const { backendVersion, refresh: refreshBackendVersion, readRunningVersion } = useBuildIdentity();
 const apps = useOcharoApps();
 const appVersion = __APP_VERSION__;
-// The stored choice seeds the first render too, so a collapsed rail never animates in from the full sidebar.
-const collapsed = usePersistentState(
-  SidebarCollapsedKey,
-  localStorageStorageBroker.read<boolean>(SidebarCollapsedKey) === true,
-);
-const breakpoint = useBreakpoint(TailwindBreakpoints);
+// The badge beside the app button follows the release the API serves; a local build has no release to compare.
+const { version: runningVersion } = useRunningVersion(() => (appVersion === 'dev' ? null : readRunningVersion()));
 
-const isDesktop = computed(() => ['lg', 'xl', '2xl'].includes(breakpoint.value ?? ''));
-const isRail = computed(() => !isDesktop.value || collapsed.value.value);
-const sidebarWidth = computed(() => (isRail.value ? SidebarWidth.Rail : SidebarWidth.Full));
 const section = computed(() => readCatalogueSection(route.meta));
 const items = computed<AppSwitcherItem[]>(() =>
   apps.map((app) => ({
@@ -86,6 +67,14 @@ const items = computed<AppSwitcherItem[]>(() =>
     kind: app.kind === OcharoAppKind.Workspace ? AppSwitcherKind.App : AppSwitcherKind.Site,
   })),
 );
+/** The app menu's own phrases. */
+const switcher = computed<AppFrameSwitcher>(() => ({
+  title: t('Ocharo apps'),
+  sitesLabel: t('Public sites'),
+  closeLabel: t('Close'),
+  newTabLabel: t('(opens in a new tab)'),
+  triggerLabel: t('Ocharo apps — {app}'),
+}));
 /** The group, the section and the place itself, each once: the place's label comes from its route metadata. */
 const crumbs = computed(() => {
   const entry = catalogueSection(section.value);
@@ -121,109 +110,74 @@ const versions = computed<AccountMenuVersion[]>(() => {
     { label: 'API', version: t(api), ...(commit ? { commit } : {}) },
   ];
 });
+/** The account menu: who is signed in, the versions, the interface languages, and sign-out while it runs. */
+const account = computed<AppFrameAccount>(() => ({
+  ...accountIdentity.value,
+  locales: InterfaceLanguages,
+  versions: versions.value,
+  isBusy: signingOut.value,
+}));
 watch(accountOpen, (open) => {
   if (open) void refreshBackendVersion();
 });
 </script>
 
 <template>
-  <AppShell
-    class="catalogue-frame surface-ambient transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none"
-    sidebar-breakpoint="md"
-    :sidebar-width="sidebarWidth"
+  <AppFrame
+    v-model:account-open="accountOpen"
+    :locale="uiLocale"
+    :version="appVersion"
+    :running-version="runningVersion"
+    :apps="items"
+    current-app="catalogue"
+    :app-label="t('Catalogue')"
+    app-subtitle="Ocharo"
+    :app-switcher="switcher"
+    :crumbs="crumbs"
+    :trail-label="t('You are here')"
+    :account="account"
+    :collapse-storage-key="SidebarCollapsedKey"
+    :content-max-width="1800"
+    @update:locale="setUiLocale"
   >
-    <AppShellHeader height="auto" variant="glass" class="no-print p-0 pt-[env(safe-area-inset-top)]">
-      <div class="flex min-h-15 w-full min-w-0 items-center gap-3 px-3 sm:px-4">
-        <div class="flex shrink-0 items-center gap-2">
-          <AppSwitcherMenu
-            :items="items"
-            current="catalogue"
-            :label="t('Catalogue')"
-            subtitle="Ocharo"
-            :title="t('Ocharo apps')"
-            :sites-label="t('Public sites')"
-            :close-label="t('Close')"
-            :new-tab-label="t('(opens in a new tab)')"
-            :trigger-label="t('Ocharo apps — {app}')"
-            variant="glass-menu"
-            class="[&[data-state=open]_[data-app-switcher-chevron]]:text-primary-soft-foreground"
-          >
-            <template #mark><span class="oc-mark">O</span></template>
-          </AppSwitcherMenu>
-          <span class="font-mono text-[11px] text-muted-foreground" :title="t('App version')">{{ appVersion }}</span>
-        </div>
-        <nav
-          :aria-label="t('You are here')"
-          class="hidden min-w-0 items-center gap-1.5 border-s border-border ps-3 text-sm text-muted-foreground md:flex"
+    <template #brand><span class="oc-mark">O</span></template>
+    <template #nav="{ isRail }"><CatalogueNav :current="section" :collapsed="isRail" /></template>
+    <template #bar-end><NotificationsMenu /></template>
+    <template #phone-nav><PhoneNav :current="section" /></template>
+    <template #notice>
+      <div
+        v-if="store.notice.value"
+        role="status"
+        class="no-print mb-5 flex justify-between gap-4 rounded-xl border border-success/20 bg-success-soft px-5 py-3 text-sm text-success-soft-foreground"
+      >
+        <p>{{ store.notice.value }}</p>
+        <Button
+          variant="ghost"
+          tone="success"
+          shape="square"
+          size="sm"
+          class="shrink-0"
+          :aria-label="t('Close')"
+          @click="store.notice.value = null"
         >
-          <template v-for="(crumb, index) in crumbs" :key="index">
-            <ChevronRight v-if="index > 0" :size="14" class="shrink-0" aria-hidden="true" />
-            <span
-              :class="index === crumbs.length - 1 ? 'truncate font-semibold text-foreground' : 'shrink-0'"
-              :aria-current="index === crumbs.length - 1 ? 'page' : undefined"
-              >{{ crumb }}</span
-            >
-          </template>
-        </nav>
-        <span class="flex-1" />
-        <NotificationsMenu />
-        <AccountMenu
-          v-model:open="accountOpen"
-          v-bind="accountIdentity"
-          :locales="InterfaceLanguages"
-          :locale="uiLocale"
-          :versions="versions"
-          :is-busy="signingOut"
-          variant="glass-menu"
-          @update:locale="setUiLocale"
-        />
+          <Icon :icon="X" :size="16" />
+        </Button>
       </div>
-    </AppShellHeader>
-    <AppShellSidebar variant="glass" class="no-print">
-      <CatalogueNav
-        :current="section"
-        :collapsed="isRail"
-        :can-toggle="isDesktop"
-        @toggle="collapsed.setValue((previous) => !previous)"
-      />
-    </AppShellSidebar>
-    <AppShellMain class="min-w-0">
-      <AppShellContent gutter="lg" :max-width="1800" class="pb-12 pt-6 xl:px-10 print:max-w-none print:p-0">
-        <div
-          v-if="store.notice.value"
-          role="status"
-          class="no-print mb-5 flex justify-between gap-4 rounded-xl border border-success/20 bg-success-soft px-5 py-3 text-sm text-success-soft-foreground"
+      <SessionConnection />
+    </template>
+    <AppErrorBoundary>
+      <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
+      <template #fallback="{ reset }">
+        <Card
+          v-bind="{ role: 'region', 'aria-labelledby': 'page-error-heading' }"
+          radius="2xl"
+          padding="2xl"
+          class="text-center"
         >
-          <p>{{ store.notice.value }}</p>
-          <Button
-            variant="ghost"
-            tone="success"
-            shape="square"
-            size="sm"
-            class="shrink-0"
-            :aria-label="t('Close')"
-            @click="store.notice.value = null"
-          >
-            <Icon :icon="X" :size="16" />
-          </Button>
-        </div>
-        <SessionConnection />
-        <AppErrorBoundary>
-          <RouterView v-slot="{ Component }"><component :is="Component" :key="route.fullPath" /></RouterView>
-          <template #fallback="{ reset }">
-            <Card
-              v-bind="{ role: 'region', 'aria-labelledby': 'page-error-heading' }"
-              radius="2xl"
-              padding="2xl"
-              class="text-center"
-            >
-              <h1 id="page-error-heading" class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
-              <Button class="mt-5" @click="reset">{{ t('Retry') }}</Button>
-            </Card>
-          </template>
-        </AppErrorBoundary>
-      </AppShellContent>
-    </AppShellMain>
-    <PhoneNav :current="section" />
-  </AppShell>
+          <h1 id="page-error-heading" class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
+          <Button class="mt-5" @click="reset">{{ t('Retry') }}</Button>
+        </Card>
+      </template>
+    </AppErrorBoundary>
+  </AppFrame>
 </template>

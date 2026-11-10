@@ -19,6 +19,15 @@ export const sdkUiMessages: UiMessageTable = {
   'AccountMenu.organizationLabel': { uz: 'Tashkilot', ru: 'Организация' },
   'AccountMenu.versionsLabel': { uz: 'Versiyalar', ru: 'Версии' },
   'AccountMenu.signOutLabel': { uz: 'Chiqish', ru: 'Выйти' },
+  'AppFrame.collapseLabel': { uz: 'Yon panelni yig‘ish', ru: 'Свернуть боковую панель' },
+  'AppFrame.expandLabel': { uz: 'Yon panelni yoyish', ru: 'Развернуть боковую панель' },
+  'AppFrame.openNavigationLabel': { uz: 'Navigatsiyani ochish', ru: 'Открыть навигацию' },
+  'AppFrame.navigationLabel': { uz: 'Navigatsiya', ru: 'Навигация' },
+  'VersionBadge.label': { uz: 'Versiya {version}', ru: 'Версия {version}' },
+  'VersionBadge.updateLabel': {
+    uz: '{running} versiyasi chiqdi; bu oyna {version} versiyasida ishlayapti. Yangilash uchun sahifani qayta yuklang.',
+    ru: 'Вышла версия {running}; эта вкладка работает на {version}. Перезагрузите страницу, чтобы обновить.',
+  },
   'MenuItem.newTabLabel': { uz: '(yangi oynada ochiladi)', ru: '(откроется в новой вкладке)' },
 };
 

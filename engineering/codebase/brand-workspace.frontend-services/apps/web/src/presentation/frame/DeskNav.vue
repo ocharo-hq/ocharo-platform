@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-vue-next';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuSection } from '@wow-two-beta/fe/presentation/nav';
 
 import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
@@ -16,15 +15,11 @@ import {
 import { SectionIcons } from './ShellIcons';
 
 /**
- * Desk's sidebar: Overview, then each group of sections under its heading, with the collapse control last. As an icon
+ * Desk's sidebar: Overview, then each group of sections under its heading. As an icon
  * rail the labels stay for assistive technology and show as tooltips.
  */
 defineOptions({ name: 'DeskNav' });
-const props = withDefaults(
-  defineProps<{ organizationId: string; current: DeskSection | null; collapsed: boolean; canToggle?: boolean }>(),
-  { canToggle: true },
-);
-const emit = defineEmits<{ toggle: [] }>();
+const props = defineProps<{ organizationId: string; current: DeskSection | null; collapsed: boolean }>();
 const { t } = useUiLocale();
 const groups = computed(() =>
   Object.values(DeskSectionGroup).map((group) => ({
@@ -34,7 +29,6 @@ const groups = computed(() =>
   })),
 );
 const labelClass = computed(() => (props.collapsed ? 'sr-only' : 'min-w-0 flex-1 truncate text-start'));
-const toggleLabel = computed(() => t(props.collapsed ? 'Expand sidebar' : 'Collapse sidebar'));
 </script>
 
 <template>
@@ -73,19 +67,5 @@ const toggleLabel = computed(() => t(props.collapsed ? 'Expand sidebar' : 'Colla
         </SidebarMenuSection>
       </template>
     </SidebarMenu>
-    <div v-if="props.canToggle" class="border-t border-glass-edge p-2">
-      <button
-        type="button"
-        class="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        :class="{ 'justify-center': props.collapsed }"
-        :aria-label="toggleLabel"
-        :aria-expanded="!props.collapsed"
-        :title="props.collapsed ? toggleLabel : undefined"
-        @click="emit('toggle')"
-      >
-        <component :is="props.collapsed ? PanelLeftOpen : PanelLeftClose" :size="17" aria-hidden="true" />
-        <span v-if="!props.collapsed">{{ toggleLabel }}</span>
-      </button>
-    </div>
   </div>
 </template>

@@ -12,7 +12,7 @@ import { SectionIcons } from './ShellIcons';
 
 /**
  * The phone's navigation: a bottom bar of the first four sections, then More, which opens every other section as a
- * full-screen dialog. The bar sits in the shell's footer row, so the scrolling region ends above it.
+ * full-screen dialog. The frame places the bar below the scrolling region and hides it from tablets up and in print.
  */
 defineOptions({ name: 'PhoneNav' });
 const props = defineProps<{ current: CatalogueSection | null }>();
@@ -25,12 +25,7 @@ const moreIsCurrent = computed(() => moreSections.some((section) => section.id =
 </script>
 
 <template>
-  <BottomNavMenu
-    :is-fixed="false"
-    v-bind="{ 'aria-label': t('Catalogue sections') }"
-    variant="glass"
-    class="no-print z-sticky [grid-area:footer] md:hidden"
-  >
+  <BottomNavMenu :is-fixed="false" v-bind="{ 'aria-label': t('Catalogue sections') }" variant="glass">
     <BottomNavMenuItem
       v-for="section in barSections"
       :key="section.id"

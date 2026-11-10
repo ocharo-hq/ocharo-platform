@@ -186,7 +186,37 @@ describe('Ocharo frame in Desk', () => {
     expect(bar).toEqual(expect.arrayContaining(['surface-glass', 'border-t', 'border-glass-edge', 'shadow-(--glass-bottom-shadow)', 'pb-[env(safe-area-inset-bottom)]']));
     expect(bar).not.toContain('bg-background');
     expect(bar).not.toContain('surface-glass!');
-    expect(bar).toEqual(expect.arrayContaining(['z-sticky', '[grid-area:footer]', 'md:hidden']));
+    // The frame places the bar under the scrolling region and takes it out of print.
+    expect(wrapper!.get('[data-app-frame-phone-nav]').find('nav[aria-label="Desk sections"]').exists()).toBe(true);
+  });
+
+  it('shows the icon rail on a tablet, where the toggle opens the sections in a drawer instead', async () => {
+    await renderAt(`/organizations/${ORG}/brands`, 900);
+
+    expect(wrapper!.find('button[aria-label="Expand sidebar"]').exists()).toBe(false);
+    expect(wrapper!.find('button[aria-label="Collapse sidebar"]').exists()).toBe(false);
+    const toggle = wrapper!.get('button[aria-label="Open navigation"]');
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+
+    await toggle.trigger('click');
+    await flushPromises();
+
+    const drawer = document.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(drawer.querySelector('nav[aria-label="Desk sections"] a[href="/system"]')).not.toBeNull();
+    expect(localStorage.getItem(SidebarCollapsedKey)).toBeNull();
+  });
+
+  it('hides the toggle on a phone, where the bottom bar is the navigation', async () => {
+    await renderAt(`/organizations/${ORG}/brands`, 390);
+
+    expect(wrapper!.find('[data-app-frame-toggle]').exists()).toBe(false);
+  });
+
+  it('shows the app version beside the app button on a desktop', async () => {
+    await renderAt(`/organizations/${ORG}/brands`, 1440);
+
+    const badge = wrapper!.get('[data-version-badge]');
+    expect(badge.text()).toBe(__APP_VERSION__);
   });
 
   it('keeps the sidebar rail choice this browser already stored, and stores a change under the same key', async () => {
