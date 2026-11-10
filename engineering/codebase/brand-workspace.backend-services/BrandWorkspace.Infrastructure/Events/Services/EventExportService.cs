@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using BrandWorkspace.Application.Events.Models;
 using BrandWorkspace.Application.Events.Repositories;
@@ -8,13 +9,13 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
 namespace BrandWorkspace.Infrastructure.Events.Services;
 
 /// <summary>
-/// Writes an organization's events as a WoW2 Events import bundle; it reads Desk and never writes it
-/// (events-adoption.md #6).
+/// Writes an organization's events as a WoW2 Events import bundle (Events' contract § Imports); it reads Desk and never
+/// writes it (events-adoption.md #6).
 /// </summary>
-public sealed class EventExportService(IEventRepository repository, TimeProvider time)
+public sealed class EventExportService(IEventRepository repository)
 {
     public const string Format = "wow2.events-import.v1";
-    public const string SourceSystem = "ocharo-desk";
+    public const string Source = "ocharo-desk";
 
     /// <summary>Holds the BCP 47 tag for a language nobody recorded; no title is assumed Uzbek.</summary>
     public const string UndeterminedLanguage = "und";
@@ -34,64 +35,74 @@ public sealed class EventExportService(IEventRepository repository, TimeProvider
         if (File.Exists(bundlePath))
             throw DeskErrors.Conflict("The bundle file already exists; choose a new path.").ToException();
         IReadOnlyList<ShowcaseEventRecord> records = await repository.GetEventRecordsAsync(organizationId, token);
-        EventExportBundle bundle = Map(organizationId, records, time.GetUtcNow());
+        EventExportBundle bundle = Map(organizationId, records);
         await using (var stream = new FileStream(bundlePath, FileMode.CreateNew, FileAccess.Write))
             await JsonSerializer.SerializeAsync(stream, bundle, BundleJson, token);
         return Report(organizationId, bundlePath, records);
     }
 
     /// <summary>Maps stored events to the bundle; precision and certainty carry over, never sharpen.</summary>
-    public static EventExportBundle Map(
-        Guid organizationId, IReadOnlyList<ShowcaseEventRecord> records, DateTimeOffset exportedAt)
+    public static EventExportBundle Map(Guid organizationId, IReadOnlyList<ShowcaseEventRecord> records)
     {
         ArgumentNullException.ThrowIfNull(records);
-        var events = records.Select(record => MapEvent(organizationId, record)).ToList();
-        return new EventExportBundle(
-            Format, new EventExportSource(SourceSystem, organizationId, exportedAt, events.Count), events);
+        return new EventExportBundle(Format, Source, records.Select(record => MapRow(organizationId, record)).ToList());
     }
 
-    private static ExportedEvent MapEvent(Guid organizationId, ShowcaseEventRecord record)
+    private static ExportedEventRow MapRow(Guid organizationId, ShowcaseEventRecord record)
     {
         ShowcaseEvent item = record.Event;
-        return new ExportedEvent(
-            item.Id,
+        var facts = new ExportedFacts(
             item.Key,
-            new ExportedText(item.Title, UndeterminedLanguage),
-            item.Organizer,
+            new Dictionary<string, string>(StringComparer.Ordinal) { [UndeterminedLanguage] = item.Title },
             item.Format,
-            new ExportedPlace(item.Country, item.City, item.Venue),
-            Date(item.StartsOn, item.DatePrecision),
-            Date(item.EndsOn, item.DatePrecision),
-            item.ApplicationDeadline is { } deadline ? [new ExportedDeadline("application", deadline)] : [],
-            item.Website,
-            new ExportedTracking(item.Status, item.Priority, item.Notes, item.Participation, item.Cost),
-            new ExportedProvenance(
-                SourceSystem,
-                organizationId,
-                item.Id,
-                item.Key,
-                item.SourceUrl,
-                record.CreatedBy,
-                item.CreatedAt,
-                item.UpdatedAt,
-                item.Revision),
-            item);
+            item.Organizer is { } organizer ? new ExportedOrganizer(organizer, null) : null,
+            item.Venue is null && item.City is null && item.Country is null
+                ? null
+                : new ExportedPlace(item.Venue, item.City, item.Country),
+            When(item.StartsOn, item.DatePrecision) ?? new ExportedWhen(null, "unknown", Announced),
+            When(item.EndsOn, item.DatePrecision),
+            item.ApplicationDeadline is { } deadline
+                ? [new ExportedDeadline("application", new ExportedWhen(Day(deadline), "day", Announced))]
+                : [],
+            item.Website);
+        return new ExportedEventRow(
+            item.Id.ToString(),
+            facts,
+            item.SourceUrl,
+            item.CreatedAt,
+            Legacy(organizationId, record),
+            new ExportedTracking(
+                item.Status, item.Priority, item.Notes, new ExportedTrackingFields(item.Participation, item.Cost)));
     }
 
     /// <summary>
-    /// Maps a stored date: <c>day</c> stays a day; <c>month</c> and <c>estimated</c> keep the 1st of the month at month
-    /// precision, <c>estimated</c> marked so; <c>unknown</c> stores no date.
+    /// Maps a stored date: <c>day</c> stays a day; <c>month</c> and <c>estimated</c> become the month (<c>yyyy-MM</c>,
+    /// never a first-of-month day), <c>estimated</c> marked so; no date maps to none.
     /// </summary>
-    public static ExportedDate? Date(DateOnly? date, string precision)
+    public static ExportedWhen? When(DateOnly? date, string precision)
     {
         if (date is not { } value) return null;
         return precision switch
         {
-            "day" => new ExportedDate(value, "day", Announced),
-            "month" => new ExportedDate(value, "month", Announced),
-            "estimated" => new ExportedDate(value, "month", Estimated),
+            "day" => new ExportedWhen(Day(value), "day", Announced),
+            "month" => new ExportedWhen(Month(value), "month", Announced),
+            "estimated" => new ExportedWhen(Month(value), "month", Estimated),
             _ => throw new InvalidOperationException($"A dated event cannot have precision '{precision}'."),
         };
+    }
+
+    private static string Day(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private static string Month(DateOnly date) => date.ToString("yyyy-MM", CultureInfo.InvariantCulture);
+
+    private static ShowcaseEventLegacyRow Legacy(Guid organizationId, ShowcaseEventRecord record)
+    {
+        ShowcaseEvent item = record.Event;
+        return new ShowcaseEventLegacyRow(
+            organizationId, item.Id, item.Key, item.Title, item.Organizer, item.Scope, item.Format, item.Country,
+            item.City, item.Venue, item.StartsOn, item.EndsOn, item.DatePrecision, item.ApplicationDeadline,
+            item.Participation, item.Cost, item.Website, item.SourceUrl, item.Status, item.Priority, item.Notes,
+            item.Revision, record.CreatedBy, item.CreatedAt, item.UpdatedAt);
     }
 
     private static EventExportReport Report(

@@ -104,7 +104,8 @@ dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- \
   export events --organization <organization-id> --out <bundle.json>
 ```
 
-It writes `wow2.events-import.v1` (events-adoption.md #6): each event keyed by its Desk id, with its key, stage, priority,
-notes, provenance and the stored row; `month` and `estimated` dates stay at month precision, `estimated` marked so; every
-title's language is `und`. It reads Desk, writes only the new file, refuses an existing one, and prints the counts by
-stage and precision that reconciliation compares. Bundles stay out of Git, like the import's.
+It writes Events' `wow2.events-import.v1` (events-adoption.md #6): one row per event keyed by its Desk id
+(`legacyId`), its facts with `und` titles, `yyyy-MM` months and `estimated` kept, Ocharo's tracking with participation
+and cost as fields, and the whole stored row as `legacy`. It reads Desk, writes only the new file, refuses an existing
+one, and prints the counts by stage and precision that reconciliation compares. Bundles stay out of Git, like the
+import's.

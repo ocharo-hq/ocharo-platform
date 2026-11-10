@@ -15,13 +15,12 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
 ## Status
 
 - ✅ Snapshot slice verified 2026-11-10 and its deltas sent to the orchestrator (`events-integration #34`).
-- 🔄 M1 picks written 2026-11-10 (#1–#11). Events' and SCFD's names arrive from their lanes through the orchestrator;
-  the shapes below take them unchanged.
-- 🔄 M2 started 2026-11-10 ([v0.3](../planning/version-track/v0.3/v0.3.md)): the `export events` verb is built,
-  ahead of Events' published schema, so its mapping (`EventExportService`) may still rename fields; on local Desk it
-  wrote 68 of 68 rows with 68 unique ids, every stage, priority, note and provenance equal to the stored row, 18
-  estimated dates kept at month precision as estimated, 5 month dates announced, 10 unknown with no dates.
-- ⬜ Registrations, proxy, screens, import and freeze wait for Events' and SCFD's names and `IEventsClient` (#12).
+- ✅ M1 closed 2026-11-10 for every lane; names from the events and scfd lanes are in #2, the import schema in #6.
+- 🔄 M2 started 2026-11-10 ([v0.3](../planning/version-track/v0.3/v0.3.md)):
+  - ✅ `export events` writes Events' fixed `wow2.events-import.v1`; local Desk gives 68 of 68 rows (#6).
+  - ✅ Registrations pushed (`34f08dc`, `v0.3.1`); `ocharo-dev`'s Identity redeployed healthy with them (#2, #5).
+  - ⬜ Client 10 `events-console` waits on its three typed URIs.
+  - ⬜ Proxy, proposal and tracking routes, screens, import and freeze wait on `IEventsClient` (#7, #8, #12).
 
 ## Data
 
@@ -123,23 +122,34 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 ### #6 Producer (`events-integration #26`)
 
 - A Desk verb, `export events --organization <id> --out <bundle.json>`, beside `import events`; it reads, never writes.
-- It emits `wow2.events-import.v1` as the events lane defines it, with `dryRun` left to the import.
-- Each record carries `sourceId` (Desk's event id) and `key`, so Events' old → new id map is stable across reruns.
-- Provenance: source `ocharo-desk`, source organization id, `created_by`, `created_at`, `revision`, `source_url`.
-- Tracking keeps `status` as the stage, `priority` and `notes`; `participation` and `cost` go where the spec puts them.
-- Date precision: `day` → `day`; `month` → `month` on the 1st; `estimated` → `month` with certainty `estimated`, never
-  confirmed; `unknown` → no dates.
+- It emits Events' `wow2.events-import.v1` (Events repo `engineering/architecture/contract.md` § Imports, fixed
+  2026-11-10): `{ format, source: "ocharo-desk", rows }`; the importing caller's token names the organization.
+- Each row's `legacyId` is Desk's event id, so Events' old → new id map is stable across reruns.
+- `facts`: `key`, `title { und }`, `kind` (Desk's `format`), `organizer { name }`, `place { venue, city, country }`,
+  `starts`, `ends`, `deadlines [{ kind: application, at }]`, `website`; `scope` is dropped as derived.
+- Dates: `day` → `yyyy-MM-dd` at `day`; `month` → `yyyy-MM` at `month`, never a first-of-month day; `estimated` →
+  `yyyy-MM` at `month`, certainty `estimated`, never announced or confirmed; `unknown` → `{ precision: unknown }`, no value.
 - Title language: `und` on every title, since Desk never stored one; nothing becomes `uz` by default.
-- The full Desk row rides along as a `legacy` object, `scope` included, so reconciliation compares field by field.
-- Reconciliation passes when the import's counts equal the export's (68), every `sourceId` maps once, and stage,
-  priority, notes, provenance and precision read back equal.
+- `sourceUrl`, `recordedAtUtc` (Desk's `created_at`), and `legacy`: every column of the row, organization and
+  `created_by` included, which Events stores as an `import` observation.
+- `tracking { stage, priority, notes, fields: { participation, cost } }`; Desk's 8 stages go into Ocharo's workflow
+  first (`PUT api/events/v1/workflow`, `attended` won, `rejected` lost).
+- On local Desk, 2026-11-10: 68 rows, 68 unique `legacyId`s, 35 day and 23 month values in shape, 18 estimated, 10
+  unknown with no value, no end before its start, tracking and `recordedAtUtc` equal to the stored row.
+- Reconciliation passes when Events' `EventImportReport` maps all 68 `legacyId`s once and stage, priority, notes,
+  fields and precision read back equal.
 
 ### #7 Cutover (`events-integration #27`)
 
 - `Events:BaseUrl` set: Desk's `api/organizations/{organizationId}/events` reads proxy onto `IEventsClient`.
-- Tracking writes go through one Desk route onto Events' tracking; the browser still calls only Desk's routes.
-- The old writes (`POST`, `PUT /{eventId}`, `DELETE /{eventId}`) answer 410 with code `EventsMoved`: catalog facts now
-  change through Events' review.
+- Create maps onto Events' member proposal (`POST …/catalogs/{c}/candidates`, `events.track` + `events:track`): the
+  event is a candidate Ocharo tracks at once, published only when a reviewer accepts it.
+- Tracking writes go through one Desk route onto Events' `PUT …/tracking/{eventId}`; the browser still calls only Desk's
+  routes.
+- The old fact writes (`PUT /{eventId}`, `DELETE /{eventId}`) answer 410 with code `EventsMoved`: catalog facts change
+  through Events' review, and untracking uses the tracking route.
+- The import runs through Desk as an Ocharo admin (`events.import` + `events:admin` by Desk's exchange), after the
+  workflow `PUT`, dry run first.
 - `import events` refuses while `Events:BaseUrl` is set; `events.showcase_events` stays, untouched, as the rollback copy.
 - Rollback until reconciliation passes: unset `Events:BaseUrl`, and Desk reads and writes its own table again.
 - After reconciliation, a later migration drops the table (its `Rollback.sql` already refuses while rows exist).

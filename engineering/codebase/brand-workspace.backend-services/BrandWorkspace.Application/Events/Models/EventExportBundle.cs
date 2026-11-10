@@ -1,83 +1,100 @@
-using BrandWorkspace.Domain.Events.Models;
-
 namespace BrandWorkspace.Application.Events.Models;
 
 /// <summary>
-/// Desk's events as WoW2 Events imports them (<c>wow2.events-import.v1</c>, events-adoption.md #6): one record per
-/// stored event, keyed by its Desk id so the import's old → new id map stays stable across reruns.
+/// Desk's events as WoW2 Events imports them: <c>wow2.events-import.v1</c>, Events' contract § Imports
+/// (events-adoption.md #6). The importing caller's token names the organization, so the bundle carries none.
 /// </summary>
 /// <param name="Format">The bundle format.</param>
-/// <param name="Source">Where and when the bundle was exported.</param>
-/// <param name="Events">The exported events, oldest first.</param>
-public sealed record EventExportBundle(string Format, EventExportSource Source, IReadOnlyList<ExportedEvent> Events);
+/// <param name="Source">The producing system, <c>ocharo-desk</c>; it prefixes each row's source identity.</param>
+/// <param name="Rows">One row per stored event, oldest first.</param>
+public sealed record EventExportBundle(string Format, string Source, IReadOnlyList<ExportedEventRow> Rows);
 
-/// <summary>The system and organization a bundle comes from.</summary>
-/// <param name="System">The exporting system, <c>ocharo-desk</c>.</param>
-/// <param name="OrganizationId">The organization in that system, which the import's target organization replaces.</param>
-/// <param name="ExportedAt">When the export ran.</param>
-/// <param name="Count">How many events the bundle holds.</param>
-public sealed record EventExportSource(string System, Guid OrganizationId, DateTimeOffset ExportedAt, int Count);
+/// <summary>One stored event: its facts, Ocharo's tracking, and the whole Desk row as evidence.</summary>
+/// <param name="LegacyId">The event's Desk id; Events' old → new id map keys on it, so a rerun finds the same event.</param>
+/// <param name="Facts">The catalog facts, dates at the precision and certainty Desk stored.</param>
+/// <param name="SourceUrl">Where the event was found.</param>
+/// <param name="RecordedAtUtc">When Desk first recorded it.</param>
+/// <param name="Legacy">The whole stored row, for reconciliation and rollback.</param>
+/// <param name="Tracking">Ocharo's standing with the event.</param>
+public sealed record ExportedEventRow(
+    string LegacyId,
+    ExportedFacts Facts,
+    string? SourceUrl,
+    DateTimeOffset RecordedAtUtc,
+    ShowcaseEventLegacyRow Legacy,
+    ExportedTracking Tracking);
 
-/// <summary>One exported event: catalog facts, the organization's tracking, provenance and the stored row.</summary>
-/// <param name="SourceId">The event's Desk id; the import maps it to exactly one new id.</param>
+/// <summary>An event's facts in Events' shape.</summary>
 /// <param name="Key">The import slug, when the event came from a bundle.</param>
-/// <param name="Title">The title with its language; Desk stored none, so it is <c>und</c>.</param>
-/// <param name="Organizer">The organizer.</param>
-/// <param name="Kind">Desk's <c>format</c>.</param>
-/// <param name="Place">Country, city and venue.</param>
-/// <param name="Starts">The start, with its precision and certainty; null when the dates are unknown.</param>
+/// <param name="Title">The title per locale; Desk stored no language, so only <c>und</c>.</param>
+/// <param name="Kind">Desk's <c>format</c>, a key of the catalog's taxonomy.</param>
+/// <param name="Organizer">The organizer, when stored.</param>
+/// <param name="Place">Venue, city and country, when any is stored.</param>
+/// <param name="Starts">The start; <c>unknown</c> with no value when Desk stored no date.</param>
 /// <param name="Ends">The end, as precise and as certain as the start; null when not stored.</param>
 /// <param name="Deadlines">The application deadline, when stored.</param>
 /// <param name="Website">The official page.</param>
-/// <param name="Tracking">Ocharo's standing with the event.</param>
-/// <param name="Provenance">Where the record came from in Desk.</param>
-/// <param name="Legacy">The stored row as Desk's contract reads it, <c>scope</c> included, for reconciliation.</param>
-public sealed record ExportedEvent(
-    Guid SourceId,
+public sealed record ExportedFacts(
     string? Key,
-    ExportedText Title,
-    string? Organizer,
+    IReadOnlyDictionary<string, string> Title,
     string Kind,
-    ExportedPlace Place,
-    ExportedDate? Starts,
-    ExportedDate? Ends,
+    ExportedOrganizer? Organizer,
+    ExportedPlace? Place,
+    ExportedWhen Starts,
+    ExportedWhen? Ends,
     IReadOnlyList<ExportedDeadline> Deadlines,
-    string? Website,
-    ExportedTracking Tracking,
-    ExportedProvenance Provenance,
-    ShowcaseEvent Legacy);
+    string? Website);
 
-/// <summary>A text with its BCP 47 language.</summary>
-public sealed record ExportedText(string Value, string Language);
+/// <summary>Who runs an event; Desk stores only the name.</summary>
+public sealed record ExportedOrganizer(string Name, string? Website);
 
 /// <summary>Where an event takes place.</summary>
-public sealed record ExportedPlace(string? Country, string? City, string? Venue);
+public sealed record ExportedPlace(string? Venue, string? City, string? Country);
 
 /// <summary>
-/// A date at the precision Desk stored: <c>day</c> or <c>month</c> (the 1st of that month); certainty
-/// <c>announced</c>, or <c>estimated</c> when inferred from earlier editions, which never becomes announced.
+/// A date in Events' shape: <c>yyyy-MM-dd</c> at <c>day</c>, <c>yyyy-MM</c> at <c>month</c>, no value at
+/// <c>unknown</c>; certainty <c>announced</c>, or <c>estimated</c> when inferred from earlier editions.
 /// </summary>
-public sealed record ExportedDate(DateOnly Date, string Precision, string Certainty);
+public sealed record ExportedWhen(string? Value, string Precision, string Certainty);
 
 /// <summary>A deadline of one kind, such as <c>application</c>.</summary>
-public sealed record ExportedDeadline(string Kind, DateOnly Date);
+public sealed record ExportedDeadline(string Kind, ExportedWhen At);
 
-/// <summary>An organization's standing with an event.</summary>
-public sealed record ExportedTracking(string Stage, string Priority, string Notes, string Participation, string? Cost);
+/// <summary>An organization's standing with an event; <c>Fields</c> holds what Events has no column for.</summary>
+public sealed record ExportedTracking(string Stage, string Priority, string Notes, ExportedTrackingFields Fields);
 
-/// <summary>Where a record came from.</summary>
-public sealed record ExportedProvenance(
-    string System,
+/// <summary>Desk's tracking fields Events keeps as the organization's own.</summary>
+public sealed record ExportedTrackingFields(string Participation, string? Cost);
+
+/// <summary>Every column of one <c>events.showcase_events</c> row, as stored.</summary>
+public sealed record ShowcaseEventLegacyRow(
     Guid OrganizationId,
-    Guid EventId,
-    string? Key,
+    Guid Id,
+    string? ImportKey,
+    string Title,
+    string? Organizer,
+    string Scope,
+    string Format,
+    string? Country,
+    string? City,
+    string? Venue,
+    DateOnly? StartsOn,
+    DateOnly? EndsOn,
+    string DatePrecision,
+    DateOnly? ApplicationDeadline,
+    string Participation,
+    string? Cost,
+    string? Website,
     string? SourceUrl,
+    string Status,
+    string Priority,
+    string Notes,
+    int Revision,
     string CreatedBy,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt,
-    int Revision);
+    DateTimeOffset UpdatedAt);
 
-/// <summary>What an export wrote: counts the reconciliation compares against the import's.</summary>
+/// <summary>What an export wrote: counts the reconciliation compares against the import's report.</summary>
 public sealed record EventExportReport(
     Guid OrganizationId,
     string Bundle,
