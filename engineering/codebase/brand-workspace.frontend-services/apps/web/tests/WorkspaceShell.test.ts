@@ -234,7 +234,8 @@ describe('Ocharo frame in Desk', () => {
 
     const nav = wrapper!.get('nav[aria-label="Desk sections"]');
     const links = nav.findAll('a').map((link) => link.attributes('href'));
-    expect(links).toContain(`/organizations/${ORG}/events`);
+    expect(links).toContain("https://localhost:8292/");
+    expect(links).not.toContain(`/organizations/${ORG}/events`);
     expect(links).toContain(`/organizations/${ORG}/sourcing`);
     expect(links).toContain('/system');
     expect(nav.get('[aria-current="page"]').text()).toBe('Brands');

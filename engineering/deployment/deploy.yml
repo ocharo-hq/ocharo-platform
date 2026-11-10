@@ -106,12 +106,6 @@ services:
         # backfill and public routes; linked to the Uri this descriptor types for its Files resource. Rows stored before
         # Files keep their bytes until the migration and boot fill their ids (research/files-adoption.md #13, #32).
         Files:BaseUrl: { from: Identity:Server:Resources:2:Uri }
-        # Desk's Events page reads WoW2 Events, catalog `ocharo-fashion`, with the operator's token exchanged within their
-        # session (client 0's `ExchangeResources: events`); linked to the Uri this descriptor types for its Events resource.
-        # Desk keeps no events store since v0.3 Iteration 5, so a deployed Desk refuses to start without it.
-        Events:BaseUrl: { from: Identity:Server:Resources:3:Uri }
-        # The Events catalog Desk's page reads; Ocharo's intake and import write `ocharo-fashion`.
-        Events:Catalog: { default: ocharo-fashion }
         # Background removal: the private image worker, a sibling on the platform network. Its address is an owner key
         # typed per environment as `http://ocharo-<environment>-image-worker:8080`, its platform name: the bare service
         # name is an alias every environment's worker would share on that one network, and the descriptor has no template
@@ -130,6 +124,7 @@ services:
         OcharoApps:Atlas: { type: url }
         OcharoApps:Wear: { type: url }
         OcharoApps:Blog: { from: { repository: marketing, key: Sites:blog:Url } }
+        OcharoApps:Events: { from: Sites:events:Url }
     volumes:
       keys: /var/lib/brand-workspace/keys
     sites:
@@ -392,12 +387,6 @@ services:
         Identity:Server:Clients:5:ExchangeResources:0: { default: files }
         Identity:Server:Clients:5:Scopes:0: { default: files.read }
         Identity:Server:Clients:5:Scopes:1: { default: files.write }
-        # WoW2 Events (events-integration #21–#23, #30; research/events-adoption.md #2): Desk reaches `events` for a person
-        # only, by token exchange, and Events checks a scope plus an `events:*` permission against the token's org_id.
-        Identity:Server:Clients:0:ExchangeResources:1: { default: events }
-        Identity:Server:Clients:0:Scopes:2: { default: events.read }
-        Identity:Server:Clients:0:Scopes:3: { default: events.track }
-        Identity:Server:Clients:0:Scopes:4: { default: events.import }
         # Client 8, events: WoW2 Events pulls SCFD's deliveries as itself. Clients 8 and 10 belong to Events, another
         # product; their generated secrets reach its target through Wheelhouse's owner link, never typed twice.
         Identity:Server:Clients:8:ClientId: { default: events }
@@ -538,6 +527,7 @@ services:
         OcharoApps:Atlas: { type: url }
         OcharoApps:Wear: { type: url }
         OcharoApps:Blog: { from: { repository: marketing, key: Sites:blog:Url } }
+        OcharoApps:Events: { from: Sites:events:Url }
     volumes:
       # Blobs stored before WoW2 Files, and the retired SQLite store and file key ring until `import-sqlite`
       # (deployment/brand/brand.md § PostgreSQL move).
@@ -588,6 +578,7 @@ services:
         OcharoApps:Atlas: { type: url }
         OcharoApps:Wear: { type: url }
         OcharoApps:Blog: { from: { repository: marketing, key: Sites:blog:Url } }
+        OcharoApps:Events: { from: Sites:events:Url }
     volumes:
       # Blobs stored before WoW2 Files, and the retired SQLite store and file key ring until `import-sqlite`
       # (deployment/catalogue/catalogue.md § PostgreSQL move).
@@ -621,8 +612,8 @@ services:
         Identity:Client:SignalUrl: { from: Identity:Server:Clients:11:SignalUrl }
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         # The page reads WoW2 Events, catalog `ocharo-fashion`, with the member's token exchanged within their session
-        # (client 11's `ExchangeResources: events`); linked to the Uri this descriptor types for its Events resource, as
-        # Desk's is. The service keeps no events store, so a deployed boot refuses without it.
+        # (client 11's `ExchangeResources: events`); linked to the Uri this descriptor types for its Events resource. The
+        # service keeps no events store, so a deployed boot refuses without it.
         Events:BaseUrl: { from: Identity:Server:Resources:3:Uri }
         Events:Catalog: { default: ocharo-fashion }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out. Apps whose

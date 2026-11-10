@@ -18,6 +18,7 @@ public static class OcharoAppsSettingsExtensions
         (nameof(OcharoAppsSettings.Atlas), "OCHARO_ATLAS_URL", settings => settings.Atlas),
         (nameof(OcharoAppsSettings.Wear), "OCHARO_WEAR_URL", settings => settings.Wear),
         (nameof(OcharoAppsSettings.Blog), "OCHARO_BLOG_URL", settings => settings.Blog),
+        (nameof(OcharoAppsSettings.Events), "OCHARO_EVENTS_URL", settings => settings.Events),
     ];
 
     /// <summary>
@@ -40,6 +41,7 @@ public static class OcharoAppsSettingsExtensions
             Atlas = Public(apps => apps.Atlas),
             Wear = Public(apps => apps.Wear),
             Blog = Public(apps => apps.Blog),
+            Events = Public(apps => apps.Events),
         };
     }
 

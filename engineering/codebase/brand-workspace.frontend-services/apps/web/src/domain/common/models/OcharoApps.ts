@@ -4,7 +4,7 @@ export const OcharoAppKind = { Workspace: 'workspace', PublicSite: 'public-site'
 export type OcharoAppKind = (typeof OcharoAppKind)[keyof typeof OcharoAppKind];
 
 /** Names one destination in the app menu. */
-export type OcharoAppKey = 'desk' | 'catalogue' | 'studio' | 'marketing' | 'editorial' | 'brand' | 'atlas' | 'wear' | 'blog';
+export type OcharoAppKey = 'desk' | 'catalogue' | 'studio' | 'marketing' | 'editorial' | 'brand' | 'atlas' | 'wear' | 'blog' | 'events';
 
 /** One destination in the app menu. */
 export interface OcharoApp {
@@ -31,6 +31,7 @@ const OcharoAppEntries: readonly Omit<OcharoApp, 'url'>[] = [
   { key: 'atlas', label: 'Atlas', summary: 'Public site', kind: OcharoAppKind.PublicSite },
   { key: 'wear', label: 'Wear', summary: 'Public site', kind: OcharoAppKind.PublicSite },
   { key: 'blog', label: 'Blog', summary: 'Public site', kind: OcharoAppKind.PublicSite },
+  { key: 'events', label: 'Events', summary: 'Trade events and deadlines', kind: OcharoAppKind.Workspace },
 ];
 
 /** Accepts only plain HTTPS links: no credentials, query or fragment that could carry a token. */

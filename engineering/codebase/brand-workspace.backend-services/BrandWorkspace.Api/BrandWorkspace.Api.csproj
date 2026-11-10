@@ -4,7 +4,6 @@
     <PackageReference Include="WoW2.Sdk.Beta.Be.Identity.Client" />
     <!-- Media: WoW2 Files over HTTP, by Identity tokens of the same `desk` client. -->
     <PackageReference Include="WoW2.Sdk.Beta.Be.Files.Client" />
-    <PackageReference Include="WoW2.Sdk.Beta.Be.Events.Client" />
     <ProjectReference Include="../BrandWorkspace.Application/BrandWorkspace.Application.csproj" />
     <ProjectReference Include="../BrandWorkspace.Infrastructure/BrandWorkspace.Infrastructure.csproj" />
     <ProjectReference Include="../BrandWorkspace.Persistence/BrandWorkspace.Persistence.csproj" />

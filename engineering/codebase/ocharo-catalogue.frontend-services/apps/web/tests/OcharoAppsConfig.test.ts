@@ -22,6 +22,7 @@ const LocalDefaults = {
   OCHARO_MARKETING_URL: 'https://localhost:8358/',
   OCHARO_EDITORIAL_URL: 'https://localhost:8284/studio/',
   OCHARO_BRAND_URL: 'https://localhost:8288/',
+  OCHARO_EVENTS_URL: 'https://localhost:8292/',
   OCHARO_ATLAS_URL: 'https://localhost:8284/atlas/',
   OCHARO_WEAR_URL: 'https://localhost:8284/wear/',
   OCHARO_BLOG_URL: 'https://localhost:8284/',
@@ -113,6 +114,22 @@ describe('Ocharo app addresses', () => {
   });
 });
 
+describe('Events address', () => {
+  it('lists Events after Brand, reads its address from the runtime settings and keeps the local default', () => {
+    const config = resolveOcharoAppsConfig([
+      runtimeConfigSource({ OCHARO_EVENTS_URL: 'https://events.example.test/' }),
+    ]);
+    const apps = ocharoApps({ brand: LocalDefaults.OCHARO_BRAND_URL, events: config.OCHARO_EVENTS_URL });
+
+    expect(resolveOcharoAppsConfig([]).OCHARO_EVENTS_URL).toBe(LocalDefaults.OCHARO_EVENTS_URL);
+    expect(apps.map(({ key, label, summary, kind }) => [key, label, summary, kind])).toEqual([
+      ['brand', 'Brand', 'Logo and brand guide', 'workspace'],
+      ['events', 'Events', 'Trade events and deadlines', 'workspace'],
+    ]);
+    expect(apps[1]?.url).toBe('https://events.example.test/');
+  });
+});
+
 describe('Brand addresses', () => {
   it('keeps the Brand API the print sheet reads apart from the Brand app the menu opens', async () => {
     const startup = await (serveRuntimeConfig({}), loadOcharoApps());
@@ -167,7 +184,7 @@ describe('startup resolution', () => {
       desk: 'https://desk.example.test/',
       catalogue: LocalDefaults.OCHARO_CATALOGUE_URL,
     });
-    expect(ocharoApps(startup.addresses)).toHaveLength(9);
+    expect(ocharoApps(startup.addresses)).toHaveLength(10);
   });
 
   it.each([

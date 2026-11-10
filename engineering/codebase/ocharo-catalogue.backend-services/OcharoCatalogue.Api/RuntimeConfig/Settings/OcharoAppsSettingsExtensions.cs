@@ -15,6 +15,7 @@ public static class OcharoAppsSettingsExtensions
         (nameof(OcharoAppsSettings.Atlas), "OCHARO_ATLAS_URL", settings => settings.Atlas),
         (nameof(OcharoAppsSettings.Wear), "OCHARO_WEAR_URL", settings => settings.Wear),
         (nameof(OcharoAppsSettings.Blog), "OCHARO_BLOG_URL", settings => settings.Blog),
+        (nameof(OcharoAppsSettings.Events), "OCHARO_EVENTS_URL", settings => settings.Events),
     ];
 
     /// <summary>Returns the configured, plain HTTPS addresses keyed for runtime config; any other value is left out.</summary>

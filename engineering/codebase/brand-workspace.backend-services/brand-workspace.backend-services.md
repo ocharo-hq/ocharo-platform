@@ -160,8 +160,8 @@ Unknown `/api` paths, including dotted paths and non-GET methods, return JSON `4
 }
 ```
 
-The keys are `OCHARO_{DESK,CATALOGUE,STUDIO,MARKETING,EDITORIAL,BRAND,ATLAS,WEAR,BLOG}_URL`, from the settings
-`OcharoApps:{Desk,Catalogue,Studio,Marketing,Editorial,Brand,Atlas,Wear,Blog}` ([target settings](../../deployment/deployment.md#target-settings)).
+The keys are `OCHARO_{DESK,CATALOGUE,STUDIO,MARKETING,EDITORIAL,BRAND,ATLAS,WEAR,BLOG,EVENTS}_URL`, from the settings
+`OcharoApps:{Desk,Catalogue,Studio,Marketing,Editorial,Brand,Atlas,Wear,Blog,Events}` ([target settings](../../deployment/deployment.md#target-settings)).
 A value is served only as an absolute HTTPS address without credentials, query or fragment; the host logs one startup
 warning naming each setting it leaves out. The SPA layers these values ahead of its build-time `VITE_OCHARO_*_URL`
 values and local `localhost` defaults.

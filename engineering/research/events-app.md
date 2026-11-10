@@ -10,8 +10,8 @@ v0.3 Iteration 8.
 ## Status
 
 - ✅ Design #1–#9 picked 2026-11-10.
-- 🔄 R1: the service, its app, its Identity client and its deploy entry.
-- ⬜ R2: Desk's Events page, routes and exchange leave; every app's menu gains Events.
+- ✅ R1: the service, its app, its Identity client and its deploy entry; `v0.3.11` on dev 2026-11-10, read back.
+- 🔄 R2: Desk's Events page, routes and exchange leave; every app's menu gains Events.
 
 ## #1 Shape
 

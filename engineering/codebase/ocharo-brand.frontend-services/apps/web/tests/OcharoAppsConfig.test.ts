@@ -22,6 +22,7 @@ const LocalDefaults = {
   OCHARO_MARKETING_URL: 'https://localhost:8358/',
   OCHARO_EDITORIAL_URL: 'https://localhost:8284/studio/',
   OCHARO_BRAND_URL: 'https://localhost:8288/',
+  OCHARO_EVENTS_URL: 'https://localhost:8292/',
   OCHARO_ATLAS_URL: 'https://localhost:8284/atlas/',
   OCHARO_WEAR_URL: 'https://localhost:8284/wear/',
   OCHARO_BLOG_URL: 'https://localhost:8284/',
@@ -113,6 +114,7 @@ describe('Ocharo app addresses', () => {
       marketing: LocalDefaults.OCHARO_MARKETING_URL,
       editorial: LocalDefaults.OCHARO_EDITORIAL_URL,
       brand: LocalDefaults.OCHARO_BRAND_URL,
+      events: LocalDefaults.OCHARO_EVENTS_URL,
       atlas: LocalDefaults.OCHARO_ATLAS_URL,
       wear: LocalDefaults.OCHARO_WEAR_URL,
       blog: LocalDefaults.OCHARO_BLOG_URL,
@@ -125,6 +127,7 @@ describe('Ocharo app addresses', () => {
       ['marketing', 'Marketing', 'Posts and leads', 'workspace'],
       ['editorial', 'Editorial', 'Blog stories', 'workspace'],
       ['brand', 'Brand', 'Logo and brand guide', 'workspace'],
+      ['events', 'Events', 'Trade events and deadlines', 'workspace'],
       ['atlas', 'Atlas', 'Public site', 'public-site'],
       ['wear', 'Wear', 'Public site', 'public-site'],
       ['blog', 'Blog', 'Public site', 'public-site'],
@@ -148,7 +151,7 @@ describe('startup resolution', () => {
       desk: 'https://desk.example.test/',
       brand: LocalDefaults.OCHARO_BRAND_URL,
     });
-    expect(ocharoApps(startup.addresses)).toHaveLength(9);
+    expect(ocharoApps(startup.addresses)).toHaveLength(10);
   });
 
   it.each([

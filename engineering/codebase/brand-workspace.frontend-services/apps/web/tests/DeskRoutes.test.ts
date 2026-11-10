@@ -17,7 +17,7 @@ function resolve(path: string) {
 describe('Desk places', () => {
   it('opens every address Desk serves in the section its workspace location names', () => {
     const addresses = [
-      '/', '/catalogue', '/system', `/organizations/${ORG}`, `/organizations/${ORG}/events`, `/organizations/${ORG}/events/${ITEM}`,
+      '/', '/catalogue', '/system', `/organizations/${ORG}`, `/organizations/${ORG}/events`, `/organizations/${ORG}/events/anything`,
       `/organizations/${ORG}/sourcing`, `/organizations/${ORG}/sourcing/inbox`, `/organizations/${ORG}/sourcing/materials`,
       `/organizations/${ORG}/sourcing/${ITEM}`, `/organizations/${ORG}/sourcing/${ITEM}/extra`, `/organizations/${ORG}/products`,
       `/organizations/${ORG}/catalogue?design=${ITEM}&mode=web`, `/organizations/${ORG}/business-cards`, `/organizations/${ORG}/media`,
@@ -42,8 +42,6 @@ describe('Desk places', () => {
   it('decodes each page’s address into typed page props', () => {
     expect(deskPageProps(resolve(`/organizations/${ORG}/sourcing/${ITEM}`), context))
       .toMatchObject({ initialLocation: { view: 'supplier', supplierId: ITEM } });
-    expect(deskPageProps(resolve(`/organizations/${ORG}/events/${ITEM}`), context))
-      .toMatchObject({ initialLocation: { view: 'event', eventId: ITEM } });
     expect(deskPageProps(resolve(`/organizations/${ORG}/catalogue?design=${ITEM}&page=cover&mode=pdf`), context))
       .toMatchObject({ initialDocumentId: ITEM, initialPageId: 'cover', initialMode: 'pdf', navigationError: null });
     expect(deskPageProps(resolve(`/organizations/${ORG}/business-cards?design=nope`), context))

@@ -46,8 +46,8 @@ const UiLanguages: readonly AccountMenuLocale[] = [
  * the suite's. Desk passes what is its own: the app list with the open organization, its sections, where you are, the
  * refresh, the account with its organizations and languages, and its notices above the page.
  *
- * The frame owns the document's organization reads, so they stay loaded while places swap. Sourcing and Events keep
- * their page across their own views; every other place opens fresh on each navigation, as it did when each move loaded
+ * The frame owns the document's organization reads, so they stay loaded while places swap. Sourcing keeps
+ * its page across its own views; every other place opens fresh on each navigation, as it did when each move loaded
  * a new document. A membership the session does not hold reads as an unavailable organization, and a place that fails
  * to load or render shows its failure inside the frame.
  */
@@ -66,8 +66,8 @@ const location = computed(() => readWorkspaceLocation(route.path));
 const workspace = useWorkspace(props.access, location);
 /** The open place's sidebar section; `null` for an address outside every section. */
 const section = computed(() => readDeskPlace(route)?.section ?? null);
-/** Sourcing and Events keep their page across their own views; the rest remount per address. @internal */
-const pageKey = computed(() => (section.value === 'sourcing' || section.value === 'events' ? section.value : route.fullPath));
+/** Sourcing keeps its page across its own views; the rest remount per address. @internal */
+const pageKey = computed(() => (section.value === 'sourcing' ? section.value : route.fullPath));
 
 const organization = computed(() => workspace.organization.value ?? null);
 const user = computed(() => props.access.session.value?.user ?? null);

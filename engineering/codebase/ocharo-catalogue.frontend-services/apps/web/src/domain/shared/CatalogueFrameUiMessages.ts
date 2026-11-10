@@ -7,6 +7,8 @@ export const catalogueFrameUiMessages: UiMessageTable = {
   'Apps menu: Editorial': { en: 'Editorial', uz: 'Tahririyat', ru: 'Редакция' },
   Atlas: { uz: 'Atlas', ru: 'Atlas' },
   Wear: { uz: 'Wear', ru: 'Wear' },
+  Events: { uz: 'Tadbirlar', ru: 'Мероприятия' },
+  'Trade events and deadlines': { uz: 'Savdo tadbirlari va muddatlar', ru: 'Торговые мероприятия и сроки' },
   'Events, sourcing and products': { uz: 'Tadbirlar, ta’minot va mahsulotlar', ru: 'События, снабжение и товары' },
   'Products, prices and editions': { uz: 'Mahsulotlar, narxlar va nashrlar', ru: 'Товары, цены и издания' },
   'Garments and fabric': { uz: 'Kiyimlar va matolar', ru: 'Одежда и ткани' },

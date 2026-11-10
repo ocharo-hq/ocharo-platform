@@ -77,7 +77,7 @@ export function useWorkspace(access: AccessControls, location: MaybeRefOrGetter<
     refreshing.value = true;
     try {
       const keys: unknown[][] = [[scope[0], 'organizations']];
-      if (organization.value) keys.push([...scope, 'brands'], [...scope, 'media'], [...scope, 'drafts'], [...scope, 'sourcing'], [...scope, 'events']);
+      if (organization.value) keys.push([...scope, 'brands'], [...scope, 'media'], [...scope, 'drafts'], [...scope, 'sourcing']);
       if (organization.value && draftId() && draftId() !== 'new') keys.push(draftKey());
       await Promise.all(keys.map(key => cache.invalidate(key)));
     } finally { refreshing.value = false; }

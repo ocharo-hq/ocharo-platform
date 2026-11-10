@@ -19,6 +19,7 @@ public sealed class RuntimeConfigTests
         ["OcharoApps:Atlas"] = "https://ocharo-atlas-dev.example.ts.net/",
         ["OcharoApps:Wear"] = "https://ocharo-wear-dev.example.ts.net/",
         ["OcharoApps:Blog"] = "https://ocharo-blog-dev.example.ts.net/",
+        ["OcharoApps:Events"] = "https://ocharo-events-dev.example.ts.net/",
     };
 
     [Fact]
@@ -43,6 +44,7 @@ public sealed class RuntimeConfigTests
             ["OCHARO_ATLAS_URL"] = "https://ocharo-atlas-dev.example.ts.net/",
             ["OCHARO_WEAR_URL"] = "https://ocharo-wear-dev.example.ts.net/",
             ["OCHARO_BLOG_URL"] = "https://ocharo-blog-dev.example.ts.net/",
+            ["OCHARO_EVENTS_URL"] = "https://ocharo-events-dev.example.ts.net/",
         });
     }
 

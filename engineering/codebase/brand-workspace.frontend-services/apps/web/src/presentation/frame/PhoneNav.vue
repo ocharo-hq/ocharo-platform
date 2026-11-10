@@ -5,6 +5,7 @@ import { Ellipsis, X } from 'lucide-vue-next';
 import { BottomNavMenu, BottomNavMenuItem } from '@wow-two-beta/fe/presentation/nav';
 import { Modal, ModalContent, ModalTitle } from '@wow-two-beta/fe/presentation/overlays';
 
+import { useOcharoApps } from '@/application/common/hooks/UseOcharoApps';
 import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
 import { DeskSections, deskSectionPath, type DeskSection } from '@/domain/common/DeskSections';
 
@@ -18,17 +19,22 @@ defineOptions({ name: 'PhoneNav' });
 const props = defineProps<{ organizationId: string; current: DeskSection | null }>();
 const { t } = useUiLocale();
 const moreOpen = ref(false);
-const barSections = DeskSections.filter((section) => section.onPhoneBar);
-const moreSections = DeskSections.filter((section) => !section.onPhoneBar);
+const apps = useOcharoApps();
+const addresses = computed(() => Object.fromEntries(apps.map((app) => [app.key, app.url])));
+/** A section that lives in another app shows only while that app's address is set. */
+const shown = computed(() => DeskSections.filter((section) => !section.app || addresses.value[section.app]));
+const barSections = computed(() => shown.value.filter((section) => section.onPhoneBar));
+const moreSections = computed(() => shown.value.filter((section) => !section.onPhoneBar));
 /** More reads as current while one of its sections is open. */
-const moreIsCurrent = computed(() => moreSections.some((section) => section.id === props.current));
+const moreIsCurrent = computed(() => moreSections.value.some((section) => section.id === props.current));
 </script>
 
 <template>
   <BottomNavMenu :is-fixed="false" :aria-label="t('Desk sections')" variant="glass">
     <BottomNavMenuItem v-for="section in barSections" :key="section.id" as-child :is-active="props.current === section.id">
       <template #icon><component :is="SectionIcons[section.id]" :size="20" /></template>
-      <RouterLink :to="deskSectionPath(props.organizationId, section.id)">{{ t(section.shortLabel) }}</RouterLink>
+      <RouterLink v-if="!section.app" :to="deskSectionPath(props.organizationId, section.id)">{{ t(section.shortLabel) }}</RouterLink>
+      <a v-else :href="addresses[section.app]">{{ t(section.shortLabel) }}</a>
     </BottomNavMenuItem>
     <BottomNavMenuItem as-child :is-active="moreIsCurrent">
       <template #icon><Ellipsis :size="20" /></template>

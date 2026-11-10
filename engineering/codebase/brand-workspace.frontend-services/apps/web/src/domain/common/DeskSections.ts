@@ -1,3 +1,4 @@
+import type { OcharoAppKey } from '@/domain/common/models/OcharoApps';
 import type { WorkspaceLocation } from '@/domain/common/models/Workspace';
 
 /** One Desk section, as the address bar names it. */
@@ -23,12 +24,14 @@ export interface DeskSectionEntry {
   readonly group: DeskSectionGroup;
   /** Shown in the phone's bottom bar; every other section opens from More. */
   readonly onPhoneBar: boolean;
+  /** Set when the section lives in another Ocharo app: the item links to that app's address, and is hidden while it is unset. */
+  readonly app?: OcharoAppKey;
 }
 
 /** Every Desk section in sidebar order. The phone's bottom bar takes the four marked ones, then More. */
 export const DeskSections: readonly DeskSectionEntry[] = [
   { id: 'overview', label: 'Overview', shortLabel: 'Overview', group: DeskSectionGroup.Home, onPhoneBar: false },
-  { id: 'events', label: 'Events', shortLabel: 'Events', group: DeskSectionGroup.Operations, onPhoneBar: true },
+  { id: 'events', label: 'Events', shortLabel: 'Events', group: DeskSectionGroup.Operations, onPhoneBar: true, app: 'events' },
   { id: 'sourcing', label: 'Sourcing', shortLabel: 'Sourcing', group: DeskSectionGroup.Operations, onPhoneBar: true },
   { id: 'products', label: 'Products & releases', shortLabel: 'Products', group: DeskSectionGroup.Products, onPhoneBar: true },
   { id: 'catalogue', label: 'Catalogues', shortLabel: 'Catalogues', group: DeskSectionGroup.Products, onPhoneBar: false },

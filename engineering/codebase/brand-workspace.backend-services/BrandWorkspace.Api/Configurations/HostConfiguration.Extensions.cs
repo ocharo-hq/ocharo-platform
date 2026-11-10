@@ -25,9 +25,6 @@ using BrandWorkspace.Application.Sourcing.Repositories;
 using BrandWorkspace.Infrastructure.Sourcing.Services;
 using BrandWorkspace.Persistence.Sourcing.Repositories;
 using BrandWorkspace.Api.RuntimeConfig.Settings;
-using BrandWorkspace.Application.Events.Repositories;
-using BrandWorkspace.Infrastructure.Events.Services;
-using WoW.Two.Sdk.Beta.Be.Events.Client;
 using WoW.Two.Sdk.Beta.Be.Media.Images;
 using WoW.Two.Sdk.Beta.Be.Media.BackgroundRemoval;
 using BrandWorkspace.Application.Access.Models;
@@ -100,7 +97,7 @@ public static partial class HostConfiguration
         [
             "ImageProcessing__WorkerBaseUrl", "ImageProcessing__WorkerKey", "Commerce__SourceRoot",
             "Commerce__AdoptionOrganizationId", "DataProtection__KeysPath", "DataProtection__ApplicationName",
-            "Files__BaseUrl", "Events__BaseUrl", "Events__Catalog", "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password",
+            "Files__BaseUrl", "Kestrel__Certificates__Default__Path", "Kestrel__Certificates__Default__Password",
             "Identity__Client__Authority", "Identity__Client__ClientId", "Identity__Client__ClientSecret",
             "Identity__Client__CookieName", "Identity__Client__PostSignOutRedirectPath",
             "Identity__Client__Environment", "Identity__Resource__Uri",
@@ -360,44 +357,6 @@ public static partial class HostConfiguration
         builder.Services.AddSingleton<SourcingMediaInspector>();
         builder.Services.AddScoped<SourcingService>();
         builder.Services.AddScoped<SourcingImportService>();
-        return builder;
-    }
-
-    /// <summary>Holds the root URL of the WoW2 Events service that serves Desk's Events page (events-adoption.md #8).</summary>
-    private const string EventsBaseUrlKey = "Events:BaseUrl";
-
-    /// <summary>
-    /// Registers the showcase events feed on WoW2 Events through its published client, whose person flow exchanges the
-    /// signed-in person's BFF session token for one with Events' audience by Desk's own Identity client. Desk keeps no
-    /// events store of its own since v0.3 Iteration 5: a deployed run refuses to start without <see
-    /// cref="EventsBaseUrlKey"/>, a local run without it answers 503 on the Events routes. Settings read at resolve time,
-    /// so a test host's settings decide.
-    /// </summary>
-    private static WebApplicationBuilder AddEvents(this WebApplicationBuilder builder)
-    {
-        builder.Services.AddOptions<EventsServiceOptions>()
-            .BindConfiguration(EventsServiceOptions.SectionName)
-            .Validate<IConfiguration, IHostEnvironment>(
-                (events, configuration, environment) =>
-                    !string.IsNullOrWhiteSpace(events.BaseUrl) || environment.IsLocalRun(configuration),
-                $"{EventsBaseUrlKey} is required: WoW2 Events serves Desk's Events page, and Desk keeps no events store.")
-            .ValidateOnStart();
-        builder.Services.AddEventsClient(_ => { });
-        builder.Services.AddOptions<EventsClientOptions>().Configure<IConfiguration>((events, configuration) =>
-        {
-            if (configuration[EventsBaseUrlKey] is not { Length: > 0 } url) return;
-            events.BaseAddress = new Uri(url);
-            if (Uri.TryCreate(configuration["Identity:Client:Authority"], UriKind.Absolute, out var authority))
-                events.Identity = new EventsClientIdentityOptions
-                {
-                    TokenEndpoint = new Uri(authority, "connect/token"),
-                    ClientId = configuration["Identity:Client:ClientId"] ?? string.Empty,
-                    ClientSecret = configuration["Identity:Client:ClientSecret"] ?? string.Empty,
-                };
-        });
-        builder.Services.AddScoped<IEventRepository, EventsServiceRepository>();
-        builder.Services.AddSingleton<EventValidationService>();
-        builder.Services.AddScoped<EventService>();
         return builder;
     }
 

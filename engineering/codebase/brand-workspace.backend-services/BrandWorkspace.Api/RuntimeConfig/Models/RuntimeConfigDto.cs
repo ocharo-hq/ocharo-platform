@@ -43,4 +43,8 @@ public sealed record RuntimeConfigDto
     /// <summary>Gets the Blog address.</summary>
     [JsonPropertyName("OCHARO_BLOG_URL")]
     public string? Blog { get; init; }
+
+    /// <summary>Gets the Events address.</summary>
+    [JsonPropertyName("OCHARO_EVENTS_URL")]
+    public string? Events { get; init; }
 }

@@ -47,4 +47,5 @@ export const AppIcons: Readonly<Record<OcharoApp['key'], Component>> = {
   atlas: Globe,
   wear: Globe,
   blog: Globe,
+  events: CalendarDays,
 };

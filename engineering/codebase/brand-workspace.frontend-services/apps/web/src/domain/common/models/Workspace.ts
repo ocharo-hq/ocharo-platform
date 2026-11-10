@@ -77,8 +77,8 @@ export interface WorkspaceLocation {
 }
 
 /**
- * Resolves only the product's known document routes. Sourcing and Events read their own views from the segments after
- * their section: `readSourcingAddress`, `readEventsAddress`.
+ * Resolves only the product's known document routes. Sourcing reads its own views from the segments after
+ * its section: `readSourcingAddress`. Events lives in its own app; its address only redirects there.
  */
 export function readWorkspaceLocation(pathname: string): WorkspaceLocation {
   const parts = pathname.split('/').filter(Boolean);

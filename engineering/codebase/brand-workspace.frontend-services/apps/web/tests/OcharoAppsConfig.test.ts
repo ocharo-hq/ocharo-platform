@@ -26,6 +26,7 @@ const LocalDefaults = {
   OCHARO_ATLAS_URL: 'https://localhost:8284/atlas/',
   OCHARO_WEAR_URL: 'https://localhost:8284/wear/',
   OCHARO_BLOG_URL: 'https://localhost:8284/',
+  OCHARO_EVENTS_URL: 'https://localhost:8292/',
 };
 
 /** Answers `/api/runtime-config` with `body`, and records every request. */
@@ -93,7 +94,7 @@ describe('startup resolution', () => {
     expect(fetch).toHaveBeenCalledWith('/api/runtime-config', expect.objectContaining({ method: 'GET', credentials: 'omit' }));
     expect(startup.problems).toEqual([]);
     expect(startup.addresses).toMatchObject({ catalogue: 'https://catalogue.example.test/catalogues', desk: LocalDefaults.OCHARO_DESK_URL });
-    expect(ocharoApps(startup.addresses)).toHaveLength(9);
+    expect(ocharoApps(startup.addresses)).toHaveLength(10);
   });
 
   it('keeps reading the existing VITE_OCHARO_* build variables behind the served settings', async () => {

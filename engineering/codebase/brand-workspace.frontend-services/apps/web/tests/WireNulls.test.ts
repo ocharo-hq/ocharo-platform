@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { systemApi } from '@/integration/system/SystemApi';
-import { createEventsApi } from '@/integration/events/EventsApi';
 import { createSourcingApi } from '@/integration/sourcing/SourcingApi';
 import { createWorkspaceApi } from '@/integration/common/WorkspaceApi';
 import { createCommerceApi } from '@/integration/common/CommerceApi';
@@ -12,17 +11,6 @@ const signal = () => new AbortController().signal;
 const respond = (body: unknown) => vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json(body)));
 
 describe('decoders on the SDK JSON, which leaves null members out', () => {
-  it('restores an event\'s omitted members as null', async () => {
-    respond({ data: {
-      id: 'e1', title: 'Tashkent Fashion Week', scope: 'local', format: 'runway', datePrecision: 'unknown',
-      participation: '', status: 'shortlisted', priority: 'normal', notes: '', revision: 1,
-      createdAt: '2026-10-08T00:00:00Z', updatedAt: '2026-10-08T00:00:00Z',
-    } });
-    const result = await createEventsApi(() => 'token').getEvent('org', 'e1', signal());
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value).toMatchObject({ key: null, startsOn: null, cost: null, sourceUrl: null });
-  });
-
   it('restores a supplier\'s omitted members, its people and routes included', async () => {
     respond({ data: {
       id: 's1', name: 'Kashmir Weaves', stage: 'quoted', notes: '', revision: 1,

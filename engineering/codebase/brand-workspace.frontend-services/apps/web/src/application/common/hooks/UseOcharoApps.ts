@@ -29,6 +29,7 @@ export const OcharoAppsConfigSchema = {
   OCHARO_ATLAS_URL: url({ default: 'https://localhost:8284/atlas/' }),
   OCHARO_WEAR_URL: url({ default: 'https://localhost:8284/wear/' }),
   OCHARO_BLOG_URL: url({ default: 'https://localhost:8284/' }),
+  OCHARO_EVENTS_URL: url({ default: 'https://localhost:8292/' }),
 } satisfies ConfigSchema;
 
 /** The resolved app addresses, one per schema key. */
@@ -45,6 +46,7 @@ const AppKeys: Readonly<Record<keyof OcharoAppsConfig, OcharoAppKey>> = {
   OCHARO_ATLAS_URL: 'atlas',
   OCHARO_WEAR_URL: 'wear',
   OCHARO_BLOG_URL: 'blog',
+  OCHARO_EVENTS_URL: 'events',
 };
 
 /** What the operator is told when startup could not use every source or value. */

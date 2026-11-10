@@ -6,7 +6,6 @@ import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
 import type { WorkspaceControls } from '@/application/common/hooks/UseWorkspace';
 import type { DeskSection } from '@/domain/common/DeskSections';
 import { readDesignTarget } from '@/domain/common/EditorNavigation';
-import { readEventsAddress } from '@/domain/events/Events';
 import { readSourcingAddress } from '@/domain/sourcing/models/Sourcing';
 
 /** What the layout hands every place's page: the document's session controls and its organization's reads. */
@@ -74,7 +73,3 @@ export const designPage = (kind: 'catalogue' | 'business-card'): DeskPageProps =
 /** Sourcing, opened on the list, inbox or supplier its address names. */
 export const sourcingPage: DeskPageProps = (route, context) =>
   ({ ...workspacePage(route, context), initialLocation: readSourcingAddress(route.path) ?? undefined });
-
-/** Events, opened on the feed or the event its address names. */
-export const eventsPage: DeskPageProps = (route, context) =>
-  ({ ...workspacePage(route, context), initialLocation: readEventsAddress(route.path) ?? undefined });

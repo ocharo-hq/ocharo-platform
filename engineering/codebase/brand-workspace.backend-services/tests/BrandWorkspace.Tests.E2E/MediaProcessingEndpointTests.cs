@@ -270,7 +270,7 @@ public sealed class MediaProcessingEndpointTests
 
     [Theory]
     [InlineData("/api/organizations")]
-    [InlineData("/api/organizations/00000000-0000-0000-0000-000000000001/events")]
+    [InlineData("/api/organizations/00000000-0000-0000-0000-000000000001/sourcing/suppliers")]
     public async Task BrowserRoute_ShouldReturn401_WhenCallerHoldsOnlyAServiceToken(string route)
     {
         await using var host = await EndpointHost.CreateAsync(standInSignIn: false);

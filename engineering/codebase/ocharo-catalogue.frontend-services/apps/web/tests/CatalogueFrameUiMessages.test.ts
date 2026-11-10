@@ -34,10 +34,9 @@ describe('Ocharo frame interface languages', () => {
   it('translates every app, section, group and startup message the frame shows', () => {
     const everyApp = ocharoApps(
       Object.fromEntries(
-        ['desk', 'catalogue', 'studio', 'marketing', 'editorial', 'brand', 'atlas', 'wear', 'blog'].map((key) => [
-          key,
-          'https://example.test/',
-        ]),
+        ['desk', 'catalogue', 'studio', 'marketing', 'editorial', 'brand', 'events', 'atlas', 'wear', 'blog'].map(
+          (key) => [key, 'https://example.test/'],
+        ),
       ),
     );
     const phrases = [
@@ -46,7 +45,7 @@ describe('Ocharo frame interface languages', () => {
       ...Object.values(CatalogueGroupLabels).filter((label): label is string => Boolean(label)),
       ...Object.values(OcharoAppsProblem),
     ];
-    expect(everyApp).toHaveLength(9);
+    expect(everyApp).toHaveLength(10);
     expect(phrases.filter((phrase) => !uiMessages[phrase])).toEqual([]);
   });
 

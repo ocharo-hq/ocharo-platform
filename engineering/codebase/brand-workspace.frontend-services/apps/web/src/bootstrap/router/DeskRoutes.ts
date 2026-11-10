@@ -12,7 +12,6 @@ import { deskSectionLabel, type DeskSection } from '@/domain/common/DeskSections
 import AppLayout from '../AppLayout.vue';
 import {
   designPage,
-  eventsPage,
   organizationsPage,
   place,
   plainPage,
@@ -53,7 +52,7 @@ export const deskRoutes: RouteConfig = [
       { path: 'catalogue', lazy: lazyRoute(() => import('@/presentation/access/pages/OrganizationPage.vue')), handle: place('catalogue', deskSectionLabel('catalogue'), organizationsPage(true)) },
       sectionPlace('system', 'system', () => import('@/presentation/system/pages/FoundationPage.vue'), plainPage),
       sectionPlace(Organization, 'overview', () => import('@/presentation/common/pages/OverviewPage.vue'), workspacePage),
-      sectionPlace(`${Organization}/events/:view(.*)*`, 'events', () => import('@/presentation/events/pages/EventsPage.vue'), eventsPage),
+      sectionPlace(`${Organization}/events/:view(.*)*`, 'events', () => import('@/presentation/common/pages/EventsRedirectPage.vue'), plainPage),
       sectionPlace(`${Organization}/sourcing/:view(.*)*`, 'sourcing', () => import('@/presentation/sourcing/pages/SourcingPage.vue'), sourcingPage),
       sectionPlace(`${Organization}/products`, 'products', () => import('@/presentation/commerce/pages/CommercePage.vue'), workspacePage),
       sectionPlace(`${Organization}/catalogue`, 'catalogue', () => import('@/presentation/design/pages/CatalogueWorkspacePage.vue'), designPage('catalogue')),

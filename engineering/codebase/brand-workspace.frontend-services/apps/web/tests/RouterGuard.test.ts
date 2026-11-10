@@ -20,7 +20,7 @@ const assign = vi.fn();
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  window.history.replaceState(null, '', `/organizations/${ORG}/events`);
+  window.history.replaceState(null, '', `/organizations/${ORG}/brands`);
   router = await deskRouter();
   wrapper = mount(
     defineComponent({
@@ -62,7 +62,7 @@ describe('in-document navigation guard', () => {
     await flushPromises();
     resolveConfirmation(false);
     await declined;
-    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/events`);
+    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/brands`);
     expect(access.dirty.value).toBe(true);
 
     const accepted = router.push(`/organizations/${ORG}/media`);
@@ -77,7 +77,7 @@ describe('in-document navigation guard', () => {
     let finish!: () => void;
     const pending = access.write<void>(() => new Promise((resolve) => { finish = () => resolve(ResultExtensions.ok(undefined)); }));
     await router.push(`/organizations/${ORG}/media`);
-    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/events`);
+    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/brands`);
     finish();
     await pending;
     await router.push(`/organizations/${ORG}/media`);
@@ -85,9 +85,9 @@ describe('in-document navigation guard', () => {
   });
 
   it('replaces the document to reach another organization, so no private state crosses it', async () => {
-    await router.push(`/organizations/${OTHER}/events`);
-    expect(assign).toHaveBeenCalledWith(`/organizations/${OTHER}/events`);
-    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/events`);
+    await router.push(`/organizations/${OTHER}/brands`);
+    expect(assign).toHaveBeenCalledWith(`/organizations/${OTHER}/brands`);
+    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/brands`);
 
     assign.mockClear();
     await access.navigate(`/organizations/${OTHER}`);

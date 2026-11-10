@@ -1,6 +1,7 @@
 import type { Component } from 'vue';
 import {
   BookOpen,
+  CalendarDays,
   CalendarHeart,
   Globe,
   Image,
@@ -32,6 +33,7 @@ export const AppIcons: Readonly<Record<OcharoAppKey, Component>> = {
   marketing: Megaphone,
   editorial: PenLine,
   brand: Palette,
+  events: CalendarDays,
   atlas: Globe,
   wear: Globe,
   blog: Globe,

@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import { RouterLink } from 'vue-router';
 import { SidebarMenu, SidebarMenuItem, SidebarMenuSection } from '@wow-two-beta/fe/presentation/nav';
 
+import { useOcharoApps } from '@/application/common/hooks/UseOcharoApps';
 import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
 import {
   DeskGroupLabels,
@@ -21,11 +22,13 @@ import { SectionIcons } from './ShellIcons';
 defineOptions({ name: 'DeskNav' });
 const props = defineProps<{ organizationId: string; current: DeskSection | null; collapsed: boolean }>();
 const { t } = useUiLocale();
+const apps = useOcharoApps();
+const addresses = computed(() => Object.fromEntries(apps.map((app) => [app.key, app.url])));
 const groups = computed(() =>
   Object.values(DeskSectionGroup).map((group) => ({
     group,
     label: DeskGroupLabels[group],
-    sections: DeskSections.filter((section) => section.group === group),
+    sections: DeskSections.filter((section) => section.group === group && (!section.app || addresses.value[section.app])),
   })),
 );
 const labelClass = computed(() => (props.collapsed ? 'sr-only' : 'min-w-0 flex-1 truncate text-start'));
@@ -47,8 +50,11 @@ const labelClass = computed(() => (props.collapsed ? 'sr-only' : 'min-w-0 flex-1
             :is-active="props.current === section.id"
           >
             <template #icon><component :is="SectionIcons[section.id]" :size="17" /></template>
-            <RouterLink :to="deskSectionPath(props.organizationId, section.id)" :title="props.collapsed ? t(section.label) : undefined"
+            <RouterLink v-if="!section.app" :to="deskSectionPath(props.organizationId, section.id)" :title="props.collapsed ? t(section.label) : undefined"
               ><span :class="labelClass">{{ t(section.label) }}</span></RouterLink
+            >
+            <a v-else :href="addresses[section.app]" :title="props.collapsed ? t(section.label) : undefined"
+              ><span :class="labelClass">{{ t(section.label) }}</span></a
             >
           </SidebarMenuItem>
         </template>
@@ -60,8 +66,11 @@ const labelClass = computed(() => (props.collapsed ? 'sr-only' : 'min-w-0 flex-1
             :is-active="props.current === section.id"
           >
             <template #icon><component :is="SectionIcons[section.id]" :size="17" /></template>
-            <RouterLink :to="deskSectionPath(props.organizationId, section.id)" :title="props.collapsed ? t(section.label) : undefined"
+            <RouterLink v-if="!section.app" :to="deskSectionPath(props.organizationId, section.id)" :title="props.collapsed ? t(section.label) : undefined"
               ><span :class="labelClass">{{ t(section.label) }}</span></RouterLink
+            >
+            <a v-else :href="addresses[section.app]" :title="props.collapsed ? t(section.label) : undefined"
+              ><span :class="labelClass">{{ t(section.label) }}</span></a
             >
           </SidebarMenuItem>
         </SidebarMenuSection>

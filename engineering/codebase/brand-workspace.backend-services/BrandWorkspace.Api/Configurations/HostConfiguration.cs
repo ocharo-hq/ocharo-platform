@@ -27,7 +27,6 @@ public static partial class HostConfiguration
             .AddDesignDocuments()
             .AddCommerce()
             .AddSourcing()
-            .AddEvents()
             .AddMediaProcessing()
             .AddRuntimeConfig()
             .AddMediator()

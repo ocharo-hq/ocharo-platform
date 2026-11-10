@@ -19,4 +19,5 @@ public sealed record OcharoAppsSettings
     public string? Atlas { get; init; }
     public string? Wear { get; init; }
     public string? Blog { get; init; }
+    public string? Events { get; init; }
 }

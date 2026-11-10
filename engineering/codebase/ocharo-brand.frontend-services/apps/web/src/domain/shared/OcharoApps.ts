@@ -5,7 +5,7 @@ export type OcharoAppKind = (typeof OcharoAppKind)[keyof typeof OcharoAppKind];
 
 /** Names one destination in the app menu. */
 export type OcharoAppKey =
-  'desk' | 'catalogue' | 'studio' | 'marketing' | 'editorial' | 'brand' | 'atlas' | 'wear' | 'blog';
+  'desk' | 'catalogue' | 'studio' | 'marketing' | 'editorial' | 'brand' | 'events' | 'atlas' | 'wear' | 'blog';
 
 /** One destination in the app menu. */
 export interface OcharoApp {
@@ -29,6 +29,7 @@ const OcharoAppEntries: readonly Omit<OcharoApp, 'url'>[] = [
   { key: 'marketing', label: 'Marketing', summary: 'Posts and leads', kind: OcharoAppKind.Workspace },
   { key: 'editorial', label: 'Apps menu: Editorial', summary: 'Blog stories', kind: OcharoAppKind.Workspace },
   { key: 'brand', label: 'Brand', summary: 'Logo and brand guide', kind: OcharoAppKind.Workspace },
+  { key: 'events', label: 'Events', summary: 'Trade events and deadlines', kind: OcharoAppKind.Workspace },
   { key: 'atlas', label: 'Atlas', summary: 'Public site', kind: OcharoAppKind.PublicSite },
   { key: 'wear', label: 'Wear', summary: 'Public site', kind: OcharoAppKind.PublicSite },
   { key: 'blog', label: 'Blog', summary: 'Public site', kind: OcharoAppKind.PublicSite },

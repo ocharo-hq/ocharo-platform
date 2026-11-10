@@ -4,7 +4,6 @@ import { integrationUiMessages } from './IntegrationUiMessages';
 import { catalogueUiMessages } from './CatalogueUiMessages';
 import { productReviewUiMessages } from './ProductReviewUiMessages';
 import { designerUiMessages } from './DesignerUiMessages';
-import { eventsUiMessages } from './EventsUiMessages';
 import { sourcingUiMessages } from './SourcingUiMessages';
 import { shellUiMessages } from './ShellUiMessages';
 
@@ -1751,7 +1750,7 @@ export const operatorUiMessages: UiMessageTable = {
 };
 
 export const uiMessages: UiMessageTable = {
-  ...accessUiMessages, ...baseUiMessages, ...integrationUiMessages, ...operatorUiMessages, ...designerUiMessages, ...productReviewUiMessages, ...catalogueUiMessages, ...sourcingUiMessages, ...sourcingViewUiMessages, ...eventsUiMessages, ...shellUiMessages };
+  ...accessUiMessages, ...baseUiMessages, ...integrationUiMessages, ...operatorUiMessages, ...designerUiMessages, ...productReviewUiMessages, ...catalogueUiMessages, ...sourcingUiMessages, ...sourcingViewUiMessages, ...shellUiMessages };
 
 /** Resolves exact interface phrases without interpreting or translating customer-authored data. */
 export function translateUi(source: string, locale: UiLocale, variables?: Record<string, string | number>): string {

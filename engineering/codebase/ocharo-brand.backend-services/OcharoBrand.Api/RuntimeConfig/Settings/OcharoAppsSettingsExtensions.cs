@@ -17,6 +17,7 @@ public static class OcharoAppsSettingsExtensions
         (nameof(OcharoAppsSettings.Atlas), settings => settings.Atlas),
         (nameof(OcharoAppsSettings.Wear), settings => settings.Wear),
         (nameof(OcharoAppsSettings.Blog), settings => settings.Blog),
+        (nameof(OcharoAppsSettings.Events), settings => settings.Events),
     ];
 
     /// <summary>Returns the configured, plain HTTPS addresses as runtime config; any other value is left out.</summary>
@@ -33,6 +34,7 @@ public static class OcharoAppsSettingsExtensions
             AtlasUrl = Served(settings.Atlas),
             WearUrl = Served(settings.Wear),
             BlogUrl = Served(settings.Blog),
+            EventsUrl = Served(settings.Events),
         };
 
         static string? Served(string? value) => IsPublicAddress(value) ? value : null;

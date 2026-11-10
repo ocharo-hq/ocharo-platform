@@ -44,8 +44,6 @@ export function safeWorkspaceDestination(path: string): string {
       return `/organizations/${parts[1]}/drafts/${parts[3]}`;
     if (parts.length === 4 && parts[2] === 'sourcing' && (parts[3] === 'inbox' || parts[3] === 'materials' || identifier.test(parts[3] ?? '')))
       return `/organizations/${parts[1]}/sourcing/${parts[3]}`;
-    if (parts.length === 4 && parts[2] === 'events' && identifier.test(parts[3] ?? ''))
-      return `/organizations/${parts[1]}/events/${parts[3]}`;
     if (parts.length !== 3 || !sections.has(parts[2]!)) return '/';
     editor = parts[2] === 'catalogue' || parts[2] === 'business-cards';
   } else return '/';

@@ -16,6 +16,8 @@ export const brandFrameUiMessages: UiMessageTable = {
   Atlas: { uz: 'Atlas', ru: 'Atlas' },
   Wear: { uz: 'Wear', ru: 'Wear' },
   Blog: { uz: 'Blog', ru: 'Блог' },
+  Events: { uz: 'Tadbirlar', ru: 'Мероприятия' },
+  'Trade events and deadlines': { uz: 'Savdo tadbirlari va muddatlar', ru: 'Торговые мероприятия и сроки' },
   'Events, sourcing and products': { uz: 'Tadbirlar, ta’minot va mahsulotlar', ru: 'События, снабжение и товары' },
   'Products, prices and editions': { uz: 'Mahsulotlar, narxlar va nashrlar', ru: 'Товары, цены и издания' },
   'Garments and fabric': { uz: 'Kiyimlar va matolar', ru: 'Одежда и ткани' },
