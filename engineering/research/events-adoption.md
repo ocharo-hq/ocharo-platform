@@ -20,7 +20,8 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
   - ✅ `export events` writes Events' fixed `wow2.events-import.v1`; local Desk gives 68 of 68 rows (#6).
   - ✅ Registrations pushed (`34f08dc`, `v0.3.1`); `ocharo-dev`'s Identity redeployed healthy with them (#2, #5).
   - ✅ Client 10 `events-console` pushed once ev-wheelhouse typed its three URIs on `ocharo-dev`.
-  - ⬜ Proxy, proposal and tracking routes, screens, import and freeze wait on `IEventsClient` (#7, #8, #12).
+  - ⬜ The Events-backed repository, import route and freeze wait on the published Events Client and npm
+    package (Events `v0.1.1` image released 2026-11-10; packages pending the developer's publishing steps) (#7, #8, #12).
 
 ## Data
 
@@ -154,11 +155,20 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 - Rollback until reconciliation passes: unset `Events:BaseUrl`, and Desk reads and writes its own table again.
 - After reconciliation, a later migration drops the table (its `Rollback.sql` already refuses while rows exist).
 
-### #8 Screens (`events-integration #27`)
+### #8 Adapter and screens (`events-integration #27`), revised 2026-11-10
 
-- The Vue screens under `apps/web/src/presentation/events` keep their behaviour and read the Events contract shape from
-  Desk's proxy; `integration/events/EventsApi.ts` and `domain/events/Events.ts` change, the views stay.
-- The fe package replaces them only once it matches the month feed, deadlines, detail and tracking form.
+- Desk keeps its `IEventRepository` port; with `Events:BaseUrl` set, an Events-backed implementation replaces
+  `EventRepository`, so `EventsController`, its handlers and the Vue screens stay unchanged in P1.
+- Reads: Events' tracking list of catalog `ocharo-fashion` (`trackedOnly=false`), each `TrackedEventModel` mapped to a
+  `ShowcaseEvent`: facts from `event`, stage, priority, notes and `fields` from `tracking`, its revision (0 untracked).
+- An accepted event Ocharo never tracked shows as `candidate`, `normal`, so done-when (b) needs no tracking first.
+- Dates map back: `day` → the day; `month` → the 1st, `month`, or `estimated` when its certainty is estimated;
+  `unknown` → no dates; the title prefers `und`, then `en`, `uz`, `ru`.
+- Summary: Events' tracking summary; create: a member proposal plus its tracking; update: tracking when only stage,
+  priority, notes, participation or cost changed, else 410 `EventsMoved`; delete: 410 `EventsMoved` (#7).
+- Built on the published Events Client (`AddEventsClient()` with the be sdk's `AddOAuth2TokenExchange` and
+  `BffSubjectTokenSource`); nothing is written against unpublished wire types.
+- The fe package replaces the screens only once it matches the month feed, deadlines, detail and tracking form.
 
 ### #9 Event images (`events-integration #31`), platform input
 
