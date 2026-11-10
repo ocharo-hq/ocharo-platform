@@ -13,9 +13,9 @@
       },
       "WoW2.Sdk.Beta.Be": {
         "type": "Direct",
-        "requested": "[10.0.109-beta, )",
-        "resolved": "10.0.109-beta",
-        "contentHash": "m5m0KxsbWLv+7SxpTkhCE5494EwHeFsSpAEP881BmhRIPaExnF+rB9e/P3ioDpPtCigVZMF/L91kWBHscoaekw==",
+        "requested": "[10.0.111-beta, )",
+        "resolved": "10.0.111-beta",
+        "contentHash": "uPvd1dWdx2gvOWhNwQ0MTZZk5Zx0Hzt4+91y5BvEb5dvGj5q8Otm9vEsIGNUSTQzbHbeiV4Ptl0GteCS7Ip0gA==",
         "dependencies": {
           "AWSSDK.S3": "3.7.421.10",
           "AWSSDK.SQS": "3.7.400.71",
@@ -149,8 +149,8 @@
           "System.Security.Cryptography.Pkcs": "10.0.13",
           "TimeZoneConverter": "7.0.0",
           "Vogen": "7.0.0",
-          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.109-beta",
-          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.109-beta",
+          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.111-beta",
+          "WoW2.Sdk.Beta.Be.Data.Abstractions": "10.0.111-beta",
           "YamlDotNet": "16.3.0",
           "ZXing.Net": "0.16.11",
           "dbup-core": "6.1.1",
@@ -162,12 +162,12 @@
       },
       "WoW2.Sdk.Beta.Be.Files.Client": {
         "type": "Direct",
-        "requested": "[10.0.5-beta, )",
-        "resolved": "10.0.5-beta",
-        "contentHash": "N6SgNGh8Cb/W39c0EeEenlAmumtI4b10+8YdJFhP0RgodwmQeHwDV8acCNmTas84f91dBcJH8NH3b2phDUHNtA==",
+        "requested": "[10.0.6-beta, )",
+        "resolved": "10.0.6-beta",
+        "contentHash": "M08q3StzuuOqWgkAyUDF8Zat2ghCDjcGCeeNFuQZ0GMjecP95tU2Ozj90zWMnjATP49iyeUt2v+qd9D36gvqhg==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be": "10.0.105-beta",
-          "WoW2.Sdk.Beta.Be.Files.Abstractions": "10.0.5-beta"
+          "WoW2.Sdk.Beta.Be.Files.Abstractions": "10.0.6-beta"
         }
       },
       "WoW2.Sdk.Beta.Be.Identity.Client": {
@@ -2132,13 +2132,13 @@
       },
       "WoW2.Sdk.Beta.Be.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.109-beta",
-        "contentHash": "oJzAl/vSh1G5OoaHH1UCMLJBfT4nlUYqzwFAtJwGz9xospL9VPF2oQZgTT0PPivZ5xlC7xH2qHT8kWGe2jRbyQ=="
+        "resolved": "10.0.111-beta",
+        "contentHash": "dUc0hrozckKK3sfBTYemwDxgYojsXrmK7eNsnGuQFSx3OKx86ytKFSvsKz07g4ijRHcaTqpBQW6Y8JIScoeRLQ=="
       },
       "WoW2.Sdk.Beta.Be.Data.Abstractions": {
         "type": "Transitive",
-        "resolved": "10.0.109-beta",
-        "contentHash": "7h9mgXgY9GCSAIlQQv9758rIhnDgvHga2s1YEwqr8Uv58TCqWqXKF+X0ovAIId9JXkzm6d0XlagT3roOiEYeSQ=="
+        "resolved": "10.0.111-beta",
+        "contentHash": "f0XwacV72of0BxeXFJbnTH1Dr+z0uiMNl5BmpUnOuJM1ILJdN6N2iN2DQiV3oYPSNMiwjzEtgVKIqvgBKYtFXA=="
       },
       "WoW2.Sdk.Beta.Be.Identity.Abstractions": {
         "type": "Transitive",
@@ -2179,7 +2179,7 @@
         "type": "Project",
         "dependencies": {
           "OcharoBrand.Domain": "[0.0.0, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.109-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.111-beta, )"
         }
       },
       "ocharobrand.domain": {
@@ -2191,8 +2191,8 @@
           "OcharoBrand.Application": "[0.0.0, )",
           "OcharoBrand.Domain": "[0.0.0, )",
           "SkiaSharp": "[3.119.2, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.109-beta, )",
-          "WoW2.Sdk.Beta.Be.Files.Abstractions": "[10.0.5-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.111-beta, )",
+          "WoW2.Sdk.Beta.Be.Files.Abstractions": "[10.0.6-beta, )"
         }
       },
       "ocharobrand.persistence": {
@@ -2203,7 +2203,7 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.0, )",
           "OcharoBrand.Application": "[0.0.0, )",
           "OcharoBrand.Domain": "[0.0.0, )",
-          "WoW2.Sdk.Beta.Be": "[10.0.109-beta, )"
+          "WoW2.Sdk.Beta.Be": "[10.0.111-beta, )"
         }
       },
       "Microsoft.Data.Sqlite": {
@@ -2250,9 +2250,9 @@
       },
       "WoW2.Sdk.Beta.Be.Files.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[10.0.5-beta, )",
-        "resolved": "10.0.5-beta",
-        "contentHash": "iIajQs6g+UfeoVD7c6JIIUeJHnfXoQGMtj5ZW4hBV1UTMFa9xYViKb5xjILv5ircQZ/dGxLqfw/Do2iybm8Isw==",
+        "requested": "[10.0.6-beta, )",
+        "resolved": "10.0.6-beta",
+        "contentHash": "mNJisXWGQkrndJxaDejOjXNVyGXTK84cHRjUaZHZub8P+Bk2/kke6CYSPBYbnN2+FHmmJlUDRtIFu7Hf4NMy4Q==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be.Abstractions": "10.0.105-beta"
         }

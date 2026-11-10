@@ -6,10 +6,10 @@
     <PackageVersion Include="WoW2.Sdk.Beta.Be.Identity.Client" Version="10.0.30-beta" />
     <PackageVersion Include="WoW2.Sdk.Beta.Be.Identity.Testing" Version="10.0.30-beta" />
     <!-- WoW2 Files: the contract (Infrastructure's store) and its HTTP client (the host's composition). -->
-    <PackageVersion Include="WoW2.Sdk.Beta.Be.Files.Abstractions" Version="10.0.5-beta" />
-    <PackageVersion Include="WoW2.Sdk.Beta.Be.Files.Client" Version="10.0.5-beta" />
-    <PackageVersion Include="WoW2.Sdk.Beta.Be.Events.Abstractions" Version="10.0.0-beta" />
-    <PackageVersion Include="WoW2.Sdk.Beta.Be.Events.Client" Version="10.0.0-beta" />
+    <PackageVersion Include="WoW2.Sdk.Beta.Be.Files.Abstractions" Version="10.0.6-beta" />
+    <PackageVersion Include="WoW2.Sdk.Beta.Be.Files.Client" Version="10.0.6-beta" />
+    <PackageVersion Include="WoW2.Sdk.Beta.Be.Events.Abstractions" Version="10.0.3-beta" />
+    <PackageVersion Include="WoW2.Sdk.Beta.Be.Events.Client" Version="10.0.3-beta" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.14" />
     <PackageVersion Include="SkiaSharp" Version="4.152.1" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="4.152.1" />

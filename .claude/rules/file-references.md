@@ -7,7 +7,7 @@ Lookup only; load documents relevant to the task.
 | Product and boundaries | `product/product.md` |
 | Current decisions | `product/context.md` |
 | Features and unbuilt work | `engineering/planning/backlog.md` |
-| Active version | `engineering/planning/version-track/v0.1/v0.1.md` |
+| Active version | the newest `engineering/planning/version-track/v*/v*.md` (v0.3) |
 | Working rules | `engineering/development/rules.md` |
 | Architecture | `engineering/architecture/architecture.md` |
 | Deployment | `engineering/deployment/deployment.md` |

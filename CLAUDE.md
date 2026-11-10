@@ -1,6 +1,6 @@
 # Ocharo Platform — Ocharo Desk
 
-*Last updated: 2026-10-24*
+*Last updated: 2026-11-10*
 
 `ocharo-platform` owns Ocharo Desk, Ocharo's operator workspace. The existing Brand Workspace
 foundation provides authenticated organizations, content preparation and contextual design editors.
@@ -37,8 +37,9 @@ Its source lives under `engineering/codebase/ocharo-catalogue.{frontend,backend}
 Products, prices, translations, collections, named catalogues and both designers are edited there.
 Desk at `8264` remains a separate operator workspace. A Desk link is not a Catalogue implementation.
 
-Catalogue retains its existing SQLite products, media hashes and product revision history.
-New design/release tables are added idempotently; this work does not adopt or overwrite live data.
+Catalogue keeps its products, media hashes and product revision history in schema `catalogue` of Ocharo's
+PostgreSQL database; the retired SQLite store is read once by `import-sqlite`. Tables are added idempotently;
+this work does not adopt or overwrite live data.
 No automatic synchronization with Desk Commerce exists. Do not edit the same brand in both stores
 and imply they are synchronized. Authentication and canonical-store consolidation remain explicit
 integration work; Catalogue signs in through Ocharo's Identity since 2026-11-03 (see the companions below).
@@ -72,4 +73,4 @@ The canonical product is Ocharo Platform. `brand-workspace.*` owns Desk and Comm
 
 ## Canonical planning
 
-Use `engineering/planning/backlog.md` and `engineering/planning/version-track/v0.1/v0.1.md`. Previous-work research notes preserve evidence only. Working rules are in `engineering/development/rules.md`; convention verification and open integration gaps are in `engineering/research/convention-audit.md`.
+Use `engineering/planning/backlog.md` and the newest version track under `engineering/planning/version-track/` (v0.3 since 2026-11-10). Previous-work research notes preserve evidence only. Working rules are in `engineering/development/rules.md`; convention verification and open integration gaps are in `engineering/research/convention-audit.md`.

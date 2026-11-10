@@ -101,6 +101,8 @@ services:
         # session (client 0's `ExchangeResources: events`); linked to the Uri this descriptor types for its Events resource.
         # Unset, Desk reads and writes its own `events.showcase_events`, kept as the rollback copy (research/events-adoption.md #7).
         Events:BaseUrl: { from: Identity:Server:Resources:3:Uri }
+        # The Events catalog Desk's page reads; Ocharo's intake and import write `ocharo-fashion`.
+        Events:Catalog: { default: ocharo-fashion }
         # Background removal: the private image worker, a sibling on the platform network. Its address is an owner key
         # typed per environment as `http://ocharo-<environment>-image-worker:8080`, its platform name: the bare service
         # name is an alias every environment's worker would share on that one network, and the descriptor has no template
@@ -154,11 +156,11 @@ services:
   # key passes through a person (pipelines v0.14.0, Wheelhouse v0.11; descriptor § Generated and linked keys), and the
   # issuer follows the identity site's host. Ocharo people sign in by phone with a code from the environment's Telegram
   # bot only: password and email sign-in are off, and no Identity:Email key is set (owner, 2026-11-02). Sign-up takes an
-  # invitation from an owner or admin. Every key binds a 0.5.15 settings record (Identity's deployment.md at v0.5.15); its
-  # config check refuses an unbound one, such as a stored value of the retired Identity:SignUp:IsEnabled, which the
-  # first 0.5.x deploy needs deleted from each environment.
+  # invitation from an owner or admin. Every key binds the pinned image's settings record (Identity's deployment.md at
+  # that tag); its config check refuses an unbound one, such as a stored value of the retired
+  # Identity:SignUp:IsEnabled, which the first 0.5.x deploy needs deleted from each environment.
   identity:
-    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.20
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.21
     health: /health
     memory: 256m
     needs: [postgres]
@@ -207,7 +209,7 @@ services:
         Identity:Pages:BrandName: { default: Ocharo }
         # What each catalog role grants in Ocharo's apps (owner, admin, editor, viewer, billing; never a role of its
         # own); apps read them as org_permission, each client only its own namespace. In the apps' namespaces viewer and
-        # billing grant none; in Files', viewer reads (below).
+        # billing grant none; in Files' and Events', viewer reads (below).
         Identity:Organizations:Roles:owner:0: { default: "desk:edit" }
         Identity:Organizations:Roles:owner:1: { default: "desk:approve" }
         Identity:Organizations:Roles:owner:2: { default: "brand:edit" }
@@ -425,7 +427,7 @@ services:
         Identity:Server:Clients:10:PostSignOutRedirectUris:0: { type: url, required: true }
         Identity:Server:Clients:10:SignalUrl: { type: url, required: true }
         # The console is Events' own app and reads the reviewer's `events:*` permissions from the sign-in, so it calls no
-        # other service; Identity 0.5.20 accepts Scopes only beside a service grant, so token_exchange carries the five.
+        # other service; Identity accepts Scopes only beside a service grant, so token_exchange carries the five.
         Identity:Server:Clients:10:Grants:0: { default: authorization_code }
         Identity:Server:Clients:10:Grants:1: { default: token_exchange }
         Identity:Server:Clients:10:ExchangeResources:0: { default: events }
@@ -465,7 +467,7 @@ services:
         Identity:Server:Resources:3:PermissionNamespace: { default: events }
         Identity:Server:Resources:3:SignalUrl: { type: url, required: true }
         # SCFD's audience, typed per environment as its API site URL with the slash (dev: product `harvestadapters`).
-        # Only service tokens reach it, so it has no permission namespace and no signal URL (Identity 0.5.20: null hears
+        # Only service tokens reach it, so it has no permission namespace and no signal URL (Identity: null hears
         # none).
         Identity:Server:Resources:4:Name: { default: harvest }
         Identity:Server:Resources:4:Uri: { type: url, required: true }
@@ -509,10 +511,10 @@ services:
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         Brand:OrganizationId: { required: true }             # Ocharo's organization id in that environment's Identity
         # Media live in WoW2 Files, tenant `ocharo` on the shared files host, reached with the same Identity client: a
-        # person's exchanged token within their session, Brand's own otherwise. Typed per environment as the Uri of
-        # Identity:Server:Resources:2; the shared host is no site of this
-        # descriptor, so no `from:` reaches it. Files stored before it read from the blobs below until the migration.
-        Files:BaseUrl: { type: url, required: true }
+        # person's exchanged token within their session, Brand's own otherwise. Linked to the Uri this descriptor types
+        # for its Files resource, as Desk's is, so nobody types it. Files stored before it read from the blobs below until
+        # the migration.
+        Files:BaseUrl: { from: Identity:Server:Resources:2:Uri }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out. Apps whose
         # site root is the place to land link to that site, so nobody types them; Editorial, Atlas and Wear sit under a
         # path of the blog site, so the owner types those.
@@ -559,10 +561,10 @@ services:
         Identity:Client:SignalUrl: { from: Identity:Server:Clients:2:SignalUrl }
         Identity:Client:PostSignOutRedirectPath: { default: "/" }
         Catalogue:OrganizationId: { required: true }         # Ocharo's organization id in that environment's Identity
-        # Product images and released PDFs and page PNGs live in WoW2 Files like Brand's media, typed as the same Uri
+        # Product images and released PDFs and page PNGs live in WoW2 Files like Brand's media, linked to the same Uri
         # (Identity:Server:Resources:2); those stored before Files read from this volume until the migration
         # (research/files-adoption.md #24, #26).
-        Files:BaseUrl: { type: url, required: true }
+        Files:BaseUrl: { from: Identity:Server:Resources:2:Uri }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out. Apps whose
         # site root is the place to land link to that site, so nobody types them; Editorial, Atlas and Wear sit under a
         # path of the blog site, so the owner types those.
