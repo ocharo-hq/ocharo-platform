@@ -67,6 +67,9 @@ public static partial class HostConfiguration
     /// <summary>Holds the verb that imports a bundle: <c>import sourcing</c> or <c>import events</c>.</summary>
     private const string ImportVerb = "import";
 
+    /// <summary>Holds the verb that writes a WoW2 Events import bundle from Desk's events: <c>export events</c>.</summary>
+    private const string ExportVerb = "export";
+
     /// <summary>Holds the verb of the media runtime probe the image build runs: <c>media verify</c>.</summary>
     private const string MediaVerb = "media";
 
@@ -370,6 +373,7 @@ public static partial class HostConfiguration
         builder.Services.AddSingleton<EventValidationService>();
         builder.Services.AddScoped<EventService>();
         builder.Services.AddScoped<EventImportService>();
+        builder.Services.AddScoped<EventExportService>();
         return builder;
     }
 

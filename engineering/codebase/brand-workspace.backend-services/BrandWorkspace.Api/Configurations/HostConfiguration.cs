@@ -53,8 +53,9 @@ public static partial class HostConfiguration
 
     /// <summary>
     /// Adds Desk's own verbs beside the be sdk's <c>migrate</c> and <c>config check</c>: <c>import sourcing</c> and
-    /// <c>import events</c>, which import a bundle as a person Desk knows from Identity, and <c>media verify</c>, the
-    /// image build's decoder probe. Each runs on the built host without serving.
+    /// <c>import events</c>, which import a bundle as a person Desk knows from Identity, <c>export events</c>, which
+    /// writes a WoW2 Events import bundle, and <c>media verify</c>, the image build's decoder probe. Each runs on the
+    /// built host without serving.
     /// </summary>
     /// <param name="verbs">The service host's verbs.</param>
     public static ServiceVerbs AddDeskVerbs(this ServiceVerbs verbs)
@@ -77,6 +78,9 @@ public static partial class HostConfiguration
                     ct),
                 _ => throw new ArgumentException(ImportUsage),
             })
+            .AddHostVerb(ExportVerb, (services, verb, ct) => verb.Arguments is [EventExportVerb.Name, .. var arguments]
+                ? EventExportVerb.RunAsync(services, arguments, verb.Output, verb.Error, ct)
+                : throw new ArgumentException(EventExportVerb.Usage))
             .AddHostVerb(MediaVerb, (services, verb, _) => verb.Arguments is [MediaVerifyArgument]
                 ? Task.FromResult(MediaRuntimeVerification.Run(
                     services.GetRequiredService<ImageValidationService>(),

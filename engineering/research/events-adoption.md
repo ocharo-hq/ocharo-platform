@@ -17,7 +17,11 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
 - ✅ Snapshot slice verified 2026-11-10 and its deltas sent to the orchestrator (`events-integration #34`).
 - 🔄 M1 picks written 2026-11-10 (#1–#11). Events' and SCFD's names arrive from their lanes through the orchestrator;
   the shapes below take them unchanged.
-- ⬜ M2: registrations, producer, proxy, screens, import, freeze (#12).
+- 🔄 M2 started 2026-11-10 ([v0.3](../planning/version-track/v0.3/v0.3.md)): the `export events` verb is built,
+  ahead of Events' published schema, so its mapping (`EventExportService`) may still rename fields; on local Desk it
+  wrote 68 of 68 rows with 68 unique ids, every stage, priority, note and provenance equal to the stored row, 18
+  estimated dates kept at month precision as estimated, 5 month dates announced, 10 unknown with no dates.
+- ⬜ Registrations, proxy, screens, import and freeze wait for Events' and SCFD's names and `IEventsClient` (#12).
 
 ## Data
 
@@ -46,7 +50,7 @@ the only copy found.
 
 ## Picks
 
-### #1 Import source (`events-integration #26`)
+### #1 Import source (`events-integration #26`, accepted as `#44`)
 
 - The producer exports local Desk's 68 rows; Events on dev imports them under dev's `Ocharo` organization.
 - Dev's empty table needs no export; its writer is frozen like any other (#7).
@@ -65,15 +69,17 @@ are fixed, since the seeder deletes a client that leaves the settings. `<…>` m
 | `Resources:3:Scopes:N` | `events.<…>` | from the events lane |
 | `Resources:3:PermissionNamespace` | `events` | an exchanged token carries only `events:*` permissions |
 | `Resources:3:SignalUrl` | owner key, `url`, required | exchanged tokens carry `sid` and `org_id`, so Events hears both signals |
-| `Resources:4:Name` | `<scfd resource>` | SCFD's audience, from the scfd lane |
-| `Resources:4:Uri` | owner key, `url`, required | Wheelhouse types `{SCFD URL}/` |
-| `Resources:4:Scopes:N` | `<scfd>.<…>` | the renamed scopes (`events-integration #16`); no `events.*` name |
-| `Clients:8` | `events`, `client_credentials`, `Resources: [<scfd resource>]`, the subscription-read scope | Events pulls from SCFD as itself |
-| `Clients:9` | `<scfd operator>`, `client_credentials`, `Resources: [<scfd resource>]`, the tenant and source scopes | SCFD's operator provisions tenants and sources |
+| `Resources:4:Name` | `harvest` | SCFD's audience, as FSS kept `files` (scfd lane, 2026-11-10) |
+| `Resources:4:Uri` | owner key, `url`, required | Wheelhouse types SCFD's API site URL with its slash; on dev, product `harvestadapters`' API site (`events-integration #45`) |
+| `Resources:4:Scopes:N` | the 11 `harvest.{noun}-{verb}` scopes | renamed under SCFD's resource (`events-integration #16`), such as `harvest.events-read`, `harvest.tenants-manage` |
+| `Clients:8` | `events`, `client_credentials`, `Resources: [harvest]`, `harvest.events-read` only | Events pulls from SCFD as itself |
+| `Clients:9` | SCFD's operator (id from the scfd lane), `client_credentials`, `Resources: [harvest]`, all 11 scopes | SCFD's operator provisions tenants, sources and subscriptions |
 | `Clients:0:ExchangeResources:1` | `events` | Desk reaches Events for a person only |
 | `Clients:0:Scopes:N` | Desk's `events.*` scopes | the read and tracking scopes the events lane names |
 
 - SCFD's resource gets no `PermissionNamespace` and no `SignalUrl`: only service tokens reach it, and no signal revokes one.
+- SCFD maps each client in `Harvest:ServiceAccess:ClientGrantsJson` (`{clientId: {isOperator, tenantId?, scopes}}`),
+  which Wheelhouse types on the SCFD target; this repo holds only the Identity side.
 - Clients 8 and 9 take typed secrets (`secret: true, required: true`, no `generate`), like client 7: Events and SCFD
   deploy as their own products, and `from: { repository, key }` links only inside one product.
 - If the review console signs in through Ocharo's Identity (`events-integration #30`), client 8 adds

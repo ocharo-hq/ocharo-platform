@@ -1,6 +1,6 @@
 # Events contract — showcase events feed
 
-*Last updated: 2026-11-09*
+*Last updated: 2026-11-10*
 
 ## Increment
 
@@ -93,3 +93,18 @@ so statuses and notes edited in Desk survive every re-import. Imported events de
 or the email their sign-in carried when one person holds it. Ocharo people sign in by phone and carry no email, so
 the id is what works for them. Identity keeps every role, and a verb runs without a sign-in, so the person imports as
 an editor of an organization Desk knows; an unknown person or organization refuses.
+
+## Move to WoW2 Events
+
+Events move onto WoW2 Events, which owns the catalog and tracking; Desk keeps this page and proxies it
+([events-adoption.md](../research/events-adoption.md), v0.3). The move starts from an export:
+
+```bash
+dotnet run --project BrandWorkspace.Api --no-build --no-launch-profile -- \
+  export events --organization <organization-id> --out <bundle.json>
+```
+
+It writes `wow2.events-import.v1` (events-adoption.md #6): each event keyed by its Desk id, with its key, stage, priority,
+notes, provenance and the stored row; `month` and `estimated` dates stay at month precision, `estimated` marked so; every
+title's language is `und`. It reads Desk, writes only the new file, refuses an existing one, and prints the counts by
+stage and precision that reconciliation compares. Bundles stay out of Git, like the import's.

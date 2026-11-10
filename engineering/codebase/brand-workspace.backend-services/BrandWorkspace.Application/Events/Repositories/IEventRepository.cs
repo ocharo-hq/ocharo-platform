@@ -28,6 +28,9 @@ public interface IEventRepository
 
     Task<ShowcaseEvent?> FindEventByKeyAsync(Guid organizationId, string key, CancellationToken token);
 
+    /// <summary>Reads every event of the organization with its author, oldest first, for the export.</summary>
+    Task<IReadOnlyList<ShowcaseEventRecord>> GetEventRecordsAsync(Guid organizationId, CancellationToken token);
+
     /// <summary>Adds an event; a conflict when its import key is already used.</summary>
     Task<Result<ShowcaseEvent>> CreateEventAsync(
         Guid organizationId,

@@ -125,6 +125,21 @@ public sealed class EventRepository(IDbConnectionFactory connectionFactory, Time
         return row?.ToEvent();
     }
 
+    public async Task<IReadOnlyList<ShowcaseEventRecord>> GetEventRecordsAsync(
+        Guid organizationId, CancellationToken token)
+    {
+        const string sql =
+            $"""
+             SELECT {EventColumns}, created_by
+             FROM events.showcase_events
+             WHERE organization_id=@organizationId
+             ORDER BY created_at, id
+             """;
+        await using var connection = await connectionFactory.CreateOpenAsync(token);
+        IEnumerable<EventRow> rows = await connection.QueryAsync<EventRow>(Command(sql, new { organizationId }, token));
+        return rows.Select(row => new ShowcaseEventRecord(row.ToEvent(), row.CreatedBy)).ToList();
+    }
+
     public async Task<Result<ShowcaseEvent>> CreateEventAsync(
         Guid organizationId,
         string actor,
@@ -308,6 +323,9 @@ public sealed class EventRepository(IDbConnectionFactory connectionFactory, Time
         public int Revision { get; init; }
         public DateTimeOffset CreatedAt { get; init; }
         public DateTimeOffset UpdatedAt { get; init; }
+
+        /// <summary>Gets the author; read only by the export, which selects the column.</summary>
+        public string CreatedBy { get; init; } = string.Empty;
 
         public ShowcaseEvent ToEvent()
         {
