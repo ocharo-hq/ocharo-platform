@@ -1,39 +1,39 @@
-# Catalogue authoring and outputs
+# Catalogue authoring and outputs (Desk, retiring)
 
-*Last updated: 2026-10-20*
+*Last updated: 2026-11-10*
 
+> Desk's side of catalogue authoring: Commerce and DesignDocuments. It is not the canonical writer. The Catalogue
+> app is the base of Ocharo's Catalogue service and its one writer (E3, settled with the owner 2026-11-10;
+> [Catalogue architecture](catalogue/architecture.md)). This document stays as the record of what Desk built until
+> both retire, and of the three things the Catalogue service ports from it first: the release gate for the product
+> feed, per-image rights approval, and who saved and who published.
 
-## Current review target
+## Port to the Catalogue service
 
-The user corrected the active target to **Ocharo Catalogue**, frontend `8282` and API HTTPS
-`8278`. Native Catalogue now contains the gallery, product review and Web/PDF designers.
-Read [native Catalogue verification](../research/catalogue/2026-10-01-catalogue-review/native-catalogue-verification.md) for the current review instructions.
-The Desk architecture/results below remain historical implementation evidence, not instructions
-to redirect Catalogue review into Desk. Existing Catalogue product data was retained. Authentication
-and consolidation of the two stores remain explicit integration work; no migration occurred here.
+| From Desk | Where it lives here | State in the Catalogue app |
+|---|---|---|
+| Release gate for the product feed | [Preparation, release and history](#preparation-release-and-history) | the feed serves the current active, eligible products, with no release in between |
+| Per-image rights approval | [Copy, prices and media](#copy-prices-and-media): only approved, non-reference media qualifies | images carry no rights state |
+| Who saved and who published | immutable revisions and owner publication | revisions name no author |
 
+Desk keeps a brand's products in one JSON snapshot rewritten on every save, typed with the Catalogue app's own
+types; nothing in it moves as data. `LegacyCommerceReader` reads only the retired SQLite files.
 
-## Ownership and entrypoints
+## Ownership and entrypoints (Desk)
 
-Ocharo Desk owns authenticated products, catalogue authoring, preparation and publication.
-One saved `DesignDocument` represents one catalogue in one content language. Its immutable
-revisions hold the catalogue metadata, independent web pages and fixed PDF pages. There is
-no second mutable catalogue or product database for this feature.
+Desk's Commerce module holds authenticated products, catalogue authoring, preparation and publication per
+organization and brand. One saved `DesignDocument` represents one catalogue in one content language. Its immutable
+revisions hold the catalogue metadata, independent web pages and fixed PDF pages.
 
-| Surface | Current entrypoint and owner |
+| Surface | Desk entrypoint |
 |---|---|
-| Canonical gallery | `/catalogue` resolves the authenticated workspace; `/organizations/{organizationId}/catalogue` lists its designs. |
-| Canonical editor | The gallery opens `?design={id}&mode=web` or `?design={id}&mode=pdf`; optional `page` selects a page. |
-| Canonical products | `/organizations/{organizationId}/products`; products own names, materials, translated copy, prices, review questions and media groups. |
-| Retained Catalogue pilot | Preserved `ocharo-catalogue.*` applications retain their earlier local data/API. Their banner opens Desk in a new tab, preserving unsaved pilot work. They are not another canonical editing path. |
-| Public catalogue | Marketing consumes the explicitly published Platform release through `/api/public/v1/brands/{slug}/catalogue?locale={locale}`. |
+| Gallery | `/catalogue` resolves the authenticated workspace; `/organizations/{organizationId}/catalogue` lists its designs. |
+| Editor | The gallery opens `?design={id}&mode=web` or `?design={id}&mode=pdf`; optional `page` selects a page. |
+| Products | `/organizations/{organizationId}/products`; products own names, materials, translated copy, prices, review questions and media groups. |
+| Public catalogue | `/api/public/v1/brands/{slug}/catalogue?locale={locale}`, an explicitly published release; Marketing and Blog read the Catalogue app's feed instead (E4). |
 
-The checked-in Desk frontend defaults to HTTPS port **8378**, proxying API port **8264**.
-Environment overrides and an IDE session can use other ports. These defaults do not establish
-that a service is running. The retained pilot bridge (`resolveCatalogueDeskUrl`) defaults to
-`https://localhost:8264/catalogue`. The Ocharo app menu's Desk link is Desk's root address from runtime config
-`OCHARO_DESK_URL` (build-time `VITE_OCHARO_DESK_URL`). Both accept only an HTTPS destination without credentials,
-query or fragment. No automatic redirect discards the older editor's state.
+The checked-in Desk frontend defaults to HTTPS port **8378**, proxying API port **8264**. The Ocharo app menu's Desk
+link is Desk's root address from runtime config `OCHARO_DESK_URL`.
 
 ## Saved catalogue contract
 
@@ -148,7 +148,7 @@ catalogue activity or archiving a design does not silently replace an earlier pu
 | Public response | [PublicProjection.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Infrastructure/Commerce/Services/PublicProjection.cs) |
 | Gallery and separate designers | [CatalogueGalleryPage.vue](../codebase/brand-workspace.frontend-services/apps/web/src/presentation/workspace/CatalogueGalleryPage.vue), [CatalogueWorkspacePage.vue](../codebase/brand-workspace.frontend-services/apps/web/src/presentation/workspace/CatalogueWorkspacePage.vue) |
 | Canonical navigation | [EditorNavigation.ts](../codebase/brand-workspace.frontend-services/apps/web/src/domain/workspace/EditorNavigation.ts) |
-| Retained pilot bridge | [OcharoApps.ts](../codebase/ocharo-catalogue.frontend-services/apps/web/src/domain/shared/OcharoApps.ts), [CatalogueDeskEntry.vue](../codebase/ocharo-catalogue.frontend-services/apps/web/src/presentation/common/CatalogueDeskEntry.vue) |
+| The Catalogue app's link to Desk | [OcharoApps.ts](../codebase/ocharo-catalogue.frontend-services/apps/web/src/domain/shared/OcharoApps.ts), [CatalogueDeskEntry.vue](../codebase/ocharo-catalogue.frontend-services/apps/web/src/presentation/common/CatalogueDeskEntry.vue) |
 
 ## Verification boundary
 

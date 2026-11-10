@@ -1,11 +1,13 @@
-# ventures.ocharo-catalogue — Architecture
+# Ocharo Catalogue — Architecture
 
-*Last updated: 2026-11-09*
+*Last updated: 2026-11-10*
 
-> Retained local-pilot architecture. Canonical authenticated authoring and named web/PDF editions
-> are documented in [Catalogue authoring and outputs](../catalogue-outputs.md). The pilot remains
-> preserved and offers an explicit Desk link; its local data is not a second canonical write path.
-> The older runtime examples below describe that retained implementation, not the current Desk entrypoint.
+> The Catalogue app is the base of Ocharo's Catalogue service and its one writer: products, collections, designs,
+> releases and the public catalogue feed (E3, settled with the owner 2026-11-10; `ocharo-ws`
+> [app boundaries](../../../../../docs/app-boundaries.md#services)). Desk's Commerce and DesignDocuments, described in
+> [Catalogue authoring and outputs](../catalogue-outputs.md), retire once this service holds what only they have:
+> a release gate for the product feed, per-image rights approval, and who saved and who published. Studio imports
+> move here from Desk (E6). Until then the two stores are not synchronized; a brand is edited in one of them.
 
 ```mermaid
 flowchart LR
@@ -30,9 +32,9 @@ flowchart LR
 - `GET /api/public/catalogue?locale=uz|ru|en` — `{ brand, currency, locale, generatedAt, priceNote, garmentTypes, collections[], products[] }`; products carry copy for the requested locale plus all locales, pricing tiers, and image URLs (`/api/catalogue/media/{sha}` + `/preview`). This feed keeps its frozen wire shape — unenveloped, null fields written (`PublicFeedJson`) — because Marketing's catalogue sync reads `pricing` and `retail` without checking they exist; Blog reads it too.
 - Every other JSON endpoint answers the SDK wire: the success payload under `{ data }` (`ApiResponse<T>`), SDK JSON (camelCase, null fields left out), and failures as SDK problem details from `AppErrorProblemDetailsFactory` (`type` `urn:wow-two:error:{Type}`, `code`, `detail`, trace ids). Dictionary keys stay as stored (size labels, language codes, runtime-config names). An upload too large answers 413, one in an unaccepted format 415, a call WoW2 Files refused 502; a save PostgreSQL could not serialize beside another 409. While the retired SQLite store waits for `import-sqlite`, every `/api/catalogue` and `/api/public` route answers 503 (`storage_moving`).
 - Media URLs are content-addressed and immutable (1-year cache).
-- Editing API under `/api/catalogue/*` is revision-checked (`expectedRevision`, 409 on conflict) and loopback-only on a local
-  run; a deployed host serves it publicly without sign-in until the identity server lands (`Catalogue:PublicAccess`,
-  owner decision 2026-10-24).
+- Editing API under `/api/catalogue/*` is revision-checked (`expectedRevision`, 409 on conflict). Since 2026-11-03 it
+  needs an Ocharo Identity session: reads need membership of `Catalogue:OrganizationId`, writes `catalogue:edit`,
+  publish and withdraw `catalogue:approve` (`../../deployment/deployment.md` § Brand and Catalogue pilots).
 - Stock: `GET /api/catalogue/products/stock`, `PUT /api/catalogue/products/{id}/stock` `{ expectedRevision, stock: {size: pieces} | null, madeToOrder }`; the public feed adds `availability` and `availableSizes` only.
 - Copy grid: `GET /api/catalogue/products/copy`, `PUT /api/catalogue/products/{id}/copy` `{ expectedRevision, locales }` — replaces only the three-language copy.
 - `GET /api/runtime-config` — anonymous, `no-store`, public values only: the `OcharoApps:{Desk,Catalogue,Studio,Marketing,Editorial,Brand,Atlas,Wear,Blog}` settings as `OCHARO_*_URL` keys, the same keys Desk serves. A value that is not an absolute HTTPS address without credentials, query or fragment is left out, with one startup warning naming the setting.
@@ -45,7 +47,7 @@ flowchart LR
 
 ## Frame
 
-- Every authoring route renders inside `bootstrap/AppLayout.vue`, mounted through a layout route: the suite's glass top bar (Ocharo app button with the app version, breadcrumb from route metadata, notifications, SDK `AccountMenu`), a sidebar of Catalogues, Collections, Products, Stock and Admin › Settings that collapses to an icon rail, and a phone bottom bar with More. The published reader `/c/{slug}` keeps its own header and limited Settings dialog.
+- Every authoring route renders inside `bootstrap/AppLayout.vue`, mounted through a layout route, which renders the fe sdk's `AppFrame` like every Ocharo app: the 56px bar (Ocharo app button with the version badge, breadcrumb from route metadata, notifications, the account menu with the interface languages), a 248px sidebar of Catalogues, Collections, Products, Stock and Admin › Settings that collapses to a 64px rail, a phone bottom bar with More, and a page column capped at 1800px for the designers. The published reader `/c/{slug}` is a bare `AppFrame`: the wordmark and its limited Settings dialog.
 - The layout route's guard awaits the Identity BFF session (SDK `createBffStrategy` and `AuthProvider`) and sends a visit without one to sign-in; a failed sign-in's return or a session read the API did not answer opens the frame, which offers sign-in in another tab. The published reader reads no session: a visit that opens there reads it only when it enters the frame.
 - First paint: `index.html` links the Ocharo symbol as the tab icon (ink, reverse for a dark tab strip) and the app tile as `apple-touch-icon.png`, and carries the static twin of the SDK `SplashScreen` (wordmark and bar), which lifts once the session and the first place settle (the reader waits for the place alone).
 - Prices, product copy and the print sheet are retained product-wide tools under Products; they stay out of the sidebar because the product editor and the PDF designer supersede them.
@@ -56,5 +58,5 @@ flowchart LR
 
 ## SDK usage and extraction candidates
 
-- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.106-beta` (blob storage, mediator with `AppResult` and its exception-to-result interceptor, problem details, SDK JSON) and `@wow-two-beta/fe 0.0.41` (HTTP client, BFF session strategy and auth provider, session-bound query client, storage seam, router and guard, config, colour mode, Ocharo theme and glass, splash, app shell, app switcher, account menu and link rows, sidebar and bottom navigation, error boundary, icons, buttons, cards, badges and form fields).
+- Uses the published kit `WoW2.Sdk.Beta.Be 10.0.111-beta` (blob storage, mediator with `AppResult` and its exception-to-result interceptor, problem details, SDK JSON) and `@wow-two-beta/fe 0.0.45` (HTTP client, BFF session strategy and auth provider, session-bound query client, storage seam, router and guard, config, colour mode, Ocharo theme and glass, splash, `AppFrame` with its version badge, app switcher and account menu, sidebar and bottom navigation, error boundary, icons, buttons, cards, badges and form fields).
 - Product-local candidates for later SDK extraction: revisioned document store (document row + snapshot + expected-revision save), content-addressed media store with previews, local-pilot boundary middleware, CSV formula-safe writer, lazily resolved connection string and blob paths, and the frontend's `sessionStorage` broker (`integration/common/SessionStorageBroker.ts`, the SDK ships only the `localStorage` one).
