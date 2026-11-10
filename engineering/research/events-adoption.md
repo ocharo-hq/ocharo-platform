@@ -23,7 +23,15 @@ Code pins `ocharo-platform` `b2cb4e3`. Row counts come from read-only queries on
   - ✅ Desk's Events-backed repository built on Events `10.0.0-beta` (`WoW2.Sdk.Beta.Be.Events.Client`), be sdk
     `10.0.111-beta`: reads, proposals, tracking, the 410 freeze and `import events` refused once `Events:BaseUrl` is set
     (#7, #8); 16 unit and 2 route tests on an in-memory Events.
-  - ⬜ On dev: the 68-row import (ev-wheelhouse, Events' operator verb), then done-when (b) and (c) read back.
+  - ✅ Imported on dev 2026-11-10 by ev-wheelhouse through Events' operator verb: dry run 68 created, import 68
+    created, rerun 68 unchanged. Reconciled read-only against `events_dev`: 68 of 68 rows equal to the bundle field by
+    field (key, title, kind, organizer, place, dates with precision and certainty, deadlines, website, source URL,
+    stage, priority, notes, participation, cost), `events_import_map` mapping each `legacyId` once.
+  - ✅ Desk `v0.3.5` on dev (09:08Z), read back in the owner's own session: the Events page lists the 68 with their
+    stages, precision, priority and derived scope as stored; the browser calls only Desk's origin; a fact edit and a
+    delete answer 410 with the event unchanged; another organization's events path answers 404.
+  - ⬜ Done-when (b): the Afisha record is a review candidate in Events, which Desk's list leaves out until a reviewer
+    accepts it; then it shows on Desk's page.
 
 ## Data
 
