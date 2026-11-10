@@ -54,8 +54,9 @@ the only copy found.
 
 - The producer exports local Desk's 68 rows; Events on dev imports them under dev's `Ocharo` organization.
 - Dev's empty table needs no export; its writer is frozen like any other (#7).
-- Reason: local Desk holds the only rows, and dev's organization id differs from the local one, so the import names its
-  target organization and each record keeps its source organization in provenance.
+- Reason: local Desk holds the only rows. Local and dev share Ocharo's organization id
+  (`b8c672a6-c2e4-4516-82ad-5b178e71ace1`, read 2026-11-10 from `identity.identity_organizations` on `ocharo_dev`), and
+  the import's organization comes from the caller's token; each row keeps it in `legacy` as evidence.
 
 ### #2 Registrations (`events-integration #21`, `#22`)
 
