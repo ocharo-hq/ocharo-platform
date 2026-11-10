@@ -1,0 +1,87 @@
+@import 'tailwindcss';
+@import '@wow-two-beta/fe/styles.css';
+
+/* The fe SDK's Ocharo theme (Ink and Raspberry / Neutral graphite), its ambient backdrop and its frame glass, applied
+   by `theme-ocharo` on <html> (index.html) with `dark` from the colour-mode provider. After styles.css, so it wins. */
+@import '@wow-two-beta/fe/themes.css';
+@source '../../node_modules/@wow-two-beta/fe/dist';
+
+/* Type is the suite's; every interface colour, surface and control comes from the theme and the SDK. */
+@theme {
+  --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-editorial: Georgia, 'Times New Roman', serif;
+}
+
+@layer base {
+  /* The frame's main region scrolls; the document never does, so the canvas only needs the page colour for
+     overscroll and the first paint. */
+  html {
+    color: var(--color-foreground);
+    background-color: var(--color-background);
+    font-family: var(--font-sans);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+  }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .workspace-card {
+    @apply rounded-2xl border border-border bg-card;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-widest text-primary;
+  }
+  .page-title {
+    @apply mt-3 mb-5 text-3xl font-medium tracking-tight sm:text-4xl;
+  }
+  .empty-state {
+    @apply flex min-h-72 items-center justify-center p-8 text-center text-sm leading-7 text-muted-foreground;
+  }
+  .form-error {
+    @apply text-sm leading-6 text-destructive;
+  }
+  .oc-mark {
+    @apply grid size-9 shrink-0 place-items-center rounded-[10px] bg-primary text-lg font-bold leading-none tracking-tight text-primary-foreground;
+  }
+  .oc-app-icon {
+    @apply grid size-9 shrink-0 place-items-center rounded-[10px] border border-primary/10 bg-primary-soft/70 text-primary-soft-foreground;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    background: white;
+  }
+  /* The frame lets its own regions flow on paper; the document around it follows. */
+  html,
+  body,
+  #root {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms;
+    transition-duration: 0.01ms;
+  }
+}

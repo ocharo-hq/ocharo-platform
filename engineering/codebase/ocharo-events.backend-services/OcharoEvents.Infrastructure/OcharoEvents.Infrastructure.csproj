@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- Kit: mediator handlers, Result/AppError. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be" />
+    <!-- WoW2 Events' brokers, behind the events repository. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Events.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OcharoEvents.Application\OcharoEvents.Application.csproj" />
+    <ProjectReference Include="..\OcharoEvents.Domain\OcharoEvents.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

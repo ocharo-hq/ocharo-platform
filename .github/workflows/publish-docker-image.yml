@@ -5,7 +5,7 @@
 #   renovate/**   → ci only; Renovate fast-forwards main once it passes (the pinned Identity image's tag bumps)
 #   workflow_dispatch → a candidate for one commit that has no build yet (Wheelhouse's Build action)
 #   pull request  → ci only
-# Images: ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker,brand,catalogue}, one per service in
+# Images: ghcr.io/ocharo-hq/ocharo-platform/{desk,jobs,image-worker,brand,catalogue,events}, one per service in
 # engineering/deployment/deploy.yml; publish builds the changed ones, so ci builds no image. `identity` runs WoW2's
 # public Identity image, pinned by tag, and builds nothing.
 # Each check runs when its own paths change; a docs-only push runs nothing. Wheelhouse deploys the bundle.
@@ -71,6 +71,15 @@ jobs:
                   "dotnet test OcharoCatalogue.BackendServices.slnx -c Release --no-build"],
           "paths": ["engineering/codebase/ocharo-catalogue.backend-services/**",
                     "engineering/codebase/ocharo-catalogue.frontend-services/**"]},
+         {"name": "Backend (ocharo-events)", "dir": "engineering/codebase/ocharo-events.backend-services",
+          "dotnet": "10.0.300", "node": ".nvmrc",
+          "pnpm-lock": "engineering/codebase/ocharo-events.frontend-services/pnpm-lock.yaml",
+          "lfs": "engineering/codebase/**", "timeout": 25,
+          "run": ["dotnet restore OcharoEvents.BackendServices.slnx --locked-mode",
+                  "dotnet build OcharoEvents.BackendServices.slnx -c Release --no-restore",
+                  "dotnet test OcharoEvents.BackendServices.slnx -c Release --no-build"],
+          "paths": ["engineering/codebase/ocharo-events.backend-services/**",
+                    "engineering/codebase/ocharo-events.frontend-services/**"]},
          {"name": "Image worker tests", "dir": "engineering/codebase/ocharo-image.backend-services",
           "python": "3.12", "pip": "-r requirements-test.txt",
           "pip-cache": "engineering/codebase/ocharo-image.backend-services/requirements*.txt", "timeout": 20,
@@ -88,4 +97,7 @@ jobs:
           "paths": ["engineering/codebase/ocharo-brand.frontend-services/**"]},
          {"name": "Frontend (ocharo-catalogue)", "dir": "engineering/codebase/ocharo-catalogue.frontend-services",
           "node": ".nvmrc", "lfs": "engineering/codebase/**",
-          "paths": ["engineering/codebase/ocharo-catalogue.frontend-services/**"]}]
+          "paths": ["engineering/codebase/ocharo-catalogue.frontend-services/**"]},
+         {"name": "Frontend (ocharo-events)", "dir": "engineering/codebase/ocharo-events.frontend-services",
+          "node": ".nvmrc", "lfs": "engineering/codebase/**",
+          "paths": ["engineering/codebase/ocharo-events.frontend-services/**"]}]

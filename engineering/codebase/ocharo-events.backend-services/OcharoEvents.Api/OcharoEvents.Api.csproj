@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <!-- Kit: mediator (ISender), Result/AppError, web/problem-details, migration sets, the PostgreSQL session cache. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be" />
+    <!-- Sign-in: the Identity BFF against Ocharo's Identity instance. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Identity.Client" />
+    <!-- WoW2 Events over HTTP, by the person's token exchanged with this host's own `ocharo-events` client. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Events.Client" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OcharoEvents.Application\OcharoEvents.Application.csproj" />
+    <ProjectReference Include="..\OcharoEvents.Infrastructure\OcharoEvents.Infrastructure.csproj" />
+    <ProjectReference Include="..\OcharoEvents.Persistence\OcharoEvents.Persistence.csproj" />
+    <ProjectReference Include="..\OcharoEvents.Domain\OcharoEvents.Domain.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <!-- ocharo-events.frontend-services (the pnpm workspace) is a sibling of ocharo-events.backend-services under engineering/codebase/. -->
+    <SpaRoot>$(MSBuildProjectDirectory)/../../ocharo-events.frontend-services/</SpaRoot>
+  </PropertyGroup>
+  <!-- Builds the Events SPA into wwwroot, so one backend build yields the host that serves API + app. The image build
+       passes -p:BuildSpa=false: its Node stage supplies the built SPA. -->
+  <Target Name="BuildSpa"
+          BeforeTargets="PrepareForBuild;ResolveProjectStaticWebAssets"
+          Condition="'$(BuildSpa)' != 'false' and '$(DesignTimeBuild)' != 'true' and '$(NoBuild)' != 'true'">
+    <Error Condition="!Exists('$(SpaRoot)package.json')"
+           Text="SpaRoot must point to the frontend workspace directory." />
+    <Exec Command="pnpm install --frozen-lockfile" WorkingDirectory="$(SpaRoot)" />
+    <Exec Command="pnpm run deploy" WorkingDirectory="$(SpaRoot)" />
+    <ItemGroup>
+      <Content Remove="@(Content)"
+               Condition="$([System.String]::Copy('%(Content.Identity)').Replace('\', '/').StartsWith('wwwroot/'))" />
+      <Content Include="wwwroot/**/*"
+               CopyToOutputDirectory="PreserveNewest"
+               CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+  </Target>
+</Project>

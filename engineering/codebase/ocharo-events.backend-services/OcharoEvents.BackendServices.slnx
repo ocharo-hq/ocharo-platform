@@ -1,0 +1,16 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Tests/">
+    <Project Path="tests/OcharoEvents.Tests.E2E/OcharoEvents.Tests.E2E.csproj" />
+    <Project Path="tests/OcharoEvents.Tests.Unit/OcharoEvents.Tests.Unit.csproj" />
+  </Folder>
+  <Project Path="OcharoEvents.Api/OcharoEvents.Api.csproj" />
+  <Project Path="OcharoEvents.Application/OcharoEvents.Application.csproj" />
+  <Project Path="OcharoEvents.Domain/OcharoEvents.Domain.csproj" />
+  <Project Path="OcharoEvents.Infrastructure/OcharoEvents.Infrastructure.csproj" />
+  <Project Path="OcharoEvents.Persistence/OcharoEvents.Persistence.csproj" />
+</Solution>

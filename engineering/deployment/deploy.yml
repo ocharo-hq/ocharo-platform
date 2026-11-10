@@ -3,12 +3,14 @@
 # Format and rules: wow-two-ws/conventions/deployment/descriptor/deploy-descriptor.md. Hostnames, secrets and
 # environments live in Wheelhouse targets, never here. Paths are relative to engineering/.
 #
-# Ocharo Platform deploys Desk, its jobs worker, the private image worker, the adopted Brand and Catalogue pilots and
-# Ocharo's own Identity instance, through which Desk, Brand and Catalogue sign in, as the primary repository of the one
-# `ocharo` product (Wheelhouse decision 70): Studio, Marketing and Assets deploy beside it, so service, site and volume
-# names stay unique across them, and Desk's site is the product's front door.
+# Ocharo Platform deploys Desk, its jobs worker, the private image worker, the adopted Brand and Catalogue pilots, the
+# Events service and Ocharo's own Identity instance, through which Desk, Brand, Catalogue and Events sign in, as the
+# primary repository of the one `ocharo` product (Wheelhouse decision 70): Studio, Marketing and Assets deploy beside it,
+# so service, site and volume names stay unique across them, and Desk's site is the product's front door.
 # Brand and Catalogue store in schemas `brand` and `catalogue` of the product database; each volume keeps blobs stored
 # before WoW2 Files and the retired SQLite store until `import-sqlite` (deployment.md § Brand and Catalogue pilots).
+# Events keeps no event rows (WoW2 Events holds them, research/events-app.md #2): only its key ring in schema
+# `ocharo_events` and its sessions in `ocharo_events_cache`, and no volume.
 # Desk and jobs compile only the pilots' Domain projects.
 # dev runs as .NET Development and prod as Production (dotnetEnvironment). Desk's `migrate` item applies its schema before any
 # service restarts; Desk still applies it as it starts and reports ready only afterwards, and jobs refuses to start on a
@@ -22,6 +24,7 @@ sites:
   desk: {}                              # Desk, public: a domain, or Wheelhouse's sslip.io host until one is bound
   brand: {}                             # Brand, signed in through Ocharo's Identity; its public feed stays anonymous
   catalogue: {}                         # Catalogue authoring, signed in; the published reader stays anonymous
+  events: {}                            # Events, signed in: the organization's trade events from WoW2 Events
   identity: {}                          # Ocharo's own Identity: sign-in and tokens for every Ocharo app
 # Before any service restarts (pipelines v0.12.0), Ocharo's Identity applies its `identity` migration set to Ocharo's
 # database, then Desk's image applies Desk's sets with the be sdk's `migrate` verb; Wheelhouse fills
@@ -39,10 +42,13 @@ migrate:
   - service: catalogue                  # the `catalogue` set and its session cache's set (schema catalogue_cache)
     command: [dotnet, OcharoCatalogue.Api.dll, migrate]
     timeout: 5m
+  - service: events                     # the `ocharo_events` set and its session cache's set (schema ocharo_events_cache)
+    command: [dotnet, OcharoEvents.Api.dll, migrate]
+    timeout: 5m
 # After migrate and before any restart, and on every settings-only apply, each item's image checks the settings the
 # deploy applies (pipelines v0.15.0, Wheelhouse v0.12): exit 0 consistent, 1 refused, 2 failed, a `config-result` line
-# last; a refused or retired key stops the deploy while the running release keeps serving. Identity, Desk, Brand and
-# Catalogue answer `config check`; jobs and the image worker answer none yet, so they have no item.
+# last; a refused or retired key stops the deploy while the running release keeps serving. Identity, Desk, Brand,
+# Catalogue and Events answer `config check`; jobs and the image worker answer none yet, so they have no item.
 configCheck:
   - service: identity
     command: [dotnet, Identity.Api.dll, config, check]
@@ -55,6 +61,9 @@ configCheck:
     timeout: 2m
   - service: catalogue
     command: [dotnet, OcharoCatalogue.Api.dll, config, check]
+    timeout: 2m
+  - service: events
+    command: [dotnet, OcharoEvents.Api.dll, config, check]
     timeout: 2m
 services:
   desk:
@@ -267,8 +276,8 @@ services:
         Identity:Organizations:Roles:editor:9: { default: "events:track" }
         Identity:Organizations:Roles:viewer:1: { default: "events:read" }
         # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
-        # 2 catalogue, 3 marketing, 4 editorial, 5 studio, 6 public-build, 7 assets-release, 8 events and
-        # 10 events-console; 9 is a gap (below). Each secret but 7's
+        # 2 catalogue, 3 marketing, 4 editorial, 5 studio, 6 public-build, 7 assets-release, 8 events,
+        # 10 events-console and 11 ocharo-events; 9 is a gap (below). Each secret but 7's
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
         # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
         # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
@@ -421,6 +430,23 @@ services:
         Identity:Server:Clients:10:Scopes:2: { default: events.track }
         Identity:Server:Clients:10:Scopes:3: { default: events.import }
         Identity:Server:Clients:10:Scopes:4: { default: events.admin }
+        # Client 11, ocharo-events: Ocharo's own Events app (research/events-app.md #5) signs members in through its BFF
+        # and reaches `events` for a person only, by token exchange; Events checks the scope and the `events:*`
+        # permission against the token's org_id. Proposing and tracking need events.track; nothing needs import, review
+        # or admin. Its URIs are owner keys typed per environment from the events site's URL
+        # (`{Url}api/identity/callback`, `{Url}`, `{Url}api/identity/signal`); the app links its secret with `from`.
+        Identity:Server:Clients:11:ClientId: { default: ocharo-events }
+        Identity:Server:Clients:11:DisplayName: { default: Ocharo Events }
+        Identity:Server:Clients:11:PermissionNamespace: { default: events }
+        Identity:Server:Clients:11:ClientSecret: { secret: true, required: true, generate: { random: 32 } }
+        Identity:Server:Clients:11:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:11:PostSignOutRedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:11:SignalUrl: { type: url, required: true }
+        Identity:Server:Clients:11:Grants:0: { default: authorization_code }
+        Identity:Server:Clients:11:Grants:1: { default: token_exchange }
+        Identity:Server:Clients:11:ExchangeResources:0: { default: events }
+        Identity:Server:Clients:11:Scopes:0: { default: events.read }
+        Identity:Server:Clients:11:Scopes:1: { default: events.track }
         Identity:Server:Resources:0:Name: { default: desk }
         Identity:Server:Resources:0:Uri: { type: url, required: true }
         Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }
@@ -568,3 +594,49 @@ services:
       catalogue-data: /data
     sites:
       catalogue: {}
+  events:
+    build: { dockerfile: deployment/events/Dockerfile }
+    paths:
+      - codebase/ocharo-events.backend-services/**
+      - codebase/ocharo-events.frontend-services/**
+    health: /health                     # be sdk readiness over the PostgreSQL context
+    needs: [postgres]
+    # No event rows: WoW2 Events holds the catalog and each organization's tracking (research/events-app.md #2). Sessions
+    # (schema `ocharo_events_cache`) and the Data Protection key ring (`ocharo_events.data_protection_keys`) live in the
+    # product database, so a restart or deploy keeps everyone signed in; no volume.
+    settings:
+      # Wheelhouse derives AllowedHosts and Deployment:TrustedProxies (the ingress, whose forwarded scheme sign-in and the
+      # same-origin write check need), and fills ConnectionStrings:Database from the target's own PostgreSQL; nobody
+      # types them.
+      required: [ConnectionStrings:Database, AllowedHosts, Deployment:TrustedProxies]
+      keys:
+        # The key-ring name; keep the deployed value, a change signs everyone out.
+        DataProtection:ApplicationName: { default: ocharo-events }
+        # Sign-in through Ocharo's Identity as client 11, linked like Desk's; a route's organization must be the
+        # session's and the person must hold events:read there, else 404 (research/events-app.md #4).
+        Identity:Client:Authority: { from: Sites:identity:Url }
+        Identity:Client:ClientId: { default: ocharo-events }
+        Identity:Client:ClientSecret: { from: Identity:Server:Clients:11:ClientSecret }
+        Identity:Client:CookieName: { default: __Host-ocharo-events }
+        Identity:Client:SignalUrl: { from: Identity:Server:Clients:11:SignalUrl }
+        Identity:Client:PostSignOutRedirectPath: { default: "/" }
+        # The page reads WoW2 Events, catalog `ocharo-fashion`, with the member's token exchanged within their session
+        # (client 11's `ExchangeResources: events`); linked to the Uri this descriptor types for its Events resource, as
+        # Desk's is. The service keeps no events store, so a deployed boot refuses without it.
+        Events:BaseUrl: { from: Identity:Server:Resources:3:Uri }
+        Events:Catalog: { default: ocharo-fashion }
+        # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out. Apps whose
+        # site root is the place to land link to that site, so nobody types them; Editorial, Atlas and Wear sit under a
+        # path of the blog site, so the owner types those.
+        OcharoApps:Desk: { from: Sites:desk:Url }
+        OcharoApps:Catalogue: { from: Sites:catalogue:Url }
+        OcharoApps:Studio: { from: { repository: studio, key: Sites:studio:Url } }
+        OcharoApps:Marketing: { from: { repository: marketing, key: Sites:marketing:Url } }
+        OcharoApps:Editorial: { type: url }
+        OcharoApps:Brand: { from: Sites:brand:Url }
+        OcharoApps:Atlas: { type: url }
+        OcharoApps:Wear: { type: url }
+        OcharoApps:Blog: { from: { repository: marketing, key: Sites:blog:Url } }
+        OcharoApps:Events: { from: Sites:events:Url }
+    sites:
+      events: {}

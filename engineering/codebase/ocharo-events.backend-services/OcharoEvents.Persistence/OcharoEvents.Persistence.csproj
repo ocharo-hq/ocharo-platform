@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Kit: migration sets, snake_case naming. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The `ocharo_events` migration set; EventsDatabaseConstants.MigrationResourcePrefix names the folder. -->
+    <EmbeddedResource Include="Migrations/**/*.sql">
+      <LogicalName>OcharoEvents/Migrations/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+</Project>

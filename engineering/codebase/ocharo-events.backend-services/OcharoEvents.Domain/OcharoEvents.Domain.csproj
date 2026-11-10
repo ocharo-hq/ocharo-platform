@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Plain domain types with no SDK dependency: the showcase event Ocharo's Events page reads and tracks. -->
+
+</Project>

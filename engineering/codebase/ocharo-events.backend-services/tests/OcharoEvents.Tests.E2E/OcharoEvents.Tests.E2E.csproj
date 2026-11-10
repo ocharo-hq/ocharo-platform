@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <!-- E2E tier: whole HTTP request flows through the real host over a fresh PostgreSQL product database (Docker), signed in
+       by the test identity, with WoW2 Events an in-memory fake. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
+    <PackageReference Include="AwesomeAssertions" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\OcharoEvents.Api\OcharoEvents.Api.csproj" />
+    <ProjectReference Include="..\..\OcharoEvents.Application\OcharoEvents.Application.csproj" />
+    <ProjectReference Include="..\..\OcharoEvents.Domain\OcharoEvents.Domain.csproj" />
+    <ProjectReference Include="..\..\OcharoEvents.Infrastructure\OcharoEvents.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\OcharoEvents.Persistence\OcharoEvents.Persistence.csproj" />
+  </ItemGroup>
+
+</Project>

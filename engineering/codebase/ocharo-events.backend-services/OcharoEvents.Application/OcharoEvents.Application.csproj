@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <!-- Kit: mediator (commands, queries, AppResult), Result/AppError. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\OcharoEvents.Domain\OcharoEvents.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

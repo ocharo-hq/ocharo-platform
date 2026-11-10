@@ -1,0 +1,22 @@
+{
+  "name": "ocharoevents-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Private frontend workspace for Ocharo Events.",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ocharoevents/web dev",
+    "typecheck": "pnpm --filter @ocharoevents/web typecheck",
+    "build": "pnpm --filter @ocharoevents/web build",
+    "deploy": "pnpm build && node scripts/deploy.mjs",
+    "preview": "pnpm --filter @ocharoevents/web preview",
+    "test": "pnpm --filter @ocharoevents/web test",
+    "format": "pnpm --filter @ocharoevents/web format",
+    "format:check": "pnpm --filter @ocharoevents/web format:check",
+    "lint": "pnpm --filter @ocharoevents/web lint"
+  }
+}
