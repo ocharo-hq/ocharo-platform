@@ -1,6 +1,6 @@
 # Ocharo Platform — Backlog
 
-*Last updated: 2026-11-09*
+*Last updated: 2026-11-10*
 
 ## Features
 
@@ -27,7 +27,8 @@ Owner focus from 2026-10-24: **Events and Sourcing only**, then WoW2 File Storag
 | Merchant evidence | feature | Validate order evidence and real workflow attribution. |
 | Companion consolidation | engineering | Retained Brand/Catalogue pilots sign in through Ocharo's Identity since 2026-11-03 (G4); consolidating their stores with Desk stays open. |
 | Pilot sign-in follow-ups | engineering | After G4 (2026-11-03): Catalogue's Playwright suite (`e2e/support/start-api.mjs`) has no `Identity:Client`, `Catalogue:OrganizationId` or signed-in session, so it no longer starts or seeds the API; each pilot's stand-alone `deployment/{brand,catalogue}/docker-compose.yml`, which no longer booted without those settings, was deleted on 2026-11-09; both keep BFF sessions in memory, so a restart signs everyone out (a durable SQLite or shared cache would end that). |
-| Events SDK module move | engineering | Events moves into the WoW2 Events SDK module (owner, 2026-10-24); Desk's own feed then adopts it. |
+| Events SDK module move | engineering | Events moves into WoW2 Events, `wow-two-sdk-beta.events` (owner, 2026-10-24): Events owns the catalog and tracking, Desk its page, membership and references (E1). Picks and build: [events-adoption.md](../research/events-adoption.md) #1–#12 (`events-integration #26`, `#27`, `#31`). Source: local Desk's 68 rows, since dev's table is empty (#1). Producer: a read-only `export events` verb emitting `wow2.events-import.v1` with `sourceId`, provenance, `und` titles, kept precision and a `legacy` row (#6). Cutover: `Events:BaseUrl` turns reads and one tracking route into a proxy onto `IEventsClient`, the old writes answer 410 `EventsMoved`, `import events` refuses, the table stays as rollback until reconciliation (#7); the Vue screens read the Events contract (#8). Images: P2 from Desk's side (#9). |
+| Events registrations | engineering | Ocharo's Identity registry stays in this repo's `deploy.yml` (`events-integration #21`, `#22`, `#23`; events-adoption.md #2–#5): resource 3 `events` (namespace `events`, signal URL), resource 4 SCFD (no namespace, no signal URL), client 8 `events` and client 9 SCFD's operator by `client_credentials` with typed secrets, Desk's client 0 `ExchangeResources: events`, and `events:*` on owner and admin (all), editor (read, track), viewer (read). Names come from the events and scfd lanes; Wheelhouse types resources 3 and 4's URIs, resource 3's signal URL and both secrets before the push. |
 | Hosted rollout | engineering | Verify backups, keys, provider configuration and target approval. |
 | Identity cutover | engineering | Ocharo people sign in by Telegram through Ocharo's WoW2 Identity, local → dev → prod, then every app; track: [identity-cutover.md](../research/identity-cutover.md). |
 | Own-phone check | verification | Verify Maftuna adds her own phone through the bot's add-phone link, then signs in on her own phone, not through her trusted contact; deferred by the owner on 2026-11-03 (identity-cutover.md #46). |
@@ -76,8 +77,8 @@ Design and sources: [analysis](../research/desk/2026-10-09-sourcing-events-integ
 | Item | Type | Notes |
 |---|---|---|
 | Material requests and offers | feature | Add material requests, supplier offers, quotation evidence and sample review before price comparison. |
-| Event editions and candidates | feature | Add event editions, source observations and reviewable import candidates without overwriting confirmed facts. |
-| Feed or provider adapter | feature | Add one verified adapter with provenance, cancellation handling and bounded requests. |
+| Event editions and candidates | moved | Events owns editions, observations and review candidates (`events-integration #1`, `#30`); Desk reads them through its proxy. |
+| Feed or provider adapter | moved | SCFD's Afisha adapter feeds Events by pull (`events-integration #6`, `#20`); Desk adds no adapter. |
 | Dev bot token | fix | Revoke and replace `@ocharo_dev_bot`'s token in BotFather, then update Wheelhouse's dev vault; it was briefly pasted into a secret note, since cleared (owner, 2026-11-02). |
 | Desk MCP on Identity agent tokens | engineering | Parked: an MCP client gets its own Identity OAuth token, not Desk's browser session, and MCP stays off until then (owner, 2026-11-02). The ticket-authenticated surface left on 2026-11-05; restore its read tools, UI panel and tests from commit `ce3ad7b`. Activation on the intended server and a trusted client follow. |
 | Calendar OAuth | feature | Add only after calendar selection and outbound synchronization rules are agreed. |
