@@ -37,7 +37,11 @@ export const brandFrameUiMessages: UiMessageTable = {
   },
 
   // The bar.
-  'App version': { uz: 'Ilova versiyasi', ru: 'Версия приложения' },
+  'Version {version}': { uz: 'Versiya {version}', ru: 'Версия {version}' },
+  'Version {running} is live; this tab runs {version}. Reload to update.': {
+    uz: '{running} versiyasi chiqdi; bu oyna {version} versiyasida ishlayapti. Yangilash uchun sahifani qayta yuklang.',
+    ru: 'Вышла версия {running}; эта вкладка работает на {version}. Перезагрузите страницу, чтобы обновить.',
+  },
   'You are here': { uz: 'Siz shu yerdasiz', ru: 'Вы здесь' },
   'Release {release} · {count} unpublished changes': {
     uz: '{release}-nashr · {count} ta nashr qilinmagan o‘zgarish',
@@ -61,6 +65,8 @@ export const brandFrameUiMessages: UiMessageTable = {
   'Back to the overview': { uz: 'Umumiy sahifaga qaytish', ru: 'Вернуться к обзору' },
   'Expand sidebar': { uz: 'Yon panelni yoyish', ru: 'Развернуть боковую панель' },
   'Collapse sidebar': { uz: 'Yon panelni yig‘ish', ru: 'Свернуть боковую панель' },
+  'Open navigation': { uz: 'Navigatsiyani ochish', ru: 'Открыть навигацию' },
+  Navigation: { uz: 'Navigatsiya', ru: 'Навигация' },
   More: { uz: 'Yana', ru: 'Ещё' },
   'More in Brand': { uz: 'Brenddagi boshqa bo‘limlar', ru: 'Другие разделы бренда' },
 

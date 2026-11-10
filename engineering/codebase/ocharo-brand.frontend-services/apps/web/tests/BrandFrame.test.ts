@@ -54,7 +54,10 @@ describe('Ocharo frame in Brand', () => {
     expect(main.findAll('h1')).toHaveLength(1);
     const header = wrapper!.get('header[role="banner"]');
     expect(header.find('button[aria-label="Ocharo apps — Brand"]').exists()).toBe(true);
-    expect(header.get('[title="App version"]').text()).toBe(__APP_VERSION__);
+    // The version badge stands beside the full brand; a phone's bar has room for the mark only.
+    const badge = wrapper!.find('[data-version-badge]');
+    expect(badge.exists()).toBe(width >= 768);
+    if (badge.exists()) expect(badge.text()).toBe(__APP_VERSION__);
     const controls = header.findAll('button');
     expect(controls.at(-1)!.attributes()).toMatchObject({ 'aria-label': 'Account menu', 'aria-haspopup': 'menu' });
   });
@@ -166,12 +169,27 @@ describe('Ocharo frame in Brand', () => {
     expect(localStorage.getItem(SidebarCollapsedKey)).toBe('false');
   });
 
-  it('shows the icon rail without a collapse control on a tablet', async () => {
+  it('shows the icon rail on a tablet, where the toggle opens the sections in a drawer instead', async () => {
     await renderAt('/logos', 900);
 
     expect(sidebar().text()).toContain('Logos');
     expect(wrapper!.find('button[aria-label="Expand sidebar"]').exists()).toBe(false);
     expect(wrapper!.find('button[aria-label="Collapse sidebar"]').exists()).toBe(false);
+    const toggle = wrapper!.get('button[aria-label="Open navigation"]');
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+
+    await toggle.trigger('click');
+    await flushPromises();
+
+    const drawer = new DOMWrapper(document.querySelector<HTMLElement>('[role="dialog"]')!);
+    expect(drawer.get('[aria-label="Brand sections"]').findAll('a')).toHaveLength(5);
+    expect(localStorage.getItem(SidebarCollapsedKey)).toBeNull();
+  });
+
+  it('hides the toggle on a phone, where the bottom bar is the navigation', async () => {
+    await renderAt('/logos', 390);
+
+    expect(wrapper!.find('[data-app-frame-toggle]').exists()).toBe(false);
   });
 
   it('swaps the sidebar for a bottom bar with More on a phone', async () => {
@@ -213,7 +231,8 @@ describe('Ocharo frame in Brand', () => {
     );
     expect(bar).not.toContain('bg-background');
     expect(bar).not.toContain('surface-glass!');
-    expect(bar).toEqual(expect.arrayContaining(['no-print', 'z-sticky', '[grid-area:footer]', 'md:hidden']));
+    // The frame places the bar under the scrolling region and takes it out of print.
+    expect(wrapper!.get('[data-app-frame-phone-nav]').find('nav[aria-label="Brand sections"]').exists()).toBe(true);
   });
 
   it('shows the release the draft stands on and refreshes every Brand read from the bar', async () => {

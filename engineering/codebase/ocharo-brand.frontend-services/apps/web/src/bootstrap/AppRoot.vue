@@ -26,6 +26,12 @@ provideLocale(
   uiLocale,
   computed(() => ({
     'AppShell.skipToContent': t('Skip to content'),
+    'AppFrame.collapseLabel': t('Collapse sidebar'),
+    'AppFrame.expandLabel': t('Expand sidebar'),
+    'AppFrame.openNavigationLabel': t('Open navigation'),
+    'AppFrame.navigationLabel': t('Navigation'),
+    'VersionBadge.label': t('Version {version}'),
+    'VersionBadge.updateLabel': t('Version {running} is live; this tab runs {version}. Reload to update.'),
     'AccountMenu.menuLabel': t('Account'),
     'AccountMenu.triggerLabel': t('Account menu for {name}'),
     'AccountMenu.anonymousTriggerLabel': t('Account menu'),

@@ -1,27 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { RouterView, useRoute } from 'vue-router';
-import { ChevronRight, RefreshCw, X } from 'lucide-vue-next';
-import { TailwindBreakpoints, useBreakpoint } from '@wow-two-beta/fe/foundation/device';
+import { RefreshCw, X } from 'lucide-vue-next';
 import { Icon } from '@wow-two-beta/fe/foundation/icons';
-import { localStorageStorageBroker, usePersistentState } from '@wow-two-beta/fe/foundation/storage';
+import { useRunningVersion } from '@wow-two-beta/fe/foundation/net';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { Card } from '@wow-two-beta/fe/presentation/display';
 import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
-import {
-  AppShell,
-  AppShellContent,
-  AppShellHeader,
-  AppShellMain,
-  AppShellSidebar,
-} from '@wow-two-beta/fe/presentation/layout';
-import {
-  AccountMenu,
-  AppSwitcherKind,
-  AppSwitcherMenu,
-  type AccountMenuVersion,
-  type AppSwitcherItem,
-} from '@wow-two-beta/fe/presentation/nav';
+import { AppFrame, type AppFrameAccount, type AppFrameSwitcher } from '@wow-two-beta/fe/presentation/layout';
+import { AppSwitcherKind, type AccountMenuVersion, type AppSwitcherItem } from '@wow-two-beta/fe/presentation/nav';
 import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
 import { useBrand } from '../application/brand';
@@ -37,35 +24,25 @@ import BrandNav from '../presentation/frame/BrandNav.vue';
 import PhoneNav from '../presentation/frame/PhoneNav.vue';
 import { AppIcons } from '../presentation/frame/ShellIcons';
 
-/** The sidebar's widths: full, and the icon rail. @internal */
-const SidebarWidth = { Full: '244px', Rail: '68px' } as const;
-/** Where this browser remembers the desktop sidebar's rail choice. @internal */
+/** Where this browser remembers the desktop sidebar's rail choice; the key predates the shared frame. @internal */
 const SidebarCollapsedKey = 'ocharo.brand.sidebar-collapsed';
 
 /**
- * The Ocharo frame, as Brand wears it, around every place. The glass top bar is the suite's: the app button with the
- * app version, where you are, the release this draft stands on with a refresh, and the account menu. The sidebar is
- * Brand's sections; it collapses to an icon rail on desktops and is always the rail on tablets. Phones swap it for a
- * bottom bar. Only the main region scrolls.
+ * Brand inside the frame every Ocharo app shares (the fe sdk's `AppFrame`): the bar, the sidebar and the page column
+ * are the suite's, at one size in every app. Brand passes what is its own: the app list, its sections, where you are,
+ * the release this draft stands on with a refresh, the account, and its notices above the page.
  */
 defineOptions({ name: 'AppLayout' });
 const { t } = useUiLocale();
 const route = useRoute();
 const brand = useBrand();
 const { isAuthenticated, person, signingOut, signOut } = useIdentitySession();
-const { backendVersion, refresh: refreshBackendVersion } = useBuildIdentity();
+const { backendVersion, refresh: refreshBackendVersion, readRunningVersion } = useBuildIdentity();
 const apps = useOcharoApps();
 const appVersion = __APP_VERSION__;
-// The stored choice seeds the first render too, so a collapsed rail never animates in from the full sidebar.
-const collapsed = usePersistentState(
-  SidebarCollapsedKey,
-  localStorageStorageBroker.read<boolean>(SidebarCollapsedKey) === true,
-);
-const breakpoint = useBreakpoint(TailwindBreakpoints);
+// The badge beside the app button follows the release the API serves; a local build has no release to compare.
+const { version: runningVersion } = useRunningVersion(() => (appVersion === 'dev' ? null : readRunningVersion()));
 
-const isDesktop = computed(() => ['lg', 'xl', '2xl'].includes(breakpoint.value ?? ''));
-const isRail = computed(() => !isDesktop.value || collapsed.value.value);
-const sidebarWidth = computed(() => (isRail.value ? SidebarWidth.Rail : SidebarWidth.Full));
 const section = computed(() => readBrandSection(route.meta));
 const items = computed<AppSwitcherItem[]>(() =>
   apps.map((app) => ({
@@ -77,6 +54,14 @@ const items = computed<AppSwitcherItem[]>(() =>
     kind: app.kind === OcharoAppKind.Workspace ? AppSwitcherKind.App : AppSwitcherKind.Site,
   })),
 );
+/** The app menu's own phrases. */
+const switcher = computed<AppFrameSwitcher>(() => ({
+  title: t('Ocharo apps'),
+  sitesLabel: t('Public sites'),
+  closeLabel: t('Close'),
+  newTabLabel: t('(opens in a new tab)'),
+  triggerLabel: t('Ocharo apps — {app}'),
+}));
 /** The group, the section and the place itself, each once: the place's label comes from its route metadata. */
 const crumbs = computed(() => {
   const entry = brandSection(section.value);
@@ -127,130 +112,96 @@ const versions = computed<AccountMenuVersion[]>(() => {
     { label: 'API', version: t(api), ...(commit ? { commit } : {}) },
   ];
 });
+/** The account menu: who is signed in, the versions, and sign-out while it runs. */
+const account = computed<AppFrameAccount>(() => ({
+  ...accountIdentity.value,
+  versions: versions.value,
+  isBusy: signingOut.value,
+}));
 watch(accountOpen, (open) => {
   if (open) void refreshBackendVersion();
 });
 </script>
 
 <template>
-  <AppShell
-    class="brand-frame surface-ambient transition-[grid-template-columns] duration-200 ease-out motion-reduce:transition-none"
-    sidebar-breakpoint="md"
-    :sidebar-width="sidebarWidth"
+  <AppFrame
+    v-model:account-open="accountOpen"
+    :version="appVersion"
+    :running-version="runningVersion"
+    :apps="items"
+    current-app="brand"
+    :app-label="t('Brand')"
+    app-subtitle="Ocharo"
+    :app-switcher="switcher"
+    :crumbs="crumbs"
+    :trail-label="t('You are here')"
+    :account="account"
+    :collapse-storage-key="SidebarCollapsedKey"
   >
-    <AppShellHeader height="auto" variant="glass" class="no-print p-0 pt-[env(safe-area-inset-top)]">
-      <div class="flex min-h-15 w-full min-w-0 items-center gap-3 px-3 sm:px-4">
-        <div class="flex shrink-0 items-center gap-2">
-          <AppSwitcherMenu
-            :items="items"
-            current="brand"
-            :label="t('Brand')"
-            subtitle="Ocharo"
-            :title="t('Ocharo apps')"
-            :sites-label="t('Public sites')"
-            :close-label="t('Close')"
-            :new-tab-label="t('(opens in a new tab)')"
-            :trigger-label="t('Ocharo apps — {app}')"
-            variant="glass-menu"
-            class="[&[data-state=open]_[data-app-switcher-chevron]]:text-primary-soft-foreground"
-          >
-            <template #mark><span class="oc-mark">O</span></template>
-          </AppSwitcherMenu>
-          <span class="font-mono text-[11px] text-muted-foreground" :title="t('App version')">{{ appVersion }}</span>
-        </div>
-        <nav
-          :aria-label="t('You are here')"
-          class="hidden min-w-0 items-center gap-1.5 border-s border-border ps-3 text-sm text-muted-foreground md:flex"
+    <template #brand><span class="oc-mark">O</span></template>
+    <template #nav="{ isRail }"><BrandNav :current="section" :collapsed="isRail" /></template>
+    <template #bar-end>
+      <p
+        v-if="brand.draft.value"
+        class="hidden shrink-0 text-xs text-muted-foreground lg:block"
+        :aria-busy="brand.refreshing.value || undefined"
+      >
+        <template v-if="brand.refreshing.value"
+          ><SkeletonState class="inline-block h-4 w-44 align-middle" /><span class="sr-only">{{
+            t('Checking the release…')
+          }}</span></template
         >
-          <template v-for="(crumb, index) in crumbs" :key="index">
-            <ChevronRight v-if="index > 0" :size="14" class="shrink-0" aria-hidden="true" />
-            <span
-              :class="index === crumbs.length - 1 ? 'truncate font-semibold text-foreground' : 'shrink-0'"
-              :aria-current="index === crumbs.length - 1 ? 'page' : undefined"
-              >{{ crumb }}</span
-            >
-          </template>
-        </nav>
-        <span class="flex-1" />
-        <p
-          v-if="brand.draft.value"
-          class="hidden shrink-0 text-xs text-muted-foreground lg:block"
-          :aria-busy="brand.refreshing.value || undefined"
-        >
-          <template v-if="brand.refreshing.value"
-            ><SkeletonState class="inline-block h-4 w-44 align-middle" /><span class="sr-only">{{
-              t('Checking the release…')
-            }}</span></template
-          >
-          <template v-else>{{ releaseStatus }}</template>
-        </p>
+        <template v-else>{{ releaseStatus }}</template>
+      </p>
+      <Button
+        variant="outline"
+        class="shrink-0"
+        :is-loading="brand.refreshing.value"
+        :is-disabled="brand.mutating.value"
+        @click="brand.refresh"
+      >
+        <template #leading><Icon :icon="RefreshCw" :size="15" /></template>
+        <span class="max-sm:sr-only">{{ t('Refresh') }}</span>
+      </Button>
+    </template>
+    <template #phone-nav><PhoneNav :current="section" /></template>
+    <template #notice>
+      <div
+        v-if="brand.notice.value"
+        role="status"
+        class="no-print mb-6 flex items-start justify-between gap-4 rounded-xl border border-success/20 bg-success-soft px-5 py-4 text-sm text-success-soft-foreground"
+      >
+        <p class="leading-6">{{ brand.notice.value }}</p>
         <Button
-          variant="outline"
+          variant="ghost"
+          tone="success"
+          shape="square"
+          size="sm"
           class="shrink-0"
-          :is-loading="brand.refreshing.value"
-          :is-disabled="brand.mutating.value"
-          @click="brand.refresh"
+          :aria-label="t('Close')"
+          @click="brand.notice.value = null"
         >
-          <template #leading><Icon :icon="RefreshCw" :size="15" /></template>
-          <span class="max-sm:sr-only">{{ t('Refresh') }}</span>
+          <Icon :icon="X" :size="15" />
         </Button>
-        <AccountMenu
-          v-model:open="accountOpen"
-          v-bind="accountIdentity"
-          :versions="versions"
-          :is-busy="signingOut"
-          variant="glass-menu"
-        />
       </div>
-    </AppShellHeader>
-    <AppShellSidebar variant="glass" class="no-print">
-      <BrandNav
-        :current="section"
-        :collapsed="isRail"
-        :can-toggle="isDesktop"
-        @toggle="collapsed.setValue((previous) => !previous)"
-      />
-    </AppShellSidebar>
-    <AppShellMain class="min-w-0">
-      <AppShellContent gutter="lg" :max-width="1400" class="pb-12 pt-6 xl:px-10 print:max-w-none print:p-0">
-        <div
-          v-if="brand.notice.value"
-          role="status"
-          class="no-print mb-6 flex items-start justify-between gap-4 rounded-xl border border-success/20 bg-success-soft px-5 py-4 text-sm text-success-soft-foreground"
+      <IdentityConnection />
+    </template>
+    <AppErrorBoundary>
+      <RouterView v-slot="{ Component }">
+        <component :is="Component" v-if="brand.draft.value || !needsDraft" :key="route.fullPath" />
+        <BrandQueryState v-else :state="brand.queryState.value" :kind="queryKind" />
+      </RouterView>
+      <template #fallback="{ reset }">
+        <Card
+          v-bind="{ role: 'region', 'aria-labelledby': 'page-error-heading' }"
+          radius="2xl"
+          padding="2xl"
+          class="text-center"
         >
-          <p class="leading-6">{{ brand.notice.value }}</p>
-          <Button
-            variant="ghost"
-            tone="success"
-            shape="square"
-            size="sm"
-            class="shrink-0"
-            :aria-label="t('Close')"
-            @click="brand.notice.value = null"
-          >
-            <Icon :icon="X" :size="15" />
-          </Button>
-        </div>
-        <IdentityConnection />
-        <AppErrorBoundary>
-          <RouterView v-slot="{ Component }">
-            <component :is="Component" v-if="brand.draft.value || !needsDraft" :key="route.fullPath" />
-            <BrandQueryState v-else :state="brand.queryState.value" :kind="queryKind" />
-          </RouterView>
-          <template #fallback="{ reset }">
-            <Card
-              v-bind="{ role: 'region', 'aria-labelledby': 'page-error-heading' }"
-              radius="2xl"
-              padding="2xl"
-              class="text-center"
-            >
-              <h1 id="page-error-heading" class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
-              <Button tone="primary" class="mt-5" @click="reset">{{ t('Retry') }}</Button>
-            </Card>
-          </template>
-        </AppErrorBoundary>
-      </AppShellContent>
-    </AppShellMain>
-    <PhoneNav :current="section" />
-  </AppShell>
+          <h1 id="page-error-heading" class="font-editorial text-2xl">{{ t('Could not open this page') }}</h1>
+          <Button tone="primary" class="mt-5" @click="reset">{{ t('Retry') }}</Button>
+        </Card>
+      </template>
+    </AppErrorBoundary>
+  </AppFrame>
 </template>

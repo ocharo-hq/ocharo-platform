@@ -65,12 +65,10 @@
   body {
     background: white;
   }
-  /* The frame scrolls its main region on screen; paper takes the whole document instead. */
+  /* The frame lets its own regions flow on paper; the document around it follows. */
   html,
   body,
-  #root,
-  .brand-frame,
-  .brand-frame > main {
+  #root {
     display: block !important;
     height: auto !important;
     overflow: visible !important;
