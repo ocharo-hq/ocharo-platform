@@ -18,8 +18,10 @@ Source: three read-only agents on 2026-11-10, reading each app's `bootstrap/AppL
 - ✅ The shell shipped as `AppFrame` in `@wow-two-beta/fe` `0.0.45`; every need in #1 is answered except #12, declined
   (Studio takes the frame's drawer on a phone, or keeps its menu in the bar).
 - ✅ Brand pilot 2026-11-10 (`b91f7c8`): the pattern in #6, read locally against fixture data.
-- 🔄 Catalogue, Desk, Marketing, Editorial, Studio and Assets follow the pattern; each repo's version track records its
-  release and the sizes read on dev.
+- ✅ All seven apps render through `AppFrame` on dev, 2026-11-10: bar 56px in each; sidebar 248px and rail 64px in the
+  six with a sidebar (Assets has none). Releases: platform `v0.3.10` (Brand, Catalogue, Desk), marketing `v0.1.17`
+  (Marketing, Editorial), studio `v0.1.23`, assets `v0.1.9`; each repo's version track records its readings.
+- ⬜ Open: one home for the frame pieces Ocharo still copies (#2), and the cross-app theme and language choice (#3).
 
 ## #1 What the shared shell must accept
 
