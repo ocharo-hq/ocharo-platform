@@ -15,6 +15,37 @@ Owner focus from 2026-10-24: **Events and Sourcing only**, then WoW2 File Storag
 | Sourcing: suppliers, contacts, shared media | shipped v0.1 | [sourcing.md](../../product/features/sourcing.md) |
 | Events: showcase events feed | shipped v0.1, on WoW2 Events since v0.3 | [events.md](../../product/features/events.md); served from WoW2 Events since 2026-11-10 ([events-adoption.md](../research/events-adoption.md)) |
 
+## Specced next
+
+ChatGPT builds these in the pull order of wow-two-ws `system/sessions/events-integration/tasks/tasks.md`; each row's spec is its id in the named file there. Delete a row when it ships, with any older row it covers.
+
+| Item | Type | Notes |
+|---|---|---|
+| E25 Prefer UI-locale titles and show the title language | feature | spec in `tasks-events-path.md` |
+| E05 Show cancelled, postponed and online events as such | fix | spec in `tasks-events-path.md` |
+| E09 Show sourced ticket prices and ticket links | feature | spec in `tasks-events-path.md` |
+| E10 Show start time, address and organizer link on detail | feature | spec in `tasks-events-path.md` |
+| E16 Show source attribution and listing state on cards | feature | spec in `tasks-events-path.md` |
+| E13 Stop stage changes answering 410 after SCFD revisions | fix | spec in `tasks-events-path.md` |
+| E14 Remove dead fact-edit and delete actions from the page | fix | spec in `tasks-events-path.md` |
+| E27 Pin Ocharo's mapper to SCFD-shaped Events records | engineering | spec in `tasks-events-path.md` |
+| E29 Run a local SCFD → Events → Ocharo smoke | engineering | spec in `tasks-events-path.md` |
+| E22 Filter, page and summarize in Events, not in memory | engineering | spec in `tasks-events-path.md` |
+| E24 Show error, empty and stale states with retry | fix | spec in `tasks-events-path.md` |
+| O13 Prod promotion audit for Ocharo's Events app | engineering | spec in `tasks-platform.md` |
+| O15 Ocharo prod Identity keys for Events | engineering | spec in `tasks-platform.md` |
+| O16 Promote Ocharo's Events app to prod and read back | engineering | spec in `tasks-platform.md` |
+| O01 Sourcing service and app out of Desk (R1) | engineering | spec in `tasks-platform.md` |
+| O02 Desk's Sourcing slice leaves; every app links Sourcing (R2) | engineering | spec in `tasks-platform.md` |
+| O03 Image service: background-removal relay out of Desk | engineering | spec in `tasks-platform.md` |
+| O05 Brand takes the brands list and business cards | engineering | spec in `tasks-platform.md` |
+| O06 Catalogue: release gate for the public product feed | feature | spec in `tasks-platform.md` |
+| O07 Catalogue: per-image rights approval | feature | spec in `tasks-platform.md` |
+| O08 Catalogue: who saved and who published | feature | spec in `tasks-platform.md` |
+| O09 Catalogue receives Studio's creative imports (E6) | engineering | spec in `tasks-platform.md` |
+| O12 Remove Desk; organization switch moves to the frame | engineering | spec in `tasks-platform.md` |
+| E31 Add a triage view for untracked sourced events | product | spec in `tasks-events-path.md` |
+
 ## Product and delivery
 
 | Item | Type | Notes |
