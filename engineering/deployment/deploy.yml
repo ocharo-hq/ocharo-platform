@@ -164,7 +164,7 @@ services:
   # that tag); its config check refuses an unbound one, such as a stored value of the retired
   # Identity:SignUp:IsEnabled, which the first 0.5.x deploy needs deleted from each environment.
   identity:
-    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.22
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.23
     health: /health
     memory: 256m
     needs: [postgres]
@@ -208,6 +208,10 @@ services:
         # audience is resource 5's Uri, so it is typed once; WoW2 Events' digests (client 8) are the first sender
         # (tasks-platform.md O17). /stop mutes every app's notices for a person, a bare /start lifts the mutes.
         Identity:Notices:Audience: { from: Identity:Server:Resources:5:Uri }
+        # Member list (Identity 0.5.23): GET /api/identity/v1/organizations/{orgId}/members with a client-credentials token
+        # for this audience and identity.members.read; the route is on only while the audience is set. WoW2 Events (client 8)
+        # resolves a digest recipient `role:member` through it at each run.
+        Identity:Members:Audience: { from: Identity:Server:Resources:5:Uri }
         Identity:Otp:HashKey: { secret: true, required: true, generate: { random: 32 } }
         # The app the bot's code and sign-in messages name; the image's default is "Identity".
         Identity:Otp:Messages:AppName: { default: Ocharo }
@@ -404,6 +408,7 @@ services:
         # Events:Digests:Telegram keys take this client and resource 5's Uri as their resource.
         Identity:Server:Clients:8:Resources:1: { default: identity }
         Identity:Server:Clients:8:Scopes:1: { default: identity.notices.send }
+        Identity:Server:Clients:8:Scopes:2: { default: identity.members.read }
         # Index 9 stays empty: client 9, harvest-operator, left on 2026-11-10 because no operator HTTP caller exists (SCFD
         # provisions through host verbs); Wheelhouse v0.15.1+ holds its stored secret instead of rendering it, and the
         # seeder deletes the client. Identity matches clients by ClientId, so client 10 keeps its index and typed keys.
@@ -499,6 +504,7 @@ services:
         Identity:Server:Resources:5:Name: { default: identity }
         Identity:Server:Resources:5:Uri: { type: url, required: true }
         Identity:Server:Resources:5:Scopes:0: { default: identity.notices.send }
+        Identity:Server:Resources:5:Scopes:1: { default: identity.members.read }
     sites:
       identity: { paths: [/, /api] }
   brand:

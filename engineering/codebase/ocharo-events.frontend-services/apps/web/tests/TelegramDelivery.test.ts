@@ -31,18 +31,17 @@ afterEach(() => {
 });
 
 describe('Telegram delivery defaults', () => {
-  it("starts a digest from Ocharo's weekly Monday 09:00 Tashkent default, in Uzbek, to the admin", () => {
-    expect(ocharoDigestDefaults('owner-sub')).toEqual({
+  it("starts a digest from Ocharo's weekly Monday 09:00 Tashkent default, in Uzbek, to every member", () => {
+    expect(ocharoDigestDefaults()).toEqual({
       name: 'Ocharo tadbirlari',
       enabled: true,
       channel: 'telegram',
       schedule: { days: ['monday'], times: ['09:00'], timeZone: 'Asia/Tashkent' },
       selection: { newSinceLastRun: true, startingWithinDays: 30, deadlineWithinDays: 14 },
-      recipients: [{ subject: 'owner-sub' }],
+      recipients: [{ role: 'member' }],
       language: 'uz-Latn',
       itemCap: 20,
     });
-    expect(ocharoDigestDefaults(null).recipients).toEqual([]);
     expect(OcharoEventsCatalog).toBe('ocharo-fashion');
   });
 
@@ -93,7 +92,7 @@ describe('Telegram delivery page', () => {
     expect(panel.props('linkTemplate')).toBe(`${location.origin}/organizations/${OrganizationId}/events/{id}`);
     expect(panel.props('defaults')).toMatchObject({
       schedule: { days: ['monday'], times: ['09:00'], timeZone: 'Asia/Tashkent' },
-      recipients: [{ subject: 'owner-sub' }],
+      recipients: [{ role: 'member' }],
       language: 'uz-Latn',
     });
     expect(wrapper.get('h1').text()).toBe('Telegram delivery');

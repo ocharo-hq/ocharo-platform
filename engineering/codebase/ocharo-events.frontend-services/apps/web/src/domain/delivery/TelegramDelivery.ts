@@ -33,17 +33,17 @@ export function eventLinkTemplate(origin: string, organizationId: string): strin
 
 /**
  * Ocharo's default digest (O17): weekly on Monday at 09:00 in Tashkent, new events and those starting within 30 days plus
- * deadlines within 14 days, in Uzbek. Recipients are named one by one, by their Identity `sub`, starting with the admin
- * who sets it up: Identity offers no list of an organization's members to a service, so a role reaches nobody.
+ * deadlines within 14 days, in Uzbek. Recipients default to every member of the organization (`role: member`, which
+ * Events resolves through Identity's member list at each run); a single person is still named by Identity `sub`.
  */
-export function ocharoDigestDefaults(subject: string | null | undefined): Partial<DigestSpec> {
+export function ocharoDigestDefaults(): Partial<DigestSpec> {
   return {
     name: 'Ocharo tadbirlari',
     enabled: true,
     channel: 'telegram',
     schedule: { days: ['monday'], times: ['09:00'], timeZone: 'Asia/Tashkent' },
     selection: { newSinceLastRun: true, startingWithinDays: 30, deadlineWithinDays: 14 },
-    recipients: subject ? [{ subject }] : [],
+    recipients: [{ role: 'member' }],
     language: 'uz-Latn',
     itemCap: 20,
   };

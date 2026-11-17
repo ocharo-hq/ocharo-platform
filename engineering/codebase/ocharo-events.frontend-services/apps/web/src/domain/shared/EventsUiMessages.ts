@@ -105,10 +105,10 @@ export const eventsUiMessages: UiMessageTable = {
       uz: 'Ocharo tadbirlari shu yerda ko‘rsatilgan odamlarga Ocharo Telegram boti orqali, shu yerda belgilangan jadval bo‘yicha yuboriladi. Har bir tadbir Events’dagi o‘z sahifasiga havola qiladi.',
       ru: 'Мероприятия Ocharo уходят через Telegram-бота Ocharo людям, указанным здесь, по расписанию, заданному здесь. Каждое мероприятие ссылается на свою страницу в Events.',
     },
-  'Name each recipient by their Ocharo account id, one per line; yours is filled in. Someone who has not linked Telegram to their Ocharo account shows as not_linked in the run history.':
+  'Recipients default to role:member, every member of the organization at each run; to reach one person only, type their Ocharo account id instead, one per line. Someone who has not linked Telegram to their Ocharo account shows as not_linked in the run history.':
     {
-      uz: 'Har bir qabul qiluvchini Ocharo hisobi identifikatori bilan, har birini alohida qatorda yozing; sizniki allaqachon kiritilgan. Ocharo hisobiga Telegram ulamagan kishi yuborishlar tarixida not_linked bo‘lib ko‘rinadi.',
-      ru: 'Укажите каждого получателя по идентификатору его аккаунта Ocharo, по одному в строке; ваш уже указан. Тот, кто не привязал Telegram к аккаунту Ocharo, отображается в истории отправок как not_linked.',
+      uz: 'Qabul qiluvchilar odatda role:member, ya’ni har bir ishga tushganda tashkilotning barcha a’zolari; faqat bir kishiga yuborish uchun uning Ocharo hisobi identifikatorini, har birini alohida qatorda yozing. Ocharo hisobiga Telegram ulamagan kishi yuborishlar tarixida not_linked bo‘lib ko‘rinadi.',
+      ru: 'По умолчанию получатели: role:member, то есть все участники организации при каждом запуске; чтобы написать одному человеку, укажите вместо этого идентификатор его аккаунта Ocharo, по одному в строке. Тот, кто не привязал Telegram к аккаунту Ocharo, отображается в истории отправок как not_linked.',
     },
   'Your account id: {id}': { uz: 'Hisobingiz identifikatori: {id}', ru: 'Идентификатор вашего аккаунта: {id}' },
   "Only the organization's admins set its Telegram delivery.": {

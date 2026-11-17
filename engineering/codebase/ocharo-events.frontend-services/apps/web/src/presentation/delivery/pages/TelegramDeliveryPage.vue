@@ -16,7 +16,7 @@ import { eventsPath } from '@/domain/events/Events';
 defineOptions({ name: 'TelegramDeliveryPage' });
 const props = defineProps<{ organizationId: string; subject: string | null }>();
 const { t, uiLocale } = useUiLocale();
-const { client, catalog, defaults, linkTemplate } = useTelegramDelivery(props.organizationId, () => props.subject);
+const { client, catalog, defaults, linkTemplate } = useTelegramDelivery(props.organizationId);
 const channels = [DigestChannelConstants.telegram];
 const eventsHref = computed(() => eventsPath(props.organizationId, { view: 'feed', eventId: null }));
 </script>
@@ -36,7 +36,7 @@ const eventsHref = computed(() => eventsPath(props.organizationId, { view: 'feed
       <p class="max-w-2xl text-sm text-muted-foreground" data-test="recipients-hint">
         {{
           t(
-            'Name each recipient by their Ocharo account id, one per line; yours is filled in. Someone who has not linked Telegram to their Ocharo account shows as not_linked in the run history.',
+            'Recipients default to role:member, every member of the organization at each run; to reach one person only, type their Ocharo account id instead, one per line. Someone who has not linked Telegram to their Ocharo account shows as not_linked in the run history.',
           )
         }}
       </p>
