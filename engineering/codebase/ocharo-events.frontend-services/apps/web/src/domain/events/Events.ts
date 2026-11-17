@@ -36,6 +36,14 @@ export type EventAttendance = (typeof eventAttendances)[number];
 export type DatePrecision = (typeof datePrecisions)[number];
 export type EventPriority = (typeof eventPriorities)[number];
 
+/** What the event's source says attending costs; Ocharo's own cost of taking part is the event's `cost`. */
+export interface EventTickets {
+  minPrice: number | null;
+  maxPrice: number | null;
+  currency: string | null;
+  free: boolean;
+}
+
 export interface ShowcaseEvent {
   id: string;
   key: string | null;
@@ -58,7 +66,11 @@ export interface ShowcaseEvent {
   datePrecision: DatePrecision;
   applicationDeadline: string | null;
   participation: string;
+  /** Ocharo's own cost of taking part, as the team wrote it. */
   cost: string | null;
+  /** What the source says attending costs; null when it names no price. */
+  tickets: EventTickets | null;
+  ticketUrl: string | null;
   website: string | null;
   sourceUrl: string | null;
   status: EventStatus;
@@ -70,7 +82,17 @@ export interface ShowcaseEvent {
 }
 /** The members the server derives from the event's facts, so no form edits or sends them. */
 type DerivedEventFields =
-  'id' | 'key' | 'revision' | 'createdAt' | 'updatedAt' | 'titleLanguage' | 'languages' | 'eventStatus' | 'attendance';
+  | 'id'
+  | 'key'
+  | 'revision'
+  | 'createdAt'
+  | 'updatedAt'
+  | 'titleLanguage'
+  | 'languages'
+  | 'eventStatus'
+  | 'attendance'
+  | 'tickets'
+  | 'ticketUrl';
 /** Every mutable field; the import `key` is never edited here. */
 export type EventInput = Omit<ShowcaseEvent, DerivedEventFields>;
 /** Counts may omit statuses with no events; a missing count reads as zero. */
@@ -564,6 +586,29 @@ export function eventsPath(organizationId: string, location: EventsLocation): st
 }
 export function isEventIdentifier(value: string): boolean {
   return identifier.test(value);
+}
+
+const groupDigits = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+/** "150 000" or "12.5": thousands grouped by a non-breaking space, so an amount never splits over two lines. */
+export function formatAmount(value: number): string {
+  const [whole = '', fraction] = String(value).split('.');
+  return fraction ? `${groupDigits(whole)}.${fraction}` : groupDigits(whole);
+}
+/**
+ * "from 150 000 UZS", "100 000 – 300 000 UZS", "up to 300 000 UZS", "150 000 UZS" or "Free", in the operator
+ * language; null when the source names no price.
+ */
+export function ticketPriceLabel(tickets: EventTickets, locale: UiLocale): string | null {
+  if (tickets.free) return translateUi('Free', locale);
+  const { minPrice: min, maxPrice: max } = tickets;
+  const unit = tickets.currency ? `\u00a0${tickets.currency}` : '';
+  const amount = (value: number) => `${formatAmount(value)}${unit}`;
+  if (min !== null && max !== null && min !== max)
+    return `${formatAmount(min)}\u00a0–\u00a0${formatAmount(max)}${unit}`;
+  if (min !== null && max !== null) return amount(min);
+  if (min !== null) return translateUi('from {amount}', locale, { amount: amount(min) });
+  if (max !== null) return translateUi('up to {amount}', locale, { amount: amount(max) });
+  return null;
 }
 
 /** The language's name in the operator language, falling back to its code where the browser has no name. */

@@ -44,6 +44,7 @@ public static class EventsServiceMapper
         (DateOnly? startsOn, string precision) = Start(facts.Starts);
         DateOnly? endsOn = startsOn is { } start && Date(facts.Ends) is { } end && end >= start ? end : null;
         JsonElement? fields = tracking?.Fields;
+        EventOffer? offer = TicketOffer(facts.Offers);
         (string title, string? titleLanguage) = Title(facts.Title, preferred ?? []);
         return new ShowcaseEvent(
             item.Id,
@@ -65,6 +66,8 @@ public static class EventsServiceMapper
             Date(facts.Deadlines.FirstOrDefault(IsApplication)?.At),
             Field(fields, "participation") ?? string.Empty,
             Blank(Field(fields, "cost")),
+            offer is null ? null : new ShowcaseTickets(offer.MinPrice, offer.MaxPrice, Blank(offer.Currency), offer.Free),
+            Blank(facts.TicketUrl) ?? (offer is { Kind: OfferKind.Ticket } ? Blank(offer.Url) : null),
             Blank(facts.Website),
             Blank(item.Sources.Select(source => source.Url).FirstOrDefault(url => url is not null) ?? Field(fields, "sourceUrl")),
             tracking is not null && EventValidationService.Statuses.Contains(tracking.Stage) ? tracking.Stage : UntrackedStatus,
@@ -187,6 +190,11 @@ public static class EventsServiceMapper
     private static DateOnly? Month(string? value) =>
         value is { Length: >= 7 } && DateOnly.TryParseExact(value[..7] + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture,
             DateTimeStyles.None, out var month) ? month : null;
+
+    /// <summary>Picks the offer that tells what attending costs: the first ticket offer, else the first offer; null without
+    /// offers.</summary>
+    public static EventOffer? TicketOffer(IReadOnlyList<EventOffer> offers) =>
+        offers.FirstOrDefault(offer => offer.Kind == OfferKind.Ticket) ?? offers.FirstOrDefault();
 
     /// <summary>Names whether the event still happens as listed, in the page's wire words.</summary>
     public static string EventStatusName(EventStatus status) => status switch

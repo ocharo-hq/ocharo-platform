@@ -67,6 +67,29 @@ describe('events transport', () => {
     expect(calls[0]!.init.decode({ ...wire, languages: [3] }).ok).toBe(false);
   });
 
+  it('decodes ticket prices with the members the wire leaves out, and refuses a malformed one', async () => {
+    const { client, calls } = recordingClient();
+    await createEventsApi(client).getEvent(ORG, EVENT, signal);
+    const { decode } = calls[0]!.init;
+    const value = (input: unknown) => {
+      const decoded = decode(input);
+      return decoded.ok ? decoded.value : decoded;
+    };
+    expect(value(wire)).toMatchObject({ tickets: null, ticketUrl: null });
+    expect(
+      value({
+        ...wire,
+        tickets: { minPrice: 150000, currency: 'UZS', free: false },
+        ticketUrl: 'https://t.example.test/',
+      }),
+    ).toMatchObject({
+      tickets: { minPrice: 150000, maxPrice: null, currency: 'UZS', free: false },
+      ticketUrl: 'https://t.example.test/',
+    });
+    expect(decode({ ...wire, tickets: { minPrice: '150000', free: false } }).ok).toBe(false);
+    expect(decode({ ...wire, tickets: { minPrice: 1 } }).ok).toBe(false);
+  });
+
   it('keeps the event state and attendance, and reads an unknown or missing one as the plain case', async () => {
     const { client, calls } = recordingClient();
     await createEventsApi(client).getEvent(ORG, EVENT, signal);

@@ -15,6 +15,7 @@ import {
   type EventFilter,
   type EventInput,
   type EventSummary,
+  type EventTickets,
   type ShowcaseEvent,
 } from '@/domain/events/Events';
 
@@ -25,6 +26,8 @@ const nullableStrings = (v: Record<string, unknown>, keys: string[]) =>
   keys.every((key) => v[key] === null || typeof v[key] === 'string');
 const nullableDates = (v: Record<string, unknown>, keys: string[]) =>
   keys.every((key) => v[key] === null || isIsoDate(v[key]));
+const nullableNumbers = (v: Record<string, unknown>, keys: string[]) =>
+  keys.every((key) => v[key] === null || (typeof v[key] === 'number' && Number.isFinite(v[key])));
 const count = (v: unknown) => Number.isSafeInteger(v) && Number(v) >= 0;
 const revision = (v: unknown) => Number.isSafeInteger(v) && Number(v) > 0;
 /** @internal Restores the null members the wire leaves out, then checks the result. */
@@ -41,6 +44,12 @@ const list =
   (v: unknown): v is T[] =>
     Array.isArray(v) && v.every(guard);
 
+const isTickets = (v: unknown): v is EventTickets =>
+  record(v) &&
+  nullableNumbers(v, ['minPrice', 'maxPrice']) &&
+  nullableStrings(v, ['currency']) &&
+  typeof v.free === 'boolean';
+
 export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
   record(v) &&
   strings(v, ['id', 'title', 'participation', 'notes', 'createdAt', 'updatedAt']) &&
@@ -52,9 +61,11 @@ export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
     'city',
     'venue',
     'cost',
+    'ticketUrl',
     'website',
     'sourceUrl',
   ]) &&
+  (v.tickets === null || isTickets(v.tickets)) &&
   Array.isArray(v.languages) &&
   v.languages.every((language) => typeof language === 'string') &&
   nullableDates(v, ['startsOn', 'endsOn', 'applicationDeadline']) &&
@@ -85,9 +96,13 @@ const eventNullable = [
   'endsOn',
   'applicationDeadline',
   'cost',
+  'tickets',
+  'ticketUrl',
   'website',
   'sourceUrl',
 ];
+/** @internal The ticket members the wire leaves out when null. */
+const ticketNullable = ['minPrice', 'maxPrice', 'currency'];
 /**
  * Restores what the wire leaves out and reads an unknown event state or attendance as the plain case, so a value a newer
  * service adds never fails the whole list.
@@ -97,6 +112,7 @@ function event(value: unknown): unknown {
   return record(restored)
     ? {
         ...restored,
+        tickets: withNulls(restored.tickets, ticketNullable),
         eventStatus: isEventHappening(restored.eventStatus) ? restored.eventStatus : 'scheduled',
         attendance: isEventAttendance(restored.attendance) ? restored.attendance : 'offline',
       }

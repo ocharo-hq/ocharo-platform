@@ -32,6 +32,8 @@ function showcase(overrides: Partial<ShowcaseEvent> = {}): ShowcaseEvent {
     applicationDeadline: '2026-10-10',
     participation: 'Submit a portfolio.',
     cost: 'Fee to confirm',
+    tickets: null,
+    ticketUrl: null,
     website: 'https://example.test/events',
     sourceUrl: 'https://example.test/announcement',
     status: 'shortlisted',

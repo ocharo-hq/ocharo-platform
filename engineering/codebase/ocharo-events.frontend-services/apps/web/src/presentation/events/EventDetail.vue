@@ -37,6 +37,7 @@ import {
   scopeLabels,
   statusLabels,
   statusTones,
+  ticketPriceLabel,
   type EventInput,
   type EventPriority,
   type EventStatus,
@@ -64,6 +65,10 @@ const calendarMessages = computed(() => eventCalendarUiMessages[uiLocale.value])
 const calendar = computed(() => (event.value ? createEventCalendar(event.value, uiLocale.value) : undefined));
 const website = computed(() => safeEventUrl(event.value?.website));
 const source = computed(() => safeEventUrl(event.value?.sourceUrl));
+const ticketLink = computed(() => safeEventUrl(event.value?.ticketUrl));
+const ticketPrice = computed(() =>
+  event.value?.tickets ? ticketPriceLabel(event.value.tickets, uiLocale.value) : null,
+);
 const where = computed(() =>
   event.value
     ? [event.value.venue, event.value.city, countryName(event.value.country, uiLocale.value)]
@@ -269,8 +274,26 @@ async function remove(): Promise<void> {
               <span v-else class="text-muted-foreground">{{ t('No deadline recorded') }}</span>
             </dd>
           </div>
+          <div v-if="ticketPrice || event.ticketUrl" class="min-w-0" data-test="event-tickets">
+            <dt class="text-xs text-muted-foreground">{{ t('Tickets') }}</dt>
+            <dd class="mt-1 break-words">
+              {{ ticketPrice ?? t('Price not stated') }}
+              <template v-if="event.ticketUrl">
+                ·
+                <a
+                  v-if="ticketLink"
+                  :href="ticketLink"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="break-all text-primary underline-offset-4 hover:underline"
+                  >{{ t('Ticket link') }}</a
+                >
+                <span v-else class="break-all">{{ event.ticketUrl }}</span>
+              </template>
+            </dd>
+          </div>
           <div class="min-w-0">
-            <dt class="text-xs text-muted-foreground">{{ t('Cost') }}</dt>
+            <dt class="text-xs text-muted-foreground">{{ t("Ocharo's cost") }}</dt>
             <dd class="mt-1 whitespace-pre-wrap break-words" :class="{ 'text-muted-foreground': !event.cost }">
               {{ event.cost ?? t('Cost not stated') }}
             </dd>

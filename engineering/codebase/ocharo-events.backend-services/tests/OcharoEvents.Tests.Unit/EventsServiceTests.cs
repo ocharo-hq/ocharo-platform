@@ -203,6 +203,53 @@ public sealed class EventsServiceTests
     }
 
     [Fact]
+    public void Map_ShouldShowTheSourcesTicketPriceApartFromOcharosOwnCost()
+    {
+        TrackedEventModel Tracked(EventFacts facts, TrackingModel? tracking = null) => new()
+        {
+            Event = new EventModel
+            {
+                Id = Guid.NewGuid(), Catalog = "ocharo-fashion", Facts = facts, Review = EventReviewState.Published,
+                Revision = 1, CreatedAtUtc = DateTimeOffset.UnixEpoch, UpdatedAtUtc = DateTimeOffset.UnixEpoch,
+            },
+            Tracking = tracking,
+        };
+        EventFacts facts = Facts("Ikat Week", "UZ", Day("2026-12-05"));
+        var booth = new EventOffer { Kind = OfferKind.Exhibitor, MinPrice = 900, MaxPrice = 900, Currency = "USD" };
+        var ticket = new EventOffer
+        {
+            Kind = OfferKind.Ticket, MinPrice = 150000, MaxPrice = 150000, Currency = "UZS", Url = "https://tickets.example.test/ikat",
+        };
+
+        ShowcaseEvent priced = EventsServiceMapper.ToShowcaseEvent(Tracked(facts with
+        {
+            Offers = [booth, ticket], TicketUrl = "https://tickets.example.test/week",
+        }));
+        ShowcaseEvent offerLink = EventsServiceMapper.ToShowcaseEvent(Tracked(facts with { Offers = [booth, ticket] }));
+        ShowcaseEvent free = EventsServiceMapper.ToShowcaseEvent(Tracked(facts with
+        {
+            Offers = [new EventOffer { Kind = OfferKind.Ticket, Free = true }],
+        }));
+        ShowcaseEvent onlyBooth = EventsServiceMapper.ToShowcaseEvent(Tracked(facts with { Offers = [booth] }));
+        ShowcaseEvent none = EventsServiceMapper.ToShowcaseEvent(Tracked(facts, new TrackingModel
+        {
+            Id = Guid.NewGuid(), EventId = Guid.NewGuid(), Stage = "applying", Priority = TrackingPriority.Normal, Revision = 1,
+            CreatedAtUtc = DateTimeOffset.UnixEpoch, UpdatedAtUtc = DateTimeOffset.UnixEpoch,
+            Fields = JsonSerializer.SerializeToElement(new { cost = "Stand from 500 USD" }),
+        }));
+
+        priced.Tickets.Should().Be(new ShowcaseTickets(150000, 150000, "UZS", false));
+        priced.TicketUrl.Should().Be("https://tickets.example.test/week");
+        priced.Cost.Should().BeNull();
+        offerLink.TicketUrl.Should().Be("https://tickets.example.test/ikat");
+        free.Tickets.Should().Be(new ShowcaseTickets(null, null, null, true));
+        onlyBooth.Tickets.Should().Be(new ShowcaseTickets(900, 900, "USD", false));
+        onlyBooth.TicketUrl.Should().BeNull();
+        none.Tickets.Should().BeNull();
+        none.Cost.Should().Be("Stand from 500 USD");
+    }
+
+    [Fact]
     public async Task Summary_ShouldLeaveACancelledEventsDeadlineOutOfTheUpcomingOnes()
     {
         var service = new FakeEventsService();

@@ -222,7 +222,7 @@ async function submit(): Promise<void> {
         />
       </label>
       <label class="events-field"
-        >{{ t('Cost') }}
+        >{{ t("Ocharo's cost") }}
         <input
           v-model="draft.cost"
           class="events-input"

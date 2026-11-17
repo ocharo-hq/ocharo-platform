@@ -21,6 +21,7 @@ import {
   scopeLabels,
   statusLabels,
   statusTones,
+  ticketPriceLabel,
   titleLanguageTag,
   type EventsLocation,
   type EventStatus,
@@ -37,6 +38,9 @@ const { t, uiLocale } = useUiLocale();
 const saving = ref(false);
 const href = computed(() => eventsPath(props.events.organizationId(), { view: 'event', eventId: props.event.id }));
 const place = computed(() => eventPlace(props.event, uiLocale.value));
+const ticketPrice = computed(() =>
+  props.event.tickets ? ticketPriceLabel(props.event.tickets, uiLocale.value) : null,
+);
 const titleTag = computed(() => titleLanguageTag(props.event, uiLocale.value));
 const deadlineDays = computed(() =>
   props.event.applicationDeadline ? daysUntil(props.event.applicationDeadline, props.today) : null,
@@ -110,8 +114,12 @@ async function review(status: EventStatus): Promise<void> {
           }}</span>
         </dd>
       </div>
+      <div v-if="ticketPrice" class="flex min-w-0 flex-wrap gap-x-2" data-test="event-tickets">
+        <dt class="text-muted-foreground">{{ t('Tickets') }}</dt>
+        <dd class="min-w-0 break-words">{{ ticketPrice }}</dd>
+      </div>
       <div class="flex min-w-0 flex-wrap gap-x-2">
-        <dt class="text-muted-foreground">{{ t('Cost') }}</dt>
+        <dt class="text-muted-foreground">{{ t("Ocharo's cost") }}</dt>
         <dd class="min-w-0 break-words" :class="{ 'text-muted-foreground': !event.cost }">
           {{ event.cost ?? t('Cost not stated') }}
         </dd>

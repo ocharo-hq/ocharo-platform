@@ -7,6 +7,7 @@ import {
   eventDraft,
   eventInput,
   eventsPath,
+  formatAmount,
   formatEventDates,
   groupEventsByMonth,
   localIsoDate,
@@ -14,6 +15,7 @@ import {
   readEventsAddress,
   readEventsOrganizationId,
   safeEventUrl,
+  ticketPriceLabel,
   titleLanguageTag,
   validateEventDraft,
   type ShowcaseEvent,
@@ -43,6 +45,8 @@ const showcase = (over: Partial<ShowcaseEvent> = {}): ShowcaseEvent => ({
   applicationDeadline: null,
   participation: '',
   cost: null,
+  tickets: null,
+  ticketUrl: null,
   website: null,
   sourceUrl: null,
   status: 'shortlisted',
@@ -280,5 +284,37 @@ describe('title language', () => {
     expect(titleLanguageTag({ titleLanguage: 'und' }, 'uz')).toBeNull();
     expect(titleLanguageTag({ titleLanguage: null }, 'uz')).toBeNull();
     expect(titleLanguageTag({ titleLanguage: 'ky-Cyrl' }, 'en')).toBe('KY');
+  });
+});
+
+describe('ticket prices', () => {
+  const nbsp = '\u00a0';
+  const tickets = (over: Partial<NonNullable<ShowcaseEvent['tickets']>>) => ({
+    minPrice: null,
+    maxPrice: null,
+    currency: null,
+    free: false,
+    ...over,
+  });
+
+  it('groups thousands with a non-breaking space', () => {
+    expect(formatAmount(150000)).toBe(`150${nbsp}000`);
+    expect(formatAmount(999)).toBe('999');
+    expect(formatAmount(1234567.5)).toBe(`1${nbsp}234${nbsp}567.5`);
+  });
+
+  it('words a price as exactly as the source gave it, and reads no price as null', () => {
+    const price = (over: Partial<NonNullable<ShowcaseEvent['tickets']>>, locale: 'en' | 'ru' = 'en') =>
+      ticketPriceLabel(tickets(over), locale);
+    expect(price({ minPrice: 150000, currency: 'UZS' })).toBe(`from 150${nbsp}000${nbsp}UZS`);
+    expect(price({ minPrice: 150000, maxPrice: 150000, currency: 'UZS' })).toBe(`150${nbsp}000${nbsp}UZS`);
+    expect(price({ minPrice: 100000, maxPrice: 300000, currency: 'UZS' })).toBe(
+      `100${nbsp}000${nbsp}–${nbsp}300${nbsp}000${nbsp}UZS`,
+    );
+    expect(price({ maxPrice: 300000, currency: 'UZS' })).toBe(`up to 300${nbsp}000${nbsp}UZS`);
+    expect(price({ minPrice: 20 })).toBe('from 20');
+    expect(price({ free: true })).toBe('Free');
+    expect(price({ free: true }, 'ru')).toBe('Бесплатно');
+    expect(price({})).toBeNull();
   });
 });

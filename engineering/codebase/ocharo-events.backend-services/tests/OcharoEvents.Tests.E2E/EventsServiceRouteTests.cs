@@ -129,6 +129,40 @@ public sealed class EventsServiceRouteTests
     }
 
     [Fact]
+    public async Task EventsPage_ShouldShowTicketPricesApartFromOcharosOwnCost()
+    {
+        var service = new FakeEventsService();
+        service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["und"] = "Ticketed fair" },
+            Kind = "trade-fair",
+            Offers = [new EventOffer { Kind = OfferKind.Ticket, MinPrice = 150000, MaxPrice = 150000, Currency = "UZS" }],
+            TicketUrl = "https://tickets.example.test/fair",
+            Starts = new EventWhen { Value = "2026-12-03", Precision = DatePrecision.Day },
+        });
+        service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["und"] = "Plain fair" },
+            Kind = "trade-fair",
+            Starts = new EventWhen { Value = "2026-12-05", Precision = DatePrecision.Day },
+        });
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), service);
+        using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        JsonElement[] listed = (await DataAsync(await client.GetAsync(Path))).EnumerateArray().ToArray();
+
+        JsonElement ticketed = listed.Single(item => item.GetProperty("title").GetString() == "Ticketed fair");
+        JsonElement tickets = ticketed.GetProperty("tickets");
+        tickets.GetProperty("minPrice").GetDecimal().Should().Be(150000);
+        tickets.GetProperty("currency").GetString().Should().Be("UZS");
+        tickets.GetProperty("free").GetBoolean().Should().BeFalse();
+        ticketed.GetProperty("ticketUrl").GetString().Should().Be("https://tickets.example.test/fair");
+        IsNullOrAbsent(ticketed, "cost").Should().BeTrue();
+        IsNullOrAbsent(listed.Single(item => item.GetProperty("title").GetString() == "Plain fair"), "tickets")
+            .Should().BeTrue();
+    }
+
+    [Fact]
     public async Task StageSave_ShouldReachEvents_WhenTheEventsNamesExceedDesksOwnTable()
     {
         var service = new FakeEventsService();
@@ -215,6 +249,10 @@ public sealed class EventsServiceRouteTests
 
         (await client.GetAsync(Path)).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
+
+    /// <summary>The wire leaves a null member out; either form reads as no value.</summary>
+    private static bool IsNullOrAbsent(JsonElement item, string name) =>
+        !item.TryGetProperty(name, out JsonElement value) || value.ValueKind == JsonValueKind.Null;
 
     private static object Body(JsonElement item, int expectedRevision, string? status = null, string? title = null) => new
     {

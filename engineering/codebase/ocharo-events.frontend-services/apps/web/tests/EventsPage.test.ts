@@ -51,6 +51,8 @@ const showcase = (over: Partial<ShowcaseEvent>): ShowcaseEvent => ({
   applicationDeadline: '2026-10-15',
   participation: 'Application package to the organiser',
   cost: null,
+  tickets: null,
+  ticketUrl: null,
   website: 'https://tfw.example.test/',
   sourceUrl: 'https://listings.example.test/tfw',
   status: 'candidate',
@@ -239,6 +241,31 @@ describe('events feed', () => {
     expect(card('Tashkent Fashion Week').find('[data-test="title-language"]').exists()).toBe(false);
   });
 
+  it("shows the source ticket price apart from Ocharo's own cost", async () => {
+    api.listEvents.mockResolvedValue(
+      ResultExtensions.ok([
+        showcase({ tickets: { minPrice: 150000, maxPrice: null, currency: 'UZS', free: false } }),
+        showcase({
+          id: SILK_FAIR,
+          title: 'Silk Road Trade Fair',
+          tickets: { minPrice: null, maxPrice: null, currency: null, free: true },
+        }),
+        showcase({ id: CRAFT_EXPO, title: 'Craft Expo', cost: 'Stand from 300 USD' }),
+      ]),
+    );
+    await render('editor', feed);
+    await flushPromises();
+    const week = card('Tashkent Fashion Week');
+    expect(week.get('[data-test="event-tickets"] dt').text()).toBe('Tickets');
+    expect(week.get('[data-test="event-tickets"] dd').text()).toBe('from 150\u00a0000\u00a0UZS');
+    expect(week.text()).toContain("Ocharo's cost");
+    expect(week.text()).toContain('Cost not stated');
+    expect(card('Silk Road Trade Fair').get('[data-test="event-tickets"] dd').text()).toBe('Free');
+    const expo = card('Craft Expo');
+    expect(expo.find('[data-test="event-tickets"]').exists()).toBe(false);
+    expect(expo.text()).toContain('Stand from 300 USD');
+  });
+
   it('marks a cancelled, postponed or online event as such and leaves a plain event unmarked', async () => {
     api.listEvents.mockResolvedValue(
       ResultExtensions.ok([
@@ -391,6 +418,34 @@ describe('event detail', () => {
       links.every((link) => link.attributes('target') === '_blank' && link.attributes('rel') === 'noopener noreferrer'),
     ).toBe(true);
     expect(text).toContain('javascript:alert(1)');
+  });
+
+  it('shows the ticket price and a safe ticket link', async () => {
+    api.getEvent.mockResolvedValue(
+      ResultExtensions.ok({
+        ...fashionWeek(),
+        tickets: { minPrice: 150000, maxPrice: 150000, currency: 'UZS', free: false },
+        ticketUrl: 'https://tickets.example.test/tfw',
+      }),
+    );
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    expect(detail().get('[data-test="event-tickets"]').text()).toContain('150\u00a0000\u00a0UZS');
+    expect(detail().text()).toContain("Ocharo's cost");
+    const ticket = detail()
+      .findAll('a')
+      .find((link) => link.text() === 'Ticket link');
+    expect(ticket?.attributes('href')).toBe('https://tickets.example.test/tfw');
+    expect(ticket?.attributes('target')).toBe('_blank');
+    expect(ticket?.attributes('rel')).toBe('noopener noreferrer');
+  });
+
+  it('shows an unsafe ticket address as plain text, never as a link', async () => {
+    api.getEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), ticketUrl: 'javascript:alert(1)' }));
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    expect(detail().get('[data-test="event-tickets"]').text()).toContain('javascript:alert(1)');
+    expect(detail().get('[data-test="event-tickets"]').find('a').exists()).toBe(false);
   });
 
   it('shows a cancelled online event with a struck-through title and its badges', async () => {
