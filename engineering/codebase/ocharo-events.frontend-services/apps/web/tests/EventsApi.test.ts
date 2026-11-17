@@ -51,7 +51,7 @@ describe('events transport', () => {
     await api.summary(ORG, '2026-10-08', signal);
     await api.getEvent(ORG, EVENT, signal);
     await api.createEvent(ORG, input, signal);
-    await api.updateEvent(ORG, EVENT, 1, input, signal);
+    await api.updateTracking(ORG, EVENT, 1, input, signal);
     expect(calls.map((call) => call.init.headers)).toEqual(Array(5).fill({ 'Accept-Language': 'uz' }));
 
     language = 'ru';

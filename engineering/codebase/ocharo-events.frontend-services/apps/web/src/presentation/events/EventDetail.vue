@@ -6,7 +6,7 @@ import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { Badge } from '@wow-two-beta/fe/presentation/display';
 import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
 
-import { notifyError, requestConfirmation, useErrorToast } from '@/application/common/UseFeedback';
+import { notifyError, useErrorToast } from '@/application/common/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { createEventCalendar, downloadEventCalendar } from '@/application/events/EventCalendar';
 import { failureMessage, type EventsAccess } from '@/application/events/UseEventsAccess';
@@ -38,19 +38,18 @@ import {
   statusLabels,
   statusTones,
   ticketPriceLabel,
-  type EventInput,
   type EventPriority,
   type EventStatus,
   type ShowcaseEvent,
+  type TrackingInput,
 } from '@/domain/events/Events';
 
-import EventForm from './EventForm.vue';
 import EventStateBadges from './EventStateBadges.vue';
+import EventTrackingForm from './EventTrackingForm.vue';
 
 /** One event: every recorded fact, where Ocharo stands, and the editor's controls. */
 defineOptions({ name: 'EventDetail' });
 const props = defineProps<{ access: EventsAccess; events: EventsControls; eventId: string }>();
-const emit = defineEmits<{ deleted: [id: string] }>();
 const { t, uiLocale } = useUiLocale();
 const { event, loading, error } = useShowcaseEvent(props.events, () => props.eventId);
 const today = useEventToday();
@@ -84,10 +83,10 @@ const updatedOn = computed(() => {
   return isIsoDate(day) ? formatDay(day, uiLocale.value) : (event.value?.updatedAt ?? '');
 });
 
-async function saveDetails(input: EventInput): Promise<EventSaveOutcome> {
+async function saveDetails(input: TrackingInput): Promise<EventSaveOutcome> {
   const current = editing.value;
   if (!current || !props.events.canEdit.value || props.access.busy.value) return 'failed';
-  const outcome = eventSaveOutcome(await props.events.updateEvent(current, input));
+  const outcome = eventSaveOutcome(await props.events.updateTracking(current, input));
   if (outcome === 'saved') editing.value = null;
   return outcome;
 }
@@ -131,23 +130,6 @@ async function reload(discardEdits = false): Promise<void> {
   } finally {
     reloading.value = false;
   }
-}
-async function remove(): Promise<void> {
-  const current = event.value;
-  if (!current) return;
-  if (
-    !(await requestConfirmation('Delete this event? Its status and notes are removed too. This cannot be undone.', {
-      confirmLabel: 'Delete',
-    }))
-  )
-    return;
-  const result = await props.events.deleteEvent(current);
-  if (result.ok) {
-    emit('deleted', current.id);
-    return;
-  }
-  if (result.failure.code !== 'cancelled') notifyError(failureMessage(result.failure));
-  if (result.failure.status === 409 || result.failure.status === 404) await props.events.refreshEvent(current.id);
 }
 </script>
 
@@ -237,7 +219,7 @@ async function remove(): Promise<void> {
         <p>{{ t('This record changed. Reload the latest version before trying again.') }}</p>
         <Button size="sm" variant="outline" @click="reload()">{{ t('Reload latest') }}</Button>
       </div>
-      <EventForm
+      <EventTrackingForm
         v-if="editing"
         :key="formVersion"
         :events="events"
@@ -352,9 +334,6 @@ async function remove(): Promise<void> {
           <template v-if="events.canEdit.value">
             <Button size="sm" variant="outline" :is-disabled="access.busy.value" @click="edit">{{
               t('Edit details')
-            }}</Button>
-            <Button size="sm" variant="ghost" tone="danger" :is-disabled="access.busy.value" @click="remove">{{
-              t('Delete event')
             }}</Button>
           </template>
         </div>

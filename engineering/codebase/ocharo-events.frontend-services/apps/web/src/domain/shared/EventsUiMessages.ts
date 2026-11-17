@@ -107,10 +107,9 @@ export const eventsUiMessages: UiMessageTable = {
   Priority: { uz: 'Ustuvorlik', ru: 'Приоритет' },
   'Priority: {priority}': { uz: 'Ustuvorlik: {priority}', ru: 'Приоритет: {priority}' },
   'Save event': { uz: 'Tadbirni saqlash', ru: 'Сохранить мероприятие' },
-  'Delete event': { uz: 'Tadbirni o‘chirish', ru: 'Удалить мероприятие' },
-  'Delete this event? Its status and notes are removed too. This cannot be undone.': {
-    uz: 'Bu tadbir o‘chirilsinmi? Uning holati va izohlari ham o‘chiriladi. Buni qaytarib bo‘lmaydi.',
-    ru: 'Удалить это мероприятие? Его статус и заметки тоже будут удалены. Это действие нельзя отменить.',
+  "Dates, place and organizer come from the event's source and cannot be edited here.": {
+    uz: 'Sanalar, joy va tashkilotchi tadbir manbasidan olinadi va bu yerda tahrirlanmaydi.',
+    ru: 'Даты, место и организатор берутся из источника мероприятия и здесь не редактируются.',
   },
   Dates: { uz: 'Sanalar', ru: 'Даты' },
   Where: { uz: 'Qayerda', ru: 'Где' },
@@ -162,9 +161,9 @@ export const eventsUiMessages: UiMessageTable = {
     uz: '200 belgigacha bo‘lgan nom kiriting.',
     ru: 'Введите название длиной до 200 символов.',
   },
-  'Organizer is limited to 160 characters.': {
-    uz: 'Tashkilotchi nomi 160 belgi bilan cheklangan.',
-    ru: 'Организатор — не более 160 символов.',
+  'Organizer is limited to 200 characters.': {
+    uz: 'Tashkilotchi nomi 200 belgi bilan cheklangan.',
+    ru: 'Организатор — не более 200 символов.',
   },
   'Use a two-letter country code, for example UZ or KZ.': {
     uz: 'Ikki harfli mamlakat kodidan foydalaning, masalan, UZ yoki KZ.',

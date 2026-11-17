@@ -85,7 +85,6 @@ export const isEventSummary = (v: unknown): v is EventSummary =>
   record(v.byStatus) &&
   Object.entries(v.byStatus).every(([status, value]) => isEventStatus(status) && count(value)) &&
   list(isShowcaseEvent)(v.upcomingDeadlines);
-const isDeleted = (v: unknown): v is { id: string } => record(v) && typeof v.id === 'string';
 /** @internal The event members the wire leaves out when null. */
 const eventNullable = [
   'key',
@@ -160,23 +159,12 @@ export function createEventsApi(client: ApiClient = eventsHttp, language: () => 
       client.post(base(o), { ...call(signal), body: input, decode: decode(isShowcaseEvent, event) }),
     getEvent: (o: string, eventId: string, signal: AbortSignal) =>
       client.get(`${base(o)}/${id(eventId)}`, { ...call(signal), decode: decode(isShowcaseEvent, event) }),
-    updateEvent: (o: string, eventId: string, expectedRevision: number, input: EventInput, signal: AbortSignal) =>
-      client.put(`${base(o)}/${id(eventId)}`, {
-        ...call(signal),
-        body: { expectedRevision, ...input },
-        decode: decode(isShowcaseEvent, event),
-      }),
     /** Writes only where Ocharo stands, so a revision of the event's facts after the page read never refuses it. */
     updateTracking: (o: string, eventId: string, expectedRevision: number, input: TrackingInput, signal: AbortSignal) =>
       client.put(`${base(o)}/${id(eventId)}/tracking`, {
         ...call(signal),
         body: { expectedRevision, ...input },
         decode: decode(isShowcaseEvent, event),
-      }),
-    deleteEvent: (o: string, eventId: string, expectedRevision: number, signal: AbortSignal) =>
-      client.delete(`${base(o)}/${id(eventId)}?expectedRevision=${expectedRevision}`, {
-        ...call(signal),
-        decode: decode(isDeleted),
       }),
   };
 }

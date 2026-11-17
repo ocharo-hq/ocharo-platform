@@ -20,9 +20,7 @@ const api = vi.hoisted(() => ({
   summary: vi.fn(),
   createEvent: vi.fn(),
   getEvent: vi.fn(),
-  updateEvent: vi.fn(),
   updateTracking: vi.fn(),
-  deleteEvent: vi.fn(),
 }));
 vi.mock('@/integration/events/EventsApi', () => ({ createEventsApi: () => api }));
 
@@ -170,6 +168,7 @@ const card = (title: string) => wrapper!.findAll('article.event-card').find((ite
 const buttonIn = (scope: { findAll(selector: string): DOMWrapper<Element>[] }, label: string) =>
   scope.findAll('button').find((item) => item.text() === label);
 const detail = () => wrapper!.get('article[aria-labelledby="event-detail-title"]');
+const notesField = () => detail().get('[data-test="tracking-notes"]');
 const unfiltered = { query: '', scope: '', format: '', status: '', from: '2026-10-08', limit: 200, offset: 0 };
 
 describe('events feed', () => {
@@ -339,7 +338,6 @@ describe('events feed', () => {
       { ...trackingInput(fashionWeek()), status: 'shortlisted' },
       expect.any(AbortSignal),
     );
-    expect(api.updateEvent).not.toHaveBeenCalled();
     expect(api.listEvents.mock.calls.length).toBeGreaterThan(calls);
 
     await buttonIn(card('Tashkent Fashion Week'), 'Skip')!.trigger('click');
@@ -508,7 +506,6 @@ describe('event detail', () => {
     await flushPromises();
     expect(api.updateTracking).toHaveBeenCalledTimes(2);
     expect(api.updateTracking.mock.calls[1]![3]).toMatchObject({ priority: 'low' });
-    expect(api.updateEvent).not.toHaveBeenCalled();
   });
 
   it('retains the committed status throughout a pending and rejected update', async () => {
@@ -538,50 +535,96 @@ describe('event detail', () => {
     const { access } = await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
-    const title = detail().get('form input');
-    await title.setValue('Tashkent Fashion Week 2026');
+    await notesField().setValue('Ikat coats fit day two.');
     expect(access.setDirty).toHaveBeenLastCalledWith(true);
-    api.updateEvent.mockResolvedValue(
+    api.updateTracking.mockResolvedValue(
       ResultExtensions.fail(ApiFailureFactory.create('http', { status: 409, headers: new Headers() })),
     );
     await detail().get('form').trigger('submit');
     await flushPromises();
-    expect(api.updateEvent).toHaveBeenCalledWith(
+    expect(api.updateTracking).toHaveBeenCalledWith(
       ORG,
       FASHION_WEEK,
       3,
-      expect.objectContaining({ title: 'Tashkent Fashion Week 2026', status: 'candidate' }),
+      expect.objectContaining({ notes: 'Ikat coats fit day two.', status: 'candidate' }),
       expect.any(AbortSignal),
     );
     expect(detail().text()).toContain('This record changed. Your edits are still here.');
-    expect((detail().get('form input').element as HTMLInputElement).value).toBe('Tashkent Fashion Week 2026');
+    expect((notesField().element as HTMLTextAreaElement).value).toBe('Ikat coats fit day two.');
     expect(buttonIn(detail(), 'Discard my edits and reload')).toBeDefined();
     expect(access.dirty.value).toBe(true);
   });
 
-  it('rejects an end date before the start date without sending', async () => {
+  it('saves the tracking fields of an existing event and closes the form', async () => {
     await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
-    const [, end] = detail().findAll('input[type="date"]');
-    await end!.setValue('2026-10-10');
+    await chooseEventsValue(wrapper!.findComponent({ name: 'EventDetail' }), 'Status', 'applying');
+    await detail().get('[data-test="tracking-cost"]').setValue(' Stand from 500 USD ');
+    await notesField().setValue('Book a stand.');
+    api.updateTracking.mockResolvedValue(
+      ResultExtensions.ok({ ...fashionWeek(), status: 'applying', cost: 'Stand from 500 USD', revision: 4 }),
+    );
     await detail().get('form').trigger('submit');
     await flushPromises();
-    expect(detail().text()).toContain('The end date cannot be before the start date.');
-    expect(api.updateEvent).not.toHaveBeenCalled();
+    expect(api.updateTracking).toHaveBeenCalledWith(
+      ORG,
+      FASHION_WEEK,
+      3,
+      {
+        status: 'applying',
+        priority: 'high',
+        participation: fashionWeek().participation,
+        cost: 'Stand from 500 USD',
+        notes: 'Book a stand.',
+      },
+      expect.any(AbortSignal),
+    );
+    expect(detail().find('form').exists()).toBe(false);
   });
 
-  it('deletes only after confirmation and returns to the feed', async () => {
+  it('rejects an end date before the start date in a new event without sending', async () => {
+    await render('editor', feed);
+    await flushPromises();
+    await buttonIn(wrapper!, 'Add event')!.trigger('click');
+    const form = wrapper!.get('section[aria-label="New event"] form');
+    await form.get('input').setValue('Bukhara Crafts Market');
+    const [start, end] = form.findAll('input[type="date"]');
+    await start!.setValue('2026-12-05');
+    await end!.setValue('2026-12-01');
+    await form.trigger('submit');
+    await flushPromises();
+    expect(form.text()).toContain('The end date cannot be before the start date.');
+    expect(api.createEvent).not.toHaveBeenCalled();
+  });
+
+  it('offers no delete action, and no title, date or place field, for an existing event', async () => {
     await render('editor', { view: 'event', eventId: SILK_FAIR });
     await flushPromises();
-    api.deleteEvent.mockResolvedValue(ResultExtensions.ok({ id: SILK_FAIR }));
-    await buttonIn(detail(), 'Delete event')!.trigger('click');
-    await flushPromises();
-    expect(api.deleteEvent).not.toHaveBeenCalled();
-    resolveConfirmation(true);
-    await flushPromises();
-    expect(api.deleteEvent).toHaveBeenCalledWith(ORG, SILK_FAIR, 1, expect.any(AbortSignal));
-    expect(window.location.pathname).toBe(`/organizations/${ORG}/events`);
+    expect(buttonIn(detail(), 'Delete event')).toBeUndefined();
+    expect(wrapper!.text()).not.toContain('Delete event');
+    await buttonIn(detail(), 'Edit details')!.trigger('click');
+    const form = detail().get('form');
+    expect(form.findAll('input[type="date"], input[type="month"]')).toHaveLength(0);
+    for (const label of [
+      'Event title',
+      'Organizer',
+      'Scope',
+      'Format',
+      'Country code',
+      'City',
+      'Venue',
+      'Date precision',
+      'Start date',
+      'End date',
+      'Application deadline',
+      'Website',
+      'Where it was found',
+    ])
+      expect(form.text()).not.toContain(label);
+    for (const label of ['Status', 'Priority', "Ocharo's cost", 'How to take part', 'Notes'])
+      expect(form.text()).toContain(label);
+    expect(form.text()).toContain("Dates, place and organizer come from the event's source and cannot be edited here.");
   });
 });
 
@@ -651,23 +694,23 @@ describe('event review safety', () => {
     await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
-    await detail().get('form input').setValue('My draft title');
+    await notesField().setValue('My draft note');
     api.getEvent.mockResolvedValue(
       ResultExtensions.ok(showcase({ revision: 4, title: 'Another editor title', notes: 'New note' })),
     );
     await buttonIn(wrapper!, 'Refresh')!.trigger('click');
     await flushPromises();
-    expect((detail().get('form input').element as HTMLInputElement).value).toBe('My draft title');
-    api.updateEvent.mockResolvedValue(
+    expect((notesField().element as HTMLTextAreaElement).value).toBe('My draft note');
+    api.updateTracking.mockResolvedValue(
       ResultExtensions.fail(ApiFailureFactory.create('http', { status: 409, headers: new Headers() })),
     );
     await detail().get('form').trigger('submit');
     await flushPromises();
-    expect(api.updateEvent).toHaveBeenLastCalledWith(
+    expect(api.updateTracking).toHaveBeenLastCalledWith(
       ORG,
       FASHION_WEEK,
       3,
-      expect.objectContaining({ title: 'My draft title', notes: fashionWeek().notes }),
+      expect.objectContaining({ notes: 'My draft note', participation: fashionWeek().participation }),
       expect.any(AbortSignal),
     );
     expect(detail().text()).toContain('This record changed. Your edits are still here.');
@@ -677,8 +720,8 @@ describe('event review safety', () => {
     const { access } = await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
-    await detail().get('form input').setValue('Keep this draft');
-    api.updateEvent.mockResolvedValue(
+    await notesField().setValue('Keep this draft');
+    api.updateTracking.mockResolvedValue(
       ResultExtensions.fail(ApiFailureFactory.create('http', { status: 409, headers: new Headers() })),
     );
     await detail().get('form').trigger('submit');
@@ -688,22 +731,22 @@ describe('event review safety', () => {
     );
     await buttonIn(detail(), 'Discard my edits and reload')!.trigger('click');
     await flushPromises();
-    expect((detail().get('form input').element as HTMLInputElement).value).toBe('Keep this draft');
+    expect((notesField().element as HTMLTextAreaElement).value).toBe('Keep this draft');
     expect(access.dirty.value).toBe(true);
     expect(buttonIn(detail(), 'Discard my edits and reload')).toBeDefined();
-    api.getEvent.mockResolvedValue(ResultExtensions.ok(showcase({ revision: 4, title: 'Latest confirmed title' })));
+    api.getEvent.mockResolvedValue(ResultExtensions.ok(showcase({ revision: 4, notes: 'Latest confirmed note' })));
     await buttonIn(detail(), 'Discard my edits and reload')!.trigger('click');
     await flushPromises();
-    expect((detail().get('form input').element as HTMLInputElement).value).toBe('Latest confirmed title');
+    expect((notesField().element as HTMLTextAreaElement).value).toBe('Latest confirmed note');
     expect(access.dirty.value).toBe(false);
-    await detail().get('form input').setValue('Edited after reload');
+    await notesField().setValue('Edited after reload');
     await detail().get('form').trigger('submit');
     await flushPromises();
-    expect(api.updateEvent).toHaveBeenLastCalledWith(
+    expect(api.updateTracking).toHaveBeenLastCalledWith(
       ORG,
       FASHION_WEEK,
       4,
-      expect.objectContaining({ title: 'Edited after reload' }),
+      expect.objectContaining({ notes: 'Edited after reload' }),
       expect.any(AbortSignal),
     );
   });
@@ -712,12 +755,12 @@ describe('event review safety', () => {
     const { access } = await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
     await buttonIn(detail(), 'Edit details')!.trigger('click');
-    await detail().get('form input').setValue('Pending edit');
+    await notesField().setValue('Pending edit');
     access.busy.value = true;
     await flushPromises();
     await detail().get('form').trigger('submit');
     await flushPromises();
-    expect(api.updateEvent).not.toHaveBeenCalled();
+    expect(api.updateTracking).not.toHaveBeenCalled();
     expect(access.dirty.value).toBe(true);
   });
 
@@ -789,10 +832,13 @@ describe('event feed day and empty states', () => {
 
 describe('event date precision editing', () => {
   it('carries edited months and days across precision changes without restoring stale hidden dates', async () => {
-    await render('editor', { view: 'event', eventId: FASHION_WEEK });
+    await render('editor', feed);
     await flushPromises();
-    await buttonIn(detail(), 'Edit details')!.trigger('click');
-    const form = detail().get('form');
+    await buttonIn(wrapper!, 'Add event')!.trigger('click');
+    const form = wrapper!.get('section[aria-label="New event"] form');
+    await form.get('input').setValue('Bukhara Crafts Market');
+    await form.findAll('input[type="date"]')[0]!.setValue('2026-10-12');
+    await form.findAll('input[type="date"]')[1]!.setValue('2026-10-14');
     await chooseEventsValue(wrapper!, 'Date precision', 'month');
     expect((form.findAll('input[type="month"]')[0]!.element as HTMLInputElement).value).toBe('2026-10');
     await form.findAll('input[type="month"]')[0]!.setValue('2026-11');
@@ -819,13 +865,13 @@ describe('event date precision editing', () => {
         .slice(0, 2)
         .map((input) => (input.element as HTMLInputElement).value),
     ).toEqual(['2026-12-17', '2026-12-19']);
-    api.updateEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), revision: 4 }));
+    api.createEvent.mockResolvedValue(
+      ResultExtensions.ok(showcase({ id: NEW_EVENT, title: 'Bukhara Crafts Market', status: 'shortlisted' })),
+    );
     await form.trigger('submit');
     await flushPromises();
-    expect(api.updateEvent).toHaveBeenLastCalledWith(
+    expect(api.createEvent).toHaveBeenLastCalledWith(
       ORG,
-      FASHION_WEEK,
-      3,
       expect.objectContaining({ startsOn: '2026-12-17', endsOn: '2026-12-19', datePrecision: 'day' }),
       expect.any(AbortSignal),
     );

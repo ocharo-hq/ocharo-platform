@@ -21,26 +21,26 @@ import {
   validateEventDraft,
   type DatePrecision,
   type EventInput,
-  type ShowcaseEvent,
 } from '@/domain/events/Events';
 
-/** Creates or edits every field of an event, mirroring the contract's validation before sending. */
+/**
+ * Proposes a new event, a member's proposal: every fact and where Ocharo stands, mirroring the contract's validation
+ * before sending. An existing event's facts are never edited here; see `EventTrackingForm`.
+ */
 defineOptions({ name: 'EventForm' });
 const props = defineProps<{
   events: EventsControls;
   dirtyKey: string;
-  initial?: ShowcaseEvent | null | undefined;
   disabled: boolean;
   submitLabel: string;
   save: (input: EventInput) => Promise<EventSaveOutcome>;
 }>();
-const emit = defineEmits<{ cancel: []; reload: [] }>();
+const emit = defineEmits<{ cancel: [] }>();
 const { t } = useUiLocale();
-const draft = reactive(eventDraft(props.initial));
-const original = JSON.stringify(eventDraft(props.initial));
+const draft = reactive(eventDraft());
+const original = JSON.stringify(eventDraft());
 const errors = ref<string[]>([]);
 const saving = ref(false);
-const conflict = ref(false);
 const dirty = computed(() => JSON.stringify(draft) !== original);
 watch(dirty, (value) => props.events.setFormDirty(props.dirtyKey, value), { immediate: true });
 onScopeDispose(() => props.events.setFormDirty(props.dirtyKey, false));
@@ -75,13 +75,12 @@ watch(
 
 async function submit(): Promise<void> {
   if (props.disabled || saving.value || !props.events.canEdit.value) return;
-  const { input, problems } = validateEventDraft(draft, props.initial);
+  const { input, problems } = validateEventDraft(draft);
   errors.value = problems;
   if (!input) return;
   saving.value = true;
   try {
     const outcome = await props.save(input);
-    conflict.value = outcome === 'conflict';
     if (outcome === 'saved') props.events.setFormDirty(props.dirtyKey, false);
   } finally {
     saving.value = false;
@@ -266,12 +265,6 @@ async function submit(): Promise<void> {
         }}</span>
       </label>
     </fieldset>
-    <div v-if="conflict" role="alert" class="events-alert space-y-2">
-      <p>{{ t('This record changed. Your edits are still here. Reload the latest version before trying again.') }}</p>
-      <Button size="sm" variant="outline" :is-disabled="saving" @click="emit('reload')">{{
-        t('Discard my edits and reload')
-      }}</Button>
-    </div>
     <ul v-if="errors.length" role="alert" class="space-y-1">
       <li v-for="error in errors" :key="error" class="form-error">{{ t(error) }}</li>
     </ul>

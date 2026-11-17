@@ -20,6 +20,7 @@ import {
   type EventsLocation,
   type EventStatus,
   type ShowcaseEvent,
+  type TrackingInput,
 } from '@/domain/events/Events';
 import { createEventsApi } from '@/integration/events/EventsApi';
 
@@ -122,6 +123,8 @@ export function useEvents(access: EventsAccess, workspace: EventsWorkspace) {
     return result;
   }
   const o = organizationId;
+  const updateTracking = (event: ShowcaseEvent, input: TrackingInput, signal?: AbortSignal) =>
+    run((s) => api.updateTracking(o(), event.id, event.revision, input, s), signal);
 
   return {
     api,
@@ -133,11 +136,9 @@ export function useEvents(access: EventsAccess, workspace: EventsWorkspace) {
     setFormDirty,
     refreshAll,
     refreshEvent: (id: string) => cache.invalidate(keys.event(id)),
-    /** Drops a deleted event from the cache once its page has closed. */
-    forgetEvent: (id: string) => cache.remove(keys.event(id)),
     createEvent: (input: EventInput, signal?: AbortSignal) => run((s) => api.createEvent(o(), input, s), signal),
-    updateEvent: (event: ShowcaseEvent, input: EventInput, signal?: AbortSignal) =>
-      run((s) => api.updateEvent(o(), event.id, event.revision, input, s), signal),
+    /** Writes where Ocharo stands with an existing event; its facts change only through review in WoW2 Events. */
+    updateTracking,
     /**
      * Changes only the stage or priority, sending Ocharo's other tracking fields back as they were read. It rides the
      * tracking route, which never compares the event's facts, so a revision of them after the page read cannot refuse it.
@@ -146,18 +147,7 @@ export function useEvents(access: EventsAccess, workspace: EventsWorkspace) {
       event: ShowcaseEvent,
       changes: { status?: EventStatus; priority?: EventPriority },
       signal?: AbortSignal,
-    ) =>
-      run((s) => api.updateTracking(o(), event.id, event.revision, { ...trackingInput(event), ...changes }, s), signal),
-    /** Reloads the feed and summary but not the deleted event, which would only answer 404. */
-    async deleteEvent(event: ShowcaseEvent, signal?: AbortSignal) {
-      const result = await access.write((s) => api.deleteEvent(o(), event.id, event.revision, s), signal);
-      if (result.ok)
-        await refreshViews([
-          [...scope(), 'list'],
-          [...scope(), 'summary'],
-        ]);
-      return result;
-    },
+    ) => updateTracking(event, { ...trackingInput(event), ...changes }, signal),
   };
 }
 export type EventsControls = ReturnType<typeof useEvents>;

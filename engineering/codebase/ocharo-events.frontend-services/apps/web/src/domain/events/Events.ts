@@ -117,8 +117,8 @@ export interface EventFilter {
 export const eventLimits = {
   query: 120,
   title: 200,
-  organizer: 160,
-  city: 120,
+  organizer: 200,
+  city: 200,
   venue: 200,
   participation: 2000,
   cost: 500,
@@ -403,30 +403,6 @@ export function trackingInput(event: ShowcaseEvent): TrackingInput {
     notes: event.notes,
   };
 }
-/** The fields an edit or a quick status change sends back unchanged. */
-export function eventInput(event: ShowcaseEvent): EventInput {
-  return {
-    title: event.title,
-    organizer: event.organizer,
-    scope: event.scope,
-    format: event.format,
-    country: event.country,
-    city: event.city,
-    venue: event.venue,
-    startsOn: event.startsOn,
-    endsOn: event.endsOn,
-    datePrecision: event.datePrecision,
-    applicationDeadline: event.applicationDeadline,
-    participation: event.participation,
-    cost: event.cost,
-    website: event.website,
-    sourceUrl: event.sourceUrl,
-    status: event.status,
-    priority: event.priority,
-    notes: event.notes,
-  };
-}
-
 /** The draft an event form edits: plain strings, with month pickers as `YYYY-MM`. */
 export interface EventDraft {
   title: string;
@@ -450,30 +426,47 @@ export interface EventDraft {
   priority: EventPriority;
   notes: string;
 }
-export function eventDraft(event?: ShowcaseEvent | null): EventDraft {
-  const precision = event?.datePrecision ?? 'day';
-  const monthly = precision === 'month' || precision === 'estimated';
+/** The blank draft of a new event, a member's proposal: shortlisted at normal priority. */
+export function eventDraft(): EventDraft {
   return {
-    title: event?.title ?? '',
-    organizer: event?.organizer ?? '',
-    scope: event?.scope ?? 'local',
-    format: event?.format ?? 'exhibition',
-    country: event?.country ?? '',
-    city: event?.city ?? '',
-    venue: event?.venue ?? '',
-    datePrecision: precision,
-    startDay: !monthly ? (event?.startsOn ?? '') : '',
-    endDay: !monthly ? (event?.endsOn ?? '') : '',
-    startMonth: monthly ? (event?.startsOn?.slice(0, 7) ?? '') : '',
-    endMonth: monthly ? (event?.endsOn?.slice(0, 7) ?? '') : '',
-    applicationDeadline: event?.applicationDeadline ?? '',
-    participation: event?.participation ?? '',
-    cost: event?.cost ?? '',
-    website: event?.website ?? '',
-    sourceUrl: event?.sourceUrl ?? '',
-    status: event?.status ?? 'shortlisted',
-    priority: event?.priority ?? 'normal',
-    notes: event?.notes ?? '',
+    title: '',
+    organizer: '',
+    scope: 'local',
+    format: 'exhibition',
+    country: '',
+    city: '',
+    venue: '',
+    datePrecision: 'day',
+    startDay: '',
+    endDay: '',
+    startMonth: '',
+    endMonth: '',
+    applicationDeadline: '',
+    participation: '',
+    cost: '',
+    website: '',
+    sourceUrl: '',
+    status: 'shortlisted',
+    priority: 'normal',
+    notes: '',
+  };
+}
+
+/** The draft the tracking form edits: where Ocharo stands with an existing event, never the event's facts. */
+export interface TrackingDraft {
+  status: EventStatus;
+  priority: EventPriority;
+  participation: string;
+  cost: string;
+  notes: string;
+}
+export function trackingDraft(event: ShowcaseEvent): TrackingDraft {
+  return {
+    status: event.status,
+    priority: event.priority,
+    participation: event.participation,
+    cost: event.cost ?? '',
+    notes: event.notes,
   };
 }
 const monthPattern = /^\d{4}-\d{2}$/;
@@ -484,23 +477,19 @@ const lastDayOfMonth = (month: string) => {
 const inRange = (date: string) => date >= eventLimits.minDate && date <= eventLimits.maxDate;
 
 /**
- * Mirrors the contract's validation; returns English messages for `t()`, or the input to send.
- * Month pickers store the 1st as the start and the last day of the end month as the end; an end
- * the operator did not move keeps its stored day.
+ * Mirrors the contract's validation of a new event; returns English messages for `t()`, or the input to send.
+ * Month pickers store the 1st as the start and the last day of the end month as the end.
  */
-export function validateEventDraft(
-  draft: EventDraft,
-  previous?: Pick<ShowcaseEvent, 'endsOn'> | null,
-): { input: EventInput | null; problems: string[] } {
+export function validateEventDraft(draft: EventDraft): { input: EventInput | null; problems: string[] } {
   const problems: string[] = [];
   const title = draft.title.trim();
   const country = draft.country.trim().toUpperCase();
   const website = draft.website.trim();
   const sourceUrl = draft.sourceUrl.trim();
   if (!title || title.length > eventLimits.title) problems.push('Enter a title of up to 200 characters.');
-  if (draft.organizer.trim().length > eventLimits.organizer) problems.push('Organizer is limited to 160 characters.');
+  if (draft.organizer.trim().length > eventLimits.organizer) problems.push('Organizer is limited to 200 characters.');
   if (country && !/^[A-Z]{2}$/.test(country)) problems.push('Use a two-letter country code, for example UZ or KZ.');
-  if (draft.city.trim().length > eventLimits.city) problems.push('City is limited to 120 characters.');
+  if (draft.city.trim().length > eventLimits.city) problems.push('City is limited to 200 characters.');
   if (draft.venue.trim().length > eventLimits.venue) problems.push('Venue is limited to 200 characters.');
 
   let startsOn: string | null = null;
@@ -523,12 +512,7 @@ export function validateEventDraft(
     else startsOn = `${startMonth}-01`;
     if (endMonth && (!monthPattern.test(endMonth) || !isIsoDate(`${endMonth}-01`)))
       problems.push('Dates must be between 2000-01-01 and 2100-12-31.');
-    else if (endMonth)
-      endsOn = previous?.endsOn?.startsWith(endMonth)
-        ? previous.endsOn
-        : endMonth === startMonth
-          ? null
-          : lastDayOfMonth(endMonth);
+    else if (endMonth) endsOn = endMonth === startMonth ? null : lastDayOfMonth(endMonth);
     if ((startsOn && !inRange(startsOn)) || (endsOn && !inRange(endsOn)))
       problems.push('Dates must be between 2000-01-01 and 2100-12-31.');
   }
@@ -567,6 +551,26 @@ export function validateEventDraft(
       sourceUrl: sourceUrl || null,
       status: draft.status,
       priority: draft.priority,
+      notes: draft.notes.trim(),
+    },
+  };
+}
+
+/** Mirrors the contract's validation of Ocharo's tracking fields; returns English messages for `t()`, or the input to send. */
+export function validateTrackingDraft(draft: TrackingDraft): { input: TrackingInput | null; problems: string[] } {
+  const problems: string[] = [];
+  if (draft.participation.length > eventLimits.participation)
+    problems.push('How to take part is limited to 2000 characters.');
+  if (draft.cost.trim().length > eventLimits.cost) problems.push('Cost is limited to 500 characters.');
+  if (draft.notes.length > eventLimits.notes) problems.push('Notes are limited to 8000 characters.');
+  if (problems.length) return { input: null, problems };
+  return {
+    problems: [],
+    input: {
+      status: draft.status,
+      priority: draft.priority,
+      participation: draft.participation.trim(),
+      cost: optionalEventText(draft.cost),
       notes: draft.notes.trim(),
     },
   };

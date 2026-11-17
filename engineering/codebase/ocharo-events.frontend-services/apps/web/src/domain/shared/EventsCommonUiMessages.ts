@@ -76,9 +76,9 @@ export const eventsCommonUiMessages: UiMessageTable = {
   Confirmed: { uz: 'Tasdiqlangan', ru: 'Подтверждено' },
 
   // Form checks the events domain raises.
-  'City is limited to 120 characters.': {
-    uz: 'Shahar nomi 120 belgi bilan cheklangan.',
-    ru: 'Название города ограничено 120 символами.',
+  'City is limited to 200 characters.': {
+    uz: 'Shahar nomi 200 belgi bilan cheklangan.',
+    ru: 'Название города ограничено 200 символами.',
   },
   'Enter the website as a full http:// or https:// address.': {
     uz: 'Veb-saytni to‘liq http:// yoki https:// manzil sifatida kiriting.',

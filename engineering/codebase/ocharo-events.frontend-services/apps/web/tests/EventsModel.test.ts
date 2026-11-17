@@ -5,7 +5,7 @@ import {
   daysUntil,
   deadlineTone,
   eventDraft,
-  eventInput,
+  eventLimits,
   eventsPath,
   formatAmount,
   formatEventDates,
@@ -17,7 +17,10 @@ import {
   safeEventUrl,
   ticketPriceLabel,
   titleLanguageTag,
+  trackingDraft,
+  trackingInput,
   validateEventDraft,
+  validateTrackingDraft,
   type ShowcaseEvent,
 } from '@/domain/events/Events';
 import { eventListQuery, isEventSummary, isShowcaseEvent } from '@/integration/events/EventsApi';
@@ -247,19 +250,46 @@ describe('event form validation', () => {
     );
   });
 
-  it('round-trips an existing event without changing any field', () => {
+  it('mirrors the server limits for names and places, and the contract for the other text', () => {
+    const draft = { ...eventDraft(), title: 'Expo', startDay: '2026-10-14' };
+    expect(validateEventDraft({ ...draft, organizer: 'o'.repeat(200), city: 'c'.repeat(200) }).problems).toEqual([]);
+    expect(validateEventDraft({ ...draft, organizer: 'o'.repeat(201) }).problems).toContain(
+      'Organizer is limited to 200 characters.',
+    );
+    expect(validateEventDraft({ ...draft, city: 'c'.repeat(201) }).problems).toContain(
+      'City is limited to 200 characters.',
+    );
+    expect(eventLimits).toMatchObject({ organizer: 200, city: 200, venue: 200, title: 200 });
+  });
+
+  it('round-trips the tracking of an existing event without changing any field', () => {
     for (const event of [
-      showcase({
-        cost: '300 USD',
-        website: 'https://tfw.example.test/',
-        participation: 'Application package',
-        notes: 'Fit',
-      }),
-      showcase({ datePrecision: 'month', startsOn: '2026-11-01', endsOn: '2026-12-01' }),
+      showcase({ cost: '300 USD', participation: 'Application package', notes: 'Fit', priority: 'high' }),
+      showcase({ status: 'applying', cost: null }),
       showcase({ datePrecision: 'unknown', startsOn: null, endsOn: null, applicationDeadline: '2026-10-20' }),
     ]) {
-      expect(validateEventDraft(eventDraft(event), event).input).toEqual(eventInput(event));
+      expect(validateTrackingDraft(trackingDraft(event)).input).toEqual(trackingInput(event));
     }
+  });
+
+  it('checks the tracking text limits and trims what it sends', () => {
+    const draft = trackingDraft(showcase());
+    expect(validateTrackingDraft({ ...draft, participation: 'p'.repeat(2001) }).problems).toEqual([
+      'How to take part is limited to 2000 characters.',
+    ]);
+    expect(validateTrackingDraft({ ...draft, cost: 'c'.repeat(501) }).problems).toEqual([
+      'Cost is limited to 500 characters.',
+    ]);
+    expect(validateTrackingDraft({ ...draft, notes: 'n'.repeat(8001) }).problems).toEqual([
+      'Notes are limited to 8000 characters.',
+    ]);
+    expect(validateTrackingDraft({ ...draft, cost: '  ', notes: ' Fit ', participation: ' Booth ' }).input).toEqual({
+      status: 'shortlisted',
+      priority: 'normal',
+      participation: 'Booth',
+      cost: null,
+      notes: 'Fit',
+    });
   });
 });
 

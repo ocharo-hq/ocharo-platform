@@ -27,10 +27,6 @@ const showsFeed = computed(() => current.value.view !== 'event' || !current.valu
 function open(location: EventsLocation): void {
   void navigation.open(location);
 }
-async function deleted(id: string): Promise<void> {
-  await navigation.open(feed);
-  events.forgetEvent(id);
-}
 </script>
 
 <template>
@@ -57,13 +53,7 @@ async function deleted(id: string): Promise<void> {
       >
         ← {{ t('All events') }}
       </button>
-      <EventDetail
-        :key="current.eventId"
-        :access="access"
-        :events="events"
-        :event-id="current.eventId"
-        @deleted="deleted"
-      />
+      <EventDetail :key="current.eventId" :access="access" :events="events" :event-id="current.eventId" />
     </div>
   </section>
 </template>
