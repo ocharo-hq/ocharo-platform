@@ -210,6 +210,35 @@ public sealed class EventsServiceRouteTests
     }
 
     [Fact]
+    public async Task EventsPage_ShouldShowTheStartTimeZoneAddressAndOrganizerSite()
+    {
+        var service = new FakeEventsService();
+        service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["ru-Cyrl"] = "Jazz evening" },
+            Kind = "other",
+            Organizer = new EventOrganizer { Name = "Jazz Club", Website = "https://jazz.example.test/" },
+            Place = new EventPlace { Venue = "Ilkhom Theatre", Address = "Pakhtakor street 5", City = "Tashkent", Country = "UZ" },
+            Starts = new EventWhen { Value = "2026-12-05T19:00", Precision = DatePrecision.Minute },
+            TimeZone = "Asia/Tashkent",
+        });
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), service);
+        using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        JsonElement listed = (await DataAsync(await client.GetAsync(Path))).EnumerateArray().Single();
+        JsonElement read = await DataAsync(await client.GetAsync($"{Path}/{listed.GetProperty("id").GetGuid()}"));
+
+        foreach (JsonElement item in new[] { listed, read })
+        {
+            item.GetProperty("startsOn").GetString().Should().Be("2026-12-05");
+            item.GetProperty("startsAt").GetString().Should().Be("19:00");
+            item.GetProperty("timeZone").GetString().Should().Be("Asia/Tashkent");
+            item.GetProperty("address").GetString().Should().Be("Pakhtakor street 5");
+            item.GetProperty("organizerWebsite").GetString().Should().Be("https://jazz.example.test/");
+        }
+    }
+
+    [Fact]
     public async Task StageSave_ShouldReachEvents_WhenTheEventsNamesExceedDesksOwnTable()
     {
         var service = new FakeEventsService();

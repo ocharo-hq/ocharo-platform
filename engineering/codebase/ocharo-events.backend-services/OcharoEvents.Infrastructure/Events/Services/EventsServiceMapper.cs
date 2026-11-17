@@ -53,6 +53,7 @@ public static class EventsServiceMapper
             titleLanguage,
             facts.Languages.Where(language => !string.IsNullOrWhiteSpace(language)).ToList(),
             Blank(facts.Organizer?.Name),
+            Blank(facts.Organizer?.Website),
             Scope(facts.Place?.Country),
             EventValidationService.Formats.Contains(facts.Kind) ? facts.Kind : "other",
             EventStatusName(facts.Status),
@@ -60,9 +61,12 @@ public static class EventsServiceMapper
             Blank(facts.Place?.Country),
             Blank(facts.Place?.City),
             Blank(facts.Place?.Venue),
+            Blank(facts.Place?.Address),
             startsOn,
             endsOn,
             precision,
+            startsOn is null ? null : StartTime(facts.Starts),
+            Blank(facts.TimeZone),
             Date(facts.Deadlines.FirstOrDefault(IsApplication)?.At),
             Field(fields, "participation") ?? string.Empty,
             Blank(Field(fields, "cost")),
@@ -177,6 +181,13 @@ public static class EventsServiceMapper
         DatePrecision.Month => (Month(when.Value), when.Certainty == DateCertainty.Estimated ? "estimated" : "month"),
         _ => (null, "unknown"),
     } is ({ } date, var precision) ? (date, precision) : (null, "unknown");
+
+    /// <summary>Reads the local start time (<c>HH:mm</c>) of a start announced to the minute; null for any coarser start.</summary>
+    public static string? StartTime(EventWhen when) =>
+        when.Precision == DatePrecision.Minute && when.Value is { Length: >= 16 } value && value[10] is 'T' or ' '
+            && TimeOnly.TryParseExact(value[11..16], "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)
+            ? time.ToString("HH:mm", CultureInfo.InvariantCulture)
+            : null;
 
     private static DateOnly? Date(EventWhen? when) => when?.Precision switch
     {

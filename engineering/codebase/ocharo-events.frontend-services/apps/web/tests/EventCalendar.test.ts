@@ -33,6 +33,10 @@ function showcase(overrides: Partial<ShowcaseEvent> = {}): ShowcaseEvent {
     participation: 'Submit a portfolio.',
     cost: 'Fee to confirm',
     tickets: null,
+    organizerWebsite: null,
+    address: null,
+    startsAt: null,
+    timeZone: null,
     ticketUrl: null,
     website: 'https://example.test/events',
     sourceUrl: 'https://example.test/announcement',
@@ -75,6 +79,32 @@ describe('event calendar export', () => {
     expect(content.match(/TRANSP:TRANSPARENT/g)).toHaveLength(2);
     expect(content).toMatch(/^BEGIN:VCALENDAR\r\nVERSION:2.0\r\n/);
     expect(content).toMatch(/END:VCALENDAR\r\n$/);
+  });
+
+  it("exports a timed start in the event's zone when the source gave a start time", () => {
+    // The golden Afisha jazz evening: 2026-12-05T19:00 in Asia/Tashkent.
+    const jazz = showcase({
+      startsOn: '2026-12-05',
+      endsOn: null,
+      startsAt: '19:00',
+      timeZone: 'Asia/Tashkent',
+      address: 'Pakhtakor street 5',
+      applicationDeadline: null,
+    });
+    const content = calendarFor(jazz);
+    expect(content).toContain('DTSTART;TZID=Asia/Tashkent:20261205T190000');
+    expect(content).not.toContain('DTEND');
+    expect(content).toContain(
+      'BEGIN:VTIMEZONE\r\nTZID:Asia/Tashkent\r\nBEGIN:STANDARD\r\nDTSTART:19700101T000000\r\nTZOFFSETFROM:+0500\r\nTZOFFSETTO:+0500',
+    );
+    expect(content.indexOf('END:VTIMEZONE')).toBeLessThan(content.indexOf('BEGIN:VEVENT'));
+    expect(content).toContain('LOCATION:Expo Hall\\, Pakhtakor street 5\\, Tashkent\\, Uzbekistan');
+    const days = calendarFor({ ...jazz, endsOn: '2026-12-07' });
+    expect(days).toContain('DTSTART;TZID=Asia/Tashkent:20261205T190000\r\nDTEND;TZID=Asia/Tashkent:20261208T000000');
+    const floating = calendarFor({ ...jazz, timeZone: null });
+    expect(floating).toContain('DTSTART:20261205T190000');
+    expect(floating).not.toContain('TZID');
+    expect(calendarFor({ ...jazz, timeZone: 'Not/AZone' })).toContain('DTSTART:20261205T190000');
   });
 
   it.each([

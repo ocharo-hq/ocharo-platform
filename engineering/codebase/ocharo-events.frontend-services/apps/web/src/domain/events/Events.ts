@@ -53,6 +53,8 @@ export interface ShowcaseEvent {
   /** The languages the source wrote the event in. */
   languages: string[];
   organizer: string | null;
+  /** The organizer's own website, as the source names it. */
+  organizerWebsite: string | null;
   scope: EventScope;
   format: EventFormat;
   /** Whether the event still happens as listed; the wire name is `eventStatus`, since `status` is Ocharo's stage. */
@@ -61,9 +63,15 @@ export interface ShowcaseEvent {
   country: string | null;
   city: string | null;
   venue: string | null;
+  /** The venue's street address. */
+  address: string | null;
   startsOn: string | null;
   endsOn: string | null;
   datePrecision: DatePrecision;
+  /** The local start time (`HH:mm`) when the source announced one; null for a start known to the day or coarser. */
+  startsAt: string | null;
+  /** The IANA time zone of `startsAt` (`Asia/Tashkent`); null when the source named none. */
+  timeZone: string | null;
   applicationDeadline: string | null;
   participation: string;
   /** Ocharo's own cost of taking part, as the team wrote it. */
@@ -96,7 +104,11 @@ type DerivedEventFields =
   | 'eventStatus'
   | 'attendance'
   | 'tickets'
-  | 'ticketUrl';
+  | 'ticketUrl'
+  | 'organizerWebsite'
+  | 'address'
+  | 'startsAt'
+  | 'timeZone';
 /** Every mutable field; the import `key` is never edited here. */
 export type EventInput = Omit<ShowcaseEvent, DerivedEventFields>;
 /** Counts may omit statuses with no events; a missing count reads as zero. */
@@ -327,10 +339,101 @@ export function monthHeading(month: string, locale: UiLocale): string {
   return `${monthNames[locale].long[value.month]} ${value.year}`;
 }
 
-/** Renders the dates exactly as precisely as they were announced. */
-export function formatEventDates(
-  event: Pick<ShowcaseEvent, 'startsOn' | 'endsOn' | 'datePrecision'>,
+const localTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+/** A local wall-clock time written as `HH:mm`. */
+export function isLocalTime(value: unknown): value is string {
+  return typeof value === 'string' && localTimePattern.test(value);
+}
+/** The browser's own IANA time zone; undefined where it names none. */
+export function browserTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+}
+/** Minutes the zone runs ahead of UTC at the instant; null for a zone the browser does not know. */
+export function zoneOffsetMinutes(zone: string, instant: number): number | null {
+  try {
+    const fields = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(new Date(instant));
+    const field = (type: Intl.DateTimeFormatPartTypes) => Number(fields.find((item) => item.type === type)?.value);
+    const wall = Date.UTC(
+      field('year'),
+      field('month') - 1,
+      field('day'),
+      field('hour'),
+      field('minute'),
+      field('second'),
+    );
+    const offset = Math.round((wall - Math.floor(instant / 1000) * 1000) / 60_000);
+    return Number.isFinite(offset) ? offset : null;
+  } catch {
+    return null;
+  }
+}
+/** The UTC instant of a local date (`YYYY-MM-DD`) and time (`HH:mm`) in the zone; null for a zone the browser does not know. */
+export function zonedInstant(date: string, time: string, zone: string): number | null {
+  const wall = Date.UTC(
+    Number(date.slice(0, 4)),
+    Number(date.slice(5, 7)) - 1,
+    Number(date.slice(8, 10)),
+    Number(time.slice(0, 2)),
+    Number(time.slice(3, 5)),
+  );
+  const first = zoneOffsetMinutes(zone, wall);
+  if (first === null) return null;
+  const second = zoneOffsetMinutes(zone, wall - first * 60_000);
+  return second === null ? null : wall - second * 60_000;
+}
+/** The zone's short name at the instant ("GMT+5"), in the operator language. */
+function zoneShortName(zone: string, instant: number, locale: UiLocale): string | null {
+  try {
+    return (
+      new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: 'short' })
+        .formatToParts(new Date(instant))
+        .find((part) => part.type === 'timeZoneName')?.value ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+/**
+ * "19:00" for an event that starts at a known time, with the zone's short name ("19:00 GMT+5") when its zone runs at
+ * another offset than the viewer's at that moment; null without a start time.
+ */
+export function formatStartTime(
+  event: Pick<ShowcaseEvent, 'startsOn'> & Partial<Pick<ShowcaseEvent, 'startsAt' | 'timeZone'>>,
   locale: UiLocale,
+  viewerZone: string | undefined = browserTimeZone(),
+): string | null {
+  if (!event.startsOn || !isIsoDate(event.startsOn) || !isLocalTime(event.startsAt)) return null;
+  const zone = event.timeZone;
+  const instant = zone ? zonedInstant(event.startsOn, event.startsAt, zone) : null;
+  if (!zone || instant === null) return event.startsAt;
+  const viewer = viewerZone ? zoneOffsetMinutes(viewerZone, instant) : null;
+  if (viewer === zoneOffsetMinutes(zone, instant)) return event.startsAt;
+  const name = zoneShortName(zone, instant, locale);
+  return name ? `${event.startsAt} ${name}` : event.startsAt;
+}
+
+/**
+ * Renders the dates exactly as precisely as they were announced; an exact date the source gave a start time for adds it
+ * ("5 Dec 2026, 19:00"), with the zone's short name when it is not the viewer's (`viewerZone`, the browser's by default).
+ */
+export function formatEventDates(
+  event: Pick<ShowcaseEvent, 'startsOn' | 'endsOn' | 'datePrecision'> &
+    Partial<Pick<ShowcaseEvent, 'startsAt' | 'timeZone'>>,
+  locale: UiLocale,
+  viewerZone: string | undefined = browserTimeZone(),
 ): string {
   if (event.datePrecision === 'unknown' || !event.startsOn) return translateUi('Dates not announced', locale);
   const names = monthNames[locale];
@@ -339,11 +442,13 @@ export function formatEventDates(
   const sameYear = end?.year === start.year;
   const sameMonth = sameYear && end?.month === start.month;
   if (event.datePrecision === 'day') {
-    if (!end || (sameMonth && end.day === start.day)) return formatDay(event.startsOn, locale);
-    if (sameMonth) return `${start.day}–${end.day} ${names.short[start.month]} ${start.year}`;
+    const time = formatStartTime(event, locale, viewerZone);
+    const timed = (dates: string) => (time ? `${dates}, ${time}` : dates);
+    if (!end || (sameMonth && end.day === start.day)) return timed(formatDay(event.startsOn, locale));
+    if (sameMonth) return timed(`${start.day}–${end.day} ${names.short[start.month]} ${start.year}`);
     if (sameYear)
-      return `${start.day} ${names.short[start.month]} – ${end.day} ${names.short[end.month]} ${start.year}`;
-    return `${formatDay(event.startsOn, locale)} – ${formatDay(event.endsOn!, locale)}`;
+      return timed(`${start.day} ${names.short[start.month]} – ${end.day} ${names.short[end.month]} ${start.year}`);
+    return timed(`${formatDay(event.startsOn, locale)} – ${formatDay(event.endsOn!, locale)}`);
   }
   const month = (value: DateParts) => `${names.standalone[value.month]} ${value.year}`;
   const span =

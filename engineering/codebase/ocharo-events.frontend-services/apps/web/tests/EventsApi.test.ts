@@ -110,6 +110,33 @@ describe('events transport', () => {
     expect(decode({ ...wire, tickets: { minPrice: 1 } }).ok).toBe(false);
   });
 
+  it('decodes the start time, zone, address and organizer site, and reads a malformed time as none', async () => {
+    const { client, calls } = recordingClient();
+    await createEventsApi(client).getEvent(ORG, EVENT, signal);
+    const { decode } = calls[0]!.init;
+    const value = (input: unknown) => {
+      const decoded = decode(input);
+      return decoded.ok ? decoded.value : decoded;
+    };
+    expect(value(wire)).toMatchObject({ startsAt: null, timeZone: null, address: null, organizerWebsite: null });
+    expect(
+      value({
+        ...wire,
+        startsAt: '19:00',
+        timeZone: 'Asia/Tashkent',
+        address: 'Pakhtakor street 5',
+        organizerWebsite: 'https://jazz.example.test/',
+      }),
+    ).toMatchObject({
+      startsAt: '19:00',
+      timeZone: 'Asia/Tashkent',
+      address: 'Pakhtakor street 5',
+      organizerWebsite: 'https://jazz.example.test/',
+    });
+    expect(value({ ...wire, startsAt: '7pm' })).toMatchObject({ startsAt: null });
+    expect(decode({ ...wire, address: 5 }).ok).toBe(false);
+  });
+
   it('keeps the event state and attendance, and reads an unknown or missing one as the plain case', async () => {
     const { client, calls } = recordingClient();
     await createEventsApi(client).getEvent(ORG, EVENT, signal);

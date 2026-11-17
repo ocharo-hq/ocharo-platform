@@ -2,7 +2,15 @@ import { downloadText } from '@wow-two-beta/fe/foundation/files';
 
 import { eventCalendarUiMessages } from '@/domain/shared/EventCalendarUiMessages';
 import type { UiLocale } from '@/domain/shared/UiMessages';
-import { countryName, isIsoDate, safeEventUrl, type ShowcaseEvent } from '@/domain/events/Events';
+import {
+  countryName,
+  isIsoDate,
+  isLocalTime,
+  safeEventUrl,
+  zonedInstant,
+  zoneOffsetMinutes,
+  type ShowcaseEvent,
+} from '@/domain/events/Events';
 
 /** A local calendar file containing only independently known exact dates. */
 export interface EventCalendar {
@@ -54,7 +62,56 @@ function calendarTimestamp(date: Date): string {
     .replace(/\.\d{3}Z$/, 'Z');
 }
 
-/** Creates independent all-day entries for the occurrence and application deadline, when exact. */
+/** Formats a local RFC 5545 date-time, `20261205T190000`. @internal */
+function localDateTime(day: string, time: string): string {
+  return `${day.replace(/-/g, '')}T${time.replace(':', '')}00`;
+}
+
+/** Formats a UTC offset as RFC 5545 writes it, `+0500`. @internal */
+function calendarOffset(minutes: number): string {
+  const sign = minutes < 0 ? '-' : '+';
+  const value = Math.abs(minutes);
+  return `${sign}${String(Math.floor(value / 60)).padStart(2, '0')}${String(value % 60).padStart(2, '0')}`;
+}
+
+/**
+ * The occurrence's start and end lines: all-day dates, or, when the source gave a start time, a timed start in the
+ * event's zone (`DTSTART;TZID=Asia/Tashkent:20261205T190000`, with that zone's offset at the start as its `VTIMEZONE`),
+ * or floating local time without a zone; a timed event of several days ends as its last day does. @internal
+ */
+function occurrenceTimes(event: ShowcaseEvent, startsOn: string): { lines: string[]; zone: string[] } {
+  const endsOn = event.endsOn ?? startsOn;
+  if (!isLocalTime(event.startsAt))
+    return {
+      lines: [`DTSTART;VALUE=DATE:${startsOn.replace(/-/g, '')}`, `DTEND;VALUE=DATE:${exclusiveEnd(endsOn)}`],
+      zone: [],
+    };
+  const instant = event.timeZone ? zonedInstant(startsOn, event.startsAt, event.timeZone) : null;
+  const offset = event.timeZone && instant !== null ? zoneOffsetMinutes(event.timeZone, instant) : null;
+  const zone = offset === null ? null : event.timeZone;
+  const property = (name: string) => (zone ? `${name};TZID=${zone}` : name);
+  const lines = [`${property('DTSTART')}:${localDateTime(startsOn, event.startsAt)}`];
+  if (endsOn > startsOn) lines.push(`${property('DTEND')}:${exclusiveEnd(endsOn)}T000000`);
+  if (!zone || offset === null) return { lines, zone: [] };
+  return {
+    lines,
+    zone: [
+      'BEGIN:VTIMEZONE',
+      `TZID:${zone}`,
+      'BEGIN:STANDARD',
+      'DTSTART:19700101T000000',
+      `TZOFFSETFROM:${calendarOffset(offset)}`,
+      `TZOFFSETTO:${calendarOffset(offset)}`,
+      'END:STANDARD',
+      'END:VTIMEZONE',
+    ],
+  };
+}
+
+/**
+ * Creates independent entries for the occurrence and application deadline, when exact: all-day, except an occurrence the
+ * source gave a start time for, which starts at that time in its zone.
+ */
 export function createEventCalendar(
   event: ShowcaseEvent,
   locale: UiLocale,
@@ -79,7 +136,9 @@ export function createEventCalendar(
   ]
     .filter(Boolean)
     .join('\n\n');
-  const location = [event.venue, event.city, countryName(event.country, locale)].filter(Boolean).join(', ');
+  const location = [event.venue, event.address, event.city, countryName(event.country, locale)]
+    .filter(Boolean)
+    .join(', ');
   const updated = new Date(event.updatedAt);
   const metadata = [
     `DTSTAMP:${calendarTimestamp(now)}`,
@@ -90,12 +149,13 @@ export function createEventCalendar(
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Ocharo//Ocharo Events//EN', 'CALSCALE:GREGORIAN'];
 
   if (hasOccurrence && event.startsOn) {
+    const times = occurrenceTimes(event, event.startsOn);
     lines.push(
+      ...times.zone,
       'BEGIN:VEVENT',
       `UID:${calendarText(`event-${event.id}-occurrence@ocharo.local`)}`,
       ...metadata,
-      `DTSTART;VALUE=DATE:${event.startsOn.replace(/-/g, '')}`,
-      `DTEND;VALUE=DATE:${exclusiveEnd(event.endsOn ?? event.startsOn)}`,
+      ...times.lines,
       `SUMMARY:${calendarText(event.title)}`,
       ...(location ? [`LOCATION:${calendarText(location)}`] : []),
       ...(description ? [`DESCRIPTION:${calendarText(description)}`] : []),

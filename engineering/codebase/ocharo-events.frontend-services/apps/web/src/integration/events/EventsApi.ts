@@ -12,6 +12,7 @@ import {
   isEventScope,
   isEventStatus,
   isIsoDate,
+  isLocalTime,
   type EventFilter,
   type EventInput,
   type EventSummary,
@@ -58,14 +59,18 @@ export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
     'key',
     'titleLanguage',
     'organizer',
+    'organizerWebsite',
     'country',
     'city',
     'venue',
+    'address',
+    'timeZone',
     'cost',
     'ticketUrl',
     'website',
     'sourceUrl',
   ]) &&
+  (v.startsAt === null || isLocalTime(v.startsAt)) &&
   (v.tickets === null || isTickets(v.tickets)) &&
   Array.isArray(v.languages) &&
   v.languages.every((language) => typeof language === 'string') &&
@@ -90,11 +95,15 @@ const eventNullable = [
   'key',
   'titleLanguage',
   'organizer',
+  'organizerWebsite',
   'country',
   'city',
   'venue',
+  'address',
   'startsOn',
   'endsOn',
+  'startsAt',
+  'timeZone',
   'applicationDeadline',
   'cost',
   'tickets',
@@ -105,8 +114,8 @@ const eventNullable = [
 /** @internal The ticket members the wire leaves out when null. */
 const ticketNullable = ['minPrice', 'maxPrice', 'currency'];
 /**
- * Restores what the wire leaves out and reads an unknown event state or attendance as the plain case, so a value a newer
- * service adds never fails the whole list.
+ * Restores what the wire leaves out and reads an unknown event state or attendance as the plain case, and a malformed
+ * start time as none, so a value a newer service adds never fails the whole list.
  */
 function event(value: unknown): unknown {
   const restored = withArrays(withNulls(value, eventNullable), ['languages']);
@@ -116,6 +125,7 @@ function event(value: unknown): unknown {
         tickets: withNulls(restored.tickets, ticketNullable),
         eventStatus: isEventHappening(restored.eventStatus) ? restored.eventStatus : 'scheduled',
         attendance: isEventAttendance(restored.attendance) ? restored.attendance : 'offline',
+        startsAt: isLocalTime(restored.startsAt) ? restored.startsAt : null,
       }
     : restored;
 }

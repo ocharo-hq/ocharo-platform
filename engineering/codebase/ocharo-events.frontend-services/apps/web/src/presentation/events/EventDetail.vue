@@ -63,6 +63,7 @@ const fieldSaving = ref(false);
 const calendarMessages = computed(() => eventCalendarUiMessages[uiLocale.value]);
 const calendar = computed(() => (event.value ? createEventCalendar(event.value, uiLocale.value) : undefined));
 const website = computed(() => safeEventUrl(event.value?.website));
+const organizerSite = computed(() => safeEventUrl(event.value?.organizerWebsite));
 const source = computed(() => safeEventUrl(event.value?.sourceUrl));
 const ticketLink = computed(() => safeEventUrl(event.value?.ticketUrl));
 const ticketPrice = computed(() =>
@@ -173,7 +174,17 @@ async function reload(discardEdits = false): Promise<void> {
           >
             {{ event.title }}
           </h2>
-          <p v-if="event.organizer" class="break-words text-sm text-muted-foreground">{{ event.organizer }}</p>
+          <p v-if="event.organizer" class="break-words text-sm text-muted-foreground" data-test="event-organizer">
+            <a
+              v-if="organizerSite"
+              :href="organizerSite"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary underline-offset-4 hover:underline"
+              >{{ event.organizer }}</a
+            >
+            <template v-else>{{ event.organizer }}</template>
+          </p>
           <p class="text-sm font-medium">{{ formatEventDates(event, uiLocale) }}</p>
         </div>
         <div v-if="events.canEdit.value && !editing" class="flex flex-wrap items-center gap-3">
@@ -243,6 +254,9 @@ async function reload(discardEdits = false): Promise<void> {
           <div class="min-w-0">
             <dt class="text-xs text-muted-foreground">{{ t('Where') }}</dt>
             <dd class="mt-1 break-words">{{ where || '—' }}</dd>
+            <dd v-if="event.address" class="break-words text-muted-foreground" data-test="event-address">
+              {{ event.address }}
+            </dd>
           </div>
           <div>
             <dt class="text-xs text-muted-foreground">{{ t('Application deadline') }}</dt>

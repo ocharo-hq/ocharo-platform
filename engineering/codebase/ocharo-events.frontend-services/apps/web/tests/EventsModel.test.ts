@@ -9,6 +9,7 @@ import {
   eventsPath,
   formatAmount,
   formatEventDates,
+  formatStartTime,
   groupEventsByMonth,
   localIsoDate,
   monthHeading,
@@ -49,6 +50,10 @@ const showcase = (over: Partial<ShowcaseEvent> = {}): ShowcaseEvent => ({
   participation: '',
   cost: null,
   tickets: null,
+  organizerWebsite: null,
+  address: null,
+  startsAt: null,
+  timeZone: null,
   ticketUrl: null,
   website: null,
   sourceUrl: null,
@@ -120,6 +125,27 @@ describe('event date ranges', () => {
     );
     expect(formatEventDates(showcase({ datePrecision: 'unknown', startsOn: null, endsOn: null }), 'en')).toBe(
       'Dates not announced',
+    );
+  });
+
+  it("adds the start time the source announced, with its zone only where it is not the viewer's", () => {
+    // The golden Afisha jazz evening, as Events serves it since E08: 2026-12-05T19:00 in Asia/Tashkent.
+    const jazz = showcase({
+      startsOn: '2026-12-05',
+      endsOn: null,
+      startsAt: '19:00',
+      timeZone: 'Asia/Tashkent',
+    });
+    expect(formatEventDates(jazz, 'en', 'Asia/Tashkent')).toBe('5 Dec 2026, 19:00');
+    expect(formatEventDates(jazz, 'en', 'Asia/Samarkand')).toBe('5 Dec 2026, 19:00');
+    expect(formatEventDates(jazz, 'en', 'Europe/Berlin')).toBe('5 Dec 2026, 19:00 GMT+5');
+    expect(formatEventDates({ ...jazz, timeZone: null }, 'en', 'Europe/Berlin')).toBe('5 Dec 2026, 19:00');
+    expect(formatEventDates({ ...jazz, timeZone: 'Not/AZone' }, 'en', 'Europe/Berlin')).toBe('5 Dec 2026, 19:00');
+    expect(formatEventDates({ ...jazz, endsOn: '2026-12-07' }, 'ru', 'Asia/Tashkent')).toBe('5–7 дек. 2026, 19:00');
+    expect(formatEventDates({ ...jazz, startsAt: null }, 'en', 'Asia/Tashkent')).toBe('5 Dec 2026');
+    expect(formatStartTime({ ...jazz, startsAt: '25:00' }, 'en', 'Asia/Tashkent')).toBeNull();
+    expect(formatEventDates({ ...jazz, datePrecision: 'month', startsOn: '2026-12-01' }, 'en', 'Europe/Berlin')).toBe(
+      'Dec 2026',
     );
   });
 

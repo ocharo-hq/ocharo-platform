@@ -51,6 +51,10 @@ const showcase = (over: Partial<ShowcaseEvent>): ShowcaseEvent => ({
   participation: 'Application package to the organiser',
   cost: null,
   tickets: null,
+  organizerWebsite: null,
+  address: null,
+  startsAt: null,
+  timeZone: null,
   ticketUrl: null,
   website: 'https://tfw.example.test/',
   sourceUrl: 'https://listings.example.test/tfw',
@@ -454,6 +458,36 @@ describe('event detail', () => {
     expect(ticket?.attributes('href')).toBe('https://tickets.example.test/tfw');
     expect(ticket?.attributes('target')).toBe('_blank');
     expect(ticket?.attributes('rel')).toBe('noopener noreferrer');
+  });
+
+  it('shows the start time, the address under the venue and the organizer linked to its site', async () => {
+    api.getEvent.mockResolvedValue(
+      ResultExtensions.ok({
+        ...fashionWeek(),
+        endsOn: null,
+        startsAt: '19:00',
+        timeZone: null,
+        address: 'Pakhtakor street 5',
+        organizerWebsite: 'https://council.example.test/',
+      }),
+    );
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    expect(detail().text()).toContain('12 Oct 2026, 19:00');
+    expect(detail().get('[data-test="event-address"]').text()).toBe('Pakhtakor street 5');
+    const organizer = detail().get('[data-test="event-organizer"] a');
+    expect(organizer.text()).toBe('Fashion Council');
+    expect(organizer.attributes('href')).toBe('https://council.example.test/');
+    expect(organizer.attributes('rel')).toBe('noopener noreferrer');
+  });
+
+  it('shows an unsafe organizer site as the plain organizer name', async () => {
+    api.getEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), organizerWebsite: 'javascript:alert(1)' }));
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    expect(detail().get('[data-test="event-organizer"]').text()).toBe('Fashion Council');
+    expect(detail().get('[data-test="event-organizer"]').find('a').exists()).toBe(false);
+    expect(detail().find('[data-test="event-address"]').exists()).toBe(false);
   });
 
   it('shows an unsafe ticket address as plain text, never as a link', async () => {

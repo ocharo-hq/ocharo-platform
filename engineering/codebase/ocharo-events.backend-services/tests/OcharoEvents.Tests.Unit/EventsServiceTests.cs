@@ -253,6 +253,46 @@ public sealed class EventsServiceTests
     }
 
     [Fact]
+    public void Map_ShouldShowTheStartTimeZoneAddressAndOrganizerSite_OfAMinuteStart()
+    {
+        TrackedEventModel Tracked(EventFacts facts) => new()
+        {
+            Event = new EventModel
+            {
+                Id = Guid.NewGuid(), Catalog = "ocharo-fashion", Facts = facts, Review = EventReviewState.Published,
+                Revision = 1, CreatedAtUtc = DateTimeOffset.UnixEpoch, UpdatedAtUtc = DateTimeOffset.UnixEpoch,
+            },
+        };
+        // The golden Afisha jazz evening: SCFD's `2026-12-05T19:00:00+05:00` arrives as a local minute in Asia/Tashkent (E08).
+        EventFacts jazz = Facts("Jazz evening", "UZ", new EventWhen { Value = "2026-12-05T19:00", Precision = DatePrecision.Minute }) with
+        {
+            TimeZone = "Asia/Tashkent",
+            Place = new EventPlace { Venue = "Ilkhom Theatre", Address = "Pakhtakor street 5", City = "Tashkent", Country = "UZ" },
+            Organizer = new EventOrganizer { Name = "Jazz Club", Website = "https://jazz.example.test/" },
+        };
+
+        ShowcaseEvent timed = EventsServiceMapper.ToShowcaseEvent(Tracked(jazz));
+        ShowcaseEvent dayOnly = EventsServiceMapper.ToShowcaseEvent(Tracked(jazz with
+        {
+            Starts = Day("2026-12-05"), TimeZone = null, Place = null, Organizer = new EventOrganizer { Name = "Jazz Club" },
+        }));
+
+        timed.StartsOn.Should().Be(new DateOnly(2026, 12, 5));
+        timed.DatePrecision.Should().Be("day");
+        timed.StartsAt.Should().Be("19:00");
+        timed.TimeZone.Should().Be("Asia/Tashkent");
+        timed.Address.Should().Be("Pakhtakor street 5");
+        timed.Venue.Should().Be("Ilkhom Theatre");
+        timed.OrganizerWebsite.Should().Be("https://jazz.example.test/");
+        dayOnly.StartsAt.Should().BeNull();
+        dayOnly.TimeZone.Should().BeNull();
+        dayOnly.Address.Should().BeNull();
+        dayOnly.OrganizerWebsite.Should().BeNull();
+        EventsServiceMapper.StartTime(new EventWhen { Value = "2026-12", Precision = DatePrecision.Month }).Should().BeNull();
+        EventsServiceMapper.StartTime(new EventWhen { Value = "2026-12-05T25:00", Precision = DatePrecision.Minute }).Should().BeNull();
+    }
+
+    [Fact]
     public async Task Summary_ShouldLeaveACancelledEventsDeadlineOutOfTheUpcomingOnes()
     {
         var service = new FakeEventsService();

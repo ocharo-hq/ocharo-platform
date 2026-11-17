@@ -12,3 +12,5 @@ under as `titleLanguage` and the source's `languages`.
 Events' event status and attendance ride as `eventStatus` and `attendance`, apart from Ocharo's own stage `status`; a
 cancelled event's application deadline is not an upcoming one in the summary.
 What the source says attending costs rides as `tickets` and `ticketUrl`; `cost` stays Ocharo's own cost of taking part.
+A start announced to the minute rides as `startsAt` (local `HH:mm`) beside `startsOn`, with the source's IANA `timeZone`;
+the venue's street address rides as `address` and the organizer's site as `organizerWebsite`.
