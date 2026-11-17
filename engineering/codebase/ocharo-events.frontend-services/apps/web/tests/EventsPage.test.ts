@@ -35,6 +35,8 @@ const showcase = (over: Partial<ShowcaseEvent>): ShowcaseEvent => ({
   id: FASHION_WEEK,
   key: 'tfw-2026',
   title: 'Tashkent Fashion Week',
+  titleLanguage: null,
+  languages: [],
   organizer: 'Fashion Council',
   scope: 'local',
   format: 'runway',
@@ -215,6 +217,24 @@ describe('events feed', () => {
     ]);
     // Events records decisions only: nothing offers to apply, register, send or pay.
     expect(wrapper!.findAll('button').some((item) => /apply|register|send|pay/i.test(item.text()))).toBe(false);
+  });
+
+  it('tags a title written in another language than the interface and reloads the feed when the language changes', async () => {
+    api.listEvents.mockResolvedValue(
+      ResultExtensions.ok([showcase({ titleLanguage: 'ru-Cyrl', languages: ['ru-Cyrl'] }), silkFair()]),
+    );
+    await render('editor', feed);
+    await flushPromises();
+    const tag = card('Tashkent Fashion Week').get('[data-test="title-language"]');
+    expect(tag.text()).toBe('RU');
+    expect(tag.attributes('title')).toContain('Title language');
+    expect(card('Silk Road Trade Fair').find('[data-test="title-language"]').exists()).toBe(false);
+
+    const calls = api.listEvents.mock.calls.length;
+    useUiLocale().setUiLocale('ru');
+    await flushPromises();
+    expect(api.listEvents.mock.calls.length).toBeGreaterThan(calls);
+    expect(card('Tashkent Fashion Week').find('[data-test="title-language"]').exists()).toBe(false);
   });
 
   it('turns every filter into query parameters and drops from=today when past events are shown', async () => {

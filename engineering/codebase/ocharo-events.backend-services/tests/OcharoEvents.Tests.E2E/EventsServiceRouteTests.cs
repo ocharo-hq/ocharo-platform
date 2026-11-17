@@ -66,6 +66,38 @@ public sealed class EventsServiceRouteTests
     }
 
     [Fact]
+    public async Task EventsPage_ShouldShowTheTitleInTheLanguageTheRequestAsksFor()
+    {
+        var service = new FakeEventsService();
+        EventModel sourced = service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["ru-Cyrl"] = "Неделя моды", ["uz-Latn"] = "Moda haftaligi" },
+            Languages = ["ru-Cyrl"],
+            Kind = "runway",
+            Place = new EventPlace { City = "Tashkent", Country = "UZ" },
+            Starts = new EventWhen { Value = "2026-12-03", Precision = DatePrecision.Day },
+        });
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), service);
+        using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Owner);
+
+        async Task<JsonElement> ReadAsync(string url, string? language)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            if (language is not null) request.Headers.TryAddWithoutValidation("Accept-Language", language);
+            return await DataAsync(await client.SendAsync(request));
+        }
+
+        JsonElement uz = (await ReadAsync(Path, "uz,ru;q=0.5")).EnumerateArray().Single();
+        JsonElement ru = await ReadAsync($"{Path}/{sourced.Id}", "ru");
+
+        uz.GetProperty("title").GetString().Should().Be("Moda haftaligi");
+        uz.GetProperty("titleLanguage").GetString().Should().Be("uz-Latn");
+        uz.GetProperty("languages").EnumerateArray().Select(language => language.GetString()).Should().Equal("ru-Cyrl");
+        ru.GetProperty("title").GetString().Should().Be("Неделя моды");
+        ru.GetProperty("titleLanguage").GetString().Should().Be("ru-Cyrl");
+    }
+
+    [Fact]
     public async Task StageSave_ShouldReachEvents_WhenTheEventsNamesExceedDesksOwnTable()
     {
         var service = new FakeEventsService();

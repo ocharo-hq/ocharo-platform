@@ -73,6 +73,7 @@ export const eventsUiMessages: UiMessageTable = {
   // Cards and review
   'New — review': { uz: 'Yangi — ko‘rib chiqing', ru: 'Новое — на рассмотрение' },
   'High priority': { uz: 'Yuqori ustuvorlik', ru: 'Высокий приоритет' },
+  'Title language: {language}': { uz: 'Nom tili: {language}', ru: 'Язык названия: {language}' },
   'Cost not stated': { uz: 'Narx ko‘rsatilmagan', ru: 'Стоимость не указана' },
   Shortlist: { uz: 'Saralanganlarga qo‘shish', ru: 'В шорт-лист' },
   Skip: { uz: 'O‘tkazib yuborish', ru: 'Пропустить' },

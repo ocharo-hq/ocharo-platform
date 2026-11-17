@@ -1,6 +1,8 @@
 using System.Text.Json;
 using OcharoEvents.Application.Access.Models;
+using OcharoEvents.Api.Events;
 using OcharoEvents.Application.Events.Models;
+using OcharoEvents.Application.Events.Services;
 using OcharoEvents.Domain.Events.Models;
 using OcharoEvents.Infrastructure.Events.Services;
 using Microsoft.Extensions.Options;
@@ -148,6 +150,66 @@ public sealed class EventsServiceTests
     }
 
     [Fact]
+    public async Task Read_ShouldPickTheTitleInTheUiLanguage_AndNameItsLanguage()
+    {
+        var service = new FakeEventsService();
+        service.Add(Facts("ignored", "UZ", Day("2026-12-05")) with
+        {
+            Title = new Dictionary<string, string> { ["ru-Cyrl"] = "Неделя моды", ["uz-Latn"] = "Moda haftaligi" },
+            Languages = ["ru-Cyrl"],
+        });
+
+        ShowcaseEvent uz = (await Repository(service, "uz").GetEventsAsync(Organization, All, 200, 0, Token)).Single();
+        ShowcaseEvent ru = (await Repository(service, "ru-RU").GetEventsAsync(Organization, All, 200, 0, Token)).Single();
+        ShowcaseEvent en = (await Repository(service, "en").GetEventsAsync(Organization, All, 200, 0, Token)).Single();
+        ShowcaseEvent none = (await Repository(service).GetEventsAsync(Organization, All, 200, 0, Token)).Single();
+
+        uz.Title.Should().Be("Moda haftaligi");
+        uz.TitleLanguage.Should().Be("uz-Latn");
+        uz.Languages.Should().Equal("ru-Cyrl");
+        ru.Title.Should().Be("Неделя моды");
+        ru.TitleLanguage.Should().Be("ru-Cyrl");
+        en.TitleLanguage.Should().Be("uz-Latn");
+        none.TitleLanguage.Should().Be("uz-Latn");
+    }
+
+    [Theory]
+    [InlineData("uz", "uz-Latn")]
+    [InlineData("uz-UZ", "uz-Latn")]
+    [InlineData("uz-Cyrl", "uz-Cyrl")]
+    [InlineData("ru", "ru-Cyrl")]
+    [InlineData("de", "und")]
+    public void Title_ShouldMatchByLanguagePrefix_ThenFallBackToUndeterminedEnglishAndAny(string tag, string expected)
+    {
+        var titles = new Dictionary<string, string>
+        {
+            ["und"] = "Undetermined", ["uz-Cyrl"] = "Узбекча", ["uz-Latn"] = "Uzbekcha", ["ru-Cyrl"] = "Русский",
+        };
+
+        EventsServiceMapper.Title(titles, [tag]).Language.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Title_ShouldFallBackToEnglishThenAnyTitle_AndNeverReturnBlank()
+    {
+        EventsServiceMapper.Title(new Dictionary<string, string> { ["en"] = "Fair", ["ru-Cyrl"] = "Ярмарка" }, ["de"])
+            .Should().Be(("Fair", "en"));
+        EventsServiceMapper.Title(new Dictionary<string, string> { ["ky-Cyrl"] = "Жарманке" }, ["uz"])
+            .Should().Be(("Жарманке", "ky-Cyrl"));
+        EventsServiceMapper.Title(new Dictionary<string, string> { ["ru-Cyrl"] = " " }, ["ru"])
+            .Should().Be(("(untitled)", null));
+    }
+
+    [Theory]
+    [InlineData("uz-UZ,ru;q=0.8,en;q=0.5,*;q=0.1", "uz-UZ,ru,en")]
+    [InlineData("en;q=0.4, ru;q=0.9, uz", "uz,ru,en")]
+    [InlineData("ru;q=0", "")]
+    [InlineData("", "")]
+    [InlineData(null, "")]
+    public void AcceptLanguage_ShouldListTheTagsByWeight(string? header, string expected) =>
+        string.Join(',', HttpUiLocale.Parse(header)).Should().Be(expected);
+
+    [Fact]
     public async Task Create_ShouldProposeACandidate_AndTrackIt()
     {
         var service = new FakeEventsService();
@@ -227,15 +289,22 @@ public sealed class EventsServiceTests
     public async Task Read_ShouldAnswerUnavailable_WhenEventsIsNotConfigured()
     {
         var repository = new EventsServiceRepository(
-            new FakeEventsService(), new FakeEventsService(), Options.Create(new EventsServiceOptions()));
+            new FakeEventsService(), new FakeEventsService(), Options.Create(new EventsServiceOptions()),
+            new FixedUiLocale([]));
 
         Func<Task> read = () => repository.GetEventsAsync(Organization, All, 200, 0, Token);
 
         (await read.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.ExternalUnavailable);
     }
 
-    private static EventsServiceRepository Repository(FakeEventsService service) =>
-        new(service, service, Options.Create(new EventsServiceOptions { BaseUrl = "https://events.example.test" }));
+    private static EventsServiceRepository Repository(FakeEventsService service, params string[] preferred) =>
+        new(service, service, Options.Create(new EventsServiceOptions { BaseUrl = "https://events.example.test" }),
+            new FixedUiLocale(preferred));
+
+    private sealed class FixedUiLocale(IReadOnlyList<string> preferred) : IUiLocale
+    {
+        public IReadOnlyList<string> Preferred => preferred;
+    }
 
     private static EventFacts Facts(string title, string? country, EventWhen starts) => new()
     {

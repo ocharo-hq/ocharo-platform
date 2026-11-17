@@ -19,7 +19,9 @@ public static class EventsServiceMapper
 {
     public const string UntrackedStatus = "candidate";
     private const string ApplicationDeadline = "application";
-    private static readonly string[] TitleLocales = ["und", "en", "uz", "ru"];
+    /// <summary>Holds the title languages tried after the caller's own: undetermined, English, then Ocharo's two operator
+    /// languages, so an event with no title in the caller's language still reads the same way every time.</summary>
+    private static readonly string[] FallbackTitleLanguages = ["und", "en", "uz", "ru"];
 
     /// <summary>Holds the countries the page counts as regional to Ocharo in Uzbekistan; the 68 stored scopes agree.</summary>
     private static readonly HashSet<string> RegionalCountries = new(StringComparer.Ordinal)
@@ -31,8 +33,9 @@ public static class EventsServiceMapper
     public static bool IsVisible(EventModel item) =>
         item.MergedInto is null && item.Review is EventReviewState.Published or EventReviewState.Candidate;
 
-    /// <summary>Maps an event and this organization's tracking of it to the page's record.</summary>
-    public static ShowcaseEvent ToShowcaseEvent(TrackedEventModel tracked)
+    /// <summary>Maps an event and this organization's tracking of it to the page's record; the title follows
+    /// <paramref name="preferred"/>, the caller's language tags, most preferred first.</summary>
+    public static ShowcaseEvent ToShowcaseEvent(TrackedEventModel tracked, IReadOnlyList<string>? preferred = null)
     {
         ArgumentNullException.ThrowIfNull(tracked);
         EventModel item = tracked.Event;
@@ -41,10 +44,13 @@ public static class EventsServiceMapper
         (DateOnly? startsOn, string precision) = Start(facts.Starts);
         DateOnly? endsOn = startsOn is { } start && Date(facts.Ends) is { } end && end >= start ? end : null;
         JsonElement? fields = tracking?.Fields;
+        (string title, string? titleLanguage) = Title(facts.Title, preferred ?? []);
         return new ShowcaseEvent(
             item.Id,
             facts.Key,
-            Title(facts.Title),
+            title,
+            titleLanguage,
+            facts.Languages.Where(language => !string.IsNullOrWhiteSpace(language)).ToList(),
             Blank(facts.Organizer?.Name),
             Scope(facts.Place?.Country),
             EventValidationService.Formats.Contains(facts.Kind) ? facts.Kind : "other",
@@ -182,11 +188,40 @@ public static class EventsServiceMapper
 
     private static bool IsApplication(EventDeadline deadline) => deadline.Kind == DeadlineKind.Application;
 
-    private static string Title(IReadOnlyDictionary<string, string> titles)
+    /// <summary>
+    /// Picks the title for the caller: the first preferred language the event has a title in (a tag matches by its language
+    /// prefix, so <c>uz</c> finds <c>uz-Latn</c>, then <c>uz-Cyrl</c>), then <c>und</c>, <c>en</c>, <c>uz</c>, <c>ru</c>, then
+    /// any title. Returns the title with the key it came under.
+    /// </summary>
+    public static (string Title, string? Language) Title(
+        IReadOnlyDictionary<string, string> titles, IReadOnlyList<string> preferred)
     {
-        foreach (var locale in TitleLocales)
-            if (titles.TryGetValue(locale, out var title) && !string.IsNullOrWhiteSpace(title)) return title;
-        return titles.Values.FirstOrDefault(title => !string.IsNullOrWhiteSpace(title)) ?? "(untitled)";
+        foreach (string tag in preferred.Concat(FallbackTitleLanguages))
+            if (TitleFor(titles, tag) is { } found) return found;
+        KeyValuePair<string, string> any = titles.FirstOrDefault(pair => !string.IsNullOrWhiteSpace(pair.Value));
+        return string.IsNullOrWhiteSpace(any.Value) ? ("(untitled)", null) : (any.Value, any.Key);
+    }
+
+    /// <summary>Finds the title under <paramref name="tag"/>: the exact key, else the bare language, else its Latin script,
+    /// else any key with the same language prefix in key order.</summary>
+    private static (string Title, string Language)? TitleFor(IReadOnlyDictionary<string, string> titles, string tag)
+    {
+        string language = LanguageOf(tag);
+        if (language.Length == 0) return null;
+        var candidates = titles
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Value) && LanguageOf(pair.Key) == language)
+            .OrderBy(pair => string.Equals(pair.Key, tag, StringComparison.OrdinalIgnoreCase) ? 0
+                : string.Equals(pair.Key, language, StringComparison.OrdinalIgnoreCase) ? 1
+                : pair.Key.EndsWith("-Latn", StringComparison.OrdinalIgnoreCase) ? 2 : 3)
+            .ThenBy(pair => pair.Key, StringComparer.Ordinal)
+            .ToList();
+        return candidates.Count == 0 ? null : (candidates[0].Value, candidates[0].Key);
+    }
+
+    private static string LanguageOf(string tag)
+    {
+        int dash = tag.IndexOf('-', StringComparison.Ordinal);
+        return (dash < 0 ? tag : tag[..dash]).Trim().ToLowerInvariant();
     }
 
     private static string Priority(TrackingPriority priority) => priority switch

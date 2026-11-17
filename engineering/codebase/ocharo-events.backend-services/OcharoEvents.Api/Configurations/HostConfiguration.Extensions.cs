@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using OcharoEvents.Api.RuntimeConfig.Settings;
+using OcharoEvents.Api.Events;
 using OcharoEvents.Application.Events.Repositories;
+using OcharoEvents.Application.Events.Services;
 using OcharoEvents.Infrastructure;
 using OcharoEvents.Infrastructure.Events.Services;
 using OcharoEvents.Persistence;
@@ -89,6 +91,8 @@ public static partial class HostConfiguration
                 };
         });
         builder.Services.TryAddSingleton(TimeProvider.System);
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<IUiLocale, HttpUiLocale>();
         builder.Services.AddScoped<IEventRepository, EventsServiceRepository>();
         builder.Services.AddSingleton<EventValidationService>();
         builder.Services.AddScoped<EventService>();

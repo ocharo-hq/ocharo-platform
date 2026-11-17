@@ -21,7 +21,6 @@ ChatGPT builds these in the pull order of wow-two-ws `system/sessions/events-int
 
 | Item | Type | Notes |
 |---|---|---|
-| E25 Prefer UI-locale titles and show the title language | feature | spec in `tasks-events-path.md` |
 | E05 Show cancelled, postponed and online events as such | fix | spec in `tasks-events-path.md` |
 | E09 Show sourced ticket prices and ticket links | feature | spec in `tasks-events-path.md` |
 | E10 Show start time, address and organizer link on detail | feature | spec in `tasks-events-path.md` |

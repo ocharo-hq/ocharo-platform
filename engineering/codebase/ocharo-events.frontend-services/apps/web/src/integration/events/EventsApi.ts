@@ -1,7 +1,7 @@
 import { ApiFailureFactory, type ApiClient, type ApiDecoder } from '@wow-two-beta/fe/foundation/http';
 import { eventsHttp } from '@/integration/common/IdentitySession';
 import { ResultExtensions } from '@wow-two-beta/fe/foundation/results';
-import { eachWithNulls, memberWithNulls, withNulls } from '@/integration/common/WireNulls';
+import { eachWithNulls, memberWithNulls, withArrays, withNulls } from '@/integration/common/WireNulls';
 
 import {
   isDatePrecision,
@@ -42,7 +42,19 @@ const list =
 export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
   record(v) &&
   strings(v, ['id', 'title', 'participation', 'notes', 'createdAt', 'updatedAt']) &&
-  nullableStrings(v, ['key', 'organizer', 'country', 'city', 'venue', 'cost', 'website', 'sourceUrl']) &&
+  nullableStrings(v, [
+    'key',
+    'titleLanguage',
+    'organizer',
+    'country',
+    'city',
+    'venue',
+    'cost',
+    'website',
+    'sourceUrl',
+  ]) &&
+  Array.isArray(v.languages) &&
+  v.languages.every((language) => typeof language === 'string') &&
   nullableDates(v, ['startsOn', 'endsOn', 'applicationDeadline']) &&
   isEventScope(v.scope) &&
   isEventFormat(v.format) &&
@@ -60,6 +72,7 @@ const isDeleted = (v: unknown): v is { id: string } => record(v) && typeof v.id 
 /** @internal The event members the wire leaves out when null. */
 const eventNullable = [
   'key',
+  'titleLanguage',
   'organizer',
   'country',
   'city',
@@ -71,7 +84,7 @@ const eventNullable = [
   'website',
   'sourceUrl',
 ];
-const event = (v: unknown) => withNulls(v, eventNullable);
+const event = (v: unknown) => withArrays(withNulls(v, eventNullable), ['languages']);
 const events = (v: unknown) => eachWithNulls(v, event);
 const summary = (v: unknown) => memberWithNulls(v, 'upcomingDeadlines', events);
 
@@ -88,36 +101,39 @@ export function eventListQuery(filter: EventFilter, page: { limit: number; offse
   return query;
 }
 
-/** Creates the Events transport. It records where Ocharo stands; nothing here applies, registers or pays. */
-export function createEventsApi(client: ApiClient = eventsHttp) {
+/**
+ * Creates the Events transport. It records where Ocharo stands; nothing here applies, registers or pays. Every call
+ * names the operator language in `Accept-Language`, read when the request starts, so a title comes back in it.
+ */
+export function createEventsApi(client: ApiClient = eventsHttp, language: () => string = () => 'en') {
   const base = (o: string) => `/api/organizations/${encodeURIComponent(o)}/events`;
   const id = encodeURIComponent;
   /** The session's CSRF token rides every unsafe request through the client's antiforgery option. */
-  const write = (signal: AbortSignal) => ({ signal });
+  const call = (signal: AbortSignal) => ({ signal, headers: { 'Accept-Language': language() } });
   return {
     listEvents: (o: string, filter: EventFilter & { limit: number; offset: number }, signal: AbortSignal) =>
       client.get(`${base(o)}?${eventListQuery(filter, filter)}`, {
-        signal,
+        ...call(signal),
         decode: decode(list(isShowcaseEvent), events),
       }),
     summary: (o: string, today: string, signal: AbortSignal) =>
       client.get(`${base(o)}/summary?${new URLSearchParams({ today })}`, {
-        signal,
+        ...call(signal),
         decode: decode(isEventSummary, summary),
       }),
     createEvent: (o: string, input: EventInput, signal: AbortSignal) =>
-      client.post(base(o), { ...write(signal), body: input, decode: decode(isShowcaseEvent, event) }),
+      client.post(base(o), { ...call(signal), body: input, decode: decode(isShowcaseEvent, event) }),
     getEvent: (o: string, eventId: string, signal: AbortSignal) =>
-      client.get(`${base(o)}/${id(eventId)}`, { signal, decode: decode(isShowcaseEvent, event) }),
+      client.get(`${base(o)}/${id(eventId)}`, { ...call(signal), decode: decode(isShowcaseEvent, event) }),
     updateEvent: (o: string, eventId: string, expectedRevision: number, input: EventInput, signal: AbortSignal) =>
       client.put(`${base(o)}/${id(eventId)}`, {
-        ...write(signal),
+        ...call(signal),
         body: { expectedRevision, ...input },
         decode: decode(isShowcaseEvent, event),
       }),
     deleteEvent: (o: string, eventId: string, expectedRevision: number, signal: AbortSignal) =>
       client.delete(`${base(o)}/${id(eventId)}?expectedRevision=${expectedRevision}`, {
-        ...write(signal),
+        ...call(signal),
         decode: decode(isDeleted),
       }),
   };

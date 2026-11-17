@@ -1,6 +1,7 @@
 using OcharoEvents.Application.Events.Models;
 using OcharoEvents.Application.Events.Repositories;
 using OcharoEvents.Application.Events.Errors;
+using OcharoEvents.Application.Events.Services;
 using OcharoEvents.Domain.Events.Models;
 using Microsoft.Extensions.Options;
 using WoW.Two.Sdk.Beta.Be.Events;
@@ -25,7 +26,8 @@ namespace OcharoEvents.Infrastructure.Events.Services;
 public sealed class EventsServiceRepository(
     ICatalogEventsBroker catalogEvents,
     IEventTrackingBroker tracking,
-    IOptions<EventsServiceOptions> options) : IEventRepository
+    IOptions<EventsServiceOptions> options,
+    IUiLocale locale) : IEventRepository
 {
     /// <summary>Holds the most pages one read follows, a guard against a cursor that never ends.</summary>
     private const int MaximumPages = 50;
@@ -73,7 +75,7 @@ public sealed class EventsServiceRepository(
         return found switch
         {
             Result<TrackedEventModel>.Success { Value: var tracked } when EventsServiceMapper.IsVisible(tracked.Event) =>
-                Result<ShowcaseEvent>.Ok(EventsServiceMapper.ToShowcaseEvent(tracked)),
+                Result<ShowcaseEvent>.Ok(EventsServiceMapper.ToShowcaseEvent(tracked, locale.Preferred)),
             Result<TrackedEventModel>.Failure failure => Result<ShowcaseEvent>.Fail(failure.Error),
             _ => Result<ShowcaseEvent>.Fail(OcharoEventsErrors.NotFound("The event was not found.")),
         };
@@ -92,7 +94,7 @@ public sealed class EventsServiceRepository(
         return tracked switch
         {
             Result<TrackingModel>.Success { Value: var own } => Result<ShowcaseEvent>.Ok(
-                EventsServiceMapper.ToShowcaseEvent(new TrackedEventModel { Event = created, Tracking = own })),
+                EventsServiceMapper.ToShowcaseEvent(new TrackedEventModel { Event = created, Tracking = own }, locale.Preferred)),
             Result<TrackingModel>.Failure failure => Result<ShowcaseEvent>.Fail(failure.Error),
             _ => throw new InvalidOperationException("A result is a success or a failure."),
         };
@@ -110,7 +112,7 @@ public sealed class EventsServiceRepository(
         TrackedEventModel current = ((Result<TrackedEventModel>.Success)found).Value;
         if (!EventsServiceMapper.IsVisible(current.Event))
             return Result<ShowcaseEvent>.Fail(OcharoEventsErrors.NotFound("The event was not found."));
-        ShowcaseEvent shown = EventsServiceMapper.ToShowcaseEvent(current);
+        ShowcaseEvent shown = EventsServiceMapper.ToShowcaseEvent(current, locale.Preferred);
         if (shown.Revision != expectedRevision)
             return Result<ShowcaseEvent>.Fail(
                 OcharoEventsErrors.Conflict("The event changed since it was loaded. Reload it before saving again."));
@@ -121,7 +123,7 @@ public sealed class EventsServiceRepository(
         return saved switch
         {
             Result<TrackingModel>.Success { Value: var own } => Result<ShowcaseEvent>.Ok(
-                EventsServiceMapper.ToShowcaseEvent(current with { Tracking = own })),
+                EventsServiceMapper.ToShowcaseEvent(current with { Tracking = own }, locale.Preferred)),
             Result<TrackingModel>.Failure failure => Result<ShowcaseEvent>.Fail(failure.Error),
             _ => throw new InvalidOperationException("A result is a success or a failure."),
         };
@@ -151,7 +153,7 @@ public sealed class EventsServiceRepository(
             if (read is Result<TrackingPage>.Failure failure) throw failure.Error.ToException();
             TrackingPage items = ((Result<TrackingPage>.Success)read).Value;
             all.AddRange(items.Items.Where(item => EventsServiceMapper.IsVisible(item.Event))
-                .Select(EventsServiceMapper.ToShowcaseEvent));
+                .Select(item => EventsServiceMapper.ToShowcaseEvent(item, locale.Preferred)));
             cursor = items.NextCursor;
             if (cursor is null) return all;
         }

@@ -59,24 +59,27 @@ export function useEventToday() {
 
 /** Owns Events transport, cache keys and server-confirmed commands for one organization document. */
 export function useEvents(access: EventsAccess, workspace: EventsWorkspace) {
-  const api = createEventsApi();
+  const { uiLocale } = useUiLocale();
+  const api = createEventsApi(undefined, () => uiLocale.value);
   const cache = useQueryCache();
   const organizationId = () => workspace.organization.value?.id ?? '';
   // The query client is bound to the session, so a new person or organization starts from empty caches.
   const scope = () => [organizationId(), 'events'];
+  // Titles come back in the operator language, so a read is cached per language; `scope` stays its prefix.
   const keys = {
     all: () => scope(),
     list: (filter: EventFilter) => [
       ...scope(),
       'list',
+      uiLocale.value,
       filter.query.trim(),
       filter.scope,
       filter.format,
       filter.status,
       filter.from,
     ],
-    summary: (today: string) => [...scope(), 'summary', today],
-    event: (id: string) => [...scope(), 'event', id],
+    summary: (today: string) => [...scope(), 'summary', uiLocale.value, today],
+    event: (id: string) => [...scope(), 'event', uiLocale.value, id],
   };
   const enabled = () => Boolean(workspace.organization.value);
   const canEdit = computed(() => workspace.canEdit.value);

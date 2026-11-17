@@ -16,6 +16,8 @@ function showcase(overrides: Partial<ShowcaseEvent> = {}): ShowcaseEvent {
     id: eventId,
     key: null,
     title: 'Tashkent Fashion Week',
+    titleLanguage: null,
+    languages: [],
     organizer: 'Fashion Council',
     scope: 'local',
     format: 'runway',

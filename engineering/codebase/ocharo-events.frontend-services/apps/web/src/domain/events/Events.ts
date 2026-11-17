@@ -34,6 +34,10 @@ export interface ShowcaseEvent {
   id: string;
   key: string | null;
   title: string;
+  /** The language tag the title came in (`uz-Latn`, `ru-Cyrl`, `und`); null when the event has no usable title. */
+  titleLanguage: string | null;
+  /** The languages the source wrote the event in. */
+  languages: string[];
   organizer: string | null;
   scope: EventScope;
   format: EventFormat;
@@ -55,8 +59,10 @@ export interface ShowcaseEvent {
   createdAt: string;
   updatedAt: string;
 }
+/** The members the server derives from the event's facts, so no form edits or sends them. */
+type DerivedEventFields = 'id' | 'key' | 'revision' | 'createdAt' | 'updatedAt' | 'titleLanguage' | 'languages';
 /** Every mutable field; the import `key` is never edited here. */
-export type EventInput = Omit<ShowcaseEvent, 'id' | 'key' | 'revision' | 'createdAt' | 'updatedAt'>;
+export type EventInput = Omit<ShowcaseEvent, DerivedEventFields>;
 /** Counts may omit statuses with no events; a missing count reads as zero. */
 export interface EventSummary {
   byStatus: Partial<Record<EventStatus, number>>;
@@ -523,6 +529,23 @@ export function eventsPath(organizationId: string, location: EventsLocation): st
 }
 export function isEventIdentifier(value: string): boolean {
   return identifier.test(value);
+}
+
+/** The language's name in the operator language, falling back to its code where the browser has no name. */
+export function languageName(code: string, locale: UiLocale): string {
+  try {
+    return new Intl.DisplayNames([locale], { type: 'language' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+/**
+ * The tag ("RU", "UZ") shown beside a title written in another language than the interface's; null when the title is
+ * in the interface language or its language is undetermined.
+ */
+export function titleLanguageTag(event: Pick<ShowcaseEvent, 'titleLanguage'>, locale: UiLocale): string | null {
+  const language = event.titleLanguage?.split('-')[0]?.toLowerCase();
+  return !language || language === 'und' || language === locale ? null : language.toUpperCase();
 }
 
 /** The country's name in the operator language, falling back to its code where the browser has no name. */

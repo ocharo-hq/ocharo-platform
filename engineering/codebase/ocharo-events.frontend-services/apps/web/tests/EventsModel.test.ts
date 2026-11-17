@@ -14,6 +14,7 @@ import {
   readEventsAddress,
   readEventsOrganizationId,
   safeEventUrl,
+  titleLanguageTag,
   validateEventDraft,
   type ShowcaseEvent,
 } from '@/domain/events/Events';
@@ -26,6 +27,8 @@ const showcase = (over: Partial<ShowcaseEvent> = {}): ShowcaseEvent => ({
   id: eventId,
   key: null,
   title: 'Tashkent Fashion Week',
+  titleLanguage: null,
+  languages: [],
   organizer: 'Fashion Council',
   scope: 'local',
   format: 'runway',
@@ -264,5 +267,16 @@ describe('events transport guards', () => {
     expect(isEventSummary({ byStatus: { unknown: 1 }, upcomingDeadlines: [] })).toBe(false);
     expect(safeEventUrl('javascript:alert(1)')).toBeNull();
     expect(safeEventUrl('https://tfw.example.test/apply')).toBe('https://tfw.example.test/apply');
+  });
+});
+
+describe('title language', () => {
+  it('tags only a title written in another known language than the interface', () => {
+    expect(titleLanguageTag({ titleLanguage: 'ru-Cyrl' }, 'uz')).toBe('RU');
+    expect(titleLanguageTag({ titleLanguage: 'uz-Latn' }, 'ru')).toBe('UZ');
+    expect(titleLanguageTag({ titleLanguage: 'uz-Latn' }, 'uz')).toBeNull();
+    expect(titleLanguageTag({ titleLanguage: 'und' }, 'uz')).toBeNull();
+    expect(titleLanguageTag({ titleLanguage: null }, 'uz')).toBeNull();
+    expect(titleLanguageTag({ titleLanguage: 'ky-Cyrl' }, 'en')).toBe('KY');
   });
 });

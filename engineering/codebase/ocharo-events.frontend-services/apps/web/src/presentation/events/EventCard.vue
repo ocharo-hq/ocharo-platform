@@ -17,9 +17,11 @@ import {
   formatDay,
   formatEventDates,
   formatLabels,
+  languageName,
   scopeLabels,
   statusLabels,
   statusTones,
+  titleLanguageTag,
   type EventsLocation,
   type EventStatus,
   type ShowcaseEvent,
@@ -33,6 +35,7 @@ const { t, uiLocale } = useUiLocale();
 const saving = ref(false);
 const href = computed(() => eventsPath(props.events.organizationId(), { view: 'event', eventId: props.event.id }));
 const place = computed(() => eventPlace(props.event, uiLocale.value));
+const titleTag = computed(() => titleLanguageTag(props.event, uiLocale.value));
 const deadlineDays = computed(() =>
   props.event.applicationDeadline ? daysUntil(props.event.applicationDeadline, props.today) : null,
 );
@@ -83,6 +86,12 @@ async function review(status: EventStatus): Promise<void> {
     </div>
     <p class="text-sm font-medium" data-test="event-dates">{{ formatEventDates(event, uiLocale) }}</p>
     <div class="flex flex-wrap gap-2">
+      <span
+        v-if="titleTag"
+        data-test="title-language"
+        :title="t('Title language: {language}', { language: languageName(titleTag.toLowerCase(), uiLocale) })"
+        ><Badge size="sm" variant="neutral">{{ titleTag }}</Badge></span
+      >
       <Badge size="sm" variant="outline">{{ t(formatLabels[event.format]) }}</Badge>
       <Badge size="sm" variant="neutral">{{ t(scopeLabels[event.scope]) }}</Badge>
       <Badge size="sm" :variant="statusTones[event.status]">{{ t(statusLabels[event.status]) }}</Badge>

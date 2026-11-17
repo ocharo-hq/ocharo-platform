@@ -21,3 +21,10 @@ export function eachWithNulls(value: unknown, normalize: (item: unknown) => unkn
 export function memberWithNulls(value: unknown, key: string, normalize: (item: unknown) => unknown): unknown {
   return isRecord(value) && key in value ? { ...value, [key]: normalize(value[key]) } : value;
 }
+
+/** Restores the array members the API's JSON leaves out when they are empty, so a decoded value carries `[]`. */
+export function withArrays(value: unknown, keys: readonly string[]): unknown {
+  if (!isRecord(value)) return value;
+  const missing = keys.filter((key) => !(key in value));
+  return missing.length === 0 ? value : { ...value, ...Object.fromEntries(missing.map((key) => [key, []])) };
+}
