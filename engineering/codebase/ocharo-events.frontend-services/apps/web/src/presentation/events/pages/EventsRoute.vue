@@ -14,9 +14,9 @@ import NotFoundPage from './NotFoundPage.vue';
  */
 defineOptions({ name: 'EventsRoute' });
 const route = useRoute();
-const { organization, canRead, canEdit } = useIdentitySession();
+const { organization, canRead, canEdit, canAdmin } = useIdentitySession();
 const access = useEventsAccess();
-const workspace: EventsWorkspace = { organization, canEdit };
+const workspace: EventsWorkspace = { organization, canEdit, canAdmin };
 const served = computed(
   () =>
     organization.value !== null &&

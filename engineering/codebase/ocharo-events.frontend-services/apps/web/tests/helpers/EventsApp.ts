@@ -28,6 +28,14 @@ export const EditorSession = {
   expiresAt: '2099-01-01T00:00:00Z',
 };
 
+/** The session of an owner of the same organization, who also sets its Telegram delivery (`events:admin`). */
+export const AdminSession = {
+  ...EditorSession,
+  person: { ...EditorSession.person, sub: 'owner-sub', name: 'Malika Owner' },
+  organization: { ...EditorSession.organization, role: 'owner' },
+  permissions: ['events:read', 'events:track', 'events:review', 'events:admin'],
+};
+
 /** The session route's answer without a session. */
 export const SignedOutSession = { isAuthenticated: false };
 
@@ -59,8 +67,8 @@ export interface EventsHostOptions {
 }
 
 /**
- * Stubs the host's own routes (runtime settings, status, the session and sign-out) and the events routes, which answer
- * an empty feed and an empty summary.
+ * Stubs the host's own routes (runtime settings, status, the session and sign-out), the events routes, which answer
+ * an empty feed and an empty summary, and the Telegram delivery's digest list, which answers none.
  */
 export function stubEventsHost(options: EventsHostOptions = {}): void {
   vi.stubGlobal(
@@ -78,6 +86,8 @@ export function stubEventsHost(options: EventsHostOptions = {}): void {
       if (/^\/api\/organizations\/[^/]+\/events\/summary$/.test(pathname))
         return Promise.resolve(Response.json({ data: { byStatus: {}, upcomingDeadlines: [] } }));
       if (/^\/api\/organizations\/[^/]+\/events$/.test(pathname)) return Promise.resolve(Response.json({ data: [] }));
+      if (/^\/api\/organizations\/[^/]+\/delivery\/api\/events\/v1\/catalogs\/[^/]+\/digests$/.test(pathname))
+        return Promise.resolve(Response.json({ data: [] }));
       return Promise.resolve(Response.json({ title: 'Not found' }, { status: 404 }));
     }),
   );

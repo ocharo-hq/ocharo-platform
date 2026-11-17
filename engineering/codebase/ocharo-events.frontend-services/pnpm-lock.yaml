@@ -16,6 +16,9 @@ importers:
       '@wow-two-beta/fe':
         specifier: 0.0.45
         version: 0.0.45(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
+      '@wow-two-beta/fe-events':
+        specifier: 0.0.5
+        version: 0.0.5(@wow-two-beta/fe@0.0.45(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
       lucide-vue-next:
         specifier: ^0.460.0
         version: 0.460.0(vue@3.5.45(typescript@5.9.3))
@@ -781,6 +784,12 @@ packages:
     peerDependenciesMeta:
       '@vue/server-renderer':
         optional: true
+
+  '@wow-two-beta/fe-events@0.0.5':
+    resolution: {integrity: sha512-302aTyVwdQmFYz0vgFOCAbq+4OwesVe+/M9eVAHWhic3r4oJ7uIfG+vquGn6sLz/819q7QegsjBZaifqSotpKA==}
+    peerDependencies:
+      '@wow-two-beta/fe': '>=0.0.42 <0.1.0'
+      vue: ^3.5.0
 
   '@wow-two-beta/fe@0.0.45':
     resolution: {integrity: sha512-pw5n2s0cMC34T/nIDqugxrYkdP3IgGfWqurKiECsZG20iJ3Iz4NLklbGXEjwBeFjO98pvTPAFVr45WPQu7qcTA==}
@@ -2273,6 +2282,11 @@ snapshots:
       vue-component-type-helpers: 3.3.14
     optionalDependencies:
       '@vue/server-renderer': 3.5.45
+
+  '@wow-two-beta/fe-events@0.0.5(@wow-two-beta/fe@0.0.45(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))':
+    dependencies:
+      '@wow-two-beta/fe': 0.0.45(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
+      vue: 3.5.45(typescript@5.9.3)
 
   '@wow-two-beta/fe@0.0.45(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))':
     dependencies:

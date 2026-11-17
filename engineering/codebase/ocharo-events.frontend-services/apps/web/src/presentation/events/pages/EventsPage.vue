@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { RouterLink } from 'vue-router';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { EventsAccess } from '@/application/events/UseEventsAccess';
 import { useEvents, useEventsNavigation } from '@/application/events/UseEvents';
 import type { EventsWorkspace } from '@/application/events/UseEventsAccess';
-import type { EventsLocation } from '@/domain/events/Events';
+import { deliveryPath } from '@/domain/delivery/TelegramDelivery';
+import { isEventIdentifier, type EventsLocation } from '@/domain/events/Events';
 
 import EventDetail from '../EventDetail.vue';
 import EventsFeed from '../EventsFeed.vue';
@@ -24,6 +26,13 @@ const feed: EventsLocation = { view: 'feed', eventId: null };
 const navigation = useEventsNavigation(props.access, events.organizationId, props.initialLocation ?? feed);
 const current = navigation.current;
 const showsFeed = computed(() => current.value.view !== 'event' || !current.value.eventId);
+/** The organization's Telegram delivery settings, linked for its admins only. */
+const deliveryHref = computed(() => {
+  const organizationId = props.workspace.organization.value?.id;
+  return props.workspace.canAdmin?.value && organizationId && isEventIdentifier(organizationId)
+    ? deliveryPath(organizationId.toLowerCase())
+    : null;
+});
 function open(location: EventsLocation): void {
   void navigation.open(location);
 }
@@ -32,7 +41,16 @@ function open(location: EventsLocation): void {
 <template>
   <section class="space-y-6">
     <header>
-      <p class="eyebrow">{{ t('Showcase events') }}</p>
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <p class="eyebrow">{{ t('Showcase events') }}</p>
+        <RouterLink
+          v-if="deliveryHref"
+          :to="deliveryHref"
+          class="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          data-test="telegram-delivery-link"
+          >{{ t('Telegram delivery') }}</RouterLink
+        >
+      </div>
       <h1 class="page-title">{{ t('Events') }}</h1>
       <p class="max-w-2xl text-muted-foreground">
         {{

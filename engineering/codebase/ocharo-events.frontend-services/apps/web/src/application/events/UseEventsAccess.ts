@@ -84,4 +84,6 @@ export type EventsAccess = ReturnType<typeof useEventsAccess>;
 export interface EventsWorkspace {
   readonly organization: { readonly value: { readonly id: string; readonly name: string | null } | null };
   readonly canEdit: { readonly value: boolean };
+  /** Whether the person sets the organization's Telegram delivery; absent reads as no. */
+  readonly canAdmin?: { readonly value: boolean };
 }

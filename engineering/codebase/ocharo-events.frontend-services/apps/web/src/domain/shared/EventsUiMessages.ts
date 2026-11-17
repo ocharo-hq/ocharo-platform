@@ -96,6 +96,25 @@ export const eventsUiMessages: UiMessageTable = {
   'No longer matches': { uz: 'Endi mos kelmaydi', ru: 'Больше не подходит' },
   'Unnamed source': { uz: 'Nomsiz manba', ru: 'Источник без названия' },
   'Updated by source on {date}': { uz: 'Manba {date} kuni yangiladi', ru: 'Источник обновил {date}' },
+
+  // Telegram delivery
+  Settings: { uz: 'Sozlamalar', ru: 'Настройки' },
+  'Telegram delivery': { uz: 'Telegram orqali yuborish', ru: 'Рассылка в Telegram' },
+  "Ocharo's events go out through the Ocharo Telegram bot to the people named here, on the schedule set here. Each event links to its page in Events.":
+    {
+      uz: 'Ocharo tadbirlari shu yerda ko‘rsatilgan odamlarga Ocharo Telegram boti orqali, shu yerda belgilangan jadval bo‘yicha yuboriladi. Har bir tadbir Events’dagi o‘z sahifasiga havola qiladi.',
+      ru: 'Мероприятия Ocharo уходят через Telegram-бота Ocharo людям, указанным здесь, по расписанию, заданному здесь. Каждое мероприятие ссылается на свою страницу в Events.',
+    },
+  'Name each recipient by their Ocharo account id, one per line; yours is filled in. Someone who has not linked Telegram to their Ocharo account shows as not_linked in the run history.':
+    {
+      uz: 'Har bir qabul qiluvchini Ocharo hisobi identifikatori bilan, har birini alohida qatorda yozing; sizniki allaqachon kiritilgan. Ocharo hisobiga Telegram ulamagan kishi yuborishlar tarixida not_linked bo‘lib ko‘rinadi.',
+      ru: 'Укажите каждого получателя по идентификатору его аккаунта Ocharo, по одному в строке; ваш уже указан. Тот, кто не привязал Telegram к аккаунту Ocharo, отображается в истории отправок как not_linked.',
+    },
+  'Your account id: {id}': { uz: 'Hisobingiz identifikatori: {id}', ru: 'Идентификатор вашего аккаунта: {id}' },
+  "Only the organization's admins set its Telegram delivery.": {
+    uz: 'Telegram orqali yuborishni faqat tashkilot administratorlari sozlaydi.',
+    ru: 'Рассылку в Telegram настраивают только администраторы организации.',
+  },
   'Price not stated': { uz: 'Narx ko‘rsatilmagan', ru: 'Цена не указана' },
   'Cost not stated': { uz: 'Narx ko‘rsatilmagan', ru: 'Стоимость не указана' },
   Shortlist: { uz: 'Saralanganlarga qo‘shish', ru: 'В шорт-лист' },

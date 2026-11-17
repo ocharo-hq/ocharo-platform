@@ -28,7 +28,7 @@ function currentPath(): string {
 
 /**
  * The Ocharo session as Events' frame and pages read it, over the SDK BFF session the app root provides. Reading follows
- * `events:read` and proposing or tracking `events:track`; the API checks both again.
+ * `events:read`, proposing or tracking `events:track` and the Telegram delivery `events:admin`; the API checks each again.
  */
 export function useIdentitySession() {
   const auth = useBffAuth();
@@ -62,6 +62,8 @@ export function useIdentitySession() {
     organization: computed(() => auth.organization),
     canRead: computed(() => can(EventsPermission.Read)),
     canEdit: computed(() => can(EventsPermission.Track)),
+    /** Whether the person sets the organization's Telegram delivery (`events:admin`). */
+    canAdmin: computed(() => can(EventsPermission.Admin)),
     signingOut,
     signOut,
     /** The sign-in address that comes back to `returnUrl`, by default this page without a failed sign-in's marker. */

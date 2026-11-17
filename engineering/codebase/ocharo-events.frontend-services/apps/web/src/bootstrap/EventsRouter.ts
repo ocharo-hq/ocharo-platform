@@ -58,6 +58,11 @@ export const eventsRoutes: RouteConfig = [
         handle: place('Events'),
       },
       {
+        path: 'organizations/:organizationId/telegram-delivery',
+        lazy: () => import('../presentation/delivery/pages/TelegramDeliveryRoute.vue'),
+        handle: place('Telegram delivery'),
+      },
+      {
         path: ':pathMatch(.*)*',
         lazy: () => import('../presentation/events/pages/NotFoundPage.vue'),
         handle: place('Page not found'),

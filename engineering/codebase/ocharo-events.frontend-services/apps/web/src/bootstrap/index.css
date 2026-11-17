@@ -5,6 +5,8 @@
    by `theme-ocharo` on <html> (index.html) with `dark` from the colour-mode provider. After styles.css, so it wins. */
 @import '@wow-two-beta/fe/themes.css';
 @source '../../node_modules/@wow-two-beta/fe/dist';
+/* The Telegram delivery page embeds fe-events' digest editor, whose classes Tailwind must see too. */
+@source '../../node_modules/@wow-two-beta/fe-events/dist';
 
 /* Type is the suite's; every interface colour, surface and control comes from the theme and the SDK. */
 @theme {

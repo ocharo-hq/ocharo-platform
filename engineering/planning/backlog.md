@@ -37,7 +37,6 @@ ChatGPT builds these in the pull order of wow-two-ws `system/sessions/events-int
 | O08 Catalogue: who saved and who published | feature | spec in `tasks-platform.md` |
 | O09 Catalogue receives Studio's creative imports (E6) | engineering | spec in `tasks-platform.md` |
 | O12 Remove Desk; organization switch moves to the frame | engineering | spec in `tasks-platform.md` |
-| O17 Telegram delivery of Ocharo events on an Ocharo-set schedule | feature | spec in `tasks-platform.md` |
 | E31 Add a triage view for untracked sourced events | product | spec in `tasks-events-path.md` |
 
 ## Product and delivery

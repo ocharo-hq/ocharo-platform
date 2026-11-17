@@ -8,8 +8,11 @@ import {
 } from '@wow-two-beta/fe/auth';
 import { createApiClient, type ApiClient } from '@wow-two-beta/fe/foundation/http';
 
-/** The permissions the Events API checks in the session's organization: reading, and proposing or tracking events. */
-export const EventsPermission = { Read: 'events:read', Track: 'events:track' } as const;
+/**
+ * The permissions the Events API checks in the session's organization: reading, proposing or tracking events, and
+ * setting the organization's Telegram delivery.
+ */
+export const EventsPermission = { Read: 'events:read', Track: 'events:track', Admin: 'events:admin' } as const;
 
 /** The query a failed sign-in comes back with (`signInError=callback_failed`). */
 export const SignInErrorParameter = 'signInError';
