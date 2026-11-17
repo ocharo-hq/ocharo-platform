@@ -5,12 +5,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog.Core;
 using WoW.Two.Sdk.Beta.Be.Events.CatalogEvents;
+using WoW.Two.Sdk.Beta.Be.Events.Digests;
 using WoW.Two.Sdk.Beta.Be.Events.Tracking;
 
 namespace OcharoEvents.Tests.Harness;
 
 /// <summary>An isolated Events host with its own product database, signed in through <see cref="EventsTestIdentity"/>;
-/// with a <see cref="FakeEventsService"/>, WoW2 Events' two brokers answer from memory. <c>settings</c> apply last, so a
+/// with a <see cref="FakeEventsService"/>, WoW2 Events' two brokers answer from memory, and with a
+/// <see cref="FakeDigestsBroker"/> its digests. <c>settings</c> apply last, so a
 /// test may change or clear (null) any default.</summary>
 internal sealed class EventsHost : IAsyncDisposable
 {
@@ -28,7 +30,8 @@ internal sealed class EventsHost : IAsyncDisposable
         FakeEventsService? events = null,
         string environment = "Testing",
         string? database = null,
-        CapturedLogs? logs = null)
+        CapturedLogs? logs = null,
+        FakeDigestsBroker? digests = null)
     {
         var configuration = EventsTestIdentity.Settings(database);
         foreach (var (key, value) in settings)
@@ -44,6 +47,7 @@ internal sealed class EventsHost : IAsyncDisposable
             });
             builder.ConfigureTestServices(services =>
             {
+                if (digests is not null) services.AddSingleton<IEventDigestsBroker>(digests);
                 if (events is null) return;
                 services.AddSingleton<ICatalogEventsBroker>(events);
                 services.AddSingleton<IEventTrackingBroker>(events);

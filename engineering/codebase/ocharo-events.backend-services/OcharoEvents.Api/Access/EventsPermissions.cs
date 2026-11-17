@@ -8,4 +8,8 @@ public static class EventsPermissions
 
     /// <summary>Proposes events and saves tracking; WoW2 Events checks it again on the exchanged token.</summary>
     public const string Track = "events:track";
+
+    /// <summary>Sets the organization's Telegram delivery (WoW2 Events' digests); Events checks it again on the exchanged
+    /// token, beside client 11's <c>events.admin</c> scope.</summary>
+    public const string Admin = "events:admin";
 }

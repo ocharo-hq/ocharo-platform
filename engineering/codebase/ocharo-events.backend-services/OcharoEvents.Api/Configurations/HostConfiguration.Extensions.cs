@@ -6,6 +6,7 @@ using OcharoEvents.Api.Events;
 using OcharoEvents.Application.Events.Repositories;
 using OcharoEvents.Application.Events.Services;
 using OcharoEvents.Infrastructure;
+using OcharoEvents.Infrastructure.Delivery.Services;
 using OcharoEvents.Infrastructure.Events.Services;
 using OcharoEvents.Persistence;
 using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
@@ -96,6 +97,8 @@ public static partial class HostConfiguration
         builder.Services.AddScoped<IEventRepository, EventsServiceRepository>();
         builder.Services.AddSingleton<EventValidationService>();
         builder.Services.AddScoped<EventService>();
+        // Telegram delivery: the organization's digests in WoW2 Events, through the same client and person flow.
+        builder.Services.AddScoped<EventDigestsService>();
         // The SDK registration converts a handler's thrown failure into its AppResult, outermost.
         builder.Services.AddMediator(typeof(InfrastructureAssembly).Assembly);
         return builder;

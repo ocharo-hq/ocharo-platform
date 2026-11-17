@@ -1,8 +1,15 @@
 # Telegram bots
 
-*Last updated: 2026-11-02*
+*Last updated: 2026-11-17*
 
 Ocharo runs 3 Telegram bots, one per WoW2 Identity instance. Identity's Telegram module drives each bot: it links accounts, delivers access codes and sends platform messages. Ocharo apps never talk to a bot directly.
+
+## App notices
+
+- Since Identity 0.5.22 a service sends one person a message through the environment's bot by Identity's app notices (`POST /api/identity/v1/notices`), as itself: a client-credentials token for `Identity:Notices:Audience` with the scope `identity.notices.send`.
+- `deploy.yml` declares the audience as Identity resource 5 (`identity`) and grants the scope to client 8 (`events`), so WoW2 Events sends Ocharo's scheduled event digests, which the Events app's admins set under "Telegram delivery".
+- A person without a Telegram link reads `not_linked` in the digest's run history; nothing reaches groups or channels.
+- Each notice carries a mute button for its app; `/stop` mutes every app's notices for the person, and a bare `/start` lifts the mutes. Access codes and security notices still reach a muted account.
 
 ## Bots
 
@@ -23,7 +30,7 @@ Ocharo runs 3 Telegram bots, one per WoW2 Identity instance. Identity's Telegram
 - Group privacy stays on for all 3 bots.
 - Allow groups stays off for dev and local.
 - Prod turns Allow groups on only to join the workspace group, then off again; inside that group the bot is an admin with every right off except Manage topics.
-- Commands stay empty: Identity answers `/start` only.
+- Commands stay empty in BotFather: Identity answers `/start` (link an account; a bare `/start` also unmutes app notices) and `/stop` (mute every app's notices).
 - Profile pictures are pending; the compact Ocharo mark is the planned image, with no description media.
 
 ## Languages

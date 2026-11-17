@@ -51,7 +51,8 @@ public sealed class OrganizationAccessFilter : IAsyncActionFilter
             return;
         }
         http.Items[AccessKey] = new OrganizationAccess(organizationId, AccessClaims.UserId(http.User),
-            http.User.HasOrganizationPermission(organizationId, EventsPermissions.Track));
+            http.User.HasOrganizationPermission(organizationId, EventsPermissions.Track),
+            http.User.HasOrganizationPermission(organizationId, EventsPermissions.Admin));
         await next();
     }
 }

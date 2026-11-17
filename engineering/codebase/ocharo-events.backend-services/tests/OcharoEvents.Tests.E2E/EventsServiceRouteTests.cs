@@ -4,9 +4,11 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OcharoEvents.Application.Events.Repositories;
+using OcharoEvents.Infrastructure.Delivery.Services;
 using OcharoEvents.Infrastructure.Events.Services;
 using WoW.Two.Sdk.Beta.Be.Events.CatalogEvents;
 using WoW.Two.Sdk.Beta.Be.Events.Client;
+using WoW.Two.Sdk.Beta.Be.Events.Digests;
 using WoW.Two.Sdk.Beta.Be.Http.Auth.OAuth2TokenExchange;
 
 namespace OcharoEvents.Tests.E2E;
@@ -350,6 +352,10 @@ public sealed class EventsServiceRouteTests
             .Should().Be("WoW.Two.Sdk.Beta.Be.Identity.Bff.Sessions.BffSubjectTokenSource");
         using var scope = host.Factory.Services.CreateScope();
         scope.ServiceProvider.GetRequiredService<IEventRepository>().Should().BeOfType<EventsServiceRepository>();
+        // Telegram delivery reaches Events' digests through the same client and person flow.
+        scope.ServiceProvider.GetRequiredService<IEventDigestsBroker>().GetType().FullName
+            .Should().Be("WoW.Two.Sdk.Beta.Be.Events.Client.Digests.ApiEventDigestsBroker");
+        scope.ServiceProvider.GetRequiredService<EventDigestsService>().Should().NotBeNull();
     }
 
     [Fact]

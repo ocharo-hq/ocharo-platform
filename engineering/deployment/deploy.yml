@@ -164,7 +164,7 @@ services:
   # that tag); its config check refuses an unbound one, such as a stored value of the retired
   # Identity:SignUp:IsEnabled, which the first 0.5.x deploy needs deleted from each environment.
   identity:
-    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.21
+    image: ghcr.io/wow-two-sdk-beta/wow-two-sdk-beta.identity/identity:0.5.22
     health: /health
     memory: 256m
     needs: [postgres]
@@ -203,6 +203,11 @@ services:
         Identity:Telegram:BotUserName: { required: true }
         Identity:Telegram:BotToken: { secret: true, required: true }
         Identity:Telegram:WebhookSecret: { secret: true, required: true, generate: { random: 32, encoding: hex } }
+        # App notices (Identity 0.5.22, I01): services send a person a message through this bot by POST
+        # /api/identity/v1/notices with a client-credentials token for this audience and identity.notices.send. The
+        # audience is resource 5's Uri, so it is typed once; WoW2 Events' digests (client 8) are the first sender
+        # (tasks-platform.md O17). /stop mutes every app's notices for a person, a bare /start lifts the mutes.
+        Identity:Notices:Audience: { from: Identity:Server:Resources:5:Uri }
         Identity:Otp:HashKey: { secret: true, required: true, generate: { random: 32 } }
         # The app the bot's code and sign-in messages name; the image's default is "Identity".
         Identity:Otp:Messages:AppName: { default: Ocharo }
@@ -395,6 +400,10 @@ services:
         Identity:Server:Clients:8:Grants:0: { default: client_credentials }
         Identity:Server:Clients:8:Resources:0: { default: harvest }
         Identity:Server:Clients:8:Scopes:0: { default: harvest.events-read }
+        # Events also sends Ocharo's scheduled event digests through Ocharo's bot as itself (tasks-platform.md O17): its
+        # Events:Digests:Telegram keys take this client and resource 5's Uri as their resource.
+        Identity:Server:Clients:8:Resources:1: { default: identity }
+        Identity:Server:Clients:8:Scopes:1: { default: identity.notices.send }
         # Index 9 stays empty: client 9, harvest-operator, left on 2026-11-10 because no operator HTTP caller exists (SCFD
         # provisions through host verbs); Wheelhouse v0.15.1+ holds its stored secret instead of rendering it, and the
         # seeder deletes the client. Identity matches clients by ClientId, so client 10 keeps its index and typed keys.
@@ -421,8 +430,9 @@ services:
         Identity:Server:Clients:10:Scopes:4: { default: events.admin }
         # Client 11, ocharo-events: Ocharo's own Events app (research/events-app.md #5) signs members in through its BFF
         # and reaches `events` for a person only, by token exchange; Events checks the scope and the `events:*`
-        # permission against the token's org_id. Proposing and tracking need events.track; nothing needs import, review
-        # or admin. Its URIs are owner keys typed per environment from the events site's URL
+        # permission against the token's org_id. Proposing and tracking need events.track; the Telegram delivery page
+        # edits the organization's digests, which need events.admin (owner and admin hold events:admin); nothing needs
+        # import or review. Its URIs are owner keys typed per environment from the events site's URL
         # (`{Url}api/identity/callback`, `{Url}`, `{Url}api/identity/signal`); the app links its secret with `from`.
         Identity:Server:Clients:11:ClientId: { default: ocharo-events }
         Identity:Server:Clients:11:DisplayName: { default: Ocharo Events }
@@ -436,6 +446,7 @@ services:
         Identity:Server:Clients:11:ExchangeResources:0: { default: events }
         Identity:Server:Clients:11:Scopes:0: { default: events.read }
         Identity:Server:Clients:11:Scopes:1: { default: events.track }
+        Identity:Server:Clients:11:Scopes:2: { default: events.admin }
         Identity:Server:Resources:0:Name: { default: desk }
         Identity:Server:Resources:0:Uri: { type: url, required: true }
         Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }
@@ -482,6 +493,12 @@ services:
         Identity:Server:Resources:4:Scopes:8: { default: harvest.links-submit }
         Identity:Server:Resources:4:Scopes:9: { default: harvest.entries-write }
         Identity:Server:Resources:4:Scopes:10: { default: harvest.posts-read }
+        # Identity's own app notices (Identity:Notices:Audience above): typed per environment as the identity site's URL
+        # plus `api/identity/`, with the slash (`https://<identity host>/api/identity/`). Only service tokens reach it,
+        # so it has no permission namespace and no signal URL.
+        Identity:Server:Resources:5:Name: { default: identity }
+        Identity:Server:Resources:5:Uri: { type: url, required: true }
+        Identity:Server:Resources:5:Scopes:0: { default: identity.notices.send }
     sites:
       identity: { paths: [/, /api] }
   brand:
