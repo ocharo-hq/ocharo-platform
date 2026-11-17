@@ -74,6 +74,7 @@ public static class EventsServiceMapper
             Priority(tracking?.Priority ?? TrackingPriority.Normal),
             tracking?.Notes ?? string.Empty,
             ShownRevision(tracking),
+            item.Revision,
             tracking?.CreatedAtUtc ?? item.CreatedAtUtc,
             tracking is { } own && own.UpdatedAtUtc > item.UpdatedAtUtc ? own.UpdatedAtUtc : item.UpdatedAtUtc);
     }
@@ -112,12 +113,7 @@ public static class EventsServiceMapper
         return new TrackingSpec
         {
             Stage = input.Status,
-            Priority = input.Priority switch
-            {
-                "high" => TrackingPriority.High,
-                "low" => TrackingPriority.Low,
-                _ => TrackingPriority.Normal,
-            },
+            Priority = TrackingPriorityOf(input.Priority),
             Notes = input.Notes,
             Fields = JsonSerializer.SerializeToElement(
                 new Dictionary<string, string?>(StringComparer.Ordinal)
@@ -126,6 +122,29 @@ public static class EventsServiceMapper
                     ["cost"] = input.Cost,
                     ["sourceUrl"] = input.SourceUrl,
                 }),
+            ExpectedRevision = expectedRevision,
+        };
+    }
+
+    /// <summary>
+    /// Maps the tracking fields alone to this organization's tracking at the tracking revision the page read. The tracking's
+    /// other stored fields, such as the source link an import kept there, stay as they were.
+    /// </summary>
+    public static TrackingSpec ToTracking(ShowcaseTrackingInput input, JsonElement? storedFields, int? expectedRevision)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        var fields = new Dictionary<string, object?>(StringComparer.Ordinal);
+        if (storedFields is { ValueKind: JsonValueKind.Object } stored)
+            foreach (JsonProperty property in stored.EnumerateObject())
+                fields[property.Name] = property.Value;
+        fields["participation"] = input.Participation;
+        fields["cost"] = input.Cost;
+        return new TrackingSpec
+        {
+            Stage = input.Status,
+            Priority = TrackingPriorityOf(input.Priority),
+            Notes = input.Notes,
+            Fields = JsonSerializer.SerializeToElement(fields),
             ExpectedRevision = expectedRevision,
         };
     }
@@ -251,6 +270,13 @@ public static class EventsServiceMapper
         int dash = tag.IndexOf('-', StringComparison.Ordinal);
         return (dash < 0 ? tag : tag[..dash]).Trim().ToLowerInvariant();
     }
+
+    private static TrackingPriority TrackingPriorityOf(string priority) => priority switch
+    {
+        "high" => TrackingPriority.High,
+        "low" => TrackingPriority.Low,
+        _ => TrackingPriority.Normal,
+    };
 
     private static string Priority(TrackingPriority priority) => priority switch
     {

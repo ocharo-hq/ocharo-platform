@@ -76,7 +76,10 @@ export interface ShowcaseEvent {
   status: EventStatus;
   priority: EventPriority;
   notes: string;
+  /** The tracking revision plus one: the revision every write of Ocharo's own fields names. */
   revision: number;
+  /** The revision of the event's facts in WoW2 Events; it moves when the source revises them, apart from `revision`. */
+  eventRevision: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,6 +88,7 @@ type DerivedEventFields =
   | 'id'
   | 'key'
   | 'revision'
+  | 'eventRevision'
   | 'createdAt'
   | 'updatedAt'
   | 'titleLanguage'
@@ -386,6 +390,18 @@ export function safeEventUrl(value: string | null | undefined): string | null {
 export function optionalEventText(value: string): string | null {
   const text = value.trim();
   return text ? text : null;
+}
+/** Where Ocharo stands with an event: the only fields a stage change or an edit of an existing event writes. */
+export type TrackingInput = Pick<EventInput, 'status' | 'priority' | 'participation' | 'cost' | 'notes'>;
+/** The tracking fields a quick stage or priority change sends back unchanged. */
+export function trackingInput(event: ShowcaseEvent): TrackingInput {
+  return {
+    status: event.status,
+    priority: event.priority,
+    participation: event.participation,
+    cost: event.cost,
+    notes: event.notes,
+  };
 }
 /** The fields an edit or a quick status change sends back unchanged. */
 export function eventInput(event: ShowcaseEvent): EventInput {

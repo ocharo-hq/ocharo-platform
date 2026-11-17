@@ -90,7 +90,8 @@ public sealed class EventsController(ISender sender) : ControllerBase
             fail => this.ToProblem(fail.Error));
     }
 
-    /// <summary>Replaces an event at the revision the operator edited.</summary>
+    /// <summary>Replaces an event at the revision the operator edited; a change to its facts answers 410, a facts revision the
+    /// page no longer holds 409.</summary>
     [HttpPut("{eventId:guid}")]
     public async Task<IActionResult> Update(
         Guid eventId,
@@ -98,6 +99,27 @@ public sealed class EventsController(ISender sender) : ControllerBase
         CancellationToken cancellationToken)
     {
         var result = await sender.SendAsync(new EventUpdateCommand
+        {
+            Access = OrganizationAccessFilter.GetAccess(HttpContext),
+            EventId = eventId,
+            ExpectedRevision = request.ExpectedRevision,
+            ExpectedEventRevision = request.EventRevision,
+            Fields = request.Fields(),
+        }, cancellationToken);
+        return result.Match<IActionResult>(
+            ok => Ok(ApiResponse<ShowcaseEvent>.Ok(ok.Data)),
+            fail => this.ToProblem(fail.Error));
+    }
+
+    /// <summary>Records stage, priority, participation, cost and notes at the revision the operator edited, whatever has
+    /// happened to the event's facts since it was read.</summary>
+    [HttpPut("{eventId:guid}/tracking")]
+    public async Task<IActionResult> UpdateTracking(
+        Guid eventId,
+        [FromBody] UpdateTrackingRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.SendAsync(new EventTrackingUpdateCommand
         {
             Access = OrganizationAccessFilter.GetAccess(HttpContext),
             EventId = eventId,

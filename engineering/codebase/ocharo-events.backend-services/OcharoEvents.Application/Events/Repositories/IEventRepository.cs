@@ -33,12 +33,28 @@ public interface IEventRepository
         ShowcaseEventInput input,
         CancellationToken token);
 
-    /// <summary>Changes an event at its expected revision; not found, or a conflict when it changed since.</summary>
+    /// <summary>
+    /// Changes an event at its expected revision; not found, or a conflict when it changed since. When the event's own
+    /// revision is given and differs from the current one the facts moved since the page read them, a conflict; otherwise a
+    /// change to the facts is refused as gone.
+    /// </summary>
     Task<Result<ShowcaseEvent>> UpdateEventAsync(
         Guid organizationId,
         Guid eventId,
         int expectedRevision,
+        int? expectedEventRevision,
         ShowcaseEventInput input,
+        CancellationToken token);
+
+    /// <summary>
+    /// Records where the organization stands with an event at its expected tracking revision, whatever has happened to the
+    /// event's facts since; not found, or a conflict when the tracking changed since.
+    /// </summary>
+    Task<Result<ShowcaseEvent>> UpdateTrackingAsync(
+        Guid organizationId,
+        Guid eventId,
+        int expectedRevision,
+        ShowcaseTrackingInput input,
         CancellationToken token);
 
     /// <summary>Removes an event at its expected revision; not found, or a conflict when it changed since.</summary>

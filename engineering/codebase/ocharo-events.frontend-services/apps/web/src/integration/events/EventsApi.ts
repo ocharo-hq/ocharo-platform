@@ -17,6 +17,7 @@ import {
   type EventSummary,
   type EventTickets,
   type ShowcaseEvent,
+  type TrackingInput,
 } from '@/domain/events/Events';
 
 /** @internal Checks an untrusted JSON object. */
@@ -76,7 +77,8 @@ export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
   isDatePrecision(v.datePrecision) &&
   isEventStatus(v.status) &&
   isEventPriority(v.priority) &&
-  revision(v.revision);
+  revision(v.revision) &&
+  revision(v.eventRevision);
 /** Every status key must be known; statuses with no events may be absent. */
 export const isEventSummary = (v: unknown): v is EventSummary =>
   record(v) &&
@@ -160,6 +162,13 @@ export function createEventsApi(client: ApiClient = eventsHttp, language: () => 
       client.get(`${base(o)}/${id(eventId)}`, { ...call(signal), decode: decode(isShowcaseEvent, event) }),
     updateEvent: (o: string, eventId: string, expectedRevision: number, input: EventInput, signal: AbortSignal) =>
       client.put(`${base(o)}/${id(eventId)}`, {
+        ...call(signal),
+        body: { expectedRevision, ...input },
+        decode: decode(isShowcaseEvent, event),
+      }),
+    /** Writes only where Ocharo stands, so a revision of the event's facts after the page read never refuses it. */
+    updateTracking: (o: string, eventId: string, expectedRevision: number, input: TrackingInput, signal: AbortSignal) =>
+      client.put(`${base(o)}/${id(eventId)}/tracking`, {
         ...call(signal),
         body: { expectedRevision, ...input },
         decode: decode(isShowcaseEvent, event),

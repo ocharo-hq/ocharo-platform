@@ -2,9 +2,11 @@
 
 *Last updated: 2026-11-17*
 
-The organization's showcase events under `api/organizations/{organizationId}/events`, Desk's routes and wire unchanged
-(events-app.md #3): list, `summary`, propose, read, and save tracking by `PUT {eventId}`; a fact edit or a delete answers
-410 Gone, since facts change through WoW2 Events' review.
+The organization's showcase events under `api/organizations/{organizationId}/events`, Desk's routes and wire (events-app.md #3):
+list, `summary`, propose, read, and save tracking by `PUT {eventId}/tracking` (stage, priority, participation, cost and
+notes; it never compares the event's facts, so a source revision after the page read cannot refuse it). The full
+`PUT {eventId}` answers 410 for a fact edit, since facts change through WoW2 Events' review, and 409 when the page's
+`eventRevision` no longer matches; a delete answers 410.
 A title comes back in the language `Accept-Language` names (`HttpUiLocale`, matched by language prefix), with the tag it came
 under as `titleLanguage` and the source's `languages`.
 Events' event status and attendance ride as `eventStatus` and `attendance`, apart from Ocharo's own stage `status`; a

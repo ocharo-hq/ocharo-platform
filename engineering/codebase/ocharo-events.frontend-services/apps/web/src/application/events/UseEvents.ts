@@ -8,12 +8,12 @@ import { useAppQuery, useQueryCache } from '@wow-two-beta/fe/query';
 import { notifyError, requestConfirmation } from '@/application/common/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import {
-  eventInput,
   eventLimits,
   eventsPath,
   localIsoDate,
   readEventsAddress,
   readEventsOrganizationId,
+  trackingInput,
   type EventFilter,
   type EventInput,
   type EventPriority,
@@ -27,10 +27,12 @@ import { failureMessage, type EventsAccess, type EventsWorkspace } from './UseEv
 
 /** The result of a form save as the form needs it: conflicts keep the form's input. */
 export type EventSaveOutcome = 'saved' | 'conflict' | 'failed';
-/** Maps a write result for a form: conflicts stay inline, other failures become a safe toast. */
+/** Tells whether the record moved on since the page read it: a stale revision (409) or facts that moved to review (410). */
+export const isStaleFailure = (failure: ApiFailure): boolean => failure.status === 409 || failure.status === 410;
+/** Maps a write result for a form: a record that moved on stays inline, other failures become a safe toast. */
 export function eventSaveOutcome(result: Result<unknown, ApiFailure>): EventSaveOutcome {
   if (result.ok) return 'saved';
-  if (result.failure.status === 409) return 'conflict';
+  if (isStaleFailure(result.failure)) return 'conflict';
   if (result.failure.code !== 'cancelled') notifyError(failureMessage(result.failure));
   return 'failed';
 }
@@ -136,12 +138,16 @@ export function useEvents(access: EventsAccess, workspace: EventsWorkspace) {
     createEvent: (input: EventInput, signal?: AbortSignal) => run((s) => api.createEvent(o(), input, s), signal),
     updateEvent: (event: ShowcaseEvent, input: EventInput, signal?: AbortSignal) =>
       run((s) => api.updateEvent(o(), event.id, event.revision, input, s), signal),
-    /** Changes only the status or priority, sending every other field back as it was read. */
+    /**
+     * Changes only the stage or priority, sending Ocharo's other tracking fields back as they were read. It rides the
+     * tracking route, which never compares the event's facts, so a revision of them after the page read cannot refuse it.
+     */
     patchEvent: (
       event: ShowcaseEvent,
       changes: { status?: EventStatus; priority?: EventPriority },
       signal?: AbortSignal,
-    ) => run((s) => api.updateEvent(o(), event.id, event.revision, { ...eventInput(event), ...changes }, s), signal),
+    ) =>
+      run((s) => api.updateTracking(o(), event.id, event.revision, { ...trackingInput(event), ...changes }, s), signal),
     /** Reloads the feed and summary but not the deleted event, which would only answer 404. */
     async deleteEvent(event: ShowcaseEvent, signal?: AbortSignal) {
       const result = await access.write((s) => api.deleteEvent(o(), event.id, event.revision, s), signal);

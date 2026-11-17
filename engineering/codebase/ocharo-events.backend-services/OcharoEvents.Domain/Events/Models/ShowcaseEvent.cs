@@ -5,7 +5,8 @@ namespace OcharoEvents.Domain.Events.Models;
 /// <c>EventStatus</c> says whether the event still happens as listed (<c>scheduled</c>, <c>cancelled</c>, <c>postponed</c>,
 /// <c>rescheduled</c>, <c>moved-online</c>) and <c>Attendance</c> where it is attended (<c>offline</c>, <c>online</c>,
 /// <c>mixed</c>); <c>Status</c> is Ocharo's own stage. <c>Tickets</c> and <c>TicketUrl</c> are what the source says attending costs;
-/// <c>Cost</c> stays Ocharo's own cost of taking part.</summary>
+/// <c>Cost</c> stays Ocharo's own cost of taking part. <c>Revision</c> is the tracking revision plus one; <c>EventRevision</c> is the
+/// revision of the event's facts in WoW2 Events, which moves when the source revises them.</summary>
 public sealed record ShowcaseEvent(
     Guid Id,
     string? Key,
@@ -34,5 +35,6 @@ public sealed record ShowcaseEvent(
     string Priority,
     string Notes,
     int Revision,
+    int EventRevision,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

@@ -23,7 +23,6 @@ ChatGPT builds these in the pull order of wow-two-ws `system/sessions/events-int
 |---|---|---|
 | E10 Show start time, address and organizer link on detail | feature | spec in `tasks-events-path.md` |
 | E16 Show source attribution and listing state on cards | feature | spec in `tasks-events-path.md` |
-| E13 Stop stage changes answering 410 after SCFD revisions | fix | spec in `tasks-events-path.md` |
 | E14 Remove dead fact-edit and delete actions from the page | fix | spec in `tasks-events-path.md` |
 | E27 Pin Ocharo's mapper to SCFD-shaped Events records | engineering | spec in `tasks-events-path.md` |
 | E29 Run a local SCFD → Events → Ocharo smoke | engineering | spec in `tasks-events-path.md` |

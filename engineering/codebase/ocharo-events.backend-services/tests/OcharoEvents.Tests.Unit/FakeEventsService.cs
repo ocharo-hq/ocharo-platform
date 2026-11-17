@@ -32,12 +32,23 @@ public sealed class FakeEventsService : ICatalogEventsBroker, IEventTrackingBrok
         return item;
     }
 
-    public TrackingModel Track(Guid eventId, string stage, TrackingPriority priority = TrackingPriority.Normal, int revision = 1)
+    /// <summary>Revises the event's facts as a source revision does: the facts change and the event's revision moves on.</summary>
+    public EventModel Revise(Guid id, Func<EventFacts, EventFacts> change)
+    {
+        EventModel current = events[id];
+        return events[id] = current with
+        {
+            Facts = change(current.Facts), Revision = current.Revision + 1, UpdatedAtUtc = current.UpdatedAtUtc.AddMinutes(5),
+        };
+    }
+
+    public TrackingModel Track(
+        Guid eventId, string stage, TrackingPriority priority = TrackingPriority.Normal, int revision = 1, System.Text.Json.JsonElement? fields = null)
     {
         var tracking = new TrackingModel
         {
             Id = Guid.NewGuid(), EventId = eventId, Stage = stage, Priority = priority, Revision = revision,
-            CreatedAtUtc = At, UpdatedAtUtc = At,
+            Fields = fields, CreatedAtUtc = At, UpdatedAtUtc = At,
         };
         trackings[eventId] = tracking;
         return tracking;

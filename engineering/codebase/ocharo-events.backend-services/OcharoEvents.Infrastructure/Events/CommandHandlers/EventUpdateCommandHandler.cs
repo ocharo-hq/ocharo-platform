@@ -22,6 +22,7 @@ public sealed class EventUpdateCommandHandler(EventService service, EventValidat
             request.Access,
             request.EventId,
             request.ExpectedRevision,
+            request.ExpectedEventRevision,
             input,
             cancellationToken);
         return updated.ToAppResult();

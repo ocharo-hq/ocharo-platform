@@ -69,12 +69,27 @@ public sealed class EventService(IEventRepository repository, EventValidationSer
         OrganizationAccess access,
         Guid eventId,
         int expectedRevision,
+        int? expectedEventRevision,
         ShowcaseEventInput input,
         CancellationToken token)
     {
         RequireTracker(access);
         validation.Revision(expectedRevision);
-        return repository.UpdateEventAsync(access.OrganizationId, eventId, expectedRevision, input, token);
+        if (expectedEventRevision is { } eventRevision) validation.Revision(eventRevision);
+        return repository.UpdateEventAsync(
+            access.OrganizationId, eventId, expectedRevision, expectedEventRevision, input, token);
+    }
+
+    public Task<Result<ShowcaseEvent>> UpdateTrackingAsync(
+        OrganizationAccess access,
+        Guid eventId,
+        int expectedRevision,
+        ShowcaseTrackingInput input,
+        CancellationToken token)
+    {
+        RequireTracker(access);
+        validation.Revision(expectedRevision);
+        return repository.UpdateTrackingAsync(access.OrganizationId, eventId, expectedRevision, input, token);
     }
 
     public Task<Result> DeleteEventAsync(

@@ -2,9 +2,11 @@ using OcharoEvents.Application.Events.Models;
 
 namespace OcharoEvents.Api.Events.Models;
 
-/// <summary>Represents a showcase event's replacement fields at the revision the operator edited.</summary>
+/// <summary>Represents a showcase event's replacement fields at the revision the operator edited; <c>EventRevision</c> is the
+/// revision of the event's facts the operator read, which lets a stale page answer 409 instead of 410.</summary>
 public sealed record UpdateEventRequest(
     int ExpectedRevision,
+    int? EventRevision,
     string? Title,
     string? Organizer,
     string? Scope,

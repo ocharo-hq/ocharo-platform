@@ -12,7 +12,7 @@ import { feedbackBus, resolveConfirmation } from '@/application/common/UseFeedba
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { EventsAccess } from '@/application/events/UseEventsAccess';
 import type { EventsWorkspace } from '@/application/events/UseEventsAccess';
-import { eventInput, type EventsLocation, type ShowcaseEvent } from '@/domain/events/Events';
+import { trackingInput, type EventsLocation, type ShowcaseEvent } from '@/domain/events/Events';
 import EventsPage from '@/presentation/events/pages/EventsPage.vue';
 
 const api = vi.hoisted(() => ({
@@ -21,6 +21,7 @@ const api = vi.hoisted(() => ({
   createEvent: vi.fn(),
   getEvent: vi.fn(),
   updateEvent: vi.fn(),
+  updateTracking: vi.fn(),
   deleteEvent: vi.fn(),
 }));
 vi.mock('@/integration/events/EventsApi', () => ({ createEventsApi: () => api }));
@@ -59,6 +60,7 @@ const showcase = (over: Partial<ShowcaseEvent>): ShowcaseEvent => ({
   priority: 'high',
   notes: 'Ikat coats fit the second day.\nBring the lookbook.',
   revision: 3,
+  eventRevision: 1,
   createdAt: at,
   updatedAt: at,
   ...over,
@@ -321,33 +323,49 @@ describe('events feed', () => {
     );
   });
 
-  it('shortlists or skips a candidate with one PUT carrying its revision', async () => {
+  it('shortlists or skips a candidate with one tracking PUT carrying its revision', async () => {
     await render('editor', feed);
     await flushPromises();
-    api.updateEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'shortlisted', revision: 4 }));
+    api.updateTracking.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'shortlisted', revision: 4 }));
     expect(buttonIn(card('Silk Road Trade Fair'), 'Shortlist')).toBeUndefined();
     const calls = api.listEvents.mock.calls.length;
     await buttonIn(card('Tashkent Fashion Week'), 'Shortlist')!.trigger('click');
     await flushPromises();
-    expect(api.updateEvent).toHaveBeenCalledTimes(1);
-    expect(api.updateEvent).toHaveBeenCalledWith(
+    expect(api.updateTracking).toHaveBeenCalledTimes(1);
+    expect(api.updateTracking).toHaveBeenCalledWith(
       ORG,
       FASHION_WEEK,
       3,
-      { ...eventInput(fashionWeek()), status: 'shortlisted' },
+      { ...trackingInput(fashionWeek()), status: 'shortlisted' },
       expect.any(AbortSignal),
     );
+    expect(api.updateEvent).not.toHaveBeenCalled();
     expect(api.listEvents.mock.calls.length).toBeGreaterThan(calls);
 
     await buttonIn(card('Tashkent Fashion Week'), 'Skip')!.trigger('click');
     await flushPromises();
-    expect(api.updateEvent).toHaveBeenLastCalledWith(
+    expect(api.updateTracking).toHaveBeenLastCalledWith(
       ORG,
       FASHION_WEEK,
       3,
-      { ...eventInput(fashionWeek()), status: 'skipped' },
+      { ...trackingInput(fashionWeek()), status: 'skipped' },
       expect.any(AbortSignal),
     );
+  });
+
+  it.each([409, 410])('reloads the feed and says so when a card review answers %i', async (status) => {
+    const notice = vi.spyOn(feedbackBus, 'notify');
+    await render('editor', feed);
+    await flushPromises();
+    api.updateTracking.mockResolvedValue(
+      ResultExtensions.fail(ApiFailureFactory.create('http', { status, headers: new Headers() })),
+    );
+    const calls = api.listEvents.mock.calls.length;
+    await buttonIn(card('Tashkent Fashion Week'), 'Shortlist')!.trigger('click');
+    await flushPromises();
+    expect(notice).toHaveBeenCalledWith(expect.objectContaining({ tone: 'danger' }));
+    expect(api.listEvents.mock.calls.length).toBeGreaterThan(calls);
+    notice.mockRestore();
   });
 
   it('creates a manual event as shortlisted by default and opens it', async () => {
@@ -472,24 +490,25 @@ describe('event detail', () => {
     expect(card('Tashkent Fashion Week').findAll('button')).toHaveLength(0);
   });
 
-  it('saves status and priority as soon as they change', async () => {
+  it('saves status and priority as soon as they change, through the tracking route', async () => {
     await render('editor', { view: 'event', eventId: FASHION_WEEK });
     await flushPromises();
-    api.updateEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'applying', revision: 4 }));
+    api.updateTracking.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'applying', revision: 4 }));
     await chooseEventsValue(wrapper!.findComponent({ name: 'EventDetail' }), 'Status', 'applying');
     await flushPromises();
-    expect(api.updateEvent).toHaveBeenLastCalledWith(
+    expect(api.updateTracking).toHaveBeenLastCalledWith(
       ORG,
       FASHION_WEEK,
       3,
-      { ...eventInput(fashionWeek()), status: 'applying' },
+      { ...trackingInput(fashionWeek()), status: 'applying' },
       expect.any(AbortSignal),
     );
     api.getEvent.mockResolvedValue(ResultExtensions.ok({ ...fashionWeek(), status: 'applying', revision: 4 }));
     await chooseEventsValue(wrapper!.findComponent({ name: 'EventDetail' }), 'Priority', 'low');
     await flushPromises();
-    expect(api.updateEvent).toHaveBeenCalledTimes(2);
-    expect(api.updateEvent.mock.calls[1]![3]).toMatchObject({ priority: 'low' });
+    expect(api.updateTracking).toHaveBeenCalledTimes(2);
+    expect(api.updateTracking.mock.calls[1]![3]).toMatchObject({ priority: 'low' });
+    expect(api.updateEvent).not.toHaveBeenCalled();
   });
 
   it('retains the committed status throughout a pending and rejected update', async () => {
@@ -498,14 +517,14 @@ describe('event detail', () => {
     const eventDetail = wrapper!.findComponent({ name: 'EventDetail' });
     const picker = eventsSelect(eventDetail, 'Status');
     let finish!: (value: unknown) => void;
-    api.updateEvent.mockImplementationOnce(
+    api.updateTracking.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           finish = resolve;
         }),
     );
     await chooseEventsValue(eventDetail, 'Status', 'applying');
-    expect(api.updateEvent).toHaveBeenCalledTimes(1);
+    expect(api.updateTracking).toHaveBeenCalledTimes(1);
     expect(picker.props('modelValue')).toBe('candidate');
     expect(picker.props('disabled')).toBe(true);
     finish(ResultExtensions.fail(ApiFailureFactory.create('http', { status: 409, headers: new Headers() })));

@@ -18,6 +18,9 @@ public sealed record EventUpdateCommand : ICommand<AppResult<ShowcaseEvent>>
     /// <summary>Gets the revision the operator edited.</summary>
     public required int ExpectedRevision { get; init; }
 
+    /// <summary>Gets the revision of the event's facts the operator read, when the client names it.</summary>
+    public int? ExpectedEventRevision { get; init; }
+
     /// <summary>Gets the fields as the operator sent them.</summary>
     public required EventFields Fields { get; init; }
 }

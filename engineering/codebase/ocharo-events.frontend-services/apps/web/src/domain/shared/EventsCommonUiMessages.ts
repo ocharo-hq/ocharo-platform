@@ -19,6 +19,11 @@ export const eventsCommonUiMessages: UiMessageTable = {
     uz: 'Bu yozuv ushbu tashkilotda mavjud emas.',
     ru: 'Эта запись недоступна в данной организации.',
   },
+  'Event details change through WoW2 Events review. Reload the event; stage, priority, notes and cost stay editable here.':
+    {
+      uz: 'Tadbir tafsilotlari WoW2 Events ko‘rib chiqish orqali o‘zgaradi. Tadbirni qayta yuklang; bosqich, ustuvorlik, izohlar va xarajat shu yerda tahrirlanadi.',
+      ru: 'Данные мероприятия меняются через проверку в WoW2 Events. Перезагрузите мероприятие; этап, приоритет, заметки и расходы можно редактировать здесь.',
+    },
   'This record changed. Your edits are still here. Reload the latest version before trying again.': {
     uz: 'Yozuv o‘zgardi. Tahrirlaringiz saqlanib turibdi. Qayta urinishdan oldin oxirgi versiyani yuklang.',
     ru: 'Запись изменилась. Ваши правки сохранены. Загрузите последнюю версию перед повтором.',

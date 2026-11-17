@@ -7,7 +7,7 @@ import { Badge } from '@wow-two-beta/fe/presentation/display';
 import { notifyError } from '@/application/common/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { failureMessage, type EventsAccess } from '@/application/events/UseEventsAccess';
-import type { EventsControls } from '@/application/events/UseEvents';
+import { isStaleFailure, type EventsControls } from '@/application/events/UseEvents';
 import {
   daysLeftLabel,
   daysUntil,
@@ -57,7 +57,7 @@ async function review(status: EventStatus): Promise<void> {
   try {
     const result = await props.events.patchEvent(props.event, { status });
     if (result.ok || result.failure.code === 'cancelled') return;
-    if (result.failure.status === 409 || result.failure.status === 404) {
+    if (isStaleFailure(result.failure) || result.failure.status === 404) {
       notifyError(
         'This event changed elsewhere. The feed has been reloaded; review it and try again.',
         `event-review-${props.event.id}`,

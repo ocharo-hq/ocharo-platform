@@ -66,6 +66,53 @@ public sealed class EventsServiceRouteTests
     }
 
     [Fact]
+    public async Task TrackingRoute_ShouldSaveTheStage_AfterTheSourceRevisedTheFactsSinceThePageRead()
+    {
+        var service = new FakeEventsService();
+        EventModel sourced = service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["und"] = "Tashkent Fashion Week" },
+            Kind = "runway",
+            Place = new EventPlace { City = "Tashkent", Country = "UZ" },
+            Starts = new EventWhen { Value = "2026-12-03", Precision = DatePrecision.Day },
+        });
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), service);
+        using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Editor);
+        JsonElement listed = (await DataAsync(await client.GetAsync(Path))).EnumerateArray().Single();
+        listed.GetProperty("eventRevision").GetInt32().Should().Be(1);
+        service.Revise(sourced.Id, facts => facts with
+        {
+            Starts = new EventWhen { Value = "2026-12-04", Precision = DatePrecision.Day },
+        });
+
+        JsonElement shortlisted = await DataAsync(await client.PutAsJsonAsync($"{Path}/{sourced.Id}/tracking", new
+        {
+            expectedRevision = 1, status = "shortlisted", priority = "high", participation = "Booth", cost = "USD 500",
+            notes = "Fits.",
+        }));
+
+        shortlisted.GetProperty("status").GetString().Should().Be("shortlisted");
+        shortlisted.GetProperty("priority").GetString().Should().Be("high");
+        shortlisted.GetProperty("startsOn").GetString().Should().Be("2026-12-04");
+        shortlisted.GetProperty("eventRevision").GetInt32().Should().Be(2);
+        shortlisted.GetProperty("revision").GetInt32().Should().Be(2);
+        service.TrackingWrites.Should().ContainSingle().Which.Stage.Should().Be("shortlisted");
+
+        // A full replacement from the stale page answers 409 (its facts revision moved), not 410.
+        (await client.PutAsJsonAsync($"{Path}/{sourced.Id}", Body(listed, 2, status: "applying", eventRevision: 1)))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        // A real fact change on a current page still answers 410.
+        (await client.PutAsJsonAsync($"{Path}/{sourced.Id}", Body(shortlisted, 2, title: "Renamed", eventRevision: 2)))
+            .StatusCode.Should().Be(HttpStatusCode.Gone);
+        // A stale tracking revision answers 409, and an unknown stage 400.
+        (await client.PutAsJsonAsync($"{Path}/{sourced.Id}/tracking", new { expectedRevision = 1, status = "applying" }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await client.PutAsJsonAsync($"{Path}/{sourced.Id}/tracking", new { expectedRevision = 2, status = "registered" }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        service.TrackingWrites.Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task EventsPage_ShouldShowTheTitleInTheLanguageTheRequestAsksFor()
     {
         var service = new FakeEventsService();
@@ -254,9 +301,11 @@ public sealed class EventsServiceRouteTests
     private static bool IsNullOrAbsent(JsonElement item, string name) =>
         !item.TryGetProperty(name, out JsonElement value) || value.ValueKind == JsonValueKind.Null;
 
-    private static object Body(JsonElement item, int expectedRevision, string? status = null, string? title = null) => new
+    private static object Body(
+        JsonElement item, int expectedRevision, string? status = null, string? title = null, int? eventRevision = null) => new
     {
         expectedRevision,
+        eventRevision,
         title = title ?? item.GetProperty("title").GetString(),
         scope = item.GetProperty("scope").GetString(),
         format = item.GetProperty("format").GetString(),

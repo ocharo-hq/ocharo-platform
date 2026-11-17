@@ -93,8 +93,14 @@ public sealed class AccessTests
             startsOn = "2026-12-03", datePrecision = "day", status = "shortlisted",
         });
 
+        var trackOnly = await viewer.PutAsJsonAsync($"{OwnPath}/{item.Id}/tracking", new
+        {
+            expectedRevision = 1, status = "shortlisted",
+        });
+
         propose.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         track.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        trackOnly.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         events.TrackingWrites.Should().BeEmpty();
     }
 

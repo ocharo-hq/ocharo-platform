@@ -71,6 +71,17 @@ public sealed partial class EventValidationService
             notes);
     }
 
+    /// <summary>Validates the tracking fields alone; a status is required, a blank priority reads as normal.</summary>
+    public ShowcaseTrackingInput Tracking(TrackingFields fields)
+    {
+        return new ShowcaseTrackingInput(
+            Status(fields.Status),
+            Priority(string.IsNullOrWhiteSpace(fields.Priority) ? "normal" : fields.Priority),
+            Text(fields.Participation, "Participation", 2000),
+            OptionalText(fields.Cost, "Cost", 500),
+            Text(fields.Notes, "Notes", 8000));
+    }
+
     public ShowcaseEventFilter Filter(
         string? query, string? scope, string? format, string? status, string? from, string? to, bool includeUndated)
     {

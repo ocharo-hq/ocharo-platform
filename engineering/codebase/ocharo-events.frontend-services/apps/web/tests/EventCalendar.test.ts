@@ -40,6 +40,7 @@ function showcase(overrides: Partial<ShowcaseEvent> = {}): ShowcaseEvent {
     priority: 'normal',
     notes: 'Internal decision notes stay in Events.',
     revision: 2,
+    eventRevision: 1,
     createdAt: '2026-10-01T00:00:00Z',
     updatedAt: '2026-10-08T12:00:00Z',
     ...overrides,

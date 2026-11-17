@@ -53,6 +53,7 @@ const showcase = (over: Partial<ShowcaseEvent> = {}): ShowcaseEvent => ({
   priority: 'normal',
   notes: '',
   revision: 1,
+  eventRevision: 1,
   createdAt: at,
   updatedAt: at,
   ...over,

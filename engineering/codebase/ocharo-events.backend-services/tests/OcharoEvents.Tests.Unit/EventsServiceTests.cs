@@ -118,10 +118,10 @@ public sealed class EventsServiceTests
         ShowcaseEvent shown = (await repository.GetEventsAsync(Organization, All, 200, 0, Token)).Single();
 
         Result<ShowcaseEvent> first = await repository.UpdateEventAsync(
-            Organization, item.Id, shown.Revision, InputOf(shown) with { Status = "shortlisted", Notes = "Ask for a stand." }, Token);
+            Organization, item.Id, shown.Revision, null, InputOf(shown) with { Status = "shortlisted", Notes = "Ask for a stand." }, Token);
         ShowcaseEvent saved = first.Should().BeOfType<Result<ShowcaseEvent>.Success>().Which.Value;
         Result<ShowcaseEvent> second = await repository.UpdateEventAsync(
-            Organization, item.Id, saved.Revision, InputOf(saved) with { Priority = "high" }, Token);
+            Organization, item.Id, saved.Revision, null, InputOf(saved) with { Priority = "high" }, Token);
 
         service.TrackingWrites.Select(write => write.ExpectedRevision).Should().Equal(null, 1);
         saved.Status.Should().Be("shortlisted");
@@ -138,12 +138,15 @@ public sealed class EventsServiceTests
         ShowcaseEvent shown = (await repository.GetEventsAsync(Organization, All, 200, 0, Token)).Single();
 
         Result<ShowcaseEvent> moved = await repository.UpdateEventAsync(
-            Organization, item.Id, shown.Revision, InputOf(shown) with { Title = "Ambiente 2027" }, Token);
+            Organization, item.Id, shown.Revision, shown.EventRevision, InputOf(shown) with { Title = "Ambiente 2027" }, Token);
+        Result<ShowcaseEvent> legacyMoved = await repository.UpdateEventAsync(
+            Organization, item.Id, shown.Revision, null, InputOf(shown) with { Title = "Ambiente 2027" }, Token);
         Result<ShowcaseEvent> stale = await repository.UpdateEventAsync(
-            Organization, item.Id, shown.Revision + 1, InputOf(shown), Token);
+            Organization, item.Id, shown.Revision + 1, null, InputOf(shown), Token);
         Result deleted = await repository.DeleteEventAsync(Organization, item.Id, shown.Revision, Token);
 
         moved.Should().BeOfType<Result<ShowcaseEvent>.Failure>().Which.Error.Type.Should().Be(AppErrorType.Gone);
+        legacyMoved.Should().BeOfType<Result<ShowcaseEvent>.Failure>().Which.Error.Type.Should().Be(AppErrorType.Gone);
         stale.Should().BeOfType<Result<ShowcaseEvent>.Failure>().Which.Error.Type.Should().Be(AppErrorType.Conflict);
         deleted.Should().BeOfType<Result.Failure>().Which.Error.Type.Should().Be(AppErrorType.Gone);
         service.TrackingWrites.Should().BeEmpty();
@@ -305,6 +308,97 @@ public sealed class EventsServiceTests
         string.Join(',', HttpUiLocale.Parse(header)).Should().Be(expected);
 
     [Fact]
+    public async Task Update_ShouldAnswerConflictNotGone_WhenTheSourceRevisedTheFactsSinceThePageRead()
+    {
+        var service = new FakeEventsService();
+        EventModel item = service.Add(Facts("Ambiente Frankfurt", "DE", Day("2027-01-29")));
+        var repository = Repository(service);
+        ShowcaseEvent shown = (await repository.GetEventsAsync(Organization, All, 200, 0, Token)).Single();
+        service.Revise(item.Id, facts => facts with { Starts = Day("2027-02-05") });
+
+        Result<ShowcaseEvent> stale = await repository.UpdateEventAsync(
+            Organization, item.Id, shown.Revision, shown.EventRevision, InputOf(shown) with { Notes = "Ask for a stand." }, Token);
+
+        stale.Should().BeOfType<Result<ShowcaseEvent>.Failure>().Which.Error.Type.Should().Be(AppErrorType.Conflict);
+        service.TrackingWrites.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UpdateTracking_ShouldRecordTheStage_AfterTheSourceRevisedTheFactsSinceThePageRead()
+    {
+        var service = new FakeEventsService();
+        EventModel item = service.Add(Facts("Ambiente Frankfurt", "DE", Day("2027-01-29")));
+        var repository = Repository(service);
+        ShowcaseEvent shown = (await repository.GetEventsAsync(Organization, All, 200, 0, Token)).Single();
+        service.Revise(item.Id, facts => facts with
+        {
+            Title = new Dictionary<string, string> { ["und"] = "Ambiente Frankfurt 2027" }, Starts = Day("2027-02-05"),
+        });
+
+        Result<ShowcaseEvent> saved = await repository.UpdateTrackingAsync(
+            Organization, item.Id, shown.Revision, TrackingInput("shortlisted"), Token);
+
+        ShowcaseEvent after = saved.Should().BeOfType<Result<ShowcaseEvent>.Success>().Which.Value;
+        after.Status.Should().Be("shortlisted");
+        after.Title.Should().Be("Ambiente Frankfurt 2027");
+        after.EventRevision.Should().Be(shown.EventRevision + 1);
+        after.Participation.Should().Be("Application package");
+        after.Cost.Should().Be("USD 500");
+        service.TrackingWrites.Should().ContainSingle().Which.ExpectedRevision.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateTracking_ShouldAnswerConflictBeforeEvents_ForAStaleTrackingRevision()
+    {
+        var service = new FakeEventsService();
+        EventModel item = service.Add(Facts("Ambiente Frankfurt", "DE", Day("2027-01-29")));
+        service.Track(item.Id, "applying");
+        var repository = Repository(service);
+        ShowcaseEvent shown = (await repository.GetEventsAsync(Organization, All, 200, 0, Token)).Single();
+
+        Result<ShowcaseEvent> stale = await repository.UpdateTrackingAsync(
+            Organization, item.Id, shown.Revision + 1, TrackingInput("shortlisted"), Token);
+        Result<ShowcaseEvent> saved = await repository.UpdateTrackingAsync(
+            Organization, item.Id, shown.Revision, TrackingInput("applied") with { Cost = null }, Token);
+
+        stale.Should().BeOfType<Result<ShowcaseEvent>.Failure>().Which.Error.Type.Should().Be(AppErrorType.Conflict);
+        saved.Should().BeOfType<Result<ShowcaseEvent>.Success>().Which.Value.Status.Should().Be("applied");
+        service.TrackingWrites.Should().ContainSingle().Which.ExpectedRevision.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UpdateTracking_ShouldKeepTheSourceLinkAnImportStoredBesideTheStage()
+    {
+        var service = new FakeEventsService();
+        EventModel item = service.Add(Facts("Ambiente Frankfurt", "DE", Day("2027-01-29")));
+        service.Track(item.Id, "shortlisted", fields: JsonSerializer.SerializeToElement(
+            new { participation = "Old", cost = "Old cost", sourceUrl = "https://example.org/found" }));
+        var repository = Repository(service);
+        ShowcaseEvent shown = (await repository.GetEventsAsync(Organization, All, 200, 0, Token)).Single();
+
+        Result<ShowcaseEvent> saved = await repository.UpdateTrackingAsync(
+            Organization, item.Id, shown.Revision, TrackingInput("applying"), Token);
+
+        ShowcaseEvent after = saved.Should().BeOfType<Result<ShowcaseEvent>.Success>().Which.Value;
+        after.SourceUrl.Should().Be("https://example.org/found");
+        after.Participation.Should().Be("Application package");
+        after.Cost.Should().Be("USD 500");
+    }
+
+    [Fact]
+    public async Task UpdateTracking_ShouldAnswerNotFound_ForAHiddenEvent()
+    {
+        var service = new FakeEventsService();
+        EventModel hidden = service.Add(Facts("Rejected fair", "UZ", Day("2026-12-04")), EventReviewState.Rejected);
+
+        Result<ShowcaseEvent> saved = await Repository(service).UpdateTrackingAsync(
+            Organization, hidden.Id, 1, TrackingInput("shortlisted"), Token);
+
+        saved.Should().BeOfType<Result<ShowcaseEvent>.Failure>().Which.Error.Type.Should().Be(AppErrorType.NotFound);
+        service.TrackingWrites.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Create_ShouldProposeACandidate_AndTrackIt()
     {
         var service = new FakeEventsService();
@@ -372,10 +466,12 @@ public sealed class EventsServiceTests
         var reader = new OrganizationAccess(Organization, "viewer-sub", CanTrack: false);
 
         Func<Task> propose = () => events.CreateEventAsync(reader, Input("unknown", null), Token);
-        Func<Task> track = () => events.UpdateEventAsync(reader, item.Id, 1, Input("unknown", null), Token);
+        Func<Task> track = () => events.UpdateEventAsync(reader, item.Id, 1, null, Input("unknown", null), Token);
+        Func<Task> trackOnly = () => events.UpdateTrackingAsync(reader, item.Id, 1, TrackingInput("shortlisted"), Token);
 
         (await propose.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Forbidden);
         (await track.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Forbidden);
+        (await trackOnly.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Forbidden);
         service.TrackingWrites.Should().BeEmpty();
         (await events.GetEventsAsync(reader, null, null, null, null, null, null, true, 200, 0, Token)).Should().ContainSingle();
     }
@@ -415,6 +511,9 @@ public sealed class EventsServiceTests
         "Ikat Week", "Ikat House", "local", "festival", "UZ", "Margilan", null, startsOn, null, precision,
         startsOn?.AddDays(-30), "Application package", "Free", "https://example.org", "https://example.org/found",
         "candidate", "normal", "Bring scarves.");
+
+    private static ShowcaseTrackingInput TrackingInput(string status) =>
+        new(status, "normal", "Application package", "USD 500", "Ask for a stand.");
 
     private static ShowcaseEventInput InputOf(ShowcaseEvent item) => new(
         item.Title, item.Organizer, item.Scope, item.Format, item.Country, item.City, item.Venue, item.StartsOn,

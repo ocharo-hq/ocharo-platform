@@ -17,6 +17,8 @@ export function failureMessage(error: ApiFailure): string {
   if (error.status === 403)
     return 'This action is not permitted, or your session changed. Reload to check your access.';
   if (error.status === 404) return 'This record is unavailable in this organization.';
+  if (error.status === 410)
+    return 'Event details change through WoW2 Events review. Reload the event; stage, priority, notes and cost stay editable here.';
   if (error.code === 'protocol') return 'The service returned an unexpected response. Please retry.';
   if (error.code === 'cancelled') return 'The request was cancelled. Your edits have been retained.';
   return 'The service could not complete this request. Your edits are still here; try again.';

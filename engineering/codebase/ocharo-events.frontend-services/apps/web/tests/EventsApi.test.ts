@@ -20,6 +20,7 @@ const wire = {
   priority: 'normal',
   notes: '',
   revision: 1,
+  eventRevision: 1,
   createdAt: '2026-10-01T00:00:00Z',
   updatedAt: '2026-10-01T00:00:00Z',
 };
@@ -65,6 +66,25 @@ describe('events transport', () => {
     expect(decoded.ok).toBe(true);
     expect(decoded.ok && decoded.value).toMatchObject({ titleLanguage: null, languages: [] });
     expect(calls[0]!.init.decode({ ...wire, languages: [3] }).ok).toBe(false);
+  });
+
+  it('writes where Ocharo stands to the tracking route, carrying only the tracking fields and the revision', async () => {
+    const { client, calls } = recordingClient();
+    const input = {
+      status: 'shortlisted',
+      priority: 'high',
+      participation: 'Booth',
+      cost: null,
+      notes: 'Fits.',
+    } as const;
+
+    await createEventsApi(client, () => 'ru').updateTracking(ORG, EVENT, 4, input, signal);
+
+    expect(calls[0]!.path).toBe(`/api/organizations/${ORG}/events/${EVENT}/tracking`);
+    expect(calls[0]!.init.body).toEqual({ expectedRevision: 4, ...input });
+    expect(calls[0]!.init.headers).toEqual({ 'Accept-Language': 'ru' });
+    expect(calls[0]!.init.decode({ ...wire, status: 'shortlisted' }).ok).toBe(true);
+    expect(calls[0]!.init.decode({ ...wire, eventRevision: 0 }).ok).toBe(false);
   });
 
   it('decodes ticket prices with the members the wire leaves out, and refuses a malformed one', async () => {

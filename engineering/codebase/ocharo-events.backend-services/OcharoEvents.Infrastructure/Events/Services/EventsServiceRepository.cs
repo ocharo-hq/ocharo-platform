@@ -105,11 +105,13 @@ public sealed class EventsServiceRepository(
     }
 
     /// <summary>
-    /// Records stage, priority, notes, participation and cost at the revision the page read; a change to the event's facts
+    /// Records stage, priority, notes, participation and cost at the revision the page read. A page whose facts revision
+    /// (<paramref name="expectedEventRevision"/>) is no longer the event's reads a conflict; a change to the facts themselves
     /// answers Gone, since facts change through Events' review.
     /// </summary>
     public async Task<Result<ShowcaseEvent>> UpdateEventAsync(
-        Guid organizationId, Guid eventId, int expectedRevision, ShowcaseEventInput input, CancellationToken token)
+        Guid organizationId, Guid eventId, int expectedRevision, int? expectedEventRevision, ShowcaseEventInput input,
+        CancellationToken token)
     {
         Result<TrackedEventModel> found = await tracking.GetAsync(Catalog, eventId, token);
         if (found is Result<TrackedEventModel>.Failure missing) return Result<ShowcaseEvent>.Fail(missing.Error);
@@ -120,9 +122,40 @@ public sealed class EventsServiceRepository(
         if (shown.Revision != expectedRevision)
             return Result<ShowcaseEvent>.Fail(
                 OcharoEventsErrors.Conflict("The event changed since it was loaded. Reload it before saving again."));
+        if (expectedEventRevision is { } seen && seen != shown.EventRevision)
+            return Result<ShowcaseEvent>.Fail(OcharoEventsErrors.Conflict(
+                "The event's details changed in WoW2 Events since it was loaded. Reload it before saving again."));
         if (!EventsServiceMapper.HasSameFacts(shown, input)) return Result<ShowcaseEvent>.Fail(FactsMoved());
         Result<TrackingModel> saved = await tracking.PutAsync(
             Catalog, eventId, EventsServiceMapper.ToTracking(input, EventsServiceMapper.TrackingRevision(expectedRevision)),
+            token);
+        return saved switch
+        {
+            Result<TrackingModel>.Success { Value: var own } => Result<ShowcaseEvent>.Ok(
+                EventsServiceMapper.ToShowcaseEvent(current with { Tracking = own }, locale.Preferred)),
+            Result<TrackingModel>.Failure failure => Result<ShowcaseEvent>.Fail(failure.Error),
+            _ => throw new InvalidOperationException("A result is a success or a failure."),
+        };
+    }
+
+    /// <summary>
+    /// Records stage, priority, participation, cost and notes at the tracking revision the page read, validating nothing of
+    /// the event's facts, so a revision of the source's facts after the page read never refuses a stage change.
+    /// </summary>
+    public async Task<Result<ShowcaseEvent>> UpdateTrackingAsync(
+        Guid organizationId, Guid eventId, int expectedRevision, ShowcaseTrackingInput input, CancellationToken token)
+    {
+        Result<TrackedEventModel> found = await tracking.GetAsync(Catalog, eventId, token);
+        if (found is Result<TrackedEventModel>.Failure missing) return Result<ShowcaseEvent>.Fail(missing.Error);
+        TrackedEventModel current = ((Result<TrackedEventModel>.Success)found).Value;
+        if (!EventsServiceMapper.IsVisible(current.Event))
+            return Result<ShowcaseEvent>.Fail(OcharoEventsErrors.NotFound("The event was not found."));
+        if (EventsServiceMapper.ShownRevision(current.Tracking) != expectedRevision)
+            return Result<ShowcaseEvent>.Fail(
+                OcharoEventsErrors.Conflict("The event changed since it was loaded. Reload it before saving again."));
+        Result<TrackingModel> saved = await tracking.PutAsync(
+            Catalog, eventId,
+            EventsServiceMapper.ToTracking(input, current.Tracking?.Fields, EventsServiceMapper.TrackingRevision(expectedRevision)),
             token);
         return saved switch
         {
