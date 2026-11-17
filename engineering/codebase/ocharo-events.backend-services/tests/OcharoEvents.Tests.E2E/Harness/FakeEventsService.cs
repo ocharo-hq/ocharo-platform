@@ -42,6 +42,9 @@ internal sealed class FakeEventsService : ICatalogEventsBroker, IEventTrackingBr
         };
     }
 
+    /// <summary>Replaces the stored event as it is, such as one with its sources set.</summary>
+    public EventModel Replace(EventModel item) => events[item.Id] = item;
+
     public TrackingModel Track(
         Guid eventId, string stage, TrackingPriority priority = TrackingPriority.Normal, int revision = 1, System.Text.Json.JsonElement? fields = null)
     {

@@ -14,3 +14,6 @@ cancelled event's application deadline is not an upcoming one in the summary.
 What the source says attending costs rides as `tickets` and `ticketUrl`; `cost` stays Ocharo's own cost of taking part.
 A start announced to the minute rides as `startsAt` (local `HH:mm`) beside `startsOn`, with the source's IANA `timeZone`;
 the venue's street address rides as `address` and the organizer's site as `organizerWebsite`.
+Every source that reported the event rides in `sources` (`name`, `url`, `state`: `live`, `suspect`, `gone` or
+`unmatched`, from Events' `EventSourceModel`), and `sourceUpdatedAt` is the event's last change in Events when it came
+after the organization's tracking.

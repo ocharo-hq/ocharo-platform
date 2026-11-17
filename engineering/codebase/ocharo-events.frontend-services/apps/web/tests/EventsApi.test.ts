@@ -137,6 +137,35 @@ describe('events transport', () => {
     expect(decode({ ...wire, address: 5 }).ok).toBe(false);
   });
 
+  it('decodes each source and its listing state, reading an unknown state as none and no sources as empty', async () => {
+    const { client, calls } = recordingClient();
+    await createEventsApi(client).getEvent(ORG, EVENT, signal);
+    const { decode } = calls[0]!.init;
+    const value = (input: unknown) => {
+      const decoded = decode(input);
+      return decoded.ok ? decoded.value : decoded;
+    };
+    expect(value(wire)).toMatchObject({ sources: [], sourceUpdatedAt: null });
+    expect(
+      value({
+        ...wire,
+        sources: [
+          { name: 'Afisha Uzbekistan', url: 'https://afisha.example.test/jazz', state: 'gone' },
+          { state: 'vanished' },
+        ],
+        sourceUpdatedAt: '2026-10-07T09:30:00Z',
+      }),
+    ).toMatchObject({
+      sources: [
+        { name: 'Afisha Uzbekistan', url: 'https://afisha.example.test/jazz', state: 'gone' },
+        { name: null, url: null, state: null },
+      ],
+      sourceUpdatedAt: '2026-10-07T09:30:00Z',
+    });
+    expect(decode({ ...wire, sources: [{ name: 5 }] }).ok).toBe(false);
+    expect(decode({ ...wire, sources: 'Afisha' }).ok).toBe(false);
+  });
+
   it('keeps the event state and attendance, and reads an unknown or missing one as the plain case', async () => {
     const { client, calls } = recordingClient();
     await createEventsApi(client).getEvent(ORG, EVENT, signal);

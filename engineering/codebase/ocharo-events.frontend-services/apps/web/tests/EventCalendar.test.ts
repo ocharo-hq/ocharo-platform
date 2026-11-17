@@ -40,6 +40,8 @@ function showcase(overrides: Partial<ShowcaseEvent> = {}): ShowcaseEvent {
     ticketUrl: null,
     website: 'https://example.test/events',
     sourceUrl: 'https://example.test/announcement',
+    sources: [],
+    sourceUpdatedAt: null,
     status: 'shortlisted',
     priority: 'normal',
     notes: 'Internal decision notes stay in Events.',

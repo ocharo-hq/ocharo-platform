@@ -35,6 +35,9 @@ import {
   priorityLabels,
   safeEventUrl,
   scopeLabels,
+  sourceLabel,
+  sourceStateLabels,
+  sourceStateTones,
   statusLabels,
   statusTones,
   ticketPriceLabel,
@@ -79,6 +82,17 @@ const where = computed(() =>
 const deadlineDays = computed(() =>
   event.value?.applicationDeadline ? daysUntil(event.value.applicationDeadline, today.value) : null,
 );
+const sources = computed(() =>
+  (event.value?.sources ?? []).map((item) => ({
+    label: sourceLabel(item) ?? t('Unnamed source'),
+    url: safeEventUrl(item.url),
+    state: item.state,
+  })),
+);
+const sourceUpdatedOn = computed(() => {
+  const day = event.value?.sourceUpdatedAt?.slice(0, 10) ?? '';
+  return isIsoDate(day) ? formatDay(day, uiLocale.value) : null;
+});
 const updatedOn = computed(() => {
   const day = event.value?.updatedAt.slice(0, 10) ?? '';
   return isIsoDate(day) ? formatDay(day, uiLocale.value) : (event.value?.updatedAt ?? '');
@@ -186,6 +200,9 @@ async function reload(discardEdits = false): Promise<void> {
             <template v-else>{{ event.organizer }}</template>
           </p>
           <p class="text-sm font-medium">{{ formatEventDates(event, uiLocale) }}</p>
+          <p v-if="sourceUpdatedOn" class="text-sm text-muted-foreground" data-test="source-updated">
+            {{ t('Updated by source on {date}', { date: sourceUpdatedOn }) }}
+          </p>
         </div>
         <div v-if="events.canEdit.value && !editing" class="flex flex-wrap items-center gap-3">
           <label class="flex items-center gap-2 text-sm text-muted-foreground"
@@ -310,7 +327,25 @@ async function reload(discardEdits = false): Promise<void> {
           </div>
           <div class="min-w-0">
             <dt class="text-xs text-muted-foreground">{{ t('Where it was found') }}</dt>
-            <dd class="mt-1 break-all">
+            <dd v-if="sources.length" class="mt-1">
+              <ul class="space-y-1" data-test="event-sources">
+                <li v-for="(item, index) in sources" :key="index" class="flex flex-wrap items-center gap-2">
+                  <a
+                    v-if="item.url"
+                    :href="item.url"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="break-all text-primary underline-offset-4 hover:underline"
+                    >{{ item.label }}</a
+                  >
+                  <span v-else class="break-all">{{ item.label }}</span>
+                  <Badge v-if="item.state" size="sm" :variant="sourceStateTones[item.state]" data-test="source-state">{{
+                    t(sourceStateLabels[item.state])
+                  }}</Badge>
+                </li>
+              </ul>
+            </dd>
+            <dd v-else class="mt-1 break-all">
               <a
                 v-if="source"
                 :href="source"

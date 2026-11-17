@@ -239,6 +239,41 @@ public sealed class EventsServiceRouteTests
     }
 
     [Fact]
+    public async Task EventsPage_ShouldNameEachSourceWithItsListingState()
+    {
+        var service = new FakeEventsService();
+        EventModel jazz = service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["und"] = "Jazz evening" },
+            Kind = "other",
+            Starts = new EventWhen { Value = "2026-12-05", Precision = DatePrecision.Day },
+        });
+        service.Replace(jazz with
+        {
+            Sources =
+            [
+                new EventSourceModel
+                {
+                    Kind = EventSourceKind.Scfd, Id = "afisha/1", Name = "Afisha Uzbekistan", State = EventSourceState.Gone,
+                    Url = "https://afisha.example.test/jazz", FirstSeenAtUtc = jazz.CreatedAtUtc, LastSeenAtUtc = jazz.CreatedAtUtc,
+                },
+            ],
+        });
+        service.Track(jazz.Id, "shortlisted");
+        service.Revise(jazz.Id, facts => facts with { Website = "https://jazz.example.test/" });
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), service);
+        using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        JsonElement listed = (await DataAsync(await client.GetAsync(Path))).EnumerateArray().Single();
+
+        JsonElement source = listed.GetProperty("sources").EnumerateArray().Single();
+        source.GetProperty("name").GetString().Should().Be("Afisha Uzbekistan");
+        source.GetProperty("url").GetString().Should().Be("https://afisha.example.test/jazz");
+        source.GetProperty("state").GetString().Should().Be("gone");
+        listed.GetProperty("sourceUpdatedAt").GetDateTimeOffset().Should().Be(service.Event(jazz.Id).UpdatedAtUtc);
+    }
+
+    [Fact]
     public async Task StageSave_ShouldReachEvents_WhenTheEventsNamesExceedDesksOwnTable()
     {
         var service = new FakeEventsService();

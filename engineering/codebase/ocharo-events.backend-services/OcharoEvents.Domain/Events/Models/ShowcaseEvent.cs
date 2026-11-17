@@ -8,7 +8,9 @@ namespace OcharoEvents.Domain.Events.Models;
 /// <c>Cost</c> stays Ocharo's own cost of taking part. <c>Revision</c> is the tracking revision plus one; <c>EventRevision</c> is the
 /// revision of the event's facts in WoW2 Events, which moves when the source revises them. <c>StartsAt</c> is the local start
 /// time (<c>HH:mm</c>) when the source announced one, in <c>TimeZone</c> (an IANA zone) when it named the zone;
-/// <c>Address</c> is the venue's street address and <c>OrganizerWebsite</c> the organizer's own site.</summary>
+/// <c>Address</c> is the venue's street address and <c>OrganizerWebsite</c> the organizer's own site. <c>Sources</c> are
+/// every source that reported the event, each with its name, page and listing state; <c>SourceUpdatedAt</c> is when the
+/// event last changed in WoW2 Events, set only for a tracked event whose change came after the tracking's.</summary>
 public sealed record ShowcaseEvent(
     Guid Id,
     string? Key,
@@ -37,6 +39,8 @@ public sealed record ShowcaseEvent(
     string? TicketUrl,
     string? Website,
     string? SourceUrl,
+    IReadOnlyList<ShowcaseEventSource> Sources,
+    DateTimeOffset? SourceUpdatedAt,
     string Status,
     string Priority,
     string Notes,

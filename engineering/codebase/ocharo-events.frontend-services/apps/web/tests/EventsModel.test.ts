@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  attributedSource,
   daysLeftLabel,
   daysUntil,
   deadlineTone,
@@ -11,11 +12,13 @@ import {
   formatEventDates,
   formatStartTime,
   groupEventsByMonth,
+  listingRemoved,
   localIsoDate,
   monthHeading,
   readEventsAddress,
   readEventsOrganizationId,
   safeEventUrl,
+  sourceLabel,
   ticketPriceLabel,
   titleLanguageTag,
   trackingDraft,
@@ -57,6 +60,8 @@ const showcase = (over: Partial<ShowcaseEvent> = {}): ShowcaseEvent => ({
   ticketUrl: null,
   website: null,
   sourceUrl: null,
+  sources: [],
+  sourceUpdatedAt: null,
   status: 'shortlisted',
   priority: 'normal',
   notes: '',
@@ -97,6 +102,23 @@ describe('events locations', () => {
       `/organizations/${organization}/events`,
     );
     expect(() => eventsPath('not-an-organization', { view: 'feed', eventId: null })).toThrow();
+  });
+});
+
+describe('event sources', () => {
+  const afisha = { name: 'Afisha Uzbekistan', url: 'https://afisha.example.test/jazz', state: 'gone' } as const;
+  it('marks a listing removed only when every source is gone or no longer matches', () => {
+    expect(listingRemoved(showcase())).toBe(false);
+    expect(listingRemoved(showcase({ sources: [afisha, { name: null, url: null, state: 'unmatched' }] }))).toBe(true);
+    expect(listingRemoved(showcase({ sources: [afisha, { ...afisha, state: 'suspect' }] }))).toBe(false);
+    expect(listingRemoved(showcase({ sources: [afisha, { ...afisha, state: null }] }))).toBe(false);
+  });
+
+  it('names the first named source and labels a nameless one by its page', () => {
+    expect(attributedSource(showcase({ sources: [{ ...afisha, name: null }, afisha] }))).toEqual(afisha);
+    expect(attributedSource(showcase())).toBeNull();
+    expect(sourceLabel({ name: null, url: 'https://desk.example.test/42', state: null })).toBe('desk.example.test');
+    expect(sourceLabel({ name: null, url: 'javascript:alert(1)', state: null })).toBeNull();
   });
 });
 

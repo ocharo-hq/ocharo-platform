@@ -2,11 +2,20 @@
 import { Badge } from '@wow-two-beta/fe/presentation/display';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import { attendanceLabels, happeningLabels, happeningTones, type ShowcaseEvent } from '@/domain/events/Events';
+import {
+  attendanceLabels,
+  happeningLabels,
+  happeningTones,
+  listingRemoved,
+  type ShowcaseEvent,
+} from '@/domain/events/Events';
 
-/** The badges that say an event no longer runs as listed, or is attended online; a plain in-person event shows none. */
+/**
+ * The badges that say an event no longer runs as listed, is attended online, or left every source that listed it; a
+ * plain in-person event shows none.
+ */
 defineOptions({ name: 'EventStateBadges' });
-defineProps<{ event: Pick<ShowcaseEvent, 'eventStatus' | 'attendance'> }>();
+defineProps<{ event: Pick<ShowcaseEvent, 'eventStatus' | 'attendance' | 'sources'> }>();
 const { t } = useUiLocale();
 </script>
 
@@ -20,5 +29,8 @@ const { t } = useUiLocale();
   >
   <Badge v-if="event.attendance !== 'offline'" size="sm" variant="info" data-test="event-attendance">{{
     t(attendanceLabels[event.attendance])
+  }}</Badge>
+  <Badge v-if="listingRemoved(event)" size="sm" variant="warning" data-test="listing-removed">{{
+    t('Listing removed at source')
   }}</Badge>
 </template>

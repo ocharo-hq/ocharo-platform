@@ -74,6 +74,9 @@ public static class EventsServiceMapper
             Blank(facts.TicketUrl) ?? (offer is { Kind: OfferKind.Ticket } ? Blank(offer.Url) : null),
             Blank(facts.Website),
             Blank(item.Sources.Select(source => source.Url).FirstOrDefault(url => url is not null) ?? Field(fields, "sourceUrl")),
+            item.Sources.Select(source => new ShowcaseEventSource(Blank(source.Name), Blank(source.Url), SourceStateName(source.State)))
+                .ToList(),
+            tracking is not null && item.UpdatedAtUtc > tracking.UpdatedAtUtc ? item.UpdatedAtUtc : null,
             tracking is not null && EventValidationService.Statuses.Contains(tracking.Stage) ? tracking.Stage : UntrackedStatus,
             Priority(tracking?.Priority ?? TrackingPriority.Normal),
             tracking?.Notes ?? string.Empty,
@@ -234,6 +237,16 @@ public static class EventsServiceMapper
         EventStatus.Rescheduled => "rescheduled",
         EventStatus.MovedOnline => "moved-online",
         _ => "scheduled",
+    };
+
+    /// <summary>Names where a source's listing stands, in the page's wire words; null when the source reports no state.</summary>
+    public static string? SourceStateName(EventSourceState? state) => state switch
+    {
+        EventSourceState.Live => "live",
+        EventSourceState.Suspect => "suspect",
+        EventSourceState.Gone => "gone",
+        EventSourceState.Unmatched => "unmatched",
+        _ => null,
     };
 
     /// <summary>Names where the event is attended, in the page's wire words.</summary>

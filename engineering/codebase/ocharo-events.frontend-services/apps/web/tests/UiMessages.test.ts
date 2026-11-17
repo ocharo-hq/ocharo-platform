@@ -17,6 +17,8 @@ import {
   precisionLabels,
   priorityLabels,
   scopeLabels,
+  sourceStateLabels,
+  sourceStates,
   statusLabels,
 } from '@/domain/events/Events';
 import { failureMessage } from '@/application/events/UseEventsAccess';
@@ -64,6 +66,7 @@ describe('interface messages', () => {
       ...eventPriorities.map((value) => priorityLabels[value]),
       ...eventHappenings.map((value) => happeningLabels[value]),
       ...eventAttendances.map((value) => attendanceLabels[value]),
+      ...sourceStates.map((value) => sourceStateLabels[value]),
       ...[400, 401, 403, 404, 409, 410, 500].map((status) =>
         failureMessage(ApiFailureFactory.create('http', { status, headers: new Headers() })),
       ),

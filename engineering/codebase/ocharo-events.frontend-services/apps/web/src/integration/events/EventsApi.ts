@@ -13,7 +13,9 @@ import {
   isEventStatus,
   isIsoDate,
   isLocalTime,
+  isSourceState,
   type EventFilter,
+  type EventSource,
   type EventInput,
   type EventSummary,
   type EventTickets,
@@ -52,6 +54,9 @@ const isTickets = (v: unknown): v is EventTickets =>
   nullableStrings(v, ['currency']) &&
   typeof v.free === 'boolean';
 
+const isEventSource = (v: unknown): v is EventSource =>
+  record(v) && nullableStrings(v, ['name', 'url']) && (v.state === null || isSourceState(v.state));
+
 export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
   record(v) &&
   strings(v, ['id', 'title', 'participation', 'notes', 'createdAt', 'updatedAt']) &&
@@ -69,8 +74,10 @@ export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
     'ticketUrl',
     'website',
     'sourceUrl',
+    'sourceUpdatedAt',
   ]) &&
   (v.startsAt === null || isLocalTime(v.startsAt)) &&
+  list(isEventSource)(v.sources) &&
   (v.tickets === null || isTickets(v.tickets)) &&
   Array.isArray(v.languages) &&
   v.languages.every((language) => typeof language === 'string') &&
@@ -110,15 +117,23 @@ const eventNullable = [
   'ticketUrl',
   'website',
   'sourceUrl',
+  'sourceUpdatedAt',
 ];
+/** @internal The source members the wire leaves out when null. */
+const sourceNullable = ['name', 'url', 'state'];
+/** Restores a source's missing members and reads a state a newer service adds as none. */
+function source(value: unknown): unknown {
+  const restored = withNulls(value, sourceNullable);
+  return record(restored) ? { ...restored, state: isSourceState(restored.state) ? restored.state : null } : restored;
+}
 /** @internal The ticket members the wire leaves out when null. */
 const ticketNullable = ['minPrice', 'maxPrice', 'currency'];
 /**
  * Restores what the wire leaves out and reads an unknown event state or attendance as the plain case, and a malformed
- * start time as none, so a value a newer service adds never fails the whole list.
+ * start time or an unknown listing state as none, so a value a newer service adds never fails the whole list.
  */
 function event(value: unknown): unknown {
-  const restored = withArrays(withNulls(value, eventNullable), ['languages']);
+  const restored = withArrays(withNulls(value, eventNullable), ['languages', 'sources']);
   return record(restored)
     ? {
         ...restored,
@@ -126,6 +141,7 @@ function event(value: unknown): unknown {
         eventStatus: isEventHappening(restored.eventStatus) ? restored.eventStatus : 'scheduled',
         attendance: isEventAttendance(restored.attendance) ? restored.attendance : 'offline',
         startsAt: isLocalTime(restored.startsAt) ? restored.startsAt : null,
+        sources: Array.isArray(restored.sources) ? restored.sources.map(source) : restored.sources,
       }
     : restored;
 }

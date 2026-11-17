@@ -28,6 +28,8 @@ export const eventHappenings = ['scheduled', 'cancelled', 'postponed', 'reschedu
 export const eventAttendances = ['offline', 'online', 'mixed'] as const;
 export const datePrecisions = ['day', 'month', 'estimated', 'unknown'] as const;
 export const eventPriorities = ['high', 'normal', 'low'] as const;
+/** Where a source's listing of the event stands, as the source last reported it. */
+export const sourceStates = ['live', 'suspect', 'gone', 'unmatched'] as const;
 export type EventScope = (typeof eventScopes)[number];
 export type EventFormat = (typeof eventFormats)[number];
 export type EventStatus = (typeof eventStatuses)[number];
@@ -35,6 +37,16 @@ export type EventHappening = (typeof eventHappenings)[number];
 export type EventAttendance = (typeof eventAttendances)[number];
 export type DatePrecision = (typeof datePrecisions)[number];
 export type EventPriority = (typeof eventPriorities)[number];
+export type SourceState = (typeof sourceStates)[number];
+
+/** One source that reported the event: its name as people know it ("Afisha"), the page and its listing's state. */
+export interface EventSource {
+  /** Null for an import or a curator's entry. */
+  name: string | null;
+  url: string | null;
+  /** Null when the source reports no state. */
+  state: SourceState | null;
+}
 
 /** What the event's source says attending costs; Ocharo's own cost of taking part is the event's `cost`. */
 export interface EventTickets {
@@ -81,6 +93,10 @@ export interface ShowcaseEvent {
   ticketUrl: string | null;
   website: string | null;
   sourceUrl: string | null;
+  /** Every source that reported the event. */
+  sources: EventSource[];
+  /** When the source last changed a tracked event after Ocharo's own last change; null otherwise. */
+  sourceUpdatedAt: string | null;
   status: EventStatus;
   priority: EventPriority;
   notes: string;
@@ -108,7 +124,9 @@ type DerivedEventFields =
   | 'organizerWebsite'
   | 'address'
   | 'startsAt'
-  | 'timeZone';
+  | 'timeZone'
+  | 'sources'
+  | 'sourceUpdatedAt';
 /** Every mutable field; the import `key` is never edited here. */
 export type EventInput = Omit<ShowcaseEvent, DerivedEventFields>;
 /** Counts may omit statuses with no events; a missing count reads as zero. */
@@ -186,6 +204,12 @@ export const attendanceLabels: Record<EventAttendance, string> = {
   online: 'Online',
   mixed: 'In person and online',
 };
+export const sourceStateLabels: Record<SourceState, string> = {
+  live: 'Listing live',
+  suspect: 'Listing may be removed',
+  gone: 'Listing removed',
+  unmatched: 'No longer matches',
+};
 export type EventTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info' | 'outline';
 export const statusTones: Record<EventStatus, EventTone> = {
   candidate: 'outline',
@@ -218,6 +242,29 @@ export const isDatePrecision = (value: unknown): value is DatePrecision =>
   datePrecisions.includes(value as DatePrecision);
 export const isEventPriority = (value: unknown): value is EventPriority =>
   eventPriorities.includes(value as EventPriority);
+export const isSourceState = (value: unknown): value is SourceState => sourceStates.includes(value as SourceState);
+
+/** Badge tones for a source's listing: live is neutral, a doubtful listing a warning, a removed one danger. */
+export const sourceStateTones: Record<SourceState, EventTone> = {
+  live: 'neutral',
+  suspect: 'warning',
+  gone: 'danger',
+  unmatched: 'warning',
+};
+/** Whether the event's listing left every source that reported it: each one gone or no longer matching. */
+export function listingRemoved(event: Pick<ShowcaseEvent, 'sources'>): boolean {
+  return event.sources.length > 0 && event.sources.every((item) => item.state === 'gone' || item.state === 'unmatched');
+}
+/** The source a card names ("via Afisha"): the first one with a name; null when none has one. */
+export function attributedSource(event: Pick<ShowcaseEvent, 'sources'>): EventSource | null {
+  return event.sources.find((item) => item.name) ?? null;
+}
+/** A source's label: its name, else its page's host; null when it has neither. */
+export function sourceLabel(source: EventSource): string | null {
+  if (source.name) return source.name;
+  const url = safeEventUrl(source.url);
+  return url ? new URL(url).hostname : null;
+}
 
 const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
 /** A real calendar date written as `YYYY-MM-DD`. */

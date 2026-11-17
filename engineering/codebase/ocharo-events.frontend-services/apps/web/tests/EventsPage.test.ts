@@ -58,6 +58,8 @@ const showcase = (over: Partial<ShowcaseEvent>): ShowcaseEvent => ({
   ticketUrl: null,
   website: 'https://tfw.example.test/',
   sourceUrl: 'https://listings.example.test/tfw',
+  sources: [],
+  sourceUpdatedAt: null,
   status: 'candidate',
   priority: 'high',
   notes: 'Ikat coats fit the second day.\nBring the lookbook.',
@@ -271,6 +273,50 @@ describe('events feed', () => {
     expect(expo.text()).toContain('Stand from 300 USD');
   });
 
+  it('names the source a card came from and marks a listing removed at every source', async () => {
+    api.listEvents.mockResolvedValue(
+      ResultExtensions.ok([
+        showcase({
+          sources: [
+            { name: 'Afisha Uzbekistan', url: 'https://afisha.example.test/jazz', state: 'gone' },
+            { name: null, url: null, state: 'unmatched' },
+          ],
+        }),
+        showcase({
+          id: SILK_FAIR,
+          title: 'Silk Road Trade Fair',
+          sources: [
+            { name: 'Afisha Uzbekistan', url: 'javascript:alert(1)', state: 'gone' },
+            { name: 'Anons', url: 'https://anons.example.test/fair', state: 'live' },
+          ],
+        }),
+        showcase({ id: CRAFT_EXPO, title: 'Craft Expo' }),
+      ]),
+    );
+    await render('editor', feed);
+    await flushPromises();
+    const week = card('Tashkent Fashion Week');
+    expect(week.get('[data-test="event-source"]').text()).toBe('via Afisha Uzbekistan');
+    const link = week.get('[data-test="event-source"] a');
+    expect(link.text()).toBe('Afisha Uzbekistan');
+    expect(link.attributes('href')).toBe('https://afisha.example.test/jazz');
+    expect(link.attributes('rel')).toBe('noopener noreferrer');
+    expect(week.get('[data-test="listing-removed"]').text()).toBe('Listing removed at source');
+    const fair = card('Silk Road Trade Fair');
+    expect(fair.get('[data-test="event-source"]').text()).toBe('via Afisha Uzbekistan');
+    expect(fair.get('[data-test="event-source"]').find('a').exists()).toBe(false);
+    expect(fair.find('[data-test="listing-removed"]').exists()).toBe(false);
+    expect(card('Craft Expo').find('[data-test="event-source"]').exists()).toBe(false);
+    expect(card('Craft Expo').find('[data-test="listing-removed"]').exists()).toBe(false);
+
+    useUiLocale().setUiLocale('uz');
+    await flushPromises();
+    expect(card('Tashkent Fashion Week').get('[data-test="event-source"]').text()).toBe('Afisha Uzbekistan orqali');
+    expect(card('Tashkent Fashion Week').get('[data-test="listing-removed"]').text()).toBe(
+      'Manbada e’lon olib tashlangan',
+    );
+  });
+
   it('marks a cancelled, postponed or online event as such and leaves a plain event unmarked', async () => {
     api.listEvents.mockResolvedValue(
       ResultExtensions.ok([
@@ -479,6 +525,48 @@ describe('event detail', () => {
     expect(organizer.text()).toBe('Fashion Council');
     expect(organizer.attributes('href')).toBe('https://council.example.test/');
     expect(organizer.attributes('rel')).toBe('noopener noreferrer');
+  });
+
+  it('lists every source with its listing state and says when the source updated a tracked event', async () => {
+    api.getEvent.mockResolvedValue(
+      ResultExtensions.ok({
+        ...fashionWeek(),
+        status: 'shortlisted',
+        sourceUpdatedAt: '2026-10-07T09:30:00Z',
+        sources: [
+          { name: 'Afisha Uzbekistan', url: 'https://afisha.example.test/jazz', state: 'gone' },
+          { name: null, url: 'https://desk.example.test/42', state: null },
+          { name: null, url: null, state: 'unmatched' },
+        ],
+      }),
+    );
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    const items = detail().findAll('[data-test="event-sources"] li');
+    expect(items.map((item) => item.get('a, span').text())).toEqual([
+      'Afisha Uzbekistan',
+      'desk.example.test',
+      'Unnamed source',
+    ]);
+    const state = (item: DOMWrapper<Element>) => {
+      const badge = item.find('[data-test="source-state"]');
+      return badge.exists() ? badge.text() : null;
+    };
+    expect(items.map(state)).toEqual(['Listing removed', null, 'No longer matches']);
+    expect(items[0]!.get('a').attributes('href')).toBe('https://afisha.example.test/jazz');
+    expect(items[2]!.find('a').exists()).toBe(false);
+    expect(detail().get('[data-test="source-updated"]').text()).toBe('Updated by source on 7 Oct 2026');
+    // The import's own source reports no state, so the listing has not left every source.
+    expect(detail().find('[data-test="listing-removed"]').exists()).toBe(false);
+  });
+
+  it('keeps the recorded source link and no update line for an event without sources', async () => {
+    api.getEvent.mockResolvedValue(ResultExtensions.ok(fashionWeek()));
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    expect(detail().find('[data-test="event-sources"]').exists()).toBe(false);
+    expect(detail().find('[data-test="source-updated"]').exists()).toBe(false);
+    expect(detail().text()).toContain('https://listings.example.test/tfw');
   });
 
   it('shows an unsafe organizer site as the plain organizer name', async () => {

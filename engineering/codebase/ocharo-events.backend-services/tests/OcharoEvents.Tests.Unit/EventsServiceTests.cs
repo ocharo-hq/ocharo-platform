@@ -293,6 +293,51 @@ public sealed class EventsServiceTests
     }
 
     [Fact]
+    public void Map_ShouldNameEverySourceWithItsListingState_AndWhenTheSourceChangedATrackedEvent()
+    {
+        var at = new DateTimeOffset(2026, 11, 10, 8, 0, 0, TimeSpan.Zero);
+        EventSourceModel Source(string id, string? name, EventSourceState? state, string? url) => new()
+        {
+            Kind = name is null ? EventSourceKind.Import : EventSourceKind.Scfd, Id = id, Name = name, State = state, Url = url,
+            FirstSeenAtUtc = at, LastSeenAtUtc = at,
+        };
+        TrackedEventModel Tracked(DateTimeOffset updated, TrackingModel? tracking, params EventSourceModel[] sources) => new()
+        {
+            Event = new EventModel
+            {
+                Id = Guid.NewGuid(), Catalog = "ocharo-fashion", Facts = Facts("Jazz evening", "UZ", Day("2026-12-05")),
+                Review = EventReviewState.Published, Sources = sources, Revision = 2, CreatedAtUtc = at, UpdatedAtUtc = updated,
+            },
+            Tracking = tracking,
+        };
+        TrackingModel Tracking(DateTimeOffset updated) => new()
+        {
+            Id = Guid.NewGuid(), EventId = Guid.NewGuid(), Stage = "shortlisted", Priority = TrackingPriority.Normal, Revision = 1,
+            CreatedAtUtc = at, UpdatedAtUtc = updated,
+        };
+
+        ShowcaseEvent gone = EventsServiceMapper.ToShowcaseEvent(Tracked(at.AddDays(2), Tracking(at.AddDays(1)),
+            Source("afisha/1", "Afisha Uzbekistan", EventSourceState.Gone, "https://afisha.example.test/jazz"),
+            Source("anons/7", " ", EventSourceState.Unmatched, null),
+            Source("desk/42", null, null, "https://desk.example.test/42")));
+        ShowcaseEvent trackedLater = EventsServiceMapper.ToShowcaseEvent(Tracked(at.AddDays(1), Tracking(at.AddDays(2))));
+        ShowcaseEvent untracked = EventsServiceMapper.ToShowcaseEvent(Tracked(at.AddDays(2), null,
+            Source("afisha/2", "Afisha Uzbekistan", EventSourceState.Live, "https://afisha.example.test/show")));
+
+        gone.Sources.Should().Equal(
+            new ShowcaseEventSource("Afisha Uzbekistan", "https://afisha.example.test/jazz", "gone"),
+            new ShowcaseEventSource(null, null, "unmatched"),
+            new ShowcaseEventSource(null, "https://desk.example.test/42", null));
+        gone.SourceUrl.Should().Be("https://afisha.example.test/jazz");
+        gone.SourceUpdatedAt.Should().Be(at.AddDays(2));
+        trackedLater.Sources.Should().BeEmpty();
+        trackedLater.SourceUpdatedAt.Should().BeNull();
+        untracked.Sources.Should().ContainSingle().Which.State.Should().Be("live");
+        untracked.SourceUpdatedAt.Should().BeNull();
+        EventsServiceMapper.SourceStateName(EventSourceState.Suspect).Should().Be("suspect");
+    }
+
+    [Fact]
     public async Task Summary_ShouldLeaveACancelledEventsDeadlineOutOfTheUpcomingOnes()
     {
         var service = new FakeEventsService();

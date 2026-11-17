@@ -9,6 +9,7 @@ import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { failureMessage, type EventsAccess } from '@/application/events/UseEventsAccess';
 import { isStaleFailure, type EventsControls } from '@/application/events/UseEvents';
 import {
+  attributedSource,
   daysLeftLabel,
   daysUntil,
   deadlineTone,
@@ -18,6 +19,7 @@ import {
   formatEventDates,
   formatLabels,
   languageName,
+  safeEventUrl,
   scopeLabels,
   statusLabels,
   statusTones,
@@ -42,6 +44,13 @@ const ticketPrice = computed(() =>
   props.event.tickets ? ticketPriceLabel(props.event.tickets, uiLocale.value) : null,
 );
 const titleTag = computed(() => titleLanguageTag(props.event, uiLocale.value));
+const via = computed(() => {
+  const source = attributedSource(props.event);
+  if (!source?.name) return null;
+  // The phrase's words sit around the name in each language ("via {name}", "{name} orqali"), so the name alone links.
+  const [before = '', after = ''] = t('via {name}').split('{name}');
+  return { before, name: source.name, after, url: safeEventUrl(source.url) };
+});
 const deadlineDays = computed(() =>
   props.event.applicationDeadline ? daysUntil(props.event.applicationDeadline, props.today) : null,
 );
@@ -86,6 +95,18 @@ async function review(status: EventStatus): Promise<void> {
         </h4>
         <p v-if="event.organizer" class="break-words text-sm text-muted-foreground">{{ event.organizer }}</p>
         <p v-if="place" class="text-sm text-muted-foreground">{{ place }}</p>
+        <p v-if="via" class="break-words text-sm text-muted-foreground" data-test="event-source">
+          {{ via.before
+          }}<a
+            v-if="via.url"
+            :href="via.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-primary underline-offset-4 hover:underline"
+            >{{ via.name }}</a
+          ><template v-else>{{ via.name }}</template
+          >{{ via.after }}
+        </p>
       </div>
       <span v-if="event.priority === 'high'" class="event-priority" :title="t('High priority')">
         <Star :size="14" aria-hidden="true" /><span>{{ t('High priority') }}</span>
