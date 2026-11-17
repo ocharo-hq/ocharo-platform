@@ -44,6 +44,7 @@ import {
 } from '@/domain/events/Events';
 
 import EventForm from './EventForm.vue';
+import EventStateBadges from './EventStateBadges.vue';
 
 /** One event: every recorded fact, where Ocharo stands, and the editor's controls. */
 defineOptions({ name: 'EventDetail' });
@@ -178,7 +179,13 @@ async function remove(): Promise<void> {
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0 space-y-1">
           <p v-if="event.status === 'candidate'" class="event-new">{{ t('New — review') }}</p>
-          <h2 id="event-detail-title" class="break-words text-2xl font-semibold">{{ event.title }}</h2>
+          <h2
+            id="event-detail-title"
+            class="break-words text-2xl font-semibold"
+            :class="{ 'line-through': event.eventStatus === 'cancelled' }"
+          >
+            {{ event.title }}
+          </h2>
           <p v-if="event.organizer" class="break-words text-sm text-muted-foreground">{{ event.organizer }}</p>
           <p class="text-sm font-medium">{{ formatEventDates(event, uiLocale) }}</p>
         </div>
@@ -217,6 +224,7 @@ async function remove(): Promise<void> {
         </div>
       </div>
       <div class="flex flex-wrap gap-2">
+        <EventStateBadges :event="event" />
         <Badge size="sm" variant="outline">{{ t(formatLabels[event.format]) }}</Badge>
         <Badge size="sm" variant="neutral">{{ t(scopeLabels[event.scope]) }}</Badge>
       </div>

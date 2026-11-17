@@ -7,3 +7,5 @@ The organization's showcase events under `api/organizations/{organizationId}/eve
 410 Gone, since facts change through WoW2 Events' review.
 A title comes back in the language `Accept-Language` names (`HttpUiLocale`, matched by language prefix), with the tag it came
 under as `titleLanguage` and the source's `languages`.
+Events' event status and attendance ride as `eventStatus` and `attendance`, apart from Ocharo's own stage `status`; a
+cancelled event's application deadline is not an upcoming one in the summary.

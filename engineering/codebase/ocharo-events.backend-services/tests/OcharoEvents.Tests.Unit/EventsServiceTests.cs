@@ -173,6 +173,54 @@ public sealed class EventsServiceTests
         none.TitleLanguage.Should().Be("uz-Latn");
     }
 
+    [Fact]
+    public void Map_ShouldShowWhetherTheEventStillHappensAndWhereItIsAttended()
+    {
+        TrackedEventModel Tracked(EventFacts facts) => new()
+        {
+            Event = new EventModel
+            {
+                Id = Guid.NewGuid(), Catalog = "ocharo-fashion", Facts = facts, Review = EventReviewState.Published,
+                Revision = 1, CreatedAtUtc = DateTimeOffset.UnixEpoch, UpdatedAtUtc = DateTimeOffset.UnixEpoch,
+            },
+        };
+        EventFacts facts = Facts("Online craft fair", "UZ", Day("2026-12-05"));
+
+        ShowcaseEvent cancelled = EventsServiceMapper.ToShowcaseEvent(Tracked(facts with
+        {
+            Status = EventStatus.Cancelled, Attendance = EventAttendance.Online,
+        }));
+        ShowcaseEvent plain = EventsServiceMapper.ToShowcaseEvent(Tracked(facts));
+
+        cancelled.EventStatus.Should().Be("cancelled");
+        cancelled.Attendance.Should().Be("online");
+        plain.EventStatus.Should().Be("scheduled");
+        plain.Attendance.Should().Be("offline");
+        EventsServiceMapper.EventStatusName(EventStatus.Postponed).Should().Be("postponed");
+        EventsServiceMapper.EventStatusName(EventStatus.Rescheduled).Should().Be("rescheduled");
+        EventsServiceMapper.EventStatusName(EventStatus.MovedOnline).Should().Be("moved-online");
+        EventsServiceMapper.AttendanceName(EventAttendance.Mixed).Should().Be("mixed");
+    }
+
+    [Fact]
+    public async Task Summary_ShouldLeaveACancelledEventsDeadlineOutOfTheUpcomingOnes()
+    {
+        var service = new FakeEventsService();
+        EventFacts Fair(string title, EventStatus status, string deadline) => Facts(title, "DE", Day("2027-06-10")) with
+        {
+            Status = status,
+            Deadlines = [new EventDeadline { Kind = DeadlineKind.Application, At = Day(deadline) }],
+        };
+        service.Add(Fair("Open fair", EventStatus.Scheduled, "2027-05-01"));
+        service.Add(Fair("Cancelled fair", EventStatus.Cancelled, "2027-04-01"));
+        service.Add(Fair("Postponed fair", EventStatus.Postponed, "2027-05-02"));
+
+        ShowcaseEventSummary summary = await Repository(service).GetSummaryAsync(Organization, new DateOnly(2027, 1, 1), 5, Token);
+
+        summary.UpcomingDeadlines.Select(item => item.Title).Should().Equal("Open fair", "Postponed fair");
+        summary.ByStatus.Should().Equal(new Dictionary<string, int> { ["candidate"] = 3 });
+    }
+
     [Theory]
     [InlineData("uz", "uz-Latn")]
     [InlineData("uz-UZ", "uz-Latn")]

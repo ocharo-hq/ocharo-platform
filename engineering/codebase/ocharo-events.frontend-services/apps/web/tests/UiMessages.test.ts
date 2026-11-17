@@ -4,12 +4,16 @@ import { describe, expect, it } from 'vitest';
 import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 
 import {
+  attendanceLabels,
   datePrecisions,
+  eventAttendances,
   eventFormats,
+  eventHappenings,
   eventPriorities,
   eventScopes,
   eventStatuses,
   formatLabels,
+  happeningLabels,
   precisionLabels,
   priorityLabels,
   scopeLabels,
@@ -58,6 +62,8 @@ describe('interface messages', () => {
       ...eventStatuses.map((value) => statusLabels[value]),
       ...datePrecisions.map((value) => precisionLabels[value]),
       ...eventPriorities.map((value) => priorityLabels[value]),
+      ...eventHappenings.map((value) => happeningLabels[value]),
+      ...eventAttendances.map((value) => attendanceLabels[value]),
       ...[400, 401, 403, 404, 409, 500].map((status) =>
         failureMessage(ApiFailureFactory.create('http', { status, headers: new Headers() })),
       ),

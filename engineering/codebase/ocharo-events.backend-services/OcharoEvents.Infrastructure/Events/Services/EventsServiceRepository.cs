@@ -32,6 +32,9 @@ public sealed class EventsServiceRepository(
     /// <summary>Holds the most pages one read follows, a guard against a cursor that never ends.</summary>
     private const int MaximumPages = 50;
 
+    /// <summary>Holds the event status of an event that will not happen, so no deadline of it is upcoming.</summary>
+    private const string CancelledEvent = "cancelled";
+
     private static readonly HashSet<string> ClosedStatuses = new(StringComparer.Ordinal) { "skipped", "rejected" };
 
     /// <summary>Gets the catalog slug; unconfigured, every call answers 503 before reaching Events.</summary>
@@ -61,7 +64,8 @@ public sealed class EventsServiceRepository(
         var byStatus = all.GroupBy(item => item.Status, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         var upcoming = all
-            .Where(item => item.ApplicationDeadline >= today && !ClosedStatuses.Contains(item.Status))
+            .Where(item => item.ApplicationDeadline >= today && !ClosedStatuses.Contains(item.Status)
+                && item.EventStatus != CancelledEvent)
             .OrderBy(item => item.ApplicationDeadline)
             .ThenBy(item => item.Title.ToLowerInvariant(), StringComparer.Ordinal)
             .Take(upcomingLimit)

@@ -22,11 +22,17 @@ export const eventStatuses = [
   'skipped',
   'rejected',
 ] as const;
+/** Whether the event still happens as listed; `status` below is Ocharo's own stage, not this. */
+export const eventHappenings = ['scheduled', 'cancelled', 'postponed', 'rescheduled', 'moved-online'] as const;
+/** Where the event is attended. */
+export const eventAttendances = ['offline', 'online', 'mixed'] as const;
 export const datePrecisions = ['day', 'month', 'estimated', 'unknown'] as const;
 export const eventPriorities = ['high', 'normal', 'low'] as const;
 export type EventScope = (typeof eventScopes)[number];
 export type EventFormat = (typeof eventFormats)[number];
 export type EventStatus = (typeof eventStatuses)[number];
+export type EventHappening = (typeof eventHappenings)[number];
+export type EventAttendance = (typeof eventAttendances)[number];
 export type DatePrecision = (typeof datePrecisions)[number];
 export type EventPriority = (typeof eventPriorities)[number];
 
@@ -41,6 +47,9 @@ export interface ShowcaseEvent {
   organizer: string | null;
   scope: EventScope;
   format: EventFormat;
+  /** Whether the event still happens as listed; the wire name is `eventStatus`, since `status` is Ocharo's stage. */
+  eventStatus: EventHappening;
+  attendance: EventAttendance;
   country: string | null;
   city: string | null;
   venue: string | null;
@@ -60,7 +69,8 @@ export interface ShowcaseEvent {
   updatedAt: string;
 }
 /** The members the server derives from the event's facts, so no form edits or sends them. */
-type DerivedEventFields = 'id' | 'key' | 'revision' | 'createdAt' | 'updatedAt' | 'titleLanguage' | 'languages';
+type DerivedEventFields =
+  'id' | 'key' | 'revision' | 'createdAt' | 'updatedAt' | 'titleLanguage' | 'languages' | 'eventStatus' | 'attendance';
 /** Every mutable field; the import `key` is never edited here. */
 export type EventInput = Omit<ShowcaseEvent, DerivedEventFields>;
 /** Counts may omit statuses with no events; a missing count reads as zero. */
@@ -126,6 +136,18 @@ export const precisionLabels: Record<DatePrecision, string> = {
   unknown: 'Not announced',
 };
 export const priorityLabels: Record<EventPriority, string> = { high: 'High', normal: 'Normal', low: 'Low' };
+export const happeningLabels: Record<EventHappening, string> = {
+  scheduled: 'Scheduled',
+  cancelled: 'Cancelled',
+  postponed: 'Postponed',
+  rescheduled: 'Rescheduled',
+  'moved-online': 'Moved online',
+};
+export const attendanceLabels: Record<EventAttendance, string> = {
+  offline: 'In person',
+  online: 'Online',
+  mixed: 'In person and online',
+};
 export type EventTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info' | 'outline';
 export const statusTones: Record<EventStatus, EventTone> = {
   candidate: 'outline',
@@ -138,9 +160,22 @@ export const statusTones: Record<EventStatus, EventTone> = {
   rejected: 'danger',
 };
 
+/** Badge tones for the event's own state: a cancellation is danger, any other change a warning. */
+export const happeningTones: Record<EventHappening, EventTone> = {
+  scheduled: 'neutral',
+  cancelled: 'danger',
+  postponed: 'warning',
+  rescheduled: 'warning',
+  'moved-online': 'warning',
+};
+
 export const isEventScope = (value: unknown): value is EventScope => eventScopes.includes(value as EventScope);
 export const isEventFormat = (value: unknown): value is EventFormat => eventFormats.includes(value as EventFormat);
 export const isEventStatus = (value: unknown): value is EventStatus => eventStatuses.includes(value as EventStatus);
+export const isEventHappening = (value: unknown): value is EventHappening =>
+  eventHappenings.includes(value as EventHappening);
+export const isEventAttendance = (value: unknown): value is EventAttendance =>
+  eventAttendances.includes(value as EventAttendance);
 export const isDatePrecision = (value: unknown): value is DatePrecision =>
   datePrecisions.includes(value as DatePrecision);
 export const isEventPriority = (value: unknown): value is EventPriority =>

@@ -27,6 +27,8 @@ import {
   type ShowcaseEvent,
 } from '@/domain/events/Events';
 
+import EventStateBadges from './EventStateBadges.vue';
+
 /** One event in the feed. Candidates carry quick review actions for editors. */
 defineOptions({ name: 'EventCard' });
 const props = defineProps<{ access: EventsAccess; events: EventsControls; event: ShowcaseEvent; today: string }>();
@@ -73,6 +75,7 @@ async function review(status: EventStatus): Promise<void> {
           <a
             :href="href"
             class="block rounded-sm underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            :class="{ 'line-through': event.eventStatus === 'cancelled' }"
             @click="follow"
             >{{ event.title }}</a
           >
@@ -86,6 +89,7 @@ async function review(status: EventStatus): Promise<void> {
     </div>
     <p class="text-sm font-medium" data-test="event-dates">{{ formatEventDates(event, uiLocale) }}</p>
     <div class="flex flex-wrap gap-2">
+      <EventStateBadges :event="event" />
       <span
         v-if="titleTag"
         data-test="title-language"

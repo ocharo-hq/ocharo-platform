@@ -54,6 +54,8 @@ public static class EventsServiceMapper
             Blank(facts.Organizer?.Name),
             Scope(facts.Place?.Country),
             EventValidationService.Formats.Contains(facts.Kind) ? facts.Kind : "other",
+            EventStatusName(facts.Status),
+            AttendanceName(facts.Attendance),
             Blank(facts.Place?.Country),
             Blank(facts.Place?.City),
             Blank(facts.Place?.Venue),
@@ -185,6 +187,24 @@ public static class EventsServiceMapper
     private static DateOnly? Month(string? value) =>
         value is { Length: >= 7 } && DateOnly.TryParseExact(value[..7] + "-01", "yyyy-MM-dd", CultureInfo.InvariantCulture,
             DateTimeStyles.None, out var month) ? month : null;
+
+    /// <summary>Names whether the event still happens as listed, in the page's wire words.</summary>
+    public static string EventStatusName(EventStatus status) => status switch
+    {
+        EventStatus.Cancelled => "cancelled",
+        EventStatus.Postponed => "postponed",
+        EventStatus.Rescheduled => "rescheduled",
+        EventStatus.MovedOnline => "moved-online",
+        _ => "scheduled",
+    };
+
+    /// <summary>Names where the event is attended, in the page's wire words.</summary>
+    public static string AttendanceName(EventAttendance attendance) => attendance switch
+    {
+        EventAttendance.Online => "online",
+        EventAttendance.Mixed => "mixed",
+        _ => "offline",
+    };
 
     private static bool IsApplication(EventDeadline deadline) => deadline.Kind == DeadlineKind.Application;
 

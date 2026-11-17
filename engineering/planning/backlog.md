@@ -21,7 +21,6 @@ ChatGPT builds these in the pull order of wow-two-ws `system/sessions/events-int
 
 | Item | Type | Notes |
 |---|---|---|
-| E05 Show cancelled, postponed and online events as such | fix | spec in `tasks-events-path.md` |
 | E09 Show sourced ticket prices and ticket links | feature | spec in `tasks-events-path.md` |
 | E10 Show start time, address and organizer link on detail | feature | spec in `tasks-events-path.md` |
 | E16 Show source attribution and listing state on cards | feature | spec in `tasks-events-path.md` |

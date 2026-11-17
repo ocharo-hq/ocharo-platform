@@ -21,6 +21,8 @@ function showcase(overrides: Partial<ShowcaseEvent> = {}): ShowcaseEvent {
     organizer: 'Fashion Council',
     scope: 'local',
     format: 'runway',
+    eventStatus: 'scheduled',
+    attendance: 'offline',
     country: 'UZ',
     city: 'Tashkent',
     venue: 'Expo Hall',

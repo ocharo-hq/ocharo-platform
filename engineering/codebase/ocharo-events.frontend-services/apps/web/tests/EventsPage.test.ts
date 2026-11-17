@@ -40,6 +40,8 @@ const showcase = (over: Partial<ShowcaseEvent>): ShowcaseEvent => ({
   organizer: 'Fashion Council',
   scope: 'local',
   format: 'runway',
+  eventStatus: 'scheduled',
+  attendance: 'offline',
   country: 'UZ',
   city: 'Tashkent',
   venue: 'Humo Arena',
@@ -237,6 +239,31 @@ describe('events feed', () => {
     expect(card('Tashkent Fashion Week').find('[data-test="title-language"]').exists()).toBe(false);
   });
 
+  it('marks a cancelled, postponed or online event as such and leaves a plain event unmarked', async () => {
+    api.listEvents.mockResolvedValue(
+      ResultExtensions.ok([
+        showcase({ eventStatus: 'cancelled', attendance: 'online' }),
+        showcase({ id: SILK_FAIR, title: 'Silk Road Trade Fair', eventStatus: 'postponed' }),
+        showcase({ id: CRAFT_EXPO, title: 'Craft Expo', eventStatus: 'rescheduled', attendance: 'mixed' }),
+        showcase({ id: NEW_EVENT, title: 'Plain Fair' }),
+      ]),
+    );
+    await render('editor', feed);
+    await flushPromises();
+    const week = card('Tashkent Fashion Week');
+    expect(week.get('[data-test="event-happening"]').text()).toBe('Cancelled');
+    expect(week.get('[data-test="event-attendance"]').text()).toBe('Online');
+    expect(week.get('h4 a').classes()).toContain('line-through');
+    expect(card('Silk Road Trade Fair').get('[data-test="event-happening"]').text()).toBe('Postponed');
+    expect(card('Silk Road Trade Fair').find('[data-test="event-attendance"]').exists()).toBe(false);
+    expect(card('Silk Road Trade Fair').get('h4 a').classes()).not.toContain('line-through');
+    expect(card('Craft Expo').get('[data-test="event-happening"]').text()).toBe('Rescheduled');
+    expect(card('Craft Expo').get('[data-test="event-attendance"]').text()).toBe('In person and online');
+    const plain = card('Plain Fair');
+    expect(plain.find('[data-test="event-happening"]').exists()).toBe(false);
+    expect(plain.find('[data-test="event-attendance"]').exists()).toBe(false);
+  });
+
   it('turns every filter into query parameters and drops from=today when past events are shown', async () => {
     await render('editor', feed);
     await flushPromises();
@@ -364,6 +391,17 @@ describe('event detail', () => {
       links.every((link) => link.attributes('target') === '_blank' && link.attributes('rel') === 'noopener noreferrer'),
     ).toBe(true);
     expect(text).toContain('javascript:alert(1)');
+  });
+
+  it('shows a cancelled online event with a struck-through title and its badges', async () => {
+    api.getEvent.mockResolvedValue(
+      ResultExtensions.ok({ ...fashionWeek(), eventStatus: 'cancelled', attendance: 'online' }),
+    );
+    await render('viewer', { view: 'event', eventId: FASHION_WEEK });
+    await flushPromises();
+    expect(detail().get('#event-detail-title').classes()).toContain('line-through');
+    expect(detail().get('[data-test="event-happening"]').text()).toBe('Cancelled');
+    expect(detail().get('[data-test="event-attendance"]').text()).toBe('Online');
   });
 
   it('hides every edit control from viewers', async () => {

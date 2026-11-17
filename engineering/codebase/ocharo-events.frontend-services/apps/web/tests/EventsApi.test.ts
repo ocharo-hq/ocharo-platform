@@ -12,6 +12,8 @@ const wire = {
   title: 'Moda haftaligi',
   scope: 'local',
   format: 'runway',
+  eventStatus: 'cancelled',
+  attendance: 'online',
   datePrecision: 'unknown',
   participation: '',
   status: 'candidate',
@@ -63,5 +65,24 @@ describe('events transport', () => {
     expect(decoded.ok).toBe(true);
     expect(decoded.ok && decoded.value).toMatchObject({ titleLanguage: null, languages: [] });
     expect(calls[0]!.init.decode({ ...wire, languages: [3] }).ok).toBe(false);
+  });
+
+  it('keeps the event state and attendance, and reads an unknown or missing one as the plain case', async () => {
+    const { client, calls } = recordingClient();
+    await createEventsApi(client).getEvent(ORG, EVENT, signal);
+    const { decode } = calls[0]!.init;
+    const value = (input: unknown) => {
+      const decoded = decode(input);
+      return decoded.ok ? decoded.value : decoded;
+    };
+    expect(value(wire)).toMatchObject({ eventStatus: 'cancelled', attendance: 'online' });
+    expect(value({ ...wire, eventStatus: 'vanished', attendance: 'hologram' })).toMatchObject({
+      eventStatus: 'scheduled',
+      attendance: 'offline',
+    });
+    const older: Record<string, unknown> = { ...wire };
+    delete older.eventStatus;
+    delete older.attendance;
+    expect(value(older)).toMatchObject({ eventStatus: 'scheduled', attendance: 'offline' });
   });
 });

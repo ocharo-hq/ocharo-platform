@@ -98,6 +98,37 @@ public sealed class EventsServiceRouteTests
     }
 
     [Fact]
+    public async Task EventsPage_ShouldShowACancelledOnlineEventAsSuch()
+    {
+        var service = new FakeEventsService();
+        service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["und"] = "Online craft fair" },
+            Kind = "market",
+            Status = EventStatus.Cancelled,
+            Attendance = EventAttendance.Online,
+            Starts = new EventWhen { Value = "2026-12-03", Precision = DatePrecision.Day },
+        });
+        service.Add(new EventFacts
+        {
+            Title = new Dictionary<string, string> { ["und"] = "Tashkent Fashion Week" },
+            Kind = "runway",
+            Starts = new EventWhen { Value = "2026-12-05", Precision = DatePrecision.Day },
+        });
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), service);
+        using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        JsonElement[] listed = (await DataAsync(await client.GetAsync(Path))).EnumerateArray().ToArray();
+
+        JsonElement cancelled = listed.Single(item => item.GetProperty("title").GetString() == "Online craft fair");
+        cancelled.GetProperty("eventStatus").GetString().Should().Be("cancelled");
+        cancelled.GetProperty("attendance").GetString().Should().Be("online");
+        JsonElement live = listed.Single(item => item.GetProperty("title").GetString() == "Tashkent Fashion Week");
+        live.GetProperty("eventStatus").GetString().Should().Be("scheduled");
+        live.GetProperty("attendance").GetString().Should().Be("offline");
+    }
+
+    [Fact]
     public async Task StageSave_ShouldReachEvents_WhenTheEventsNamesExceedDesksOwnTable()
     {
         var service = new FakeEventsService();

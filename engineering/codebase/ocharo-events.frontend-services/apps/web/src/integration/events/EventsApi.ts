@@ -5,7 +5,9 @@ import { eachWithNulls, memberWithNulls, withArrays, withNulls } from '@/integra
 
 import {
   isDatePrecision,
+  isEventAttendance,
   isEventFormat,
+  isEventHappening,
   isEventPriority,
   isEventScope,
   isEventStatus,
@@ -58,6 +60,8 @@ export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
   nullableDates(v, ['startsOn', 'endsOn', 'applicationDeadline']) &&
   isEventScope(v.scope) &&
   isEventFormat(v.format) &&
+  isEventHappening(v.eventStatus) &&
+  isEventAttendance(v.attendance) &&
   isDatePrecision(v.datePrecision) &&
   isEventStatus(v.status) &&
   isEventPriority(v.priority) &&
@@ -84,7 +88,20 @@ const eventNullable = [
   'website',
   'sourceUrl',
 ];
-const event = (v: unknown) => withArrays(withNulls(v, eventNullable), ['languages']);
+/**
+ * Restores what the wire leaves out and reads an unknown event state or attendance as the plain case, so a value a newer
+ * service adds never fails the whole list.
+ */
+function event(value: unknown): unknown {
+  const restored = withArrays(withNulls(value, eventNullable), ['languages']);
+  return record(restored)
+    ? {
+        ...restored,
+        eventStatus: isEventHappening(restored.eventStatus) ? restored.eventStatus : 'scheduled',
+        attendance: isEventAttendance(restored.attendance) ? restored.attendance : 'offline',
+      }
+    : restored;
+}
 const events = (v: unknown) => eachWithNulls(v, event);
 const summary = (v: unknown) => memberWithNulls(v, 'upcomingDeadlines', events);
 

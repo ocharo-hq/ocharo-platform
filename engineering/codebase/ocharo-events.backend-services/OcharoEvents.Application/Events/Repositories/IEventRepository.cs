@@ -15,7 +15,7 @@ public interface IEventRepository
         CancellationToken token);
 
     /// <summary>
-    /// Counts only the statuses in use; the nearest deadlines on or after today, skipped and rejected excluded.
+    /// Counts only the statuses in use; the nearest deadlines on or after today, of events Ocharo skipped or rejected or that were cancelled excluded.
     /// </summary>
     Task<ShowcaseEventSummary> GetSummaryAsync(
         Guid organizationId,
