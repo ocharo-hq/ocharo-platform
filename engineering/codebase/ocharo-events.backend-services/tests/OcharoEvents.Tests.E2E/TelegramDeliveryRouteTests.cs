@@ -75,6 +75,50 @@ public sealed class TelegramDeliveryRouteTests
     }
 
     [Fact]
+    public async Task Admin_ShouldSaveTheStageSelection_OfTheDefaultDigestAndTheDeadlineReminder()
+    {
+        var digests = new FakeDigestsBroker();
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), digests: digests);
+        using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Owner);
+        var schedule = new { days = new[] { "monday" }, times = new[] { "09:00" }, timeZone = "Asia/Tashkent" };
+        var members = new object[] { new { role = "member" } };
+
+        // The default digest leaves out what the team skipped or rejected (OE05).
+        JsonElement weekly = await DataAsync(await client.PostAsJsonAsync(Path, new
+        {
+            name = "Ocharo tadbirlari", schedule, recipients = members,
+            selection = new { newSinceLastRun = true, startingWithinDays = 30, deadlineWithinDays = 14, excludeStages = new[] { "skipped", "rejected" } },
+        }));
+        StageKeys(weekly, "excludeStages").Should().Equal("skipped", "rejected");
+        StageKeys(weekly, "stages").Should().BeEmpty();
+
+        // The deadline reminder is created switched off, for the stages the team pursues.
+        JsonElement reminder = await DataAsync(await client.PostAsJsonAsync(Path, new
+        {
+            name = "Muddat eslatmalari", enabled = false, schedule, recipients = members,
+            selection = new { deadlineWithinDays = 7, stages = new[] { "shortlisted", "applying", "applied" } },
+        }));
+        reminder.GetProperty("enabled").GetBoolean().Should().BeFalse();
+        // A switched-off digest has no next run: the wire omits it or sends null.
+        (!reminder.TryGetProperty("nextRunAtUtc", out JsonElement nextRun) || nextRun.ValueKind == JsonValueKind.Null)
+            .Should().BeTrue();
+        reminder.GetProperty("selection").GetProperty("deadlineWithinDays").GetInt32().Should().Be(7);
+        StageKeys(reminder, "stages").Should().Equal("shortlisted", "applying", "applied");
+
+        // Reading and replacing a digest keeps the stage selection as saved, never dropping it.
+        JsonElement[] listed = (await DataAsync(await client.GetAsync(Path))).EnumerateArray().ToArray();
+        StageKeys(listed.Single(item => item.GetProperty("name").GetString() == "Ocharo tadbirlari"), "excludeStages")
+            .Should().Equal("skipped", "rejected");
+        JsonElement saved = await DataAsync(await client.PutAsJsonAsync($"{Path}/{reminder.GetProperty("id").GetString()}", new
+        {
+            name = "Muddat eslatmalari", enabled = true, schedule, recipients = members, expectedRevision = 1,
+            selection = new { deadlineWithinDays = 7, stages = new[] { "shortlisted", "applying" } },
+        }));
+        StageKeys(saved, "stages").Should().Equal("shortlisted", "applying");
+        saved.GetProperty("revision").GetInt32().Should().Be(2);
+    }
+
+    [Fact]
     public async Task Delivery_ShouldRefuseMembersWithoutAdmin_OtherOrganizations_AndOtherCatalogs_BeforeEvents()
     {
         var digests = new FakeDigestsBroker();
@@ -103,6 +147,12 @@ public sealed class TelegramDeliveryRouteTests
 
         (await owner.GetAsync(Path)).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
+
+    /// <summary>Reads a selection's stage list as the wire carries it: absent or empty when the digest names none.</summary>
+    private static string[] StageKeys(JsonElement digest, string list) =>
+        digest.GetProperty("selection").TryGetProperty(list, out JsonElement keys) && keys.ValueKind == JsonValueKind.Array
+            ? keys.EnumerateArray().Select(item => item.GetString()!).ToArray()
+            : [];
 
     private static async Task<JsonElement> DataAsync(HttpResponseMessage response)
     {

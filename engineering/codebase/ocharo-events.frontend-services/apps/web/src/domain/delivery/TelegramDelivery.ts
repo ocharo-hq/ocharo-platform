@@ -1,4 +1,7 @@
-import type { DigestSpec } from '@wow-two-beta/fe-events/contracts';
+import type { DigestSpec, WorkflowModel } from '@wow-two-beta/fe-events/contracts';
+
+import { eventStatuses, statusLabels, type EventStatus } from '@/domain/events/Events';
+import { translateUi } from '@/domain/shared/UiMessages';
 
 /**
  * Telegram delivery: the organization's events going out to its people through Ocharo's Telegram bot, on a schedule its
@@ -31,10 +34,20 @@ export function eventLinkTemplate(origin: string, organizationId: string): strin
   return `${origin}/organizations/${organizationId.toLowerCase()}/events/{id}`;
 }
 
+/** The stages a team has left: a digest leaves them out by default, as the feed does. */
+export const ocharoClosedStages: readonly EventStatus[] = ['skipped', 'rejected'];
+
+/** The stages of events the team is pursuing, which a deadline reminder is about. */
+export const ocharoPursuedStages: readonly EventStatus[] = ['shortlisted', 'applying', 'applied'];
+
+/** The name of the second digest an admin can add (OE05), in Uzbek like the default's: "Deadline reminders". */
+export const ocharoDeadlineReminderName = 'Muddat eslatmalari';
+
 /**
  * Ocharo's default digest (O17): weekly on Monday at 09:00 in Tashkent, new events and those starting within 30 days plus
- * deadlines within 14 days, in Uzbek. Recipients default to every member of the organization (`role: member`, which
- * Events resolves through Identity's member list at each run); a single person is still named by Identity `sub`.
+ * deadlines within 14 days, in Uzbek, leaving out the events the team skipped or rejected (OE05). Recipients default to
+ * every member of the organization (`role: member`, which Events resolves through Identity's member list at each run); a
+ * single person is still named by Identity `sub`.
  */
 export function ocharoDigestDefaults(): Partial<DigestSpec> {
   return {
@@ -42,9 +55,56 @@ export function ocharoDigestDefaults(): Partial<DigestSpec> {
     enabled: true,
     channel: 'telegram',
     schedule: { days: ['monday'], times: ['09:00'], timeZone: 'Asia/Tashkent' },
-    selection: { newSinceLastRun: true, startingWithinDays: 30, deadlineWithinDays: 14 },
+    selection: {
+      newSinceLastRun: true,
+      startingWithinDays: 30,
+      deadlineWithinDays: 14,
+      excludeStages: [...ocharoClosedStages],
+    },
     recipients: [{ role: 'member' }],
     language: 'uz-Latn',
     itemCap: 20,
+  };
+}
+
+/**
+ * The "Deadline reminders" preset (OE05): every day at 09:00 in Tashkent, the events the team shortlisted, is applying to
+ * or has applied to with an open deadline within 7 days, to every member, in Uzbek. It is created switched off, for an
+ * admin to review and switch on; a link template, when given, fixes each event's link as the editor does.
+ */
+export function ocharoDeadlineReminder(linkTemplate: string | null = null): DigestSpec {
+  return {
+    name: ocharoDeadlineReminderName,
+    enabled: false,
+    channel: 'telegram',
+    schedule: {
+      days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      times: ['09:00'],
+      timeZone: 'Asia/Tashkent',
+    },
+    selection: { deadlineWithinDays: 7, stages: [...ocharoPursuedStages] },
+    recipients: [{ role: 'member' }],
+    language: 'uz-Latn',
+    itemCap: 20,
+    ...(linkTemplate ? { linkTemplate } : {}),
+  };
+}
+
+/**
+ * Ocharo's eight stages with their labels in the three interface languages, for the digest editor's stage pickers: the
+ * mirror serves no workflow route, so the page hands the editor the stages the app itself offers. An event Ocharo does
+ * not track yet reads as `candidate`.
+ */
+export function ocharoWorkflow(): Pick<WorkflowModel, 'stages' | 'defaultStage'> {
+  return {
+    stages: eventStatuses.map((key) => ({
+      key,
+      label: {
+        en: translateUi(statusLabels[key], 'en'),
+        uz: translateUi(statusLabels[key], 'uz'),
+        ru: translateUi(statusLabels[key], 'ru'),
+      },
+    })),
+    defaultStage: 'candidate',
   };
 }

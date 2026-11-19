@@ -2476,7 +2476,7 @@
           "OcharoEvents.Infrastructure": "[0.0.0, )",
           "OcharoEvents.Persistence": "[0.0.0, )",
           "WoW2.Sdk.Beta.Be": "[10.0.112-beta, )",
-          "WoW2.Sdk.Beta.Be.Events.Client": "[10.0.9-beta, )",
+          "WoW2.Sdk.Beta.Be.Events.Client": "[10.0.13-beta, )",
           "WoW2.Sdk.Beta.Be.Identity.Client": "[10.0.30-beta, )"
         }
       },
@@ -2496,7 +2496,7 @@
           "OcharoEvents.Application": "[0.0.0, )",
           "OcharoEvents.Domain": "[0.0.0, )",
           "WoW2.Sdk.Beta.Be": "[10.0.112-beta, )",
-          "WoW2.Sdk.Beta.Be.Events.Abstractions": "[10.0.9-beta, )"
+          "WoW2.Sdk.Beta.Be.Events.Abstractions": "[10.0.13-beta, )"
         }
       },
       "ocharoevents.persistence": {
@@ -2690,21 +2690,21 @@
       },
       "WoW2.Sdk.Beta.Be.Events.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[10.0.9-beta, )",
-        "resolved": "10.0.9-beta",
-        "contentHash": "AiNXFsL/KQZCHkoIVCd8UKANElHfWQjXbvxXS1nAoH0W/lJYEVlnhO0zWQJbY1afuLCaUVKXbrxwTADPEpniIg==",
+        "requested": "[10.0.13-beta, )",
+        "resolved": "10.0.13-beta",
+        "contentHash": "wyBgMVTAy5C9BSvJ04yJf1fL+mQtRvH+7JYQxltQd4fn/rnAuUn3IQO9080aWdFBnelo+7ZQmle0+SKD40ZGCg==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be.Abstractions": "10.0.112-beta"
         }
       },
       "WoW2.Sdk.Beta.Be.Events.Client": {
         "type": "CentralTransitive",
-        "requested": "[10.0.9-beta, )",
-        "resolved": "10.0.9-beta",
-        "contentHash": "Ja3WMpTsUmyaTZhkiIBVBUEQh3IGfM9hYAp1d6WXzC78Y4Ba5mQhVOu4BKUYaT6dS/TaxPAdoAvUzGbqu73mtA==",
+        "requested": "[10.0.13-beta, )",
+        "resolved": "10.0.13-beta",
+        "contentHash": "Da0WIVORPZxZJX1C71l0D8oDP5Sue+a3En7fcwwVap6Kc0l5pYJp8uHEeIUcWGdB7dhFek6n5TaJFbpAutE7iA==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be": "10.0.112-beta",
-          "WoW2.Sdk.Beta.Be.Events.Abstractions": "10.0.9-beta"
+          "WoW2.Sdk.Beta.Be.Events.Abstractions": "10.0.13-beta"
         }
       },
       "WoW2.Sdk.Beta.Be.Identity.Client": {

@@ -1,6 +1,6 @@
 # Delivery
 
-*Last updated: 2026-11-17*
+*Last updated: 2026-11-19*
 
 The organization's Telegram delivery (tasks-platform.md O17): WoW2 Events' scheduled digests of the Events page's catalog,
 mirrored under `api/organizations/{organizationId}/delivery/api/events/v1/catalogs/{catalog}/digests`, so the page's
@@ -9,6 +9,10 @@ mirrored under `api/organizations/{organizationId}/delivery/api/events/v1/catalo
 - Routes: list, read, create (201), replace at `expectedRevision`, delete (`?expectedRevision=`), `{id}/preview` (renders
   without sending), `{id}/send` (send now) and `{id}/runs` (history, `cursor`, `limit`); bodies and answers are Events'
   digest models in the SDK envelope.
+- Selection: a digest's `selection` carries Events' `stages` and `excludeStages` (workflow stage keys of the organization's
+  own tracking; an untracked event reads as `candidate`), bound and answered as Events holds them, so a save from this
+  app keeps what was set elsewhere (OE05). The mirror serves no `/workflow` route: the page passes Ocharo's eight stages
+  to the editor.
 - Access: the organization filter as for events (404 outside the session's organization or without `events:read`), then
   403 without `events:admin`; another catalog than `Events:Catalog` answers 404 and an unconfigured Events 503, both
   before Events.

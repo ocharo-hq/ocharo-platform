@@ -114,6 +114,13 @@ export const eventsUiMessages: UiMessageTable = {
       uz: 'Qabul qiluvchilar odatda role:member, ya’ni har bir ishga tushganda tashkilotning barcha a’zolari; faqat bir kishiga yuborish uchun uning Ocharo hisobi identifikatorini, har birini alohida qatorda yozing. Ocharo hisobiga Telegram ulamagan kishi yuborishlar tarixida not_linked bo‘lib ko‘rinadi.',
       ru: 'По умолчанию получатели: role:member, то есть все участники организации при каждом запуске; чтобы написать одному человеку, укажите вместо этого идентификатор его аккаунта Ocharo, по одному в строке. Тот, кто не привязал Telegram к аккаунту Ocharo, отображается в истории отправок как not_linked.',
     },
+  'Deadline reminders': { uz: 'Muddat eslatmalari', ru: 'Напоминания о сроках' },
+  'Every day at 09:00 (Tashkent), every member gets the events that are shortlisted, applying or applied and have an application deadline within 7 days. It is added switched off; switch it on in the list below.':
+    {
+      uz: 'Har kuni soat 09:00 da (Toshkent) har bir a’zoga saralangan, ariza tayyorlanayotgan yoki ariza topshirilgan va ariza muddati 7 kun ichida bo‘lgan tadbirlar yuboriladi. U o‘chirilgan holda qo‘shiladi; uni quyidagi ro‘yxatda yoqing.',
+      ru: 'Каждый день в 09:00 (Ташкент) каждый участник получает мероприятия на этапах «В шорт-листе», «Готовим заявку» и «Заявка подана» со сроком подачи в ближайшие 7 дней. Рассылка добавляется выключенной; включите её в списке ниже.',
+    },
+  'Add deadline reminders': { uz: 'Muddat eslatmalarini qo‘shish', ru: 'Добавить напоминания о сроках' },
   'Your account id: {id}': { uz: 'Hisobingiz identifikatori: {id}', ru: 'Идентификатор вашего аккаунта: {id}' },
   "Only the organization's admins set its Telegram delivery.": {
     uz: 'Telegram orqali yuborishni faqat tashkilot administratorlari sozlaydi.',
