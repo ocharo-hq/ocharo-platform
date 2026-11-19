@@ -1,5 +1,5 @@
 # Helpers
 
-_Last updated: 2026-11-10_
+_Last updated: 2026-11-19_
 
-Shared test mounts (`mountEvents` with the stubbed host and events routes, `eventsRouter`) and the picker helpers (`eventsSelect`, `chooseEventsValue`).
+Shared test mounts: `mountEvents` with the stubbed host and the mirrored Events routes, and `eventsRouter`.

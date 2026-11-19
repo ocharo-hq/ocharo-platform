@@ -2,10 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using OcharoEvents.Api.RuntimeConfig.Settings;
-using OcharoEvents.Api.Events;
-using OcharoEvents.Application.Events.Repositories;
-using OcharoEvents.Application.Events.Services;
-using OcharoEvents.Infrastructure;
 using OcharoEvents.Infrastructure.Delivery.Services;
 using OcharoEvents.Infrastructure.Events.Services;
 using OcharoEvents.Persistence;
@@ -16,7 +12,6 @@ using WoW.Two.Sdk.Beta.Be.Events.Client;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
-using WoW.Two.Sdk.Beta.Be.Mediator;
 using WoW.Two.Sdk.Beta.Be.Observability.HealthChecks;
 using WoW.Two.Sdk.Beta.Be.Web.Json;
 using WoW.Two.Sdk.Beta.Be.Web.ProblemDetails;
@@ -63,7 +58,7 @@ public static partial class HostConfiguration
     }
 
     /// <summary>
-    /// Registers the showcase events feed on WoW2 Events through its published client, whose person flow exchanges the
+    /// Registers the Events page's mirror of WoW2 Events through its published client, whose person flow exchanges the
     /// signed-in person's BFF session token for one with Events' audience by this host's own Identity client
     /// (<c>Identity:Client</c>, client 11 <c>ocharo-events</c>). The service keeps no events store: a deployed run refuses
     /// to start without <see cref="EventsBaseUrlKey"/>, a local run without it answers 503 on the Events routes. Settings
@@ -93,14 +88,10 @@ public static partial class HostConfiguration
         });
         builder.Services.TryAddSingleton(TimeProvider.System);
         builder.Services.AddHttpContextAccessor();
-        builder.Services.AddScoped<IUiLocale, HttpUiLocale>();
-        builder.Services.AddScoped<IEventRepository, EventsServiceRepository>();
-        builder.Services.AddSingleton<EventValidationService>();
-        builder.Services.AddScoped<EventService>();
+        // The Events page: the fe-events kit's routes, mirrored under the organization and passed through to Events.
+        builder.Services.AddScoped<EventsApiService>();
         // Telegram delivery: the organization's digests in WoW2 Events, through the same client and person flow.
         builder.Services.AddScoped<EventDigestsService>();
-        // The SDK registration converts a handler's thrown failure into its AppResult, outermost.
-        builder.Services.AddMediator(typeof(InfrastructureAssembly).Assembly);
         return builder;
     }
 

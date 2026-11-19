@@ -4,15 +4,17 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog.Core;
+using WoW.Two.Sdk.Beta.Be.Events.Calendar;
 using WoW.Two.Sdk.Beta.Be.Events.CatalogEvents;
 using WoW.Two.Sdk.Beta.Be.Events.Digests;
 using WoW.Two.Sdk.Beta.Be.Events.Tracking;
+using WoW.Two.Sdk.Beta.Be.Events.Workflows;
 
 namespace OcharoEvents.Tests.Harness;
 
 /// <summary>An isolated Events host with its own product database, signed in through <see cref="EventsTestIdentity"/>;
-/// with a <see cref="FakeEventsService"/>, WoW2 Events' two brokers answer from memory, and with a
-/// <see cref="FakeDigestsBroker"/> its digests. <c>settings</c> apply last, so a
+/// with a <see cref="RecordingEventsBrokers"/>, the brokers the Events page's mirror reaches record each call and answer
+/// what the test set, and with a <see cref="FakeDigestsBroker"/> WoW2 Events' digests answer from memory. <c>settings</c> apply last, so a
 /// test may change or clear (null) any default.</summary>
 internal sealed class EventsHost : IAsyncDisposable
 {
@@ -27,7 +29,7 @@ internal sealed class EventsHost : IAsyncDisposable
     /// without <c>DEPLOY_ENVIRONMENT</c> like a local run.</summary>
     public static EventsHost Create(
         IReadOnlyDictionary<string, string?> settings,
-        FakeEventsService? events = null,
+        RecordingEventsBrokers? events = null,
         string environment = "Testing",
         string? database = null,
         CapturedLogs? logs = null,
@@ -49,8 +51,10 @@ internal sealed class EventsHost : IAsyncDisposable
             {
                 if (digests is not null) services.AddSingleton<IEventDigestsBroker>(digests);
                 if (events is null) return;
-                services.AddSingleton<ICatalogEventsBroker>(events);
                 services.AddSingleton<IEventTrackingBroker>(events);
+                services.AddSingleton<ICatalogEventsBroker>(events);
+                services.AddSingleton<IEventWorkflowsBroker>(events);
+                services.AddSingleton<IEventCalendarBroker>(events);
             });
         });
         return new EventsHost(factory);

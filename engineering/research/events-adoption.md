@@ -1,6 +1,6 @@
 # Events adoption
 
-*Last updated: 2026-11-10*
+*Last updated: 2026-11-19*
 
 Desk's Events move onto WoW2 Events, the domain repo `wow-two-sdk-beta.events`: Events owns the catalog and the
 tracking, and Desk keeps its page, its organization authorization and references to Ocharo entities (E1, `ocharo-ws`
@@ -181,8 +181,9 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 
 - Desk keeps its `IEventRepository` port; with `Events:BaseUrl` set, an Events-backed implementation replaces
   `EventRepository`, so `EventsController`, its handlers and the Vue screens stay unchanged in P1.
-- Reads: Events' tracking list of catalog `ocharo-fashion` (`trackedOnly=false`), each `TrackedEventModel` mapped to a
-  `ShowcaseEvent`: facts from `event`, stage, priority, notes and `fields` from `tracking`, its revision (0 untracked).
+- Reads: Events' tracking list of catalog `ocharo-fashion` (`trackedOnly=false`), each `TrackedEventModel` mapped to
+  Desk's event record: facts from `event`, stage, priority, notes and `fields` from `tracking`, its revision (0
+  untracked). Retired 2026-11-19 by OE07: the page reads Events' models through the `fe-events` kit.
 - An accepted event Ocharo never tracked shows as `candidate`, `normal`, so done-when (b) needs no tracking first.
 - Dates map back: `day` → the day; `month` → the 1st, `month`, or `estimated` when its certainty is estimated;
   `unknown` → no dates; the title prefers `und`, then `en`, `uz`, `ru`.

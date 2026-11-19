@@ -1,44 +1,29 @@
-import { computed, onScopeDispose, reactive, ref, shallowRef, watch } from 'vue';
+import { onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { localIsoDate, type EventsClient } from '@wow-two-beta/fe-events/kit';
 
-import type { ApiFailure } from '@wow-two-beta/fe/foundation/http';
-import type { Result } from '@wow-two-beta/fe/foundation/results';
-import { useAppQuery, useQueryCache } from '@wow-two-beta/fe/query';
-
-import { notifyError, requestConfirmation } from '@/application/common/UseFeedback';
+import { requestConfirmation } from '@/application/common/UseFeedback';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import {
-  eventLimits,
+  eventsApiPrefix,
   eventsPath,
-  localIsoDate,
+  ocharoWorkflowSpec,
   readEventsAddress,
   readEventsOrganizationId,
-  trackingInput,
-  type EventFilter,
-  type EventInput,
-  type EventPriority,
+  workflowAligned,
   type EventsLocation,
-  type EventStatus,
-  type ShowcaseEvent,
-  type TrackingInput,
 } from '@/domain/events/Events';
-import { createEventsApi } from '@/integration/events/EventsApi';
 
-import { failureMessage, type EventsAccess, type EventsWorkspace } from './UseEventsAccess';
+import { createOcharoEventsClient } from '@/integration/events/EventsClient';
 
-/** The result of a form save as the form needs it: conflicts keep the form's input. */
-export type EventSaveOutcome = 'saved' | 'conflict' | 'failed';
-/** Tells whether the record moved on since the page read it: a stale revision (409) or facts that moved to review (410). */
-export const isStaleFailure = (failure: ApiFailure): boolean => failure.status === 409 || failure.status === 410;
-/** Maps a write result for a form: a record that moved on stays inline, other failures become a safe toast. */
-export function eventSaveOutcome(result: Result<unknown, ApiFailure>): EventSaveOutcome {
-  if (result.ok) return 'saved';
-  if (isStaleFailure(result.failure)) return 'conflict';
-  if (result.failure.code !== 'cancelled') notifyError(failureMessage(result.failure));
-  return 'failed';
+import type { EventsAccess } from './UseEventsAccess';
+
+/** The Events page's `fe-events` client over this app's mirror of WoW2 Events for the organization (OE07). */
+export function createEventsPageClient(organizationId: string): EventsClient {
+  return createOcharoEventsClient(eventsApiPrefix(organizationId));
 }
 
-/** Keeps deadline labels and date filters current across midnight and sleeping browser tabs. */
+/** Keeps the person's calendar day current across midnight and sleeping browser tabs, for deadlines and past events. */
 export function useEventToday() {
   const today = ref(localIsoDate());
   let timer: ReturnType<typeof setTimeout>;
@@ -60,140 +45,21 @@ export function useEventToday() {
   return today;
 }
 
-/** Owns Events transport, cache keys and server-confirmed commands for one organization document. */
-export function useEvents(access: EventsAccess, workspace: EventsWorkspace) {
-  const { uiLocale } = useUiLocale();
-  const api = createEventsApi(undefined, () => uiLocale.value);
-  const cache = useQueryCache();
-  const organizationId = () => workspace.organization.value?.id ?? '';
-  // The query client is bound to the session, so a new person or organization starts from empty caches.
-  const scope = () => [organizationId(), 'events'];
-  // Titles come back in the operator language, so a read is cached per language; `scope` stays its prefix.
-  const keys = {
-    all: () => scope(),
-    list: (filter: EventFilter) => [
-      ...scope(),
-      'list',
-      uiLocale.value,
-      filter.query.trim(),
-      filter.scope,
-      filter.format,
-      filter.status,
-      filter.from,
-      filter.includeClosed,
-    ],
-    summary: (today: string) => [...scope(), 'summary', uiLocale.value, today],
-    event: (id: string) => [...scope(), 'event', uiLocale.value, id],
-  };
-  const enabled = () => Boolean(workspace.organization.value);
-  const canEdit = computed(() => workspace.canEdit.value);
-  const refreshing = ref(false);
-
-  const dirtyForms = reactive(new Set<string>());
-  function setFormDirty(key: string, dirty: boolean): void {
-    if (dirty) dirtyForms.add(key);
-    else dirtyForms.delete(key);
-  }
-  watch(
-    () => dirtyForms.size > 0,
-    (dirty) => access.setDirty(dirty),
-    { flush: 'sync' },
+/**
+ * Aligns the workflow WoW2 Events holds for the organization with Ocharo's (`ocharoWorkflowSpec`): its stage labels in
+ * the three interface languages, `skipped` and `rejected` as lost, and the custom fields' titles with the source link
+ * read-only. It writes once, at the stored revision, only when the stored one differs; Events refuses anyone but an
+ * admin, so the page asks only for an admin. Answers whether the stored workflow now reads as Ocharo's.
+ */
+export async function alignOcharoWorkflow(client: EventsClient, signal?: AbortSignal): Promise<boolean> {
+  const stored = await client.getWorkflow(signal);
+  if (!stored.ok) return false;
+  if (workflowAligned(stored.value)) return true;
+  const written = await client.putWorkflow(
+    { ...ocharoWorkflowSpec(), expectedRevision: stored.value.revision },
+    signal,
   );
-  onScopeDispose(() => {
-    if (dirtyForms.size) access.setDirty(false);
-  });
-
-  async function refreshViews(targets: unknown[][]): Promise<void> {
-    refreshing.value = true;
-    try {
-      await Promise.all(targets.map((key) => cache.invalidate(key)));
-    } catch {
-      notifyError(
-        'Saved successfully. The current view could not refresh. Your local edits are preserved.',
-        'events-refresh',
-      );
-    } finally {
-      refreshing.value = false;
-    }
-  }
-  /** One write can move an event between months, statuses and deadlines, so every Events view reloads. */
-  const refreshAll = () => refreshViews([keys.all()]);
-  async function run<T>(operation: (signal: AbortSignal) => Promise<Result<T, ApiFailure>>, signal?: AbortSignal) {
-    const result = await access.write(operation, signal);
-    if (result.ok) await refreshAll();
-    return result;
-  }
-  const o = organizationId;
-  const updateTracking = (event: ShowcaseEvent, input: TrackingInput, signal?: AbortSignal) =>
-    run((s) => api.updateTracking(o(), event.id, event.revision, input, s), signal);
-
-  return {
-    api,
-    keys,
-    enabled,
-    canEdit,
-    refreshing,
-    organizationId,
-    setFormDirty,
-    refreshAll,
-    refreshEvent: (id: string) => cache.invalidate(keys.event(id)),
-    createEvent: (input: EventInput, signal?: AbortSignal) => run((s) => api.createEvent(o(), input, s), signal),
-    /** Writes where Ocharo stands with an existing event; its facts change only through review in WoW2 Events. */
-    updateTracking,
-    /**
-     * Changes only the stage or priority, sending Ocharo's other tracking fields back as they were read. It rides the
-     * tracking route, which never compares the event's facts, so a revision of them after the page read cannot refuse it.
-     */
-    patchEvent: (
-      event: ShowcaseEvent,
-      changes: { status?: EventStatus; priority?: EventPriority },
-      signal?: AbortSignal,
-    ) => updateTracking(event, { ...trackingInput(event), ...changes }, signal),
-  };
-}
-export type EventsControls = ReturnType<typeof useEvents>;
-
-/** Lists events for a filter, keeping the previous rows visible while a new filter loads. */
-export function useEventList(events: EventsControls, filter: () => EventFilter) {
-  const query = useAppQuery({
-    key: () => events.keys.list(filter()),
-    enabled: events.enabled,
-    queryFn: ({ signal }) =>
-      events.api.listEvents(events.organizationId(), { ...filter(), limit: eventLimits.page, offset: 0 }, signal),
-  });
-  const previous = shallowRef<ShowcaseEvent[]>();
-  watch(
-    query.data,
-    (value) => {
-      if (value) previous.value = value;
-    },
-    { immediate: true },
-  );
-  return {
-    events: computed(() => query.data.value ?? previous.value),
-    loading: query.loading,
-    error: query.error,
-    refetch: query.refetch,
-    truncated: computed(() => (query.data.value?.length ?? 0) >= eventLimits.page),
-  };
-}
-
-export function useEventSummary(events: EventsControls, today: () => string) {
-  const query = useAppQuery({
-    key: () => events.keys.summary(today()),
-    enabled: events.enabled,
-    queryFn: ({ signal }) => events.api.summary(events.organizationId(), today(), signal),
-  });
-  return { summary: query.data, loading: query.loading, error: query.error, refetch: query.refetch };
-}
-
-export function useShowcaseEvent(events: EventsControls, id: () => string | null) {
-  const query = useAppQuery({
-    key: () => events.keys.event(id() ?? ''),
-    enabled: () => events.enabled() && Boolean(id()),
-    queryFn: ({ signal }) => events.api.getEvent(events.organizationId(), id()!, signal),
-  });
-  return { event: query.data, loading: query.loading, error: query.error };
+  return written.ok;
 }
 
 /** Moves between the feed and one event inside one document, guarding unsaved forms. */

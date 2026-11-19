@@ -37,10 +37,9 @@ describe('Events routes', () => {
     await flushPromises();
     expect(wrapper!.get('main h1').text()).toBe('Events');
     expect(document.title).toBe('Events · Ocharo Events');
-    expect(requested().some((url) => url.startsWith(`/api/organizations/${OrganizationId}/events?`))).toBe(true);
-    expect(requested().some((url) => url.startsWith(`/api/organizations/${OrganizationId}/events/summary?`))).toBe(
-      true,
-    );
+    const mirror = `/api/organizations/${OrganizationId}/events-api/api/events/v1/catalogs/ocharo-fashion`;
+    expect(requested().some((url) => url.startsWith(`${mirror}/tracking?`))).toBe(true);
+    expect(requested().some((url) => url.startsWith(`${mirror}/tracking/summary?`))).toBe(true);
   });
 
   it('opens one event address inside the same page', async () => {

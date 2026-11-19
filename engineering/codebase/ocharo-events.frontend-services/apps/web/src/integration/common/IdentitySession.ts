@@ -6,7 +6,6 @@ import {
   type BffStrategy,
   type BffUser,
 } from '@wow-two-beta/fe/auth';
-import { createApiClient, type ApiClient } from '@wow-two-beta/fe/foundation/http';
 
 /**
  * The permissions the Events API checks in the session's organization: reading, proposing or tracking events, and
@@ -47,15 +46,3 @@ export const identityStrategy: BffStrategy = {
 export async function revalidateSession(): Promise<void> {
   await sessionHost?.revalidate();
 }
-
-/**
- * The transport every private Events call rides: no automatic retry, the session's CSRF token on each unsafe request,
- * and the session's request scope, so a sign-out or an expiry cancels what the old session started. The events routes
- * answer in the SDK envelope (`{ data }`), as Desk's did, and the client unwraps it.
- */
-export const eventsHttp: ApiClient = createApiClient({
-  retry: false,
-  scope: identityBridge.scope,
-  onUnauthorized: identityBridge.onUnauthorized,
-  antiforgery: identityStrategy.antiforgery,
-});

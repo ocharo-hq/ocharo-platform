@@ -1,27 +1,18 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 
 import {
-  attendanceLabels,
-  datePrecisions,
-  derivedScopes,
-  eventAttendances,
   eventFormats,
-  eventHappenings,
-  eventPriorities,
   eventStatuses,
   formatLabels,
-  happeningLabels,
-  precisionLabels,
-  priorityLabels,
-  scopeLabels,
-  sourceStateLabels,
-  sourceStates,
+  ocharoCostField,
+  ocharoKinds,
+  ocharoParticipationField,
+  ocharoRegions,
+  ocharoWorkflowSpec,
   statusLabels,
 } from '@/domain/events/Events';
-import { failureMessage } from '@/application/events/UseEventsAccess';
 import { OcharoAppsProblem } from '@/application/shared/UseOcharoApps';
 import { ocharoApps } from '@/domain/shared/OcharoApps';
 import { translateUi, uiMessages } from '@/domain/shared/UiMessages';
@@ -57,21 +48,17 @@ describe('interface messages', () => {
     expect(missing).toEqual([]);
   });
 
-  it('translates the labels looked up by value: event values, failures, startup problems and the apps menu', () => {
+  it('translates the labels looked up by value: stages, kinds, scopes, fields, startup problems and the apps menu', () => {
     const labels = [
-      ...derivedScopes.map((value) => scopeLabels[value]),
       ...eventFormats.map((value) => formatLabels[value]),
       ...eventStatuses.map((value) => statusLabels[value]),
-      ...datePrecisions.map((value) => precisionLabels[value]),
-      ...eventPriorities.map((value) => priorityLabels[value]),
-      ...eventHappenings.map((value) => happeningLabels[value]),
-      ...eventAttendances.map((value) => attendanceLabels[value]),
-      ...sourceStates.map((value) => sourceStateLabels[value]),
-      ...[400, 401, 403, 404, 409, 410, 500].map((status) =>
-        failureMessage(ApiFailureFactory.create('http', { status, headers: new Headers() })),
-      ),
-      failureMessage(ApiFailureFactory.create('protocol')),
-      failureMessage(ApiFailureFactory.create('cancelled')),
+      'Local',
+      'Regional',
+      'International',
+      "Ocharo's cost",
+      'Cost not stated',
+      'How to take part',
+      'Source link',
       ...Object.values(OcharoAppsProblem),
       'Not checked',
       'Checking…',
@@ -81,6 +68,18 @@ describe('interface messages', () => {
       ).flatMap((app) => [app.label, app.summary]),
     ];
     expect(labels.filter((label) => !(label in uiMessages))).toEqual([]);
+  });
+
+  it("hands the kit Ocharo's labels in all three languages, the Russian never the English source", () => {
+    const texts = [
+      ...ocharoWorkflowSpec().stages.map((stage) => stage.label!),
+      ...ocharoKinds().map((kind) => kind.label!),
+      ...ocharoRegions().map((region) => region.label),
+      ocharoCostField().label,
+      ocharoCostField().empty!,
+      ocharoParticipationField().label,
+    ];
+    expect(texts.filter((text) => !text.en || !text.uz || !text.ru || text.ru === text.en)).toEqual([]);
   });
 
   it('keeps every {parameter} of the English key in both translations', () => {
@@ -97,6 +96,8 @@ describe('interface messages', () => {
     expect(translateUi('Sign out', 'uz')).toBe('Chiqish');
     expect(translateUi('Sign out', 'ru')).toBe('Выйти');
     expect(translateUi('Sign out', 'en')).toBe('Sign out');
-    expect(translateUi('Apply by {date}', 'ru', { date: '15 окт' })).toBe('Заявка до 15 окт');
+    expect(translateUi('Your account id: {id}', 'ru', { id: 'owner-sub' })).toBe(
+      'Идентификатор вашего аккаунта: owner-sub',
+    );
   });
 });

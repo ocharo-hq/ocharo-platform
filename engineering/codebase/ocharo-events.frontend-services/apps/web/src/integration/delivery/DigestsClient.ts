@@ -1,7 +1,7 @@
-import { createEventsClient, type EventsClient } from '@wow-two-beta/fe-events/kit';
+import type { EventsClient } from '@wow-two-beta/fe-events/kit';
 
 import { deliveryApiPrefix } from '@/domain/delivery/TelegramDelivery';
-import { identityStrategy, revalidateSession } from '@/integration/common/IdentitySession';
+import { createOcharoEventsClient } from '@/integration/events/EventsClient';
 
 /**
  * The digest editor's transport: WoW2 Events' digest routes as this app mirrors them for the organization
@@ -9,9 +9,5 @@ import { identityStrategy, revalidateSession } from '@/integration/common/Identi
  * re-reads the session, so the frame offers sign-in again.
  */
 export function createDigestsClient(organizationId: string): EventsClient {
-  return createEventsClient({
-    baseUrl: deliveryApiPrefix(organizationId),
-    csrfToken: () => identityStrategy.getCsrfToken(),
-    onSignInRequired: () => void revalidateSession(),
-  });
+  return createOcharoEventsClient(deliveryApiPrefix(organizationId));
 }

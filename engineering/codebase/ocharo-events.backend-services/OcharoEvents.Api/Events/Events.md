@@ -1,19 +1,24 @@
 # Events
 
-*Last updated: 2026-11-17*
+*Last updated: 2026-11-19*
 
-The organization's showcase events under `api/organizations/{organizationId}/events`, Desk's routes and wire (events-app.md #3):
-list, `summary`, propose, read, and save tracking by `PUT {eventId}/tracking` (stage, priority, participation, cost and
-notes; it never compares the event's facts, so a source revision after the page read cannot refuse it). The full
-`PUT {eventId}` answers 410 for a fact edit, since facts change through WoW2 Events' review, and 409 when the page's
-`eventRevision` no longer matches; a delete answers 410.
-A title comes back in the language `Accept-Language` names (`HttpUiLocale`, matched by language prefix), with the tag it came
-under as `titleLanguage` and the source's `languages`.
-Events' event status and attendance ride as `eventStatus` and `attendance`, apart from Ocharo's own stage `status`; a
-cancelled event's application deadline is not an upcoming one in the summary.
-What the source says attending costs rides as `tickets` and `ticketUrl`; `cost` stays Ocharo's own cost of taking part.
-A start announced to the minute rides as `startsAt` (local `HH:mm`) beside `startsOn`, with the source's IANA `timeZone`;
-the venue's street address rides as `address` and the organizer's site as `organizerWebsite`.
-Every source that reported the event rides in `sources` (`name`, `url`, `state`: `live`, `suspect`, `gone` or
-`unmatched`, from Events' `EventSourceModel`), and `sourceUpdatedAt` is the event's last change in Events when it came
-after the organization's tracking.
+The Events page's mirror of WoW2 Events (OE07): `EventsApiController` serves the `fe-events` kit's routes under
+`api/organizations/{organizationId}/events-api/api/events/v1/…`, so the page's client reaches them with that prefix,
+as the Telegram delivery page reaches the digest routes under `…/delivery`. Each route binds Events' own query
+(`Models/TrackingQueryParameters`, `Models/EventQueryParameters`: lists as repeated keys, days `yyyy-MM-dd`, enums by
+wire name) or body (`TrackingSpec`, `EventSpec`, `WorkflowSpec`), calls one broker through `EventsApiService` and
+answers Events' model in the SDK envelope; no Ocharo wire, mapper or in-memory filter sits between the page and Events.
+
+| Method | Route (after `…/events-api/api/events/v1`) | Needs |
+|---|---|---|
+| GET | `catalogs/{catalog}/tracking` (feed: stages, countries, kind, text, from/to, cursor, limit) | `events:read` |
+| GET | `catalogs/{catalog}/tracking/summary` (`today`, repeated `deadlineKinds`) | `events:read` |
+| GET, PUT, DELETE | `catalogs/{catalog}/tracking/{eventId}` (`expectedRevision` on delete) | read; writes `events:track` |
+| GET | `catalogs/{catalog}/tracking/{eventId}/history` | `events:read` |
+| GET | `catalogs/{catalog}/events/{id}` | `events:read` |
+| POST | `catalogs/{catalog}/candidates` (published at once in Ocharo's private catalog, OE03) | `events:track` |
+| GET, PUT | `workflow` (the page aligns Ocharo's labels, classes and fields for an admin) | read; write `events:admin` |
+| GET | `catalogs/{catalog}/events.ics` (calendar file, no envelope) | `events:read` |
+
+A catalog other than `Events:Catalog` answers 404 and an unconfigured Events 503 before any call; Events checks the
+exchanged token's scopes and permissions again.

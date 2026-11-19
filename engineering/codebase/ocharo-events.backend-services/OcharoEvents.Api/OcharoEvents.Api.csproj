@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
-    <!-- Kit: mediator (ISender), Result/AppError, web/problem-details, migration sets, the PostgreSQL session cache. -->
+    <!-- Kit: Result/AppError, web/problem-details, migration sets, the PostgreSQL session cache. -->
     <PackageReference Include="WoW2.Sdk.Beta.Be" />
     <!-- Sign-in: the Identity BFF against Ocharo's Identity instance. -->
     <PackageReference Include="WoW2.Sdk.Beta.Be.Identity.Client" />

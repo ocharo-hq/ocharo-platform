@@ -1,6 +1,6 @@
 # OcharoEvents.Application
 
-*Last updated: 2026-11-17*
+*Last updated: 2026-11-19*
 
-Events use cases: the organization access a request resolved, commands, queries, models, the error factory, the
-events repository port and the caller's interface language (`IUiLocale`).
+The organization access a request resolved (`Access/`) and the service's error factory (`Events/Errors/`). The Events
+page's use cases are WoW2 Events' own, passed through by `Infrastructure` (OE07).

@@ -1,12 +1,39 @@
+import type {
+  CatalogKindModel,
+  JsonValue,
+  LocalizedText,
+  StageClass,
+  WorkflowModel,
+  WorkflowSpec,
+  WorkflowStageModel,
+} from '@wow-two-beta/fe-events/contracts';
+import type {
+  EventCalendarOptions,
+  EventProposalOptions,
+  EventRegion,
+  TrackingShownField,
+} from '@wow-two-beta/fe-events/kit';
+
 import { translateUi, type UiLocale } from '@/domain/shared/UiMessages';
 
-/** Events slice 1: every event where Ocharo could show its products, and where Ocharo stands with each. */
-/** The scopes the feed filters by; the server derives each event's scope from its country. */
-export const eventScopes = ['local', 'regional', 'international'] as const;
-/** The scope of an event that names no country; no filter chip offers it. */
-export const unknownScope = 'unknown' as const;
-/** Every scope an event reads as: one of the filter scopes, or `unknown` without a country. */
-export const derivedScopes = [...eventScopes, unknownScope] as const;
+/**
+ * Events: every event where Ocharo could show its products, and where Ocharo stands with each. WoW2 Events holds the
+ * events, the organization's tracking and its workflow; the page renders them with `fe-events`' kit (OE07). What stays
+ * here is Ocharo's own configuration of that kit: its catalog, stages, kinds, regions, the tracking fields it shows,
+ * how a new event is proposed, and the page's addresses.
+ */
+
+/** The catalog the Events page reads (`Events:Catalog`); the mirrored routes serve only it. */
+export const OcharoEventsCatalog = 'ocharo-fashion';
+
+/** The interface languages every Ocharo text below is written in. */
+const uiLocales: readonly UiLocale[] = ['en', 'uz', 'ru'];
+
+/** One English interface phrase in the three interface languages, for a kit label. */
+export function localized(source: string): LocalizedText {
+  return Object.fromEntries(uiLocales.map((locale) => [locale, translateUi(source, locale)]));
+}
+
 export const eventFormats = [
   'runway',
   'trade-fair',
@@ -17,176 +44,7 @@ export const eventFormats = [
   'conference',
   'other',
 ] as const;
-export const eventStatuses = [
-  'candidate',
-  'shortlisted',
-  'applying',
-  'applied',
-  'confirmed',
-  'attended',
-  'skipped',
-  'rejected',
-] as const;
-/** Whether the event still happens as listed; `status` below is Ocharo's own stage, not this. */
-export const eventHappenings = ['scheduled', 'cancelled', 'postponed', 'rescheduled', 'moved-online'] as const;
-/** Where the event is attended. */
-export const eventAttendances = ['offline', 'online', 'mixed'] as const;
-export const datePrecisions = ['day', 'month', 'estimated', 'unknown'] as const;
-export const eventPriorities = ['high', 'normal', 'low'] as const;
-/** Where a source's listing of the event stands, as the source last reported it. */
-export const sourceStates = ['live', 'suspect', 'gone', 'unmatched'] as const;
-export type EventScope = (typeof eventScopes)[number];
-export type DerivedScope = (typeof derivedScopes)[number];
 export type EventFormat = (typeof eventFormats)[number];
-export type EventStatus = (typeof eventStatuses)[number];
-export type EventHappening = (typeof eventHappenings)[number];
-export type EventAttendance = (typeof eventAttendances)[number];
-export type DatePrecision = (typeof datePrecisions)[number];
-export type EventPriority = (typeof eventPriorities)[number];
-export type SourceState = (typeof sourceStates)[number];
-
-/** One source that reported the event: its name as people know it ("Afisha"), the page and its listing's state. */
-export interface EventSource {
-  /** Null for an import or a curator's entry. */
-  name: string | null;
-  url: string | null;
-  /** Null when the source reports no state. */
-  state: SourceState | null;
-}
-
-/** What the event's source says attending costs; Ocharo's own cost of taking part is the event's `cost`. */
-export interface EventTickets {
-  minPrice: number | null;
-  maxPrice: number | null;
-  currency: string | null;
-  free: boolean;
-}
-
-export interface ShowcaseEvent {
-  id: string;
-  key: string | null;
-  title: string;
-  /** The language tag the title came in (`uz-Latn`, `ru-Cyrl`, `und`); null when the event has no usable title. */
-  titleLanguage: string | null;
-  /** The languages the source wrote the event in. */
-  languages: string[];
-  organizer: string | null;
-  /** The organizer's own website, as the source names it. */
-  organizerWebsite: string | null;
-  /** Derived from `country`: Uzbekistan local, its neighbours regional, any other country international, none unknown. */
-  scope: DerivedScope;
-  format: EventFormat;
-  /** Whether the event still happens as listed; the wire name is `eventStatus`, since `status` is Ocharo's stage. */
-  eventStatus: EventHappening;
-  attendance: EventAttendance;
-  country: string | null;
-  city: string | null;
-  venue: string | null;
-  /** The venue's street address. */
-  address: string | null;
-  startsOn: string | null;
-  endsOn: string | null;
-  datePrecision: DatePrecision;
-  /** The local start time (`HH:mm`) when the source announced one; null for a start known to the day or coarser. */
-  startsAt: string | null;
-  /** The IANA time zone of `startsAt` (`Asia/Tashkent`); null when the source named none. */
-  timeZone: string | null;
-  applicationDeadline: string | null;
-  participation: string;
-  /** Ocharo's own cost of taking part, as the team wrote it. */
-  cost: string | null;
-  /** What the source says attending costs; null when it names no price. */
-  tickets: EventTickets | null;
-  ticketUrl: string | null;
-  website: string | null;
-  sourceUrl: string | null;
-  /** Every source that reported the event. */
-  sources: EventSource[];
-  /** When the source last changed a tracked event after Ocharo's own last change; null otherwise. */
-  sourceUpdatedAt: string | null;
-  status: EventStatus;
-  priority: EventPriority;
-  notes: string;
-  /** The tracking revision plus one: the revision every write of Ocharo's own fields names. */
-  revision: number;
-  /** The revision of the event's facts in WoW2 Events; it moves when the source revises them, apart from `revision`. */
-  eventRevision: number;
-  createdAt: string;
-  updatedAt: string;
-}
-/** The members the server derives from the event's facts, so no form edits or sends them. */
-type DerivedEventFields =
-  | 'id'
-  | 'key'
-  | 'revision'
-  | 'eventRevision'
-  | 'createdAt'
-  | 'updatedAt'
-  | 'titleLanguage'
-  | 'languages'
-  | 'eventStatus'
-  | 'attendance'
-  | 'tickets'
-  | 'ticketUrl'
-  | 'organizerWebsite'
-  | 'address'
-  | 'startsAt'
-  | 'timeZone'
-  | 'sources'
-  | 'sourceUpdatedAt'
-  | 'scope';
-/** Every mutable field; the import `key` is never edited here. */
-export type EventInput = Omit<ShowcaseEvent, DerivedEventFields>;
-/** Counts may omit statuses with no events; a missing count reads as zero. */
-export interface EventSummary {
-  byStatus: Partial<Record<EventStatus, number>>;
-  upcomingDeadlines: ShowcaseEvent[];
-}
-/**
- * `from` hides events that ended before it; null shows past events too. Events Ocharo skipped or rejected stay out unless
- * `includeClosed` is set or `status` names a stage.
- */
-export interface EventFilter {
-  query: string;
-  scope: EventScope | '';
-  format: EventFormat | '';
-  status: EventStatus | '';
-  from: string | null;
-  includeClosed: boolean;
-}
-
-/** Contract limits mirrored for early feedback; the server remains authoritative. */
-export const eventLimits = {
-  query: 120,
-  title: 200,
-  organizer: 200,
-  city: 200,
-  venue: 200,
-  participation: 2000,
-  cost: 500,
-  url: 2048,
-  notes: 8000,
-  page: 200,
-  minDate: '2000-01-01',
-  maxDate: '2100-12-31',
-  urgentDays: 14,
-} as const;
-
-export const scopeLabels: Record<DerivedScope, string> = {
-  local: 'Local',
-  regional: 'Regional',
-  international: 'International',
-  unknown: 'Scope unknown',
-};
-/** The countries counted as regional to Ocharo in Uzbekistan, as the server counts them. */
-const regionalCountries: ReadonlySet<string> = new Set(['KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU']);
-/** The scope the server derives from a country code, so a form shows it before sending; `unknown` without a country. */
-export function scopeOfCountry(country: string | null | undefined): DerivedScope {
-  const code = country?.trim().toUpperCase() ?? '';
-  if (!/^[A-Z]{2}$/.test(code)) return unknownScope;
-  if (code === 'UZ') return 'local';
-  return regionalCountries.has(code) ? 'regional' : 'international';
-}
 export const formatLabels: Record<EventFormat, string> = {
   runway: 'Runway show',
   'trade-fair': 'Trade fair',
@@ -197,6 +55,19 @@ export const formatLabels: Record<EventFormat, string> = {
   conference: 'Conference',
   other: 'Other',
 };
+
+/** Ocharo's eight stages, in order; an event Ocharo does not track yet reads as `candidate`. */
+export const eventStatuses = [
+  'candidate',
+  'shortlisted',
+  'applying',
+  'applied',
+  'confirmed',
+  'attended',
+  'skipped',
+  'rejected',
+] as const;
+export type EventStatus = (typeof eventStatuses)[number];
 export const statusLabels: Record<EventStatus, string> = {
   candidate: 'Candidate',
   shortlisted: 'Shortlisted',
@@ -207,544 +78,160 @@ export const statusLabels: Record<EventStatus, string> = {
   skipped: 'Skipped',
   rejected: 'Rejected',
 };
-export const precisionLabels: Record<DatePrecision, string> = {
-  day: 'Exact dates',
-  month: 'Month only',
-  estimated: 'Estimated month',
-  unknown: 'Not announced',
-};
-export const priorityLabels: Record<EventPriority, string> = { high: 'High', normal: 'Normal', low: 'Low' };
-export const happeningLabels: Record<EventHappening, string> = {
-  scheduled: 'Scheduled',
-  cancelled: 'Cancelled',
-  postponed: 'Postponed',
-  rescheduled: 'Rescheduled',
-  'moved-online': 'Moved online',
-};
-export const attendanceLabels: Record<EventAttendance, string> = {
-  offline: 'In person',
-  online: 'Online',
-  mixed: 'In person and online',
-};
-export const sourceStateLabels: Record<SourceState, string> = {
-  live: 'Listing live',
-  suspect: 'Listing may be removed',
-  gone: 'Listing removed',
-  unmatched: 'No longer matches',
-};
-export type EventTone = 'neutral' | 'brand' | 'success' | 'warning' | 'danger' | 'info' | 'outline';
-export const statusTones: Record<EventStatus, EventTone> = {
-  candidate: 'outline',
-  shortlisted: 'brand',
-  applying: 'warning',
-  applied: 'info',
-  confirmed: 'success',
-  attended: 'success',
-  skipped: 'neutral',
-  rejected: 'danger',
+/**
+ * What each stage means across organizations: Events leaves a `lost` stage's events out of the nearest deadlines, and
+ * reads `won` as done. Skipped and rejected are both lost, so neither reaches the deadlines panel.
+ */
+export const statusClasses: Record<EventStatus, StageClass> = {
+  candidate: 'open',
+  shortlisted: 'open',
+  applying: 'active',
+  applied: 'active',
+  confirmed: 'active',
+  attended: 'won',
+  skipped: 'lost',
+  rejected: 'lost',
 };
 
-/** Badge tones for the event's own state: a cancellation is danger, any other change a warning. */
-export const happeningTones: Record<EventHappening, EventTone> = {
-  scheduled: 'neutral',
-  cancelled: 'danger',
-  postponed: 'warning',
-  rescheduled: 'warning',
-  'moved-online': 'warning',
-};
+/** The stages a team has left: the feed hides them until asked (OE05), and a digest leaves them out by default. */
+export const ocharoClosedStages: readonly EventStatus[] = ['skipped', 'rejected'];
+/** The stages a card at the default stage offers as one click. */
+export const ocharoQuickStages: readonly EventStatus[] = ['shortlisted', 'skipped'];
+/** The stages of an event Ocharo was pursuing, which must be closed once the event has ended (OE12). */
+export const ocharoPursuingStages: readonly EventStatus[] = ['shortlisted', 'applying', 'applied', 'confirmed'];
+/** How a past event Ocharo was pursuing closes: it took part, or it let the event go. */
+export const ocharoClosingStages: readonly EventStatus[] = ['attended', 'skipped'];
 
-export const isEventScope = (value: unknown): value is EventScope => eventScopes.includes(value as EventScope);
-export const isDerivedScope = (value: unknown): value is DerivedScope => derivedScopes.includes(value as DerivedScope);
-export const isEventFormat = (value: unknown): value is EventFormat => eventFormats.includes(value as EventFormat);
-export const isEventStatus = (value: unknown): value is EventStatus => eventStatuses.includes(value as EventStatus);
-export const isEventHappening = (value: unknown): value is EventHappening =>
-  eventHappenings.includes(value as EventHappening);
-export const isEventAttendance = (value: unknown): value is EventAttendance =>
-  eventAttendances.includes(value as EventAttendance);
-export const isDatePrecision = (value: unknown): value is DatePrecision =>
-  datePrecisions.includes(value as DatePrecision);
-export const isEventPriority = (value: unknown): value is EventPriority =>
-  eventPriorities.includes(value as EventPriority);
-export const isSourceState = (value: unknown): value is SourceState => sourceStates.includes(value as SourceState);
+/** The tracking fields Ocharo keeps: how to take part and its own cost, plus the source link the Desk import kept. */
+export const trackingFieldKeys = { participation: 'participation', cost: 'cost', sourceUrl: 'sourceUrl' } as const;
 
-/** Badge tones for a source's listing: live is neutral, a doubtful listing a warning, a removed one danger. */
-export const sourceStateTones: Record<SourceState, EventTone> = {
-  live: 'neutral',
-  suspect: 'warning',
-  gone: 'danger',
-  unmatched: 'warning',
-};
-/** Whether the event's listing left every source that reported it: each one gone or no longer matching. */
-export function listingRemoved(event: Pick<ShowcaseEvent, 'sources'>): boolean {
-  return event.sources.length > 0 && event.sources.every((item) => item.state === 'gone' || item.state === 'unmatched');
-}
-/** The source a card names ("via Afisha"): the first one with a name; null when none has one. */
-export function attributedSource(event: Pick<ShowcaseEvent, 'sources'>): EventSource | null {
-  return event.sources.find((item) => item.name) ?? null;
-}
-/** A source's label: its name, else its page's host; null when it has neither. */
-export function sourceLabel(source: EventSource): string | null {
-  if (source.name) return source.name;
-  const url = safeEventUrl(source.url);
-  return url ? new URL(url).hostname : null;
+/**
+ * Ocharo's workflow as WoW2 Events should hold it: the eight stages with their labels in the three interface languages
+ * and their classes, `candidate` as the default, and the custom fields with localized titles, the source link read-only
+ * (shown, never offered for editing, and kept on save). An admin's visit aligns the stored workflow with it.
+ */
+export function ocharoWorkflowSpec(): Omit<WorkflowSpec, 'expectedRevision'> {
+  return {
+    stages: eventStatuses.map((key) => ({ key, label: localized(statusLabels[key]), class: statusClasses[key] })),
+    defaultStage: 'candidate',
+    fields: {
+      type: 'object',
+      properties: {
+        [trackingFieldKeys.participation]: {
+          type: 'string',
+          title: localized('How to take part'),
+          maxLength: 2000,
+          format: 'textarea',
+        },
+        [trackingFieldKeys.cost]: { type: 'string', title: localized("Ocharo's cost"), maxLength: 500 },
+        [trackingFieldKeys.sourceUrl]: {
+          type: 'string',
+          title: localized('Source link'),
+          format: 'uri',
+          readOnly: true,
+        },
+      },
+    },
+  };
 }
 
-const isoDatePattern = /^(\d{4})-(\d{2})-(\d{2})$/;
-/** A real calendar date written as `YYYY-MM-DD`. */
-export function isIsoDate(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  const match = isoDatePattern.exec(value);
-  if (!match) return false;
-  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-  return (
-    date.getUTCFullYear() === Number(match[1]) &&
-    date.getUTCMonth() === Number(match[2]) - 1 &&
-    date.getUTCDate() === Number(match[3])
-  );
-}
-const pad = (value: number) => String(value).padStart(2, '0');
-/** The browser's own calendar date, not the UTC one, so "today" matches the operator's wall clock. */
-export function localIsoDate(now: Date = new Date()): string {
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
-const utcDay = (date: string) =>
-  Date.UTC(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)));
-/** Whole calendar days from `today` to `date`; negative once the date has passed. */
-export function daysUntil(date: string, today: string): number {
-  return Math.round((utcDay(date) - utcDay(today)) / 86_400_000);
-}
-export type DeadlineTone = 'urgent' | 'upcoming' | 'passed';
-/** Deadlines within two weeks are urgent; passed ones are kept for the record. */
-export function deadlineTone(days: number): DeadlineTone {
-  if (days < 0) return 'passed';
-  return days <= eventLimits.urgentDays ? 'urgent' : 'upcoming';
-}
-/** "Today", "1 day left", "{count} days left" or "Deadline passed", in the operator language. */
-export function daysLeftLabel(days: number, locale: UiLocale): string {
-  if (days < 0) return translateUi('Deadline passed', locale);
-  if (days === 0) return translateUi('Deadline today', locale);
-  return days === 1 ? translateUi('1 day left', locale) : translateUi('{count} days left', locale, { count: days });
+/** Ocharo's stages for the kit's stage labels and pickers (the feed, the deadlines panel, the digest editor). */
+export function ocharoWorkflow(): Pick<WorkflowModel, 'stages' | 'defaultStage'> {
+  const { stages, defaultStage } = ocharoWorkflowSpec();
+  return { stages, defaultStage };
 }
 
-interface MonthNames {
-  short: readonly string[];
-  standalone: readonly string[];
-  long: readonly string[];
+/** Writes a JSON value with every object's keys sorted, so two values compare whatever order a store kept. */
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
+  if (value !== null && typeof value === 'object')
+    return `{${Object.keys(value)
+      .sort()
+      .filter((key) => (value as Record<string, unknown>)[key] !== undefined)
+      .map((key) => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`)
+      .join(',')}}`;
+  return JSON.stringify(value ?? null);
 }
-const english = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
-const englishShort = english.map((name) => name.slice(0, 3));
-const uzbekShort = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
-/** Fixed tables keep dates identical in every browser, whatever its ICU data. */
-const monthNames: Record<UiLocale, MonthNames> = {
-  en: { short: englishShort, standalone: englishShort, long: english },
-  uz: {
-    short: uzbekShort,
-    standalone: uzbekShort,
-    long: [
-      'Yanvar',
-      'Fevral',
-      'Mart',
-      'Aprel',
-      'May',
-      'Iyun',
-      'Iyul',
-      'Avgust',
-      'Sentabr',
-      'Oktabr',
-      'Noyabr',
-      'Dekabr',
-    ],
-  },
-  ru: {
-    short: ['янв.', 'февр.', 'мар.', 'апр.', 'мая', 'июн.', 'июл.', 'авг.', 'сент.', 'окт.', 'нояб.', 'дек.'],
-    standalone: ['янв.', 'февр.', 'март', 'апр.', 'май', 'июнь', 'июль', 'авг.', 'сент.', 'окт.', 'нояб.', 'дек.'],
-    long: [
-      'Январь',
-      'Февраль',
-      'Март',
-      'Апрель',
-      'Май',
-      'Июнь',
-      'Июль',
-      'Август',
-      'Сентябрь',
-      'Октябрь',
-      'Ноябрь',
-      'Декабрь',
-    ],
-  },
-};
-interface DateParts {
-  year: number;
-  month: number;
-  day: number;
-}
-const parts = (date: string): DateParts => ({
-  year: Number(date.slice(0, 4)),
-  month: Number(date.slice(5, 7)) - 1,
-  day: Number(date.slice(8, 10)),
+
+const stageShape = (stage: WorkflowStageModel) => ({
+  key: stage.key,
+  label: stage.label ?? {},
+  class: stage.class ?? 'open',
 });
 
-/** "12 Oct 2026". */
-export function formatDay(date: string, locale: UiLocale): string {
-  const value = parts(date);
-  return `${value.day} ${monthNames[locale].short[value.month]} ${value.year}`;
-}
-/** "October 2026" for `YYYY-MM` or a full date. */
-export function monthHeading(month: string, locale: UiLocale): string {
-  const value = parts(`${month.slice(0, 7)}-01`);
-  return `${monthNames[locale].long[value.month]} ${value.year}`;
-}
-
-const localTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-/** A local wall-clock time written as `HH:mm`. */
-export function isLocalTime(value: unknown): value is string {
-  return typeof value === 'string' && localTimePattern.test(value);
-}
-/** The browser's own IANA time zone; undefined where it names none. */
-export function browserTimeZone(): string | undefined {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
-  } catch {
-    return undefined;
-  }
-}
-/** Minutes the zone runs ahead of UTC at the instant; null for a zone the browser does not know. */
-export function zoneOffsetMinutes(zone: string, instant: number): number | null {
-  try {
-    const fields = new Intl.DateTimeFormat('en-US', {
-      timeZone: zone,
-      hourCycle: 'h23',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    }).formatToParts(new Date(instant));
-    const field = (type: Intl.DateTimeFormatPartTypes) => Number(fields.find((item) => item.type === type)?.value);
-    const wall = Date.UTC(
-      field('year'),
-      field('month') - 1,
-      field('day'),
-      field('hour'),
-      field('minute'),
-      field('second'),
-    );
-    const offset = Math.round((wall - Math.floor(instant / 1000) * 1000) / 60_000);
-    return Number.isFinite(offset) ? offset : null;
-  } catch {
-    return null;
-  }
-}
-/** The UTC instant of a local date (`YYYY-MM-DD`) and time (`HH:mm`) in the zone; null for a zone the browser does not know. */
-export function zonedInstant(date: string, time: string, zone: string): number | null {
-  const wall = Date.UTC(
-    Number(date.slice(0, 4)),
-    Number(date.slice(5, 7)) - 1,
-    Number(date.slice(8, 10)),
-    Number(time.slice(0, 2)),
-    Number(time.slice(3, 5)),
+/**
+ * Tells whether the workflow Events holds already reads as Ocharo's: the same stages in order, with the same labels and
+ * classes, the same default stage and the same custom fields. PostgreSQL reorders a stored object's keys, so objects
+ * compare by content, never by key order.
+ */
+export function workflowAligned(
+  stored: Pick<WorkflowModel, 'stages' | 'defaultStage'> & { readonly fields?: JsonValue | null | undefined },
+  wanted: Omit<WorkflowSpec, 'expectedRevision'> = ocharoWorkflowSpec(),
+): boolean {
+  return (
+    canonical({
+      stages: stored.stages.map(stageShape),
+      defaultStage: stored.defaultStage,
+      fields: stored.fields ?? null,
+    }) ===
+    canonical({
+      stages: wanted.stages.map(stageShape),
+      defaultStage: wanted.defaultStage,
+      fields: wanted.fields ?? null,
+    })
   );
-  const first = zoneOffsetMinutes(zone, wall);
-  if (first === null) return null;
-  const second = zoneOffsetMinutes(zone, wall - first * 60_000);
-  return second === null ? null : wall - second * 60_000;
 }
-/** The zone's short name at the instant ("GMT+5"), in the operator language. */
-function zoneShortName(zone: string, instant: number, locale: UiLocale): string | null {
-  try {
-    return (
-      new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: 'short' })
-        .formatToParts(new Date(instant))
-        .find((part) => part.type === 'timeZoneName')?.value ?? null
-    );
-  } catch {
-    return null;
-  }
+
+/** Ocharo's event kinds with their labels in the three interface languages, for the kind filter and badges. */
+export function ocharoKinds(): CatalogKindModel[] {
+  return eventFormats.map((key) => ({ key, label: localized(formatLabels[key]) }));
 }
+
+/** The countries counted as regional to Ocharo in Uzbekistan. */
+export const regionalCountries: readonly string[] = ['KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU'];
+
 /**
- * "19:00" for an event that starts at a known time, with the zone's short name ("19:00 GMT+5") when its zone runs at
- * another offset than the viewer's at that moment; null without a start time.
+ * Ocharo's scopes, derived from an event's country: Uzbekistan local, its neighbours regional, any other country
+ * international. An event with no country belongs to none and reads "Scope unknown" (OE08).
  */
-export function formatStartTime(
-  event: Pick<ShowcaseEvent, 'startsOn'> & Partial<Pick<ShowcaseEvent, 'startsAt' | 'timeZone'>>,
-  locale: UiLocale,
-  viewerZone: string | undefined = browserTimeZone(),
-): string | null {
-  if (!event.startsOn || !isIsoDate(event.startsOn) || !isLocalTime(event.startsAt)) return null;
-  const zone = event.timeZone;
-  const instant = zone ? zonedInstant(event.startsOn, event.startsAt, zone) : null;
-  if (!zone || instant === null) return event.startsAt;
-  const viewer = viewerZone ? zoneOffsetMinutes(viewerZone, instant) : null;
-  if (viewer === zoneOffsetMinutes(zone, instant)) return event.startsAt;
-  const name = zoneShortName(zone, instant, locale);
-  return name ? `${event.startsAt} ${name}` : event.startsAt;
+export function ocharoRegions(): EventRegion[] {
+  return [
+    { key: 'local', label: localized('Local'), countries: ['UZ'] },
+    { key: 'regional', label: localized('Regional'), countries: [...regionalCountries] },
+    { key: 'international', label: localized('International'), otherCountries: true },
+  ];
+}
+
+/** Ocharo's own cost of taking part, on every card and the detail, apart from the event's ticket price (E09). */
+export function ocharoCostField(): TrackingShownField {
+  return { key: trackingFieldKeys.cost, label: localized("Ocharo's cost"), empty: localized('Cost not stated') };
+}
+
+/** How Ocharo takes part, on the detail. */
+export function ocharoParticipationField(): TrackingShownField {
+  return { key: trackingFieldKeys.participation, label: localized('How to take part') };
 }
 
 /**
- * Renders the dates exactly as precisely as they were announced; an exact date the source gave a start time for adds it
- * ("5 Dec 2026, 19:00"), with the zone's short name when it is not the viewer's (`viewerZone`, the browser's by default).
+ * How a member adds an event: Ocharo's catalog is private, so Events publishes it at once (OE03) and the feed lists it;
+ * it starts shortlisted, with the application deadline and where it was found, the link kept in `sourceUrl`.
  */
-export function formatEventDates(
-  event: Pick<ShowcaseEvent, 'startsOn' | 'endsOn' | 'datePrecision'> &
-    Partial<Pick<ShowcaseEvent, 'startsAt' | 'timeZone'>>,
-  locale: UiLocale,
-  viewerZone: string | undefined = browserTimeZone(),
-): string {
-  if (event.datePrecision === 'unknown' || !event.startsOn) return translateUi('Dates not announced', locale);
-  const names = monthNames[locale];
-  const start = parts(event.startsOn);
-  const end = event.endsOn && event.endsOn > event.startsOn ? parts(event.endsOn) : null;
-  const sameYear = end?.year === start.year;
-  const sameMonth = sameYear && end?.month === start.month;
-  if (event.datePrecision === 'day') {
-    const time = formatStartTime(event, locale, viewerZone);
-    const timed = (dates: string) => (time ? `${dates}, ${time}` : dates);
-    if (!end || (sameMonth && end.day === start.day)) return timed(formatDay(event.startsOn, locale));
-    if (sameMonth) return timed(`${start.day}–${end.day} ${names.short[start.month]} ${start.year}`);
-    if (sameYear)
-      return timed(`${start.day} ${names.short[start.month]} – ${end.day} ${names.short[end.month]} ${start.year}`);
-    return timed(`${formatDay(event.startsOn, locale)} – ${formatDay(event.endsOn!, locale)}`);
-  }
-  const month = (value: DateParts) => `${names.standalone[value.month]} ${value.year}`;
-  const span =
-    !end || sameMonth
-      ? month(start)
-      : sameYear
-        ? `${names.standalone[start.month]} – ${names.standalone[end.month]} ${start.year}`
-        : `${month(start)} – ${month(end)}`;
-  return event.datePrecision === 'estimated' ? translateUi('≈ {date} (expected)', locale, { date: span }) : span;
-}
-
-export interface EventMonthGroup {
-  key: string;
-  events: ShowcaseEvent[];
-}
-export const undatedGroupKey = 'undated';
-/** Groups by the month events start in, oldest first; undated events close the list. */
-export function groupEventsByMonth(events: readonly ShowcaseEvent[]): EventMonthGroup[] {
-  const groups = new Map<string, ShowcaseEvent[]>();
-  for (const event of events) {
-    const key = event.datePrecision !== 'unknown' && event.startsOn ? event.startsOn.slice(0, 7) : undatedGroupKey;
-    const group = groups.get(key);
-    if (group) group.push(event);
-    else groups.set(key, [event]);
-  }
-  return [...groups.entries()]
-    .sort(([a], [b]) => (a === undatedGroupKey ? 1 : b === undatedGroupKey ? -1 : a.localeCompare(b)))
-    .map(([key, items]) => ({ key, events: items }));
-}
-
-/** Returns a normalized http(s) URL, or null for every other scheme (javascript:, data:, file: …). */
-export function safeEventUrl(value: string | null | undefined): string | null {
-  const text = value?.trim();
-  // eslint-disable-next-line no-control-regex -- control characters and spaces make an address unsafe.
-  if (!text || /[\u0000- \u007f]/.test(text) || !/^https?:\/\//i.test(text)) return null;
-  try {
-    const url = new URL(text);
-    return (url.protocol === 'https:' || url.protocol === 'http:') && url.hostname ? url.href : null;
-  } catch {
-    return null;
-  }
-}
-/** Blank optional strings normalize to null, as the server does. */
-export function optionalEventText(value: string): string | null {
-  const text = value.trim();
-  return text ? text : null;
-}
-/** Where Ocharo stands with an event: the only fields a stage change or an edit of an existing event writes. */
-export type TrackingInput = Pick<EventInput, 'status' | 'priority' | 'participation' | 'cost' | 'notes'>;
-/** The tracking fields a quick stage or priority change sends back unchanged. */
-export function trackingInput(event: ShowcaseEvent): TrackingInput {
+export function ocharoProposal(): EventProposalOptions {
   return {
-    status: event.status,
-    priority: event.priority,
-    participation: event.participation,
-    cost: event.cost,
-    notes: event.notes,
-  };
-}
-/** The draft an event form edits: plain strings, with month pickers as `YYYY-MM`. */
-export interface EventDraft {
-  title: string;
-  organizer: string;
-  format: EventFormat;
-  country: string;
-  city: string;
-  venue: string;
-  datePrecision: DatePrecision;
-  startDay: string;
-  endDay: string;
-  startMonth: string;
-  endMonth: string;
-  applicationDeadline: string;
-  participation: string;
-  cost: string;
-  website: string;
-  sourceUrl: string;
-  status: EventStatus;
-  priority: EventPriority;
-  notes: string;
-}
-/** The blank draft of a new event, a member's proposal: shortlisted at normal priority. */
-export function eventDraft(): EventDraft {
-  return {
-    title: '',
-    organizer: '',
-    format: 'exhibition',
-    country: '',
-    city: '',
-    venue: '',
-    datePrecision: 'day',
-    startDay: '',
-    endDay: '',
-    startMonth: '',
-    endMonth: '',
-    applicationDeadline: '',
-    participation: '',
-    cost: '',
-    website: '',
-    sourceUrl: '',
-    status: 'shortlisted',
-    priority: 'normal',
-    notes: '',
+    initialTracking: { stage: 'shortlisted', priority: 'normal' },
+    sourceField: trackingFieldKeys.sourceUrl,
+    withDeadline: true,
+    withFoundAt: true,
+    privateCatalog: true,
   };
 }
 
-/** The draft the tracking form edits: where Ocharo stands with an existing event, never the event's facts. */
-export interface TrackingDraft {
-  status: EventStatus;
-  priority: EventPriority;
-  participation: string;
-  cost: string;
-  notes: string;
-}
-export function trackingDraft(event: ShowcaseEvent): TrackingDraft {
+/** Names the one-event calendar file and its `PRODID` and `UID` suffix, as the page's own export named them. */
+export function ocharoCalendarOptions(eventId: string): EventCalendarOptions {
   return {
-    status: event.status,
-    priority: event.priority,
-    participation: event.participation,
-    cost: event.cost ?? '',
-    notes: event.notes,
-  };
-}
-const monthPattern = /^\d{4}-\d{2}$/;
-const lastDayOfMonth = (month: string) => {
-  const day = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0)).getUTCDate();
-  return `${month}-${pad(day)}`;
-};
-const inRange = (date: string) => date >= eventLimits.minDate && date <= eventLimits.maxDate;
-
-/**
- * Mirrors the contract's validation of a new event; returns English messages for `t()`, or the input to send.
- * Month pickers store the 1st as the start and the last day of the end month as the end.
- */
-export function validateEventDraft(draft: EventDraft): { input: EventInput | null; problems: string[] } {
-  const problems: string[] = [];
-  const title = draft.title.trim();
-  const country = draft.country.trim().toUpperCase();
-  const website = draft.website.trim();
-  const sourceUrl = draft.sourceUrl.trim();
-  if (!title || title.length > eventLimits.title) problems.push('Enter a title of up to 200 characters.');
-  if (draft.organizer.trim().length > eventLimits.organizer) problems.push('Organizer is limited to 200 characters.');
-  if (country && !/^[A-Z]{2}$/.test(country)) problems.push('Use a two-letter country code, for example UZ or KZ.');
-  if (draft.city.trim().length > eventLimits.city) problems.push('City is limited to 200 characters.');
-  if (draft.venue.trim().length > eventLimits.venue) problems.push('Venue is limited to 200 characters.');
-
-  let startsOn: string | null = null;
-  let endsOn: string | null = null;
-  if (draft.datePrecision === 'day') {
-    startsOn = draft.startDay.trim() || null;
-    endsOn = draft.endDay.trim() || null;
-    if (!startsOn) problems.push('Enter the start date, or choose another date precision.');
-    if (
-      (startsOn && (!isIsoDate(startsOn) || !inRange(startsOn))) ||
-      (endsOn && (!isIsoDate(endsOn) || !inRange(endsOn)))
-    )
-      problems.push('Dates must be between 2000-01-01 and 2100-12-31.');
-  } else if (draft.datePrecision === 'month' || draft.datePrecision === 'estimated') {
-    const startMonth = draft.startMonth.trim();
-    const endMonth = draft.endMonth.trim();
-    if (!startMonth) problems.push('Choose the month the event starts in.');
-    else if (!monthPattern.test(startMonth) || !isIsoDate(`${startMonth}-01`))
-      problems.push('Dates must be between 2000-01-01 and 2100-12-31.');
-    else startsOn = `${startMonth}-01`;
-    if (endMonth && (!monthPattern.test(endMonth) || !isIsoDate(`${endMonth}-01`)))
-      problems.push('Dates must be between 2000-01-01 and 2100-12-31.');
-    else if (endMonth) endsOn = endMonth === startMonth ? null : lastDayOfMonth(endMonth);
-    if ((startsOn && !inRange(startsOn)) || (endsOn && !inRange(endsOn)))
-      problems.push('Dates must be between 2000-01-01 and 2100-12-31.');
-  }
-  if (startsOn && endsOn && endsOn < startsOn) problems.push('The end date cannot be before the start date.');
-
-  const deadline = draft.applicationDeadline.trim() || null;
-  if (deadline && (!isIsoDate(deadline) || !inRange(deadline)))
-    problems.push('The application deadline must be between 2000-01-01 and 2100-12-31.');
-  if (draft.participation.length > eventLimits.participation)
-    problems.push('How to take part is limited to 2000 characters.');
-  if (draft.cost.trim().length > eventLimits.cost) problems.push('Cost is limited to 500 characters.');
-  if (website && (!safeEventUrl(website) || website.length > eventLimits.url))
-    problems.push('Enter the website as a full http:// or https:// address.');
-  if (sourceUrl && (!safeEventUrl(sourceUrl) || sourceUrl.length > eventLimits.url))
-    problems.push('Enter the source as a full http:// or https:// address.');
-  if (draft.notes.length > eventLimits.notes) problems.push('Notes are limited to 8000 characters.');
-  const unique = [...new Set(problems)];
-  if (unique.length) return { input: null, problems: unique };
-  return {
-    problems: [],
-    input: {
-      title,
-      organizer: optionalEventText(draft.organizer),
-      format: draft.format,
-      country: country || null,
-      city: optionalEventText(draft.city),
-      venue: optionalEventText(draft.venue),
-      startsOn,
-      endsOn,
-      datePrecision: draft.datePrecision,
-      applicationDeadline: deadline,
-      participation: draft.participation.trim(),
-      cost: optionalEventText(draft.cost),
-      website: website || null,
-      sourceUrl: sourceUrl || null,
-      status: draft.status,
-      priority: draft.priority,
-      notes: draft.notes.trim(),
-    },
-  };
-}
-
-/** Mirrors the contract's validation of Ocharo's tracking fields; returns English messages for `t()`, or the input to send. */
-export function validateTrackingDraft(draft: TrackingDraft): { input: TrackingInput | null; problems: string[] } {
-  const problems: string[] = [];
-  if (draft.participation.length > eventLimits.participation)
-    problems.push('How to take part is limited to 2000 characters.');
-  if (draft.cost.trim().length > eventLimits.cost) problems.push('Cost is limited to 500 characters.');
-  if (draft.notes.length > eventLimits.notes) problems.push('Notes are limited to 8000 characters.');
-  if (problems.length) return { input: null, problems };
-  return {
-    problems: [],
-    input: {
-      status: draft.status,
-      priority: draft.priority,
-      participation: draft.participation.trim(),
-      cost: optionalEventText(draft.cost),
-      notes: draft.notes.trim(),
-    },
+    productId: '-//Ocharo//Ocharo Events//EN',
+    uidDomain: 'ocharo.local',
+    fileName: `ocharo-event-${eventId}.ics`,
   };
 }
 
@@ -780,56 +267,14 @@ export function isEventIdentifier(value: string): boolean {
   return identifier.test(value);
 }
 
-const groupDigits = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
-/** "150 000" or "12.5": thousands grouped by a non-breaking space, so an amount never splits over two lines. */
-export function formatAmount(value: number): string {
-  const [whole = '', fraction] = String(value).split('.');
-  return fraction ? `${groupDigits(whole)}.${fraction}` : groupDigits(whole);
-}
-/**
- * "from 150 000 UZS", "100 000 – 300 000 UZS", "up to 300 000 UZS", "150 000 UZS" or "Free", in the operator
- * language; null when the source names no price.
- */
-export function ticketPriceLabel(tickets: EventTickets, locale: UiLocale): string | null {
-  if (tickets.free) return translateUi('Free', locale);
-  const { minPrice: min, maxPrice: max } = tickets;
-  const unit = tickets.currency ? `\u00a0${tickets.currency}` : '';
-  const amount = (value: number) => `${formatAmount(value)}${unit}`;
-  if (min !== null && max !== null && min !== max)
-    return `${formatAmount(min)}\u00a0–\u00a0${formatAmount(max)}${unit}`;
-  if (min !== null && max !== null) return amount(min);
-  if (min !== null) return translateUi('from {amount}', locale, { amount: amount(min) });
-  if (max !== null) return translateUi('up to {amount}', locale, { amount: amount(max) });
-  return null;
+/** Where this app mirrors Events' tracking, event, workflow and calendar routes for the organization (OE07). */
+export function eventsApiPrefix(organizationId: string): string {
+  return `/api/organizations/${encodeURIComponent(organizationId)}/events-api`;
 }
 
-/** The language's name in the operator language, falling back to its code where the browser has no name. */
-export function languageName(code: string, locale: UiLocale): string {
-  try {
-    return new Intl.DisplayNames([locale], { type: 'language' }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
-/**
- * The tag ("RU", "UZ") shown beside a title written in another language than the interface's; null when the title is
- * in the interface language or its language is undetermined.
- */
-export function titleLanguageTag(event: Pick<ShowcaseEvent, 'titleLanguage'>, locale: UiLocale): string | null {
-  const language = event.titleLanguage?.split('-')[0]?.toLowerCase();
-  return !language || language === 'und' || language === locale ? null : language.toUpperCase();
-}
-
-/** The country's name in the operator language, falling back to its code where the browser has no name. */
-export function countryName(code: string | null, locale: UiLocale): string | null {
-  if (!code) return null;
-  try {
-    return new Intl.DisplayNames([locale], { type: 'region' }).of(code) ?? code;
-  } catch {
-    return code;
-  }
-}
-/** "Tashkent · Uzbekistan": city then country, whichever are known. */
-export function eventPlace(event: Pick<ShowcaseEvent, 'city' | 'country'>, locale: UiLocale): string {
-  return [event.city, countryName(event.country, locale)].filter(Boolean).join(' · ');
+/** The day before `today` (`YYYY-MM-DD`): the last day an event that has ended by today could have started. */
+export function previousIsoDate(today: string): string {
+  const date = new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1, Number(today.slice(8, 10))));
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
 }

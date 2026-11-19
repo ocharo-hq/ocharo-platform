@@ -1,6 +1,6 @@
 # Ocharo Events app
 
-*Last updated: 2026-11-10*
+*Last updated: 2026-11-19*
 
 Ocharo's Events service: the first service out of Desk (`ocharo-ws` [app boundaries](../../../../docs/app-boundaries.md#services),
 WoW2 `events-integration #61`). Its one job is tracking trade events; WoW2 Events owns the catalog and the tracking
@@ -31,9 +31,14 @@ v0.3 Iteration 8.
 
 ## #3 Contract
 
-- The API keeps Desk's routes and wire unchanged, so the page moves without a rewrite:
-  `GET|POST /api/organizations/{organizationId}/events`, `GET .../events/summary`,
-  `GET|PUT|DELETE .../events/{eventId}`; fact edits and deletes keep answering 410 Gone.
+- Revised 2026-11-19 (OE07): the page reads WoW2 Events' own contract through a pass-through mirror and renders it with
+  `@wow-two-beta/fe-events`' kit; Desk's routes and wire, the mapper and the in-memory filters are gone.
+- Mirror: `/api/organizations/{organizationId}/events-api/api/events/v1/…` — the organization's tracking (list with
+  every filter and the cursor, summary, one event, write, stop, history), one event, a proposal, the workflow and the
+  calendar file; each route is one broker call with the kit's query or body as sent
+  ([events-contract.md](../architecture/events-contract.md)). The digest routes stay under `…/delivery` (O17).
+- Ocharo's own part is configuration: its stages with labels and classes, custom fields, kinds, scopes, the fields a
+  card and the detail show, and how a member adds an event.
 - Plus the suite's own: `/api/identity/*` (BFF), `/api/runtime-config`, `/api/system/status`, `/health`.
 
 ## #4 Access
@@ -42,7 +47,8 @@ v0.3 Iteration 8.
   must hold `events:read` in it; anything else answers 404, as Desk's filter does.
 - Every call to WoW2 Events exchanges the person's token for resource `events` (`events.read`, `events.track`); Events
   checks the scope and the `events:*` permission against the token's organization. Proposing a new event and saving
-  tracking need `events.track`; nothing here needs `events.import`, `review` or `admin`.
+  tracking need `events.track`; the Telegram delivery's digests and the workflow write (OE07) need `events.admin`;
+  nothing here needs `events.import` or `review`.
 
 ## #5 Identity registration
 

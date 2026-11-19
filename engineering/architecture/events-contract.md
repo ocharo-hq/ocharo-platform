@@ -1,90 +1,59 @@
-# Events contract — showcase events feed
+# Events contract — the Events page on WoW2 Events
 
 *Last updated: 2026-11-19*
 
 ## Increment
 
-Desk Events, slice 1: one feed of every event where Ocharo could show its products — local
-(Uzbekistan), regional (Central Asia and neighbours) and international — with dates, deadlines,
-how to take part, what it costs, and where Ocharo stands with each one. Event facts belong to Desk,
-as the brand identity and events proposal (mft `ventures/ocharo/platform/och-platform-brand-identity-and-events.md`)
-assigns them; Marketing later attaches campaign work to an event reference. Desk never applies,
-registers or pays on Ocharo's behalf.
+One feed of every event where Ocharo could show its products — local (Uzbekistan), regional (Central Asia and
+neighbours) and international — with dates, deadlines, how to take part, what it costs, and where Ocharo stands with
+each one. WoW2 Events (`wow-two-sdk-beta.events`) owns the catalog `ocharo-fashion`, the organization's tracking and its
+workflow; the Ocharo Events app is their Ocharo face ([events-app.md](../research/events-app.md)). It never applies,
+registers or pays on Ocharo's behalf; Marketing later attaches campaign work to an event reference.
 
-Placement: a Desk section (`/organizations/{organizationId}/events`), built like
-[Sourcing](sourcing-contract.md). Every rule of the [preparation contract](preparation-contract.md)
-applies: membership filter, organization-scoped queries, composite keys, 404 for foreign rows,
-`X-CSRF-TOKEN` on unsafe requests, `{ data }` envelopes on the SDK JSON (null members left out; the types below show them as `null`, which the
-frontend decoders restore) and SDK problem details, whose `code` names the error kind.
+## Wire
 
-## Record
-
-| Field | Rule |
-|---|---|
-| `id` | `(organization_id, id)` |
-| `key` | optional import slug `^[a-z0-9][a-z0-9-]{0,63}$`, unique per organization; null for events added in Desk |
-| `title` | 1–200 |
-| `organizer` | ≤ 160 or null |
-| `scope` | derived from `country`, never sent: `local` (UZ) · `regional` (KZ, KG, TJ, TM, AF, AZ, RU) · `international` (any other country) · `unknown` (no country; no scope filter selects it) |
-| `format` | `runway` · `trade-fair` · `market` · `exhibition` · `competition` · `festival` · `conference` · `other` |
-| `country` | ISO 3166-1 alpha-2 upper case, or null |
-| `city`, `venue` | ≤ 120 / ≤ 200, or null |
-| `startsOn`, `endsOn` | ISO dates or null; `endsOn ≥ startsOn` |
-| `datePrecision` | `day` · `month` (only the month is announced) · `estimated` (inferred from earlier editions) · `unknown` (dates null). For `month`/`estimated`, `startsOn` is the 1st of that month |
-| `applicationDeadline` | ISO date or null |
-| `participation` | how to take part, ≤ 2000 ("application package to the organiser", "stand booking") |
-| `cost` | as stated, ≤ 500, or null — unknown cost stays null, never `0` |
-| `website`, `sourceUrl` | http(s) ≤ 2048, or null — official page, and where the event was found |
-| `status` | `candidate` (found, not reviewed) · `shortlisted` · `applying` · `applied` · `confirmed` · `attended` · `skipped` · `rejected` |
-| `priority` | `high` · `normal` · `low` |
-| `notes` | ≤ 8000 — fit, what to show, evidence; never private prices or personal assessments |
-| `revision`, `createdAt`, `updatedAt` | optimistic concurrency as in Sourcing |
-
-Validation: `startsOn`/`endsOn`/`applicationDeadline` between 2000-01-01 and 2100-12-31;
-`datePrecision = unknown` requires null dates; `day` requires `startsOn`. Blank optional strings → null.
+Since OE07 (2026-11-19) the page reads WoW2 Events' own contract, unchanged: `EventModel`, `TrackedEventModel`,
+`TrackingModel`, `TrackingSummaryModel` and `WorkflowModel`, rendered by `@wow-two-beta/fe-events`' kit. The app keeps
+no record, mapper or decoder of its own, so a new fact Events carries reaches the page with a package re-pin, not an
+edit here. The Desk-era record, its mapper, the full `PUT`, the `DELETE` and the 200-row in-memory list left with it.
 
 ## HTTP surface
 
-Base: `/api/organizations/{organizationId}/events`. Reads need membership; writes need `CanEdit`.
+Base: `/api/organizations/{organizationId}/events-api/api/events/v1` — Events' routes, mirrored under the organization
+as the digest routes are under `…/delivery`. The organization must be the session's active one, with `events:read`;
+anything else answers 404. Unsafe requests carry `X-Csrf-Token`. Answers are Events' `{ data }` envelope or a problem.
 
-| Method | Path | Body / query | Returns `data` |
+| Method | Path | Query / body | Needs |
 |---|---|---|---|
-| GET | `` | `query?`, `scope?`, `format?`, `status?`, `from?`, `to?` (ISO dates, filter by the event's last day ≥ from — `endsOn`, else the month's last day for `month`/`estimated`, else `startsOn` — and `startsOn` ≤ to), `includeUndated` (default true), `includeClosed` (default false: events whose `status` is `skipped` or `rejected` stay out unless `status` names a stage), `limit` (≤ 500, default 200), `offset` | `ShowcaseEvent[]` ordered by `startsOn` (nulls last), then title |
-| GET | `/summary` | `today?` (ISO date, defaults to server UTC date) | `{ byStatus: Record<status, number>, upcomingDeadlines: ShowcaseEvent[] }` — up to 5 with `applicationDeadline ≥ today`, status not `skipped`/`rejected`, soonest first |
-| POST | `` | all mutable fields but `scope`; `status` defaults to `shortlisted`, `priority` to `normal`, `datePrecision` to `day` when `startsOn` is set else `unknown` | `ShowcaseEvent` |
-| GET | `/{eventId}` | — | `ShowcaseEvent` |
-| PUT | `/{eventId}` | `{ expectedRevision, …all mutable fields }` | `ShowcaseEvent` |
-| DELETE | `/{eventId}` | `expectedRevision` query | `{ id }` |
+| GET | `catalogs/{catalog}/tracking` | `stage`, repeated `stages` / `excludeStages`, repeated `countries` / `excludeCountries`, `includeUnknownCountry`, `kind`, `text`, `from`, `to`, `priority`, `trackedOnly`, `deadlineBefore`, `includeUndated`, `cursor`, `limit` | read |
+| GET | `catalogs/{catalog}/tracking/summary` | `today`, repeated `deadlineKinds` | read |
+| GET | `catalogs/{catalog}/tracking/{eventId}` | — | read |
+| PUT | `catalogs/{catalog}/tracking/{eventId}` | `TrackingSpec` (`stage`, `priority`, `notes`, `fields`, `references`, `expectedRevision`) | `events:track` |
+| DELETE | `catalogs/{catalog}/tracking/{eventId}` | `expectedRevision` | `events:track` |
+| GET | `catalogs/{catalog}/tracking/{eventId}/history` | — | read |
+| GET | `catalogs/{catalog}/events/{id}` | — | read |
+| POST | `catalogs/{catalog}/candidates` | `EventSpec` (`facts`) | `events:track` |
+| GET | `workflow` | — | read |
+| PUT | `workflow` | `WorkflowSpec` | `events:admin` |
+| GET | `catalogs/{catalog}/events.ics` | event filters (`from`, `kind`, `text`, `country`, `review`) | read |
 
-`query` matches title, organizer, city, venue, country and key (case-insensitive, `%`/`_` escaped).
+- Every list filter, the cursor and the page size cross to Events as sent: one list request is one Events call, filtered
+  and paged in Events' database.
+- A catalog other than `Events:Catalog` (`ocharo-fashion`) answers 404, an unconfigured Events 503, before any call;
+  Events checks the exchanged token's scope and permission again.
+- A member's proposal publishes at once: Ocharo's catalog is private to the organization (Events OE03), so the feed
+  lists it with no review step. An event's facts change only through Events' review.
 
-```ts
-type EventScope = 'local' | 'regional' | 'international' | 'unknown'; // the `scope` filter takes the first three
-type EventFormat = 'runway' | 'trade-fair' | 'market' | 'exhibition' | 'competition' | 'festival' | 'conference' | 'other';
-type EventStatus = 'candidate' | 'shortlisted' | 'applying' | 'applied' | 'confirmed' | 'attended' | 'skipped' | 'rejected';
-type DatePrecision = 'day' | 'month' | 'estimated' | 'unknown';
-type EventPriority = 'high' | 'normal' | 'low';
+## Ocharo's configuration of the kit
 
-interface ShowcaseEvent {
-  id: string; key: string | null; title: string; organizer: string | null;
-  scope: EventScope; format: EventFormat; country: string | null; city: string | null; venue: string | null;
-  startsOn: string | null; endsOn: string | null; datePrecision: DatePrecision; applicationDeadline: string | null;
-  participation: string; cost: string | null; website: string | null; sourceUrl: string | null;
-  status: EventStatus; priority: EventPriority; notes: string;
-  revision: number; createdAt: string; updatedAt: string;
-}
-```
-
-## Served by WoW2 Events
-
-Since v0.3 (2026-11-10) WoW2 Events owns the catalog and tracking; Desk keeps this page, its routes above and
-membership, and serves them from Events through its published client ([events-adoption.md](../research/events-adoption.md)
-#7, #8). A new event is a member proposal in Events, which publishes it at once because Ocharo's catalog is private to the
-organization (Events OE03, `10.0.13-beta`), so the feed lists it with no review step; stage, priority, notes, participation and cost are Ocharo's
-tracking there; changing an event's facts or deleting it answers 410 `Gone`, since facts change through Events'
-review.
-
-Desk keeps no events store of its own (v0.3 Iteration 5): the `import events` and `export events` verbs, the
-`ocharo.events-import.v1` bundle and table `events.showcase_events` are gone, migration `014-events-retire` drops the
-table, and new events reach Events through its own intake and import. A deployed Desk refuses to start without
-`Events:BaseUrl`; a local run without it answers 503 on these routes.
+| Item | Value |
+|---|---|
+| Stages | `candidate` (open, the default: an untracked event reads as it) · `shortlisted` (open) · `applying`, `applied`, `confirmed` (active) · `attended` (won) · `skipped`, `rejected` (lost: out of the nearest deadlines) |
+| Stage labels | en, uz and ru, from the app's interface messages |
+| Custom fields | `participation` "How to take part" (≤ 2000), `cost` "Ocharo's cost" (≤ 500, unknown stays empty, never `0`), `sourceUrl` "Source link" (read-only: shown, never edited, kept on save) |
+| Workflow in Events | an admin's visit aligns the stored workflow with the above, once, at the stored revision, when it differs |
+| Kinds | `runway` · `trade-fair` · `market` · `exhibition` · `competition` · `festival` · `conference` · `other`, labelled in en, uz and ru |
+| Scopes | derived from the country: `local` (UZ) · `regional` (KZ, KG, TJ, TM, AF, AZ, RU) · `international` (any other country); no country reads "Scope unknown" and no chip selects it |
+| Feed | skipped and rejected hidden until "Show Skipped, Rejected" or a stage filter asks; quick Shortlist and Skip on untracked cards; Ocharo's cost on each card |
+| Deadlines | the five nearest `application` deadlines, untracked events included, cancelled and lost-stage events left out |
+| Proposal | "Add event": starts shortlisted, normal priority, with an application deadline and where it was found (kept in `sourceUrl`) |

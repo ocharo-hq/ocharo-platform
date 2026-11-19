@@ -8,6 +8,7 @@ import { loadOcharoApps, ocharoAppsPlugin } from '../../src/application/shared/U
 import AppRoot from '../../src/bootstrap/AppRoot.vue';
 import { createEventsQueryClient } from '../../src/bootstrap/EventsQueryClient';
 import { createEventsRouter } from '../../src/bootstrap/EventsRouter';
+import { ocharoWorkflowSpec } from '../../src/domain/events/Events';
 
 /** The organization of the stubbed session. */
 export const OrganizationId = 'b8c672a6-c2e4-4516-82ad-5b178e71ace1';
@@ -67,8 +68,9 @@ export interface EventsHostOptions {
 }
 
 /**
- * Stubs the host's own routes (runtime settings, status, the session and sign-out), the events routes, which answer
- * an empty feed and an empty summary, and the Telegram delivery's digest list, which answers none.
+ * Stubs the host's own routes (runtime settings, status, the session and sign-out), the mirrored Events routes, which
+ * answer an empty tracking feed, an empty summary and Ocharo's workflow as Events holds it, and the Telegram delivery's
+ * digest list, which answers none.
  */
 export function stubEventsHost(options: EventsHostOptions = {}): void {
   vi.stubGlobal(
@@ -83,9 +85,13 @@ export function stubEventsHost(options: EventsHostOptions = {}): void {
         return Promise.resolve(Response.json({ data: options.identitySession ?? EditorSession }));
       if (pathname === '/api/identity/sign-out')
         return Promise.resolve(Response.json({ data: { endSessionUrl: EndSessionUrl } }));
-      if (/^\/api\/organizations\/[^/]+\/events\/summary$/.test(pathname))
-        return Promise.resolve(Response.json({ data: { byStatus: {}, upcomingDeadlines: [] } }));
-      if (/^\/api\/organizations\/[^/]+\/events$/.test(pathname)) return Promise.resolve(Response.json({ data: [] }));
+      const events = pathname.match(/^\/api\/organizations\/[^/]+\/events-api\/api\/events\/v1\/(.+)$/)?.[1];
+      if (events === 'workflow')
+        return Promise.resolve(Response.json({ data: { ...ocharoWorkflowSpec(), revision: 1 } }));
+      if (events && /^catalogs\/[^/]+\/tracking\/summary$/.test(events))
+        return Promise.resolve(Response.json({ data: { byStage: {}, untracked: 0, upcomingDeadlines: [] } }));
+      if (events && /^catalogs\/[^/]+\/tracking$/.test(events))
+        return Promise.resolve(Response.json({ data: { items: [], nextCursor: null } }));
       if (/^\/api\/organizations\/[^/]+\/delivery\/api\/events\/v1\/catalogs\/[^/]+\/digests$/.test(pathname))
         return Promise.resolve(Response.json({ data: [] }));
       return Promise.resolve(Response.json({ title: 'Not found' }, { status: 404 }));

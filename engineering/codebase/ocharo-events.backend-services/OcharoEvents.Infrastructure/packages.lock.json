@@ -153,9 +153,9 @@
       },
       "WoW2.Sdk.Beta.Be.Events.Abstractions": {
         "type": "Direct",
-        "requested": "[10.0.13-beta, )",
-        "resolved": "10.0.13-beta",
-        "contentHash": "wyBgMVTAy5C9BSvJ04yJf1fL+mQtRvH+7JYQxltQd4fn/rnAuUn3IQO9080aWdFBnelo+7ZQmle0+SKD40ZGCg==",
+        "requested": "[10.0.16-beta, )",
+        "resolved": "10.0.16-beta",
+        "contentHash": "Okl+O9gL/jXP+T1lXkaqP09OZ6aYtZITAqKY6bRP3taUXx7/1xCF/3ej4MNqEgWtDeZX8qJ7A5WFQPo/K2eGMA==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be.Abstractions": "10.0.112-beta"
         }

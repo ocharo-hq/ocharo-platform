@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using OcharoEvents.Application.Events.Errors;
 using OcharoEvents.Infrastructure.Events.Services;
 using WoW.Two.Sdk.Beta.Be.Events.Digests;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
@@ -14,7 +13,7 @@ namespace OcharoEvents.Infrastructure.Delivery.Services;
 /// <c>events:admin</c> again; Events renders and sends each message through Ocharo's Identity bot.
 /// </summary>
 /// <remarks>Only the configured catalog is served: another slug answers 404 before reaching Events, and an unconfigured
-/// Events answers 503, as the events page does.</remarks>
+/// Events answers 503, as the Events page's routes do.</remarks>
 public sealed class EventDigestsService(IEventDigestsBroker digests, IOptions<EventsServiceOptions> options)
 {
     /// <summary>Lists the organization's digests of the catalog.</summary>
@@ -62,14 +61,7 @@ public sealed class EventDigestsService(IEventDigestsBroker digests, IOptions<Ev
             : digests.ListRunsAsync(options.Value.Catalog, id, query, token);
 
     /// <summary>Refuses a call this service does not serve: Events unconfigured, or a catalog other than its own.</summary>
-    private AppError? Served(string catalog)
-    {
-        if (string.IsNullOrWhiteSpace(options.Value.BaseUrl))
-            return OcharoEventsErrors.Unavailable("WoW2 Events is not configured for this service (Events:BaseUrl).");
-        return string.Equals(catalog, options.Value.Catalog, StringComparison.Ordinal)
-            ? null
-            : OcharoEventsErrors.NotFound("The catalog was not found.");
-    }
+    private AppError? Served(string catalog) => EventsCatalogGuard.Refusal(options.Value, catalog);
 
     private static Task<Result<T>> Refuse<T>(AppError error) where T : notnull => Task.FromResult(Result<T>.Fail(error));
 }

@@ -2,7 +2,7 @@
 
 *Last updated: 2026-11-19*
 
-Command and query handlers, the event service, validation, and the events repository over WoW2 Events' brokers
-(`EventsServiceRepository`, `EventsServiceMapper`): reads are the organization's tracking list of the catalog, a new
-event is a member proposal that Events publishes at once in the organization's private catalog, tracking writes pass, fact edits and deletes answer 410 Gone. `Delivery/` serves the
-organization's Telegram delivery from Events' digests of the same catalog (`EventDigestsService`).
+The pass-through to WoW2 Events' brokers. `Events/Services/EventsApiService` serves the Events page's mirror (tracking,
+one event, proposals, the workflow and the calendar file), `Delivery/Services/EventDigestsService` the organization's
+Telegram delivery from Events' digests; both refuse a catalog other than `Events:Catalog` (404) and an unconfigured
+Events (503) through `EventsCatalogGuard` before any call, and pass everything else as the page sent it (OE07).

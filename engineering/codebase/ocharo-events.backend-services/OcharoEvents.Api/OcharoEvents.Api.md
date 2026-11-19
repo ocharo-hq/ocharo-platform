@@ -1,8 +1,7 @@
 # OcharoEvents.Api
 
-*Last updated: 2026-11-17*
+*Last updated: 2026-11-19*
 
-The HTTP host: the Events controller (Desk's routes and wire, events-app.md #3), the Telegram delivery's digest routes
-(`Delivery/`), Identity BFF sign-in (sessions and key
-ring in PostgreSQL), the organization access filter (#4), the WoW2 Events client composition, runtime config, status and
-the SPA bundle. Verbs: the be sdk's `migrate` and `config check`.
+The HTTP host: the Events page's mirror of WoW2 Events (`Events/`, OE07), the Telegram delivery's digest routes
+(`Delivery/`), Identity BFF sign-in (sessions and key ring in PostgreSQL), the organization access filter (#4), the WoW2
+Events client composition, runtime config, status and the SPA bundle. Verbs: the be sdk's `migrate` and `config check`.

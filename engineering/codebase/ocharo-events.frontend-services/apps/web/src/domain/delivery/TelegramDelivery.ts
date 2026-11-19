@@ -1,16 +1,14 @@
-import type { DigestSpec, WorkflowModel } from '@wow-two-beta/fe-events/contracts';
+import type { DigestSpec } from '@wow-two-beta/fe-events/contracts';
 
-import { eventStatuses, statusLabels, type EventStatus } from '@/domain/events/Events';
-import { translateUi } from '@/domain/shared/UiMessages';
+import { ocharoClosedStages, type EventStatus } from '@/domain/events/Events';
+
+export { OcharoEventsCatalog, ocharoClosedStages, ocharoWorkflow } from '@/domain/events/Events';
 
 /**
  * Telegram delivery: the organization's events going out to its people through Ocharo's Telegram bot, on a schedule its
  * admins set (tasks-platform.md O17). WoW2 Events keeps each schedule as a digest of the Events page's catalog and sends
  * through Ocharo's Identity; this app only edits them.
  */
-
-/** The catalog the Events page reads (`Events:Catalog`); the delivery routes serve only it. */
-export const OcharoEventsCatalog = 'ocharo-fashion';
 
 const identifier = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -33,9 +31,6 @@ export function eventLinkTemplate(origin: string, organizationId: string): strin
   if (!/^https?:\/\/[^/]+$/i.test(origin) || !identifier.test(organizationId)) return null;
   return `${origin}/organizations/${organizationId.toLowerCase()}/events/{id}`;
 }
-
-/** The stages a team has left: a digest leaves them out by default, as the feed does. */
-export const ocharoClosedStages: readonly EventStatus[] = ['skipped', 'rejected'];
 
 /** The stages of events the team is pursuing, which a deadline reminder is about. */
 export const ocharoPursuedStages: readonly EventStatus[] = ['shortlisted', 'applying', 'applied'];
@@ -87,24 +82,5 @@ export function ocharoDeadlineReminder(linkTemplate: string | null = null): Dige
     language: 'uz-Latn',
     itemCap: 20,
     ...(linkTemplate ? { linkTemplate } : {}),
-  };
-}
-
-/**
- * Ocharo's eight stages with their labels in the three interface languages, for the digest editor's stage pickers: the
- * mirror serves no workflow route, so the page hands the editor the stages the app itself offers. An event Ocharo does
- * not track yet reads as `candidate`.
- */
-export function ocharoWorkflow(): Pick<WorkflowModel, 'stages' | 'defaultStage'> {
-  return {
-    stages: eventStatuses.map((key) => ({
-      key,
-      label: {
-        en: translateUi(statusLabels[key], 'en'),
-        uz: translateUi(statusLabels[key], 'uz'),
-        ru: translateUi(statusLabels[key], 'ru'),
-      },
-    })),
-    defaultStage: 'candidate',
   };
 }
