@@ -9,6 +9,11 @@ export const accessUiMessages: UiMessageTable = {
   "Account settings": { "uz": "Hisob sozlamalari", "ru": "Настройки аккаунта" },
   "Your sign-in, phone and organization roles are managed in Ocharo Identity.": { "uz": "Kirish, telefon va tashkilotdagi rollaringiz Ocharo Identity’da boshqariladi.", "ru": "Вход, телефон и роли в организации управляются в Ocharo Identity." },
   "Your account has no organization yet. Ask an Ocharo owner or admin for an invite.": { "uz": "Hisobingiz hali hech qaysi tashkilotga qo‘shilmagan. Ocharo egasi yoki administratoridan taklif so‘rang.", "ru": "Ваш аккаунт пока не состоит в организации. Попросите приглашение у владельца или администратора Ocharo." },
+  "User ID": { "uz": "Foydalanuvchi ID", "ru": "ID пользователя" },
+  "Copy user ID": { "uz": "Foydalanuvchi ID’sini nusxalash", "ru": "Скопировать ID пользователя" },
+  "Copied": { "uz": "Nusxalandi", "ru": "Скопировано" },
+  "Could not copy": { "uz": "Nusxalab bo‘lmadi", "ru": "Не удалось скопировать" },
+  "Share it when an app asks for your user ID.": { "uz": "Ilova foydalanuvchi ID’sini so‘rasa, shuni yuboring.", "ru": "Сообщите его, когда приложение запросит ваш ID пользователя." },
   "admin": { "uz": "Administrator", "ru": "Администратор" },
   "billing": { "uz": "Hisob-kitob", "ru": "Биллинг" },
 };
