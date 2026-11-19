@@ -16,8 +16,8 @@ using WoW.Two.Sdk.Beta.Be.Web.ExceptionHandling.Extensions;
 namespace OcharoEvents.Api.Events.Controllers;
 
 /// <summary>
-/// Exposes the Events page's reads and writes: WoW2 Events' tracking, event, proposal, workflow and calendar routes,
-/// mirrored under the organization so the page's <c>fe-events</c> client reaches them with
+/// Exposes the Events page's reads and writes: WoW2 Events' tracking, event, proposal, workflow, calendar and intake
+/// freshness routes, mirrored under the organization so the page's <c>fe-events</c> client reaches them with
 /// <c>{prefix}/api/events/v1/…</c>, its prefix being <c>/api/organizations/{organizationId}/events-api</c> (OE07), as the
 /// digest routes are mirrored for the Telegram delivery page. Each route passes its query or body to Events as the kit
 /// sent it and answers Events' model in the SDK envelope, so no wire of Ocharo's own sits between the page and Events.
@@ -130,6 +130,13 @@ public sealed class EventsApiController(EventsApiService events, TimeProvider ti
             _ => throw new InvalidOperationException("A result is a success or a failure."),
         };
     }
+
+    /// <summary>Gets how fresh the catalog's intake is: when its sources last received records, the newest observed time and
+    /// how many sources fail (E24). Events reads it for the signed-in member's organization, so the page can tell a quiet
+    /// week from a stalled pull.</summary>
+    [HttpGet("catalogs/{catalog}/freshness")]
+    public async Task<IActionResult> Freshness(string catalog, CancellationToken cancellationToken) =>
+        Answer(await events.GetIntakeFreshnessAsync(catalog, cancellationToken));
 
     /// <summary>Refuses a tracking write or a proposal by a person without <c>events:track</c>.</summary>
     private IActionResult? RefuseUntracked() =>

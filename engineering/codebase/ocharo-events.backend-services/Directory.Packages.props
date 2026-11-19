@@ -15,8 +15,8 @@
     <!-- Sign-in through Ocharo's Identity instance: the BFF (session cookie, OIDC code flow with PKCE, X-Csrf-Token). -->
     <PackageVersion Include="WoW2.Sdk.Beta.Be.Identity.Client" Version="10.0.30-beta" />
     <!-- WoW2 Events: the contract (Infrastructure's repository) and its HTTP client (the host's composition). -->
-    <PackageVersion Include="WoW2.Sdk.Beta.Be.Events.Abstractions" Version="10.0.16-beta" />
-    <PackageVersion Include="WoW2.Sdk.Beta.Be.Events.Client" Version="10.0.16-beta" />
+    <PackageVersion Include="WoW2.Sdk.Beta.Be.Events.Abstractions" Version="10.0.20-beta" />
+    <PackageVersion Include="WoW2.Sdk.Beta.Be.Events.Client" Version="10.0.20-beta" />
   </ItemGroup>
 
   <ItemGroup>

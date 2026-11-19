@@ -25,6 +25,14 @@ export const eventsUiMessages: UiMessageTable = {
     ru: 'Мероприятие изменилось после загрузки списка, поэтому список обновлён.',
   },
 
+  // Sources freshness under the title (E24)
+  'Sources updated {time}': { uz: 'Manbalar {time} yangilandi', ru: 'Источники обновлены {time}' },
+  'No new records in over 24 hours.': {
+    uz: 'So‘nggi 24 soatdan ortiq vaqt davomida yangi yozuvlar kelmadi.',
+    ru: 'Новых записей нет больше 24 часов.',
+  },
+  'Sources failing: {count}': { uz: 'Xato bergan manbalar: {count}', ru: 'Источников с ошибкой: {count}' },
+
   // Telegram delivery
   Settings: { uz: 'Sozlamalar', ru: 'Настройки' },
   'Telegram delivery': { uz: 'Telegram orqali yuborish', ru: 'Рассылка в Telegram' },

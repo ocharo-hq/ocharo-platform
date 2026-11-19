@@ -24,6 +24,7 @@ import {
 } from '@/domain/events/Events';
 
 import PastEventsStrip from '../PastEventsStrip.vue';
+import SourcesFreshness from '../SourcesFreshness.vue';
 
 /**
  * Records events where Ocharo could show its products; it never applies, registers or pays. The page renders WoW2
@@ -31,6 +32,8 @@ import PastEventsStrip from '../PastEventsStrip.vue';
  * deadlines, the organization's tracking feed (skipped and rejected hidden until asked, scope chips, quick Shortlist and
  * Skip, Ocharo's cost on each card, "Add event" publishing at once) and one event's detail with its tracking form.
  * Between the deadlines and the feed, "Past, not closed" asks to close each ended event Ocharo was pursuing (OE12).
+ * Under the title, "Sources updated {time}" says when the intake last delivered, as a warning when it is over a day old or
+ * a source fails (E24).
  */
 defineOptions({ name: 'EventsPage' });
 const props = defineProps<{
@@ -105,6 +108,7 @@ function setDirty(dirty: boolean): void {
         >
       </div>
       <h1 class="page-title">{{ t('Events') }}</h1>
+      <SourcesFreshness :client="client" :catalog="OcharoEventsCatalog" />
       <p class="max-w-2xl text-muted-foreground">
         {{
           t(

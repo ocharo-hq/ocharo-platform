@@ -7,6 +7,7 @@ using Serilog.Core;
 using WoW.Two.Sdk.Beta.Be.Events.Calendar;
 using WoW.Two.Sdk.Beta.Be.Events.CatalogEvents;
 using WoW.Two.Sdk.Beta.Be.Events.Digests;
+using WoW.Two.Sdk.Beta.Be.Events.Intake;
 using WoW.Two.Sdk.Beta.Be.Events.Tracking;
 using WoW.Two.Sdk.Beta.Be.Events.Workflows;
 
@@ -55,6 +56,7 @@ internal sealed class EventsHost : IAsyncDisposable
                 services.AddSingleton<ICatalogEventsBroker>(events);
                 services.AddSingleton<IEventWorkflowsBroker>(events);
                 services.AddSingleton<IEventCalendarBroker>(events);
+                services.AddSingleton<IEventIntakeBroker>(events);
             });
         });
         return new EventsHost(factory);

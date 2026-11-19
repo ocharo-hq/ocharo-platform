@@ -1,13 +1,14 @@
 # OcharoEvents.Tests.E2E
 
-*Last updated: 2026-11-19*
+*Last updated: 2026-11-20*
 
 Whole HTTP flows through the real host: `EventsApiRouteTests` (the Events page's mirror of WoW2 Events, OE07: one
 Events call per list with the kit's filters and cursor, summary kinds, tracking writes and history, proposals, the
-workflow and the calendar file passed through; 403 for a viewer's write and an editor's workflow write, 404 for another
+workflow and the calendar file passed through, and a member's freshness read of the catalog's intake (E24: one Events call, Events' 404
+reaching the page); 403 for a viewer's write and an editor's workflow write, 404 for another
 catalog or organization, 400 for a malformed filter, all before Events; Events' refusal reaching the page; the client
 wiring; 503 in a local run without Events), `AccessTests` (401 without a session, 404 for another organization's path or
-a member without `events:read`, 403 on writes without `events:track`, CSRF, uncached session routes),
+a member without `events:read` (the freshness read included), 403 on writes without `events:track`, CSRF, uncached session routes),
 `TelegramDeliveryRouteTests`, `RuntimeConfigTests` (`OCHARO_EVENTS_URL`), `SystemStatusTests`, `SessionStoreTests`
 (sessions and key ring survive a restart) and `StartupTests` (a deployed host refuses to boot without `Events:BaseUrl` or
 its database).

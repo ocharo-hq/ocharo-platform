@@ -77,6 +77,8 @@ let storedWorkflow: Record<string, unknown> = {};
 let listed: unknown[] = [];
 /** What the past-events strip's query answers (OE12); none unless a test sets it. */
 let pastOpen: unknown[] = [];
+/** What Events' freshness read answers (E24); null answers 404, as for a person outside the catalog's organization. */
+let freshness: object | null = null;
 let wrapper: VueWrapper | undefined;
 
 const ok = (data: unknown, status = 200) => Response.json({ data }, { status });
@@ -86,6 +88,7 @@ function answer(method: string, url: URL, body: unknown): Response {
     return ok(method === 'PUT' ? { ...(body as object), revision: 3 } : storedWorkflow);
   if (path === `${CATALOG}/tracking`)
     return ok({ items: url.searchParams.has('stages') ? pastOpen : listed, nextCursor: null });
+  if (path === `${CATALOG}/freshness` && freshness) return ok(freshness);
   if (path === `${CATALOG}/tracking/summary`)
     return ok({
       byStage: { shortlisted: 1 },
@@ -124,6 +127,7 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
   sent = [];
   pastOpen = [];
+  freshness = null;
   storedWorkflow = { ...ocharoWorkflowSpec(), revision: 2 };
   listed = [
     { event: fashionWeek(), tracking: fashionWeekTracking() },
@@ -350,6 +354,94 @@ describe('past events not closed (OE12)', () => {
     expect(writes[0]!.body).toMatchObject({ stage: 'attended', expectedRevision: 3 });
     expect(wrapper!.find('[data-test="past-open"]').exists()).toBe(false);
     expect(lists().length).toBe(before + 1);
+  });
+});
+
+/** The instant `hours` before the test's clock, as the wire carries it. */
+const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
+const freshnessLine = () => wrapper!.find('[data-test="sources-freshness"]');
+const freshnessReads = () => sent.filter((item) => item.url.pathname === `${CATALOG}/freshness`);
+
+describe('sources freshness under the title (E24)', () => {
+  it('says when the sources last delivered, with no warning while the last record is recent and nothing fails', async () => {
+    freshness = { lastReceivedAtUtc: hoursAgo(3), newestObservedAtUtc: hoursAgo(4), failingSources: 0 };
+    await render('editor');
+
+    expect(freshnessReads()).toHaveLength(1);
+    expect(freshnessReads()[0]!.method).toBe('GET');
+    const line = freshnessLine();
+    expect(line.text()).toBe('Sources updated 3 hours ago');
+    expect(line.attributes('data-state')).toBe('fresh');
+    expect(line.classes()).not.toContain('text-warning');
+    expect(line.attributes('role')).toBeUndefined();
+    expect(wrapper!.get('h1').element.nextElementSibling).toBe(line.element);
+  });
+
+  it('warns when the last record is more than 24 hours old', async () => {
+    freshness = { lastReceivedAtUtc: hoursAgo(50), newestObservedAtUtc: hoursAgo(52), failingSources: 0 };
+    await render('editor');
+
+    const line = freshnessLine();
+    expect(line.text()).toBe('Sources updated 2 days ago · No new records in over 24 hours.');
+    expect(line.attributes('data-state')).toBe('warning');
+    expect(line.classes()).toContain('text-warning');
+    expect(line.attributes('role')).toBe('status');
+  });
+
+  it('does not warn at 24 hours, the last moment a record still counts as fresh', async () => {
+    freshness = { lastReceivedAtUtc: hoursAgo(24), failingSources: 0 };
+    await render('editor');
+
+    expect(freshnessLine().text()).toBe('Sources updated yesterday');
+    expect(freshnessLine().attributes('data-state')).toBe('fresh');
+  });
+
+  it('warns with how many sources fail, even when the last record is recent', async () => {
+    freshness = { lastReceivedAtUtc: hoursAgo(1), newestObservedAtUtc: hoursAgo(2), failingSources: 2 };
+    await render('editor');
+
+    const line = freshnessLine();
+    expect(line.text()).toBe('Sources updated 1 hour ago · Sources failing: 2');
+    expect(line.attributes('data-state')).toBe('warning');
+  });
+
+  it('warns about a failing source before the catalog has received a record, with no time to give', async () => {
+    freshness = { lastReceivedAtUtc: null, newestObservedAtUtc: null, failingSources: 1 };
+    await render('editor');
+
+    expect(freshnessLine().text()).toBe('Sources failing: 1');
+    expect(freshnessLine().attributes('data-state')).toBe('warning');
+  });
+
+  it('shows nothing before the catalog has received a record and while no source fails', async () => {
+    freshness = { failingSources: 0 };
+    await render('editor');
+
+    expect(freshnessReads()).toHaveLength(1);
+    expect(freshnessLine().exists()).toBe(false);
+  });
+
+  it('shows nothing, and no error of its own, when the read fails', async () => {
+    await render('editor');
+
+    expect(freshnessReads()).toHaveLength(1);
+    expect(freshnessLine().exists()).toBe(false);
+    expect(wrapper!.find('[role="alert"]').exists()).toBe(false);
+    expect(wrapper!.findAll('[data-test="event-card"]')).toHaveLength(2);
+  });
+
+  it('reads the age in the interface language', async () => {
+    freshness = { lastReceivedAtUtc: hoursAgo(3), failingSources: 0 };
+    await render('editor');
+    expect(freshnessLine().text()).toBe('Sources updated 3 hours ago');
+
+    useUiLocale().setUiLocale('uz');
+    await flushPromises();
+    expect(freshnessLine().text()).toBe('Manbalar 3 soat oldin yangilandi');
+
+    useUiLocale().setUiLocale('ru');
+    await flushPromises();
+    expect(freshnessLine().text()).toBe('Источники обновлены 3 часа назад');
   });
 });
 

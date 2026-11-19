@@ -1,5 +1,6 @@
 using WoW.Two.Sdk.Beta.Be.Events.Calendar;
 using WoW.Two.Sdk.Beta.Be.Events.CatalogEvents;
+using WoW.Two.Sdk.Beta.Be.Events.Intake;
 using WoW.Two.Sdk.Beta.Be.Events.Tracking;
 using WoW.Two.Sdk.Beta.Be.Events.Workflows;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
@@ -13,7 +14,8 @@ namespace OcharoEvents.Tests.Harness;
 /// Events once, with the kit's filters and cursor unchanged. The mirror keeps no rule of its own to fake: Events' rules
 /// are proven by its own conformance suites (<c>WoW2.Sdk.Beta.Be.Events.Testing</c>).
 /// </summary>
-internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEventsBroker, IEventWorkflowsBroker, IEventCalendarBroker
+internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEventsBroker, IEventWorkflowsBroker, IEventCalendarBroker,
+    IEventIntakeBroker
 {
     public static readonly DateTimeOffset At = new(2026, 11, 19, 9, 0, 0, TimeSpan.Zero);
 
@@ -32,6 +34,14 @@ internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEve
         Stages = [new WorkflowStageModel { Key = "candidate" }, new WorkflowStageModel { Key = "skipped", Class = StageClass.Lost }],
         DefaultStage = "candidate",
         Revision = 3,
+    };
+
+    /// <summary>Gets or sets the freshness the intake read answers: a pull a few hours ago, no source failing.</summary>
+    public IntakeFreshnessModel Freshness { get; set; } = new()
+    {
+        LastReceivedAtUtc = At.AddHours(-2),
+        NewestObservedAtUtc = At.AddHours(-3),
+        FailingSources = 0,
     };
 
     /// <summary>Builds a published event of the catalog with a title in one language.</summary>
@@ -118,6 +128,17 @@ internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEve
 
     public Task<Result<CalendarFile>> ExportAsync(string catalog, EventQuery query, CancellationToken cancellationToken = default) =>
         Answer(nameof(ExportAsync), catalog, query, new CalendarFile("ocharo-fashion.ics", "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n"));
+
+    public Task<Result<IntakeFreshnessModel>> GetFreshnessAsync(string catalog, CancellationToken cancellationToken = default) =>
+        Answer(nameof(GetFreshnessAsync), catalog, null, Freshness);
+
+    /// <summary>The status and the poll are operator calls no Events page route reaches; a call here is a mistake.</summary>
+    public Task<Result<IntakeStatusModel>> GetStatusAsync(CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("The Events page's mirror never reads the intake status.");
+
+    /// <inheritdoc cref="GetStatusAsync" />
+    public Task<Result<IntakeStatusModel>> PollAsync(CancellationToken cancellationToken = default) =>
+        throw new InvalidOperationException("The Events page's mirror never polls the intake.");
 
     /// <summary>Gets the calls of one broker method.</summary>
     public IReadOnlyList<(string Method, string? Catalog, object? Argument)> Of(string method) =>

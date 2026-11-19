@@ -8,6 +8,7 @@ using OcharoEvents.Infrastructure.Events.Services;
 using WoW.Two.Sdk.Beta.Be.Events.CatalogEvents;
 using WoW.Two.Sdk.Beta.Be.Events.Client;
 using WoW.Two.Sdk.Beta.Be.Events.Digests;
+using WoW.Two.Sdk.Beta.Be.Events.Intake;
 using WoW.Two.Sdk.Beta.Be.Events.Tracking;
 using WoW.Two.Sdk.Beta.Be.Events.Workflows;
 using WoW.Two.Sdk.Beta.Be.Foundation.Errors;
@@ -223,6 +224,67 @@ public sealed class EventsApiRouteTests
     }
 
     [Fact]
+    public async Task Freshness_ShouldBeReadByAMember_AsOneEventsCall_WithTheCatalogsTimesAndFailingSources()
+    {
+        var events = new RecordingEventsBrokers
+        {
+            Freshness = new IntakeFreshnessModel
+            {
+                LastReceivedAtUtc = RecordingEventsBrokers.At.AddHours(-30),
+                NewestObservedAtUtc = RecordingEventsBrokers.At.AddHours(-31),
+                FailingSources = 2,
+            },
+        };
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient viewer = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        JsonElement freshness = await DataAsync(await viewer.GetAsync($"{Catalog}/freshness"));
+
+        var call = events.Calls.Should().ContainSingle().Which;
+        call.Method.Should().Be("GetFreshnessAsync");
+        call.Catalog.Should().Be("ocharo-fashion");
+        freshness.GetProperty("lastReceivedAtUtc").GetDateTimeOffset().Should().Be(RecordingEventsBrokers.At.AddHours(-30));
+        freshness.GetProperty("newestObservedAtUtc").GetDateTimeOffset().Should().Be(RecordingEventsBrokers.At.AddHours(-31));
+        freshness.GetProperty("failingSources").GetInt32().Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Freshness_ShouldRefuseAnotherCatalog_AnotherOrganization_AMemberWithoutRead_AndNoSession_BeforeEvents()
+    {
+        var events = new RecordingEventsBrokers();
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient owner = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Owner);
+        using HttpClient outsider = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Outsider);
+        using HttpClient billing = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Billing);
+        using HttpClient unaffiliated = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Unaffiliated);
+        using HttpClient anonymous = EventsTestIdentity.Anonymous(host.Factory);
+        string other = $"/api/organizations/{EventsTestIdentity.OtherOrganization}/events-api/api/events/v1/catalogs/ocharo-fashion";
+
+        (await owner.GetAsync($"{Base}/catalogs/another-catalog/freshness")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await owner.GetAsync($"{other}/freshness")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await outsider.GetAsync($"{Catalog}/freshness")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await unaffiliated.GetAsync($"{Catalog}/freshness")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await billing.GetAsync($"{Catalog}/freshness")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await anonymous.GetAsync($"{Catalog}/freshness")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        events.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Freshness_ShouldReachThePage_AsEventsOwn404_WhenEventsRefusesTheMember()
+    {
+        var events = new RecordingEventsBrokers
+        {
+            Failure = AppError.Of(AppErrorType.NotFound, "The catalog was not found.", null, "", "", 0),
+        };
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient viewer = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        (await viewer.GetAsync($"{Catalog}/freshness")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        events.Of("GetFreshnessAsync").Should().ContainSingle();
+    }
+
+    [Fact]
     public async Task Mirror_ShouldRefuseAnotherCatalog_AnotherOrganization_AndMalformedFilters_BeforeEvents()
     {
         var events = new RecordingEventsBrokers();
@@ -276,6 +338,8 @@ public sealed class EventsApiRouteTests
             .Should().Be("WoW.Two.Sdk.Beta.Be.Events.Client.Tracking.ApiEventTrackingBroker");
         scope.ServiceProvider.GetRequiredService<IEventWorkflowsBroker>().GetType().FullName
             .Should().Be("WoW.Two.Sdk.Beta.Be.Events.Client.Workflows.ApiEventWorkflowsBroker");
+        scope.ServiceProvider.GetRequiredService<IEventIntakeBroker>().GetType().FullName
+            .Should().Be("WoW.Two.Sdk.Beta.Be.Events.Client.Intake.ApiEventIntakeBroker");
         // Telegram delivery reaches Events' digests through the same client and person flow.
         scope.ServiceProvider.GetRequiredService<IEventDigestsBroker>().GetType().FullName
             .Should().Be("WoW.Two.Sdk.Beta.Be.Events.Client.Digests.ApiEventDigestsBroker");
@@ -289,6 +353,7 @@ public sealed class EventsApiRouteTests
         using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Owner);
 
         (await client.GetAsync($"{Catalog}/tracking")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await client.GetAsync($"{Catalog}/freshness")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         (await client.GetAsync($"{Base}/workflow")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
 

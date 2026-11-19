@@ -19,6 +19,13 @@ answers Events' model in the SDK envelope; no Ocharo wire, mapper or in-memory f
 | POST | `catalogs/{catalog}/candidates` (published at once in Ocharo's private catalog, OE03) | `events:track` |
 | GET, PUT | `workflow` (the page reads it; the deploy writes Ocharo's with Events' `workflow put --spec`, so no app caller of `PUT` remains and it stays for an admin's own edits) | read; write `events:admin` |
 | GET | `catalogs/{catalog}/events.ics` (calendar file, no envelope) | `events:read` |
+| GET | `catalogs/{catalog}/freshness` (`lastReceivedAtUtc`, `newestObservedAtUtc`, `failingSources` of the catalog's intake, E24) | `events:read` |
 
 A catalog other than `Events:Catalog` answers 404 and an unconfigured Events 503 before any call; Events checks the
 exchanged token's scopes and permissions again.
+
+The freshness read (E24) serves the page's own "Sources updated {time}" line, not a kit screen: the page calls the kit's
+`getIntakeFreshness`, and the route makes one `IEventIntakeBroker.GetFreshnessAsync` call for the signed-in member, so
+Events' member check (`events.read` and `events:read` in the catalog's owner organization) holds on the exchanged token;
+another organization, or a person with no organization, reads 404 from Events as from this service, and the page shows
+nothing then.

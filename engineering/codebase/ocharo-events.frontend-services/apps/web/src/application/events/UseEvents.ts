@@ -1,5 +1,6 @@
 import { onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import type { IntakeFreshnessModel } from '@wow-two-beta/fe-events/contracts';
 import { localIsoDate, type EventsClient } from '@wow-two-beta/fe-events/kit';
 
 import { requestConfirmation } from '@/application/common/UseFeedback';
@@ -53,6 +54,42 @@ export function useEventToday() {
     document.removeEventListener('visibilitychange', update);
   });
   return today;
+}
+
+/** How often the freshness read repeats while the page stays open, so "updated 3 hours ago" keeps ageing. */
+const intakeFreshnessRefreshMs = 5 * 60 * 1000;
+
+/**
+ * Reads how fresh the catalog's intake is (E24): when its sources last received records and how many failed their last
+ * poll. It reads on mount, every five minutes and when the tab is back in view; `now` is the instant of the last read.
+ * A read that fails leaves `freshness` null (a person outside the catalog's organization reads 404), so the page shows
+ * nothing and adds no error surface.
+ */
+export function useIntakeFreshness(client: EventsClient, catalog: string) {
+  const freshness = shallowRef<IntakeFreshnessModel | null>(null);
+  const now = ref(Date.now());
+  let generation = 0;
+  async function load(): Promise<void> {
+    const run = ++generation;
+    const result = await client.getIntakeFreshness(catalog);
+    if (run !== generation) return;
+    now.value = Date.now();
+    freshness.value = result.ok ? result.value : null;
+  }
+  function reload(): void {
+    if (document.visibilityState !== 'hidden') void load();
+  }
+  const timer = setInterval(reload, intakeFreshnessRefreshMs);
+  window.addEventListener('focus', reload);
+  document.addEventListener('visibilitychange', reload);
+  onScopeDispose(() => {
+    generation++;
+    clearInterval(timer);
+    window.removeEventListener('focus', reload);
+    document.removeEventListener('visibilitychange', reload);
+  });
+  void load();
+  return { freshness, now };
 }
 
 /** Moves between the feed and one event inside one document, guarding unsaved forms. */
