@@ -145,6 +145,31 @@ describe('Telegram delivery page', () => {
 
 describe('Telegram delivery: deadline reminders', () => {
   const reminders = () => wrapper!.find('[data-test="deadline-reminders"]');
+  /** The stubbed fetch calls made with one HTTP method. */
+  const requestsOf = (method: string) =>
+    vi
+      .mocked(fetch)
+      .mock.calls.filter(
+        ([input, init]) => (input instanceof Request ? input.method : (init?.method ?? 'GET')) === method,
+      );
+
+  /** A digest as Events answers it, which the client's decoder reads in full. */
+  const digestModel = (fields: Record<string, unknown>) => ({
+    id: 'digest-0',
+    catalog: 'ocharo-fashion',
+    name: 'Ocharo tadbirlari',
+    enabled: true,
+    channel: 'telegram',
+    schedule: { days: ['monday'], times: ['09:00'], timeZone: 'Asia/Tashkent' },
+    selection: {},
+    recipients: [{ role: 'member' }],
+    language: 'uz-Latn',
+    itemCap: 20,
+    revision: 1,
+    createdAtUtc: '2026-11-19T04:00:00Z',
+    updatedAtUtc: '2026-11-19T04:00:00Z',
+    ...fields,
+  });
 
   /** Stubs the mirror's digest list (the given digests) and create (answers the posted spec as a digest). */
   function stubDigests(existing: { name: string }[], createStatus = 201) {
@@ -158,12 +183,11 @@ describe('Telegram delivery: deadline reminders', () => {
           if (createStatus !== 201) return Response.json({ title: 'No' }, { status: createStatus });
           const spec = (await request.json()) as Record<string, unknown>;
           created.push(spec);
-          return Response.json(
-            { data: { ...spec, id: 'digest-1', catalog: 'ocharo-fashion', revision: 1 } },
-            { status: 201 },
-          );
+          return Response.json({ data: digestModel({ ...spec, id: 'digest-1' }) }, { status: 201 });
         }
-        return Response.json({ data: existing.map((digest, index) => ({ id: `digest-${index}`, ...digest })) });
+        return Response.json({
+          data: existing.map((digest, index) => digestModel({ id: `digest-${index}`, ...digest })),
+        });
       }),
     );
     return created;
@@ -181,12 +205,12 @@ describe('Telegram delivery: deadline reminders', () => {
   it('creates the reminder switched off through the mirror, then stops offering it', async () => {
     const created = stubDigests([]);
     await mountPage();
+    await vi.waitFor(() => expect(reminders().exists()).toBe(true));
     expect(reminders().get('h2').text()).toBe('Deadline reminders');
 
     await reminders().get('[data-test="deadline-reminders-add"]').trigger('click');
-    await flushPromises();
 
-    expect(created).toHaveLength(1);
+    await vi.waitFor(() => expect(created).toHaveLength(1));
     expect(created[0]).toMatchObject({
       name: ocharoDeadlineReminderName,
       enabled: false,
@@ -195,26 +219,28 @@ describe('Telegram delivery: deadline reminders', () => {
       recipients: [{ role: 'member' }],
       linkTemplate: `${location.origin}/organizations/${OrganizationId}/events/{id}`,
     });
-    const posts = vi
-      .mocked(fetch)
-      .mock.calls.filter(([input, init]) => (input instanceof Request ? input.method : init?.method) === 'POST');
-    expect(posts).toHaveLength(1);
-    expect(reminders().exists()).toBe(false);
+    await vi.waitFor(() => expect(reminders().exists()).toBe(false));
+    expect(requestsOf('POST')).toHaveLength(1);
   });
 
   it('offers nothing when the organization already has a reminder digest', async () => {
     stubDigests([{ name: ocharoDeadlineReminderName }]);
     await mountPage();
+    // Both the panel and the offer read the list; only then does an absent offer mean something.
+    await vi.waitFor(() => expect(requestsOf('GET').length).toBeGreaterThanOrEqual(2));
+    await flushPromises();
+    expect(wrapper!.find('[data-test="digest-item"]').exists()).toBe(true);
     expect(reminders().exists()).toBe(false);
   });
 
   it('shows why the reminder was not added, and keeps the offer', async () => {
     stubDigests([], 403);
     await mountPage();
+    await vi.waitFor(() => expect(reminders().exists()).toBe(true));
 
     await reminders().get('[data-test="deadline-reminders-add"]').trigger('click');
-    await flushPromises();
 
+    await vi.waitFor(() => expect(wrapper!.find('[data-test="deadline-reminders-failure"]').exists()).toBe(true));
     expect(wrapper!.get('[data-test="deadline-reminders-failure"]').text()).not.toBe('');
     expect(reminders().exists()).toBe(true);
   });
