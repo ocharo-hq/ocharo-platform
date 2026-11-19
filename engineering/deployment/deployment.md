@@ -1,6 +1,6 @@
 # Deployment and local runtime
 
-*Last updated: 2026-11-02*
+*Last updated: 2026-11-20*
 
 ## Artifacts and ownership
 
@@ -134,6 +134,7 @@ organization API boundary and requires current membership.
 | Vue development | HTTPS 8378 |
 | Packaged API and SPA | HTTP 8377; optional HTTPS 8376; loopback only |
 | PostgreSQL | 8270, loopback only |
+| Events smoke (`events-e2e-smoke.sh`): Identity, SCFD, Events, Ocharo Events, PostgreSQL | 18450 to 18454, loopback, only while it runs |
 | Worker | No HTTP listener |
 
 Use the shared [port ledger](../../../../../../../../../conventions/deployment/hosting/ports.md) when adding services.
@@ -297,6 +298,58 @@ dotnet Events.Api.dll workflow put --owner-org <Ocharo's organization id> --spec
 - Until the first run Events holds only its default workflow (other stage keys): the page still shows Ocharo's labels
   from its own spec, but Events refuses a tracking write to a stage it does not hold.
 - The page's `PUT workflow` route stays for an admin's own edits; nothing in the app calls it.
+
+## Checks
+
+Two local checks need Docker and touch no deployed host. `check.sh` probes the packaged Desk stack
+([above](#start-the-packaged-stack)). `events-e2e-smoke.sh` drives one event through the three services that carry
+Ocharo's events, so a break in any hand-over shows before a deploy (E29).
+
+### Events end-to-end smoke
+
+```bash
+engineering/scripts/events-e2e-smoke.sh
+```
+
+It exits `0` and prints the event's title, start and end dates, city, source link and status, or exits `1` naming the
+step that broke and the last log lines of each service. A run takes about 30 seconds on cached images, several minutes
+after a service's code changed.
+
+- Needs Docker, `python3` (3.9+), `openssl` and `uuidgen`. Every secret and certificate is generated for the run; no real
+  key, token or account is read. The script builds `ocharo-e2e-{harvest,events,ocharo-events}:local` from the working
+  trees of SCFD (`wow-two-sdk-beta.harvest`), WoW2 Events (`wow-two-sdk-beta.events`) and this repository, and starts
+  Ocharo's Identity at the tag `deploy.yml` pins.
+- What runs, as containers named `ocharo-e2e-*` on the network `ocharo-e2e-net`: `db` (PostgreSQL 18, one database each
+  for `identity`, `harvest`, `events`, `ocharo_events`), `identity`, `scfd`, `events` and `ocharo-events`. Each service
+  serves HTTPS on 8443 under its container name, the address Identity registers, validates and issues tokens for; the
+  run's own CA is the only root they trust. Loopback ports: `E2E_PORT_BASE` (default 18450) to +4 for Identity, SCFD,
+  Events, Ocharo Events and PostgreSQL. SCFD's worker is off, so nothing is fetched from the internet.
+- The steps: sign the test owner up at Identity, make the owner the instance admin (`admin create --user-id`) and create
+  Ocharo's organization with a preset id; `ocharo setup --group afisha --group anons --group caex --group uzexpocentre
+  --selector` on SCFD; SCFD starts with `Harvest:ServiceAccess` on, so its API takes Identity's tokens only; Events gets
+  its migration, `catalog ensure ocharo-fashion`, `workflow put --spec -` with `events/ocharo-workflow.json`, and the one
+  intake source `ocharo-events` (`Filter: selector:ocharo-events`, review `auto`), then `intake check`; Ocharo Events
+  starts as Identity client `ocharo-events`.
+- The record: the driver puts one capture of a `www.afisha.uz` page through SCFD's operator capture route
+  (`POST /api/posts/captures`), reads SCFD's selector pull and expects `post.new` with a `match` verdict, polls Events'
+  intake once (`POST /api/events/v1/intake/poll`) as the owner, then signs in to Ocharo Events through Identity's code
+  flow and reads `GET /api/organizations/{id}/events-api/api/events/v1/catalogs/ocharo-fashion/tracking`.
+  Asserted: title, start date (45 days ahead, 19:00 +05:00), city `Tashkent`, source link, status `candidate` (the event is
+  untracked, so it takes the workflow's default stage) and review `published`.
+- Tagging: a post reaches the selector only once it carries model tags (`type:event`, `domain:style-fashion…`, no
+  `timeframe:past`), and a local host has no model provider. The fixture (`events-e2e-fixture.json`) carries the tags,
+  tier `smallModel`, in the envelope it posts to the operator capture route, which is how SCFD's own selector contract
+  test seeds them. The check therefore covers the selector, delivery, Events' intake and mapping and the Ocharo
+  routes, not the tagging model or its prompt.
+- The poll runs as the owner, not as a service: Events polls only the sources whose catalog the caller's organization
+  owns, so a service token polls none. The script redeems the owner's code with client `ocharo-events` and exchanges
+  it for an `events.admin` token, as the app's own client does for a session.
+- Cleanup, also on failure or Ctrl+C: `docker rm -f` of every container by name, the network, the temporary files, then
+  a check that `docker ps -a` lists no `ocharo-e2e-*` and `lsof` shows nothing listening on the five ports; a leftover
+  fails the run. The script starts no process of its own on the Mac.
+- Options: `E2E_SKIP_BUILD=1` reuses the images, `E2E_HARVEST_REPO` and `E2E_EVENTS_REPO` point at other checkouts,
+  `E2E_IDENTITY_IMAGE` at another Identity image, `E2E_FIXTURE` at another fixture, `E2E_KEEP=1` leaves the stack running
+  for inspection (it prints the stop command). Files: `engineering/scripts/events-e2e-{smoke.sh,drive.py,fixture.json}`.
 
 ## Convention adoption status
 

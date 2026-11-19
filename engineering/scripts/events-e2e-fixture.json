@@ -1,0 +1,37 @@
+{
+  "//": "One synthetic fashion event for events-e2e-smoke.sh, shaped as an SCFD capture of an Afisha page plus the envelope the post-tags pass writes. @START@ and @END@ are set by the driver at run time. The tags carry tier smallModel, the tier the model tagging pass writes (SCFD post-tags.md); a local run has no model provider, so the fixture supplies them through the operator capture route, the way SCFD's own selector contract test seeds them. Nothing here is a real listing.",
+  "source": { "family": "site", "handle": "www.afisha.uz" },
+  "capture": {
+    "externalKey": "https://www.afisha.uz/e2e-smoke/young-designers-show",
+    "url": "https://www.afisha.uz/e2e-smoke/young-designers-show",
+    "requestUrl": "https://www.afisha.uz/e2e-smoke/young-designers-show",
+    "finalUrl": "https://www.afisha.uz/e2e-smoke/young-designers-show",
+    "httpStatus": 200,
+    "contentType": "text/plain",
+    "contentProjection": "Smoke Test Young Designers Fashion Show. Designers show their collections in Tashkent. Entry by registration."
+  },
+  "envelope": {
+    "schema": "wow2.post.v1",
+    "kind": "event",
+    "title": "Smoke Test Young Designers Fashion Show",
+    "text": "Designers show their collections in Tashkent. Entry by registration.",
+    "language": { "code": "en", "script": "Latn", "mixed": false, "confidence": 1 },
+    "dates": [
+      { "role": "start", "value": "@START@", "precision": "second" },
+      { "role": "end", "value": "@END@", "precision": "day" }
+    ],
+    "location": {
+      "mentions": [
+        { "text": "Smoke Test Exhibition Hall", "kind": "venue" },
+        { "text": "Tashkent", "kind": "city" }
+      ]
+    },
+    "tags": [
+      { "tag": "type:event", "tier": "smallModel", "version": "post-tags@3", "score": 0.9 },
+      { "tag": "domain:style-fashion", "tier": "smallModel", "version": "post-tags@3", "score": 0.9 },
+      { "tag": "domain:style-fashion/high-fashion", "tier": "smallModel", "version": "post-tags@3", "score": 0.9 },
+      { "tag": "timeframe:upcoming", "tier": "smallModel", "version": "post-tags@3", "score": 0.9 }
+    ],
+    "extraction": { "normVersion": "norm@1", "rulesVersion": "rules@1", "tiersRun": ["deterministic", "rules"] }
+  }
+}
