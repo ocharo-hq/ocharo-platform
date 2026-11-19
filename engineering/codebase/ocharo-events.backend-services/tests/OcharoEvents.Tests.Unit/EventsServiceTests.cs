@@ -89,6 +89,32 @@ public sealed class EventsServiceTests
         shown.Revision.Should().Be(4);
     }
 
+    /// <summary>SCFD's estimated date (Events E34) reaches the page at any precision it was estimated at: an estimate never reads
+    /// as an exact day or time, and an announced date keeps its day and time.</summary>
+    [Theory]
+    [InlineData(DatePrecision.Day, DateCertainty.Estimated, "2027-04-12", "2027-04-01", "estimated", null)]
+    [InlineData(DatePrecision.Minute, DateCertainty.Estimated, "2027-04-12T19:00", "2027-04-01", "estimated", null)]
+    [InlineData(DatePrecision.Month, DateCertainty.Estimated, "2027-04", "2027-04-01", "estimated", null)]
+    [InlineData(DatePrecision.Day, DateCertainty.Announced, "2027-04-12", "2027-04-12", "day", null)]
+    [InlineData(DatePrecision.Minute, DateCertainty.Announced, "2027-04-12T19:00", "2027-04-12", "day", "19:00")]
+    [InlineData(DatePrecision.Month, DateCertainty.Announced, "2027-04", "2027-04-01", "month", null)]
+    public void Map_ShouldNeverShowAnEstimatedStartAsExact(
+        DatePrecision precision, DateCertainty certainty, string value, string startsOn, string shownPrecision, string? startsAt)
+    {
+        var item = new EventModel
+        {
+            Id = Guid.NewGuid(), Catalog = "ocharo-fashion", Review = EventReviewState.Published, Revision = 1,
+            CreatedAtUtc = DateTimeOffset.UnixEpoch, UpdatedAtUtc = DateTimeOffset.UnixEpoch,
+            Facts = Facts("Tashkent Fashion Week", "UZ", new EventWhen { Value = value, Precision = precision, Certainty = certainty }),
+        };
+
+        ShowcaseEvent shown = EventsServiceMapper.ToShowcaseEvent(new TrackedEventModel { Event = item });
+
+        shown.StartsOn.Should().Be(DateOnly.Parse(startsOn));
+        shown.DatePrecision.Should().Be(shownPrecision);
+        shown.StartsAt.Should().Be(startsAt);
+    }
+
     [Theory]
     [InlineData("day", "2027-01-29")]
     [InlineData("month", "2027-05-01")]

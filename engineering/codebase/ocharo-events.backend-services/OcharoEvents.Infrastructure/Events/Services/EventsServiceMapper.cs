@@ -178,16 +178,19 @@ public static class EventsServiceMapper
         _ => "international",
     };
 
+    // An estimated start (SCFD's AI estimate, or an import's) never reads as exact: the page has no estimated day, so an
+    // estimate at day or minute precision shows as its estimated month.
     private static (DateOnly? Date, string Precision) Start(EventWhen when) => when.Precision switch
     {
+        DatePrecision.Day or DatePrecision.Minute when when.Certainty == DateCertainty.Estimated => (Month(when.Value), "estimated"),
         DatePrecision.Day or DatePrecision.Minute => (Day(when.Value), "day"),
         DatePrecision.Month => (Month(when.Value), when.Certainty == DateCertainty.Estimated ? "estimated" : "month"),
         _ => (null, "unknown"),
     } is ({ } date, var precision) ? (date, precision) : (null, "unknown");
 
-    /// <summary>Reads the local start time (<c>HH:mm</c>) of a start announced to the minute; null for any coarser start.</summary>
+    /// <summary>Reads the local start time (<c>HH:mm</c>) of a start announced to the minute; null for any coarser or estimated start.</summary>
     public static string? StartTime(EventWhen when) =>
-        when.Precision == DatePrecision.Minute && when.Value is { Length: >= 16 } value && value[10] is 'T' or ' '
+        when is { Precision: DatePrecision.Minute, Certainty: not DateCertainty.Estimated } && when.Value is { Length: >= 16 } value && value[10] is 'T' or ' '
             && TimeOnly.TryParseExact(value[11..16], "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var time)
             ? time.ToString("HH:mm", CultureInfo.InvariantCulture)
             : null;
