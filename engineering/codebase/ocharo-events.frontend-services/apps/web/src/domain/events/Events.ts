@@ -1,7 +1,12 @@
 import { translateUi, type UiLocale } from '@/domain/shared/UiMessages';
 
 /** Events slice 1: every event where Ocharo could show its products, and where Ocharo stands with each. */
+/** The scopes the feed filters by; the server derives each event's scope from its country. */
 export const eventScopes = ['local', 'regional', 'international'] as const;
+/** The scope of an event that names no country; no filter chip offers it. */
+export const unknownScope = 'unknown' as const;
+/** Every scope an event reads as: one of the filter scopes, or `unknown` without a country. */
+export const derivedScopes = [...eventScopes, unknownScope] as const;
 export const eventFormats = [
   'runway',
   'trade-fair',
@@ -31,6 +36,7 @@ export const eventPriorities = ['high', 'normal', 'low'] as const;
 /** Where a source's listing of the event stands, as the source last reported it. */
 export const sourceStates = ['live', 'suspect', 'gone', 'unmatched'] as const;
 export type EventScope = (typeof eventScopes)[number];
+export type DerivedScope = (typeof derivedScopes)[number];
 export type EventFormat = (typeof eventFormats)[number];
 export type EventStatus = (typeof eventStatuses)[number];
 export type EventHappening = (typeof eventHappenings)[number];
@@ -67,7 +73,8 @@ export interface ShowcaseEvent {
   organizer: string | null;
   /** The organizer's own website, as the source names it. */
   organizerWebsite: string | null;
-  scope: EventScope;
+  /** Derived from `country`: Uzbekistan local, its neighbours regional, any other country international, none unknown. */
+  scope: DerivedScope;
   format: EventFormat;
   /** Whether the event still happens as listed; the wire name is `eventStatus`, since `status` is Ocharo's stage. */
   eventStatus: EventHappening;
@@ -126,7 +133,8 @@ type DerivedEventFields =
   | 'startsAt'
   | 'timeZone'
   | 'sources'
-  | 'sourceUpdatedAt';
+  | 'sourceUpdatedAt'
+  | 'scope';
 /** Every mutable field; the import `key` is never edited here. */
 export type EventInput = Omit<ShowcaseEvent, DerivedEventFields>;
 /** Counts may omit statuses with no events; a missing count reads as zero. */
@@ -160,11 +168,21 @@ export const eventLimits = {
   urgentDays: 14,
 } as const;
 
-export const scopeLabels: Record<EventScope, string> = {
+export const scopeLabels: Record<DerivedScope, string> = {
   local: 'Local',
   regional: 'Regional',
   international: 'International',
+  unknown: 'Scope unknown',
 };
+/** The countries counted as regional to Ocharo in Uzbekistan, as the server counts them. */
+const regionalCountries: ReadonlySet<string> = new Set(['KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU']);
+/** The scope the server derives from a country code, so a form shows it before sending; `unknown` without a country. */
+export function scopeOfCountry(country: string | null | undefined): DerivedScope {
+  const code = country?.trim().toUpperCase() ?? '';
+  if (!/^[A-Z]{2}$/.test(code)) return unknownScope;
+  if (code === 'UZ') return 'local';
+  return regionalCountries.has(code) ? 'regional' : 'international';
+}
 export const formatLabels: Record<EventFormat, string> = {
   runway: 'Runway show',
   'trade-fair': 'Trade fair',
@@ -232,6 +250,7 @@ export const happeningTones: Record<EventHappening, EventTone> = {
 };
 
 export const isEventScope = (value: unknown): value is EventScope => eventScopes.includes(value as EventScope);
+export const isDerivedScope = (value: unknown): value is DerivedScope => derivedScopes.includes(value as DerivedScope);
 export const isEventFormat = (value: unknown): value is EventFormat => eventFormats.includes(value as EventFormat);
 export const isEventStatus = (value: unknown): value is EventStatus => eventStatuses.includes(value as EventStatus);
 export const isEventHappening = (value: unknown): value is EventHappening =>
@@ -559,7 +578,6 @@ export function trackingInput(event: ShowcaseEvent): TrackingInput {
 export interface EventDraft {
   title: string;
   organizer: string;
-  scope: EventScope;
   format: EventFormat;
   country: string;
   city: string;
@@ -583,7 +601,6 @@ export function eventDraft(): EventDraft {
   return {
     title: '',
     organizer: '',
-    scope: 'local',
     format: 'exhibition',
     country: '',
     city: '',
@@ -688,7 +705,6 @@ export function validateEventDraft(draft: EventDraft): { input: EventInput | nul
     input: {
       title,
       organizer: optionalEventText(draft.organizer),
-      scope: draft.scope,
       format: draft.format,
       country: country || null,
       city: optionalEventText(draft.city),

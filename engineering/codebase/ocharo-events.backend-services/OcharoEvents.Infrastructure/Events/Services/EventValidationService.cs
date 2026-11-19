@@ -13,6 +13,7 @@ namespace OcharoEvents.Infrastructure.Events.Services;
 /// </summary>
 public sealed partial class EventValidationService
 {
+    /// <summary>Holds the scopes the feed filters by. An event with no country derives <c>unknown</c>, which no filter offers.</summary>
     public static readonly IReadOnlyList<string> Scopes = ["local", "regional", "international"];
     public static readonly IReadOnlyList<string> Formats =
         ["runway", "trade-fair", "market", "exhibition", "competition", "festival", "conference", "other"];
@@ -31,7 +32,6 @@ public sealed partial class EventValidationService
     {
         string title = Required(fields.Title, "Title", 200);
         string? organizer = Optional(fields.Organizer, "Organizer", EventsConstants.MaxNameLength);
-        string scope = Scope(fields.Scope);
         string format = Format(fields.Format);
         string? country = Country(fields.Country);
         string? city = Optional(fields.City, "City", EventsConstants.MaxNameLength);
@@ -53,7 +53,6 @@ public sealed partial class EventValidationService
         return new ShowcaseEventInput(
             title,
             organizer,
-            scope,
             format,
             country,
             city,

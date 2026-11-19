@@ -95,7 +95,7 @@ const craftExpo = () =>
     id: CRAFT_EXPO,
     key: null,
     title: 'Craft Expo',
-    scope: 'international',
+    scope: 'unknown',
     format: 'exhibition',
     country: null,
     city: null,
@@ -442,6 +442,44 @@ describe('events feed', () => {
       expect.any(AbortSignal),
     );
     expect(window.location.pathname).toBe(`/organizations/${ORG}/events/${NEW_EVENT}`);
+  });
+
+  it('asks no scope for a new event and shows the one its country derives', async () => {
+    await render('editor', feed);
+    await flushPromises();
+    await buttonIn(wrapper!, 'Add event')!.trigger('click');
+    const form = wrapper!.get('section[aria-label="New event"] form');
+    expect(() => eventsSelect(wrapper!, 'Scope')).toThrow('Missing EventsSelect: Scope');
+    expect(form.text()).not.toContain('Scope:');
+    const derived = () => form.get('[data-test="derived-scope"]').text();
+    expect(derived()).toBe('Scope unknown until a country is entered.');
+    const country = form.get('input[maxlength="2"]');
+    await country.setValue('uz');
+    expect(derived()).toBe('Local: Uzbekistan');
+    await country.setValue('KZ');
+    expect(derived()).toBe('Regional: Kazakhstan');
+    await country.setValue('FR');
+    expect(derived()).toBe('International: France');
+    await country.setValue('');
+    await form.get('input').setValue('Online Crafts Market');
+    const created = showcase({ id: NEW_EVENT, title: 'Online Crafts Market', country: null, scope: 'unknown' });
+    api.createEvent.mockResolvedValue(ResultExtensions.ok(created));
+    api.getEvent.mockResolvedValue(ResultExtensions.ok(created));
+    await chooseEventsValue(wrapper!, 'Date precision', 'unknown');
+    await form.trigger('submit');
+    await flushPromises();
+    expect(api.createEvent).toHaveBeenCalledTimes(1);
+    const sent = api.createEvent.mock.calls[0]![1] as Record<string, unknown>;
+    expect(sent.country).toBeNull();
+    expect(sent).not.toHaveProperty('scope');
+    expect(detail().text()).toContain('Scope unknown');
+  });
+
+  it('reads an event with no country as scope unknown, which no scope chip offers', async () => {
+    await render('editor', feed);
+    await flushPromises();
+    expect(card('Craft Expo').text()).toContain('Scope unknown');
+    expect(wrapper!.findAll('.events-chip').map((chip) => chip.text())).not.toContain('Scope unknown');
   });
 
   it('opens an event at its own address and returns to the feed', async () => {

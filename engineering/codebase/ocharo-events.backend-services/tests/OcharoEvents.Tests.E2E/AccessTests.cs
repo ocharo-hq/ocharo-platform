@@ -57,7 +57,7 @@ public sealed class AccessTests
         (await owner.GetAsync(OtherPath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await owner.GetAsync($"{OtherPath}/summary")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await owner.GetAsync($"{OtherPath}/{item.Id}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await owner.PostAsJsonAsync(OtherPath, new { title = "x", scope = "local", format = "other" })).StatusCode
+        (await owner.PostAsJsonAsync(OtherPath, new { title = "x", format = "other" })).StatusCode
             .Should().Be(HttpStatusCode.NotFound);
         (await owner.GetAsync(OwnPath)).StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -85,11 +85,11 @@ public sealed class AccessTests
         (await viewer.GetAsync($"{OwnPath}/{item.Id}")).StatusCode.Should().Be(HttpStatusCode.OK);
         var propose = await viewer.PostAsJsonAsync(OwnPath, new
         {
-            title = "Margilan Ikat Days", scope = "local", format = "festival", country = "UZ", datePrecision = "unknown",
+            title = "Margilan Ikat Days", format = "festival", country = "UZ", datePrecision = "unknown",
         });
         var track = await viewer.PutAsJsonAsync($"{OwnPath}/{item.Id}", new
         {
-            expectedRevision = 1, title = "Tashkent Fashion Week", scope = "local", format = "runway", country = "UZ",
+            expectedRevision = 1, title = "Tashkent Fashion Week", format = "runway", country = "UZ",
             startsOn = "2026-12-03", datePrecision = "day", status = "shortlisted",
         });
 
@@ -111,7 +111,7 @@ public sealed class AccessTests
         await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
         using var forger = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Owner, csrf: false);
 
-        var forged = await forger.PostAsJsonAsync(OwnPath, new { title = "x", scope = "local", format = "other" });
+        var forged = await forger.PostAsJsonAsync(OwnPath, new { title = "x", format = "other" });
 
         forged.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await CodeAsync(forged)).Should().Be("AntiforgeryValidationFailed");

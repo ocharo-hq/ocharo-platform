@@ -10,7 +10,7 @@ and where Ocharo stands with each event. [Contract](../../engineering/architectu
 | Capability | Acceptance |
 |---|---|
 | Feed | Events grouped by month; undated events kept visible; past events hidden unless asked for |
-| Filters | Scope (local · regional · international), format, status and free-text search |
+| Filters | Scope (local · regional · international, derived from the country; an event with no country reads "Scope unknown" and no chip selects it), format, status and free-text search |
 | Deadlines first | The five nearest application deadlines lead the page with days left |
 | Honest dates | Exact, month-only, expected-from-earlier-editions and not-announced dates read differently |
 | Pipeline | Candidate → shortlisted → applying → applied → confirmed → attended; skipped and rejected kept as record |

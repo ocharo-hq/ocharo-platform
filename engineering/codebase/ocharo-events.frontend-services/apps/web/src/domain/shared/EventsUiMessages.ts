@@ -233,6 +233,11 @@ export const eventsUiMessages: UiMessageTable = {
   Local: { uz: 'Mahalliy', ru: 'Местное' },
   Regional: { uz: 'Mintaqaviy', ru: 'Региональное' },
   International: { uz: 'Xalqaro', ru: 'Международное' },
+  'Scope unknown': { uz: 'Qamrov noma’lum', ru: 'Охват неизвестен' },
+  'Scope unknown until a country is entered.': {
+    uz: 'Mamlakat kiritilmaguncha qamrov noma’lum.',
+    ru: 'Охват неизвестен, пока не указана страна.',
+  },
   'Runway show': { uz: 'Podium shousi', ru: 'Показ на подиуме' },
   'Trade fair': { uz: 'Savdo yarmarkasi', ru: 'Торговая ярмарка' },
   Market: { uz: 'Bozor', ru: 'Маркет' },

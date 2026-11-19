@@ -4,7 +4,6 @@ namespace OcharoEvents.Application.Events.Models;
 public sealed record ShowcaseEventInput(
     string Title,
     string? Organizer,
-    string Scope,
     string Format,
     string? Country,
     string? City,

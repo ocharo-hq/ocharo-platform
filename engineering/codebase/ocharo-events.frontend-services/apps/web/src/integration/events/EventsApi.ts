@@ -5,11 +5,11 @@ import { eachWithNulls, memberWithNulls, withArrays, withNulls } from '@/integra
 
 import {
   isDatePrecision,
+  isDerivedScope,
   isEventAttendance,
   isEventFormat,
   isEventHappening,
   isEventPriority,
-  isEventScope,
   isEventStatus,
   isIsoDate,
   isLocalTime,
@@ -82,7 +82,7 @@ export const isShowcaseEvent = (v: unknown): v is ShowcaseEvent =>
   Array.isArray(v.languages) &&
   v.languages.every((language) => typeof language === 'string') &&
   nullableDates(v, ['startsOn', 'endsOn', 'applicationDeadline']) &&
-  isEventScope(v.scope) &&
+  isDerivedScope(v.scope) &&
   isEventFormat(v.format) &&
   isEventHappening(v.eventStatus) &&
   isEventAttendance(v.attendance) &&
@@ -129,8 +129,9 @@ function source(value: unknown): unknown {
 /** @internal The ticket members the wire leaves out when null. */
 const ticketNullable = ['minPrice', 'maxPrice', 'currency'];
 /**
- * Restores what the wire leaves out and reads an unknown event state or attendance as the plain case, and a malformed
- * start time or an unknown listing state as none, so a value a newer service adds never fails the whole list.
+ * Restores what the wire leaves out and reads an unknown event state or attendance as the plain case, an unknown scope as
+ * `unknown`, and a malformed start time or an unknown listing state as none, so a value a newer service adds never fails
+ * the whole list.
  */
 function event(value: unknown): unknown {
   const restored = withArrays(withNulls(value, eventNullable), ['languages', 'sources']);
@@ -138,6 +139,7 @@ function event(value: unknown): unknown {
     ? {
         ...restored,
         tickets: withNulls(restored.tickets, ticketNullable),
+        scope: isDerivedScope(restored.scope) ? restored.scope : 'unknown',
         eventStatus: isEventHappening(restored.eventStatus) ? restored.eventStatus : 'scheduled',
         attendance: isEventAttendance(restored.attendance) ? restored.attendance : 'offline',
         startsAt: isLocalTime(restored.startsAt) ? restored.startsAt : null,

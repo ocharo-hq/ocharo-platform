@@ -9,7 +9,6 @@ public sealed record UpdateEventRequest(
     int? EventRevision,
     string? Title,
     string? Organizer,
-    string? Scope,
     string? Format,
     string? Country,
     string? City,
@@ -29,7 +28,7 @@ public sealed record UpdateEventRequest(
     /// <summary>Maps the request to the unvalidated event fields.</summary>
     public EventFields Fields()
     {
-        return new EventFields(Title, Organizer, Scope, Format, Country, City, Venue, StartsOn, EndsOn, DatePrecision,
+        return new EventFields(Title, Organizer, Format, Country, City, Venue, StartsOn, EndsOn, DatePrecision,
             ApplicationDeadline, Participation, Cost, Website, SourceUrl, Status, Priority, Notes);
     }
 }

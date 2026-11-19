@@ -184,4 +184,17 @@ describe('events transport', () => {
     delete older.attendance;
     expect(value(older)).toMatchObject({ eventStatus: 'scheduled', attendance: 'offline' });
   });
+
+  it('keeps a derived scope, and reads an event with no country, or a scope it does not know, as unknown', async () => {
+    const { client, calls } = recordingClient();
+    await createEventsApi(client).getEvent(ORG, EVENT, signal);
+    const { decode } = calls[0]!.init;
+    const scope = (value: unknown) => {
+      const decoded = decode({ ...wire, scope: value });
+      return decoded.ok ? (decoded.value as { scope: string }).scope : null;
+    };
+    expect(scope('regional')).toBe('regional');
+    expect(scope('unknown')).toBe('unknown');
+    expect(scope('galactic')).toBe('unknown');
+  });
 });

@@ -56,15 +56,26 @@ public sealed class EventsServiceRouteTests
 
         JsonElement proposed = await DataAsync(await client.PostAsJsonAsync(Path, new
         {
-            title = "Margilan Ikat Days", scope = "local", format = "festival", country = "UZ",
+            title = "Margilan Ikat Days", format = "festival", country = "UZ",
             datePrecision = "unknown", participation = "", notes = "",
         }));
         service.Event(proposed.GetProperty("id").GetGuid()).Review.Should().Be(EventReviewState.Candidate);
+        proposed.GetProperty("scope").GetString().Should().Be("local");
+
+        // A proposal naming no country derives no scope, whatever an older page still sends.
+        JsonElement unplaced = await DataAsync(await client.PostAsJsonAsync(Path, new
+        {
+            title = "Silk Road Crafts Online", scope = "local", format = "market",
+            datePrecision = "unknown", participation = "", notes = "",
+        }));
+        unplaced.GetProperty("scope").GetString().Should().Be("unknown");
+        (await DataAsync(await client.GetAsync($"{Path}/{unplaced.GetProperty("id").GetGuid()}")))
+            .GetProperty("scope").GetString().Should().Be("unknown");
 
         (await strangerClient.GetAsync(Path)).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await strangerClient.PutAsJsonAsync($"{Path}/{accepted.Id}", Body(listed, 2, status: "skipped"))).StatusCode
             .Should().Be(HttpStatusCode.NotFound);
-        service.TrackingWrites.Should().HaveCount(2);
+        service.TrackingWrites.Should().HaveCount(3);
     }
 
     [Fact]
@@ -296,7 +307,6 @@ public sealed class EventsServiceRouteTests
             expectedRevision = 1,
             title = listed.GetProperty("title").GetString(),
             organizer = listed.GetProperty("organizer").GetString(),
-            scope = listed.GetProperty("scope").GetString(),
             format = listed.GetProperty("format").GetString(),
             country = listed.GetProperty("country").GetString(),
             city = listed.GetProperty("city").GetString(),
@@ -377,7 +387,6 @@ public sealed class EventsServiceRouteTests
         expectedRevision,
         eventRevision,
         title = title ?? item.GetProperty("title").GetString(),
-        scope = item.GetProperty("scope").GetString(),
         format = item.GetProperty("format").GetString(),
         country = item.GetProperty("country").GetString(),
         city = item.GetProperty("city").GetString(),

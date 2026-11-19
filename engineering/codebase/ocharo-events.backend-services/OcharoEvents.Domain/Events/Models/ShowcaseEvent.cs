@@ -4,7 +4,8 @@ namespace OcharoEvents.Domain.Events.Models;
 /// one in the caller's language when the event has it; <c>TitleLanguage</c> is the tag it came in (<c>uz-Latn</c>, <c>und</c>).
 /// <c>EventStatus</c> says whether the event still happens as listed (<c>scheduled</c>, <c>cancelled</c>, <c>postponed</c>,
 /// <c>rescheduled</c>, <c>moved-online</c>) and <c>Attendance</c> where it is attended (<c>offline</c>, <c>online</c>,
-/// <c>mixed</c>); <c>Status</c> is Ocharo's own stage. <c>Tickets</c> and <c>TicketUrl</c> are what the source says attending costs;
+/// <c>mixed</c>); <c>Status</c> is Ocharo's own stage. <c>Scope</c> is derived from <c>Country</c>: <c>local</c> (Uzbekistan),
+/// <c>regional</c> (its neighbours), <c>international</c>, or <c>unknown</c> when the event names no country. <c>Tickets</c> and <c>TicketUrl</c> are what the source says attending costs;
 /// <c>Cost</c> stays Ocharo's own cost of taking part. <c>Revision</c> is the tracking revision plus one; <c>EventRevision</c> is the
 /// revision of the event's facts in WoW2 Events, which moves when the source revises them. <c>StartsAt</c> is the local start
 /// time (<c>HH:mm</c>) when the source announced one, in <c>TimeZone</c> (an IANA zone) when it named the zone;

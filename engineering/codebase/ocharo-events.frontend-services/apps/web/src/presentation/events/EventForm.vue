@@ -6,17 +6,18 @@ import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { EventSaveOutcome, EventsControls } from '@/application/events/UseEvents';
 import {
+  countryName,
   datePrecisions,
   eventDraft,
   eventFormats,
   eventLimits,
   eventPriorities,
-  eventScopes,
   eventStatuses,
   formatLabels,
   precisionLabels,
   priorityLabels,
   scopeLabels,
+  scopeOfCountry,
   statusLabels,
   validateEventDraft,
   type DatePrecision,
@@ -25,7 +26,8 @@ import {
 
 /**
  * Proposes a new event, a member's proposal: every fact and where Ocharo stands, mirroring the contract's validation
- * before sending. An existing event's facts are never edited here; see `EventTrackingForm`.
+ * before sending. Scope is never asked: the server derives it from the country, and the form shows what it will read
+ * ("Local: Uzbekistan"). An existing event's facts are never edited here; see `EventTrackingForm`.
  */
 defineOptions({ name: 'EventForm' });
 const props = defineProps<{
@@ -36,7 +38,7 @@ const props = defineProps<{
   save: (input: EventInput) => Promise<EventSaveOutcome>;
 }>();
 const emit = defineEmits<{ cancel: [] }>();
-const { t } = useUiLocale();
+const { t, uiLocale } = useUiLocale();
 const draft = reactive(eventDraft());
 const original = JSON.stringify(eventDraft());
 const errors = ref<string[]>([]);
@@ -44,6 +46,12 @@ const saving = ref(false);
 const dirty = computed(() => JSON.stringify(draft) !== original);
 watch(dirty, (value) => props.events.setFormDirty(props.dirtyKey, value), { immediate: true });
 onScopeDispose(() => props.events.setFormDirty(props.dirtyKey, false));
+// The scope the event will read as, derived from the country exactly as the server derives it.
+const derivedScope = computed(() => {
+  const scope = scopeOfCountry(draft.country);
+  const country = scope === 'unknown' ? null : countryName(draft.country.trim().toUpperCase(), uiLocale.value);
+  return country ? `${t(scopeLabels[scope])}: ${country}` : t('Scope unknown until a country is entered.');
+});
 const monthly = computed(() => draft.datePrecision === 'month' || draft.datePrecision === 'estimated');
 const minMonth = eventLimits.minDate.slice(0, 7);
 const maxMonth = eventLimits.maxDate.slice(0, 7);
@@ -100,15 +108,6 @@ async function submit(): Promise<void> {
         <input v-model="draft.organizer" class="events-input" :maxlength="eventLimits.organizer" autocomplete="off" />
       </label>
       <label class="events-field"
-        >{{ t('Scope') }}
-        <EventsSelect
-          v-model="draft.scope"
-          :label="t('Scope')"
-          :disabled="disabled || saving"
-          :options="[...eventScopes.map((item) => ({ value: item, label: t(scopeLabels[item]) }))]"
-        />
-      </label>
-      <label class="events-field"
         >{{ t('Format') }}
         <EventsSelect
           v-model="draft.format"
@@ -144,6 +143,7 @@ async function submit(): Promise<void> {
           autocomplete="off"
           :placeholder="t('e.g. UZ')"
         />
+        <span class="text-xs" data-test="derived-scope">{{ derivedScope }}</span>
       </label>
       <label class="events-field"
         >{{ t('City') }}

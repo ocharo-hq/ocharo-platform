@@ -1,6 +1,6 @@
 # Events contract — showcase events feed
 
-*Last updated: 2026-11-10*
+*Last updated: 2026-11-19*
 
 ## Increment
 
@@ -25,7 +25,7 @@ frontend decoders restore) and SDK problem details, whose `code` names the error
 | `key` | optional import slug `^[a-z0-9][a-z0-9-]{0,63}$`, unique per organization; null for events added in Desk |
 | `title` | 1–200 |
 | `organizer` | ≤ 160 or null |
-| `scope` | `local` · `regional` · `international` — relative to Ocharo in Uzbekistan |
+| `scope` | derived from `country`, never sent: `local` (UZ) · `regional` (KZ, KG, TJ, TM, AF, AZ, RU) · `international` (any other country) · `unknown` (no country; no scope filter selects it) |
 | `format` | `runway` · `trade-fair` · `market` · `exhibition` · `competition` · `festival` · `conference` · `other` |
 | `country` | ISO 3166-1 alpha-2 upper case, or null |
 | `city`, `venue` | ≤ 120 / ≤ 200, or null |
@@ -51,7 +51,7 @@ Base: `/api/organizations/{organizationId}/events`. Reads need membership; write
 |---|---|---|---|
 | GET | `` | `query?`, `scope?`, `format?`, `status?`, `from?`, `to?` (ISO dates, filter by the event's last day ≥ from — `endsOn`, else the month's last day for `month`/`estimated`, else `startsOn` — and `startsOn` ≤ to), `includeUndated` (default true), `limit` (≤ 500, default 200), `offset` | `ShowcaseEvent[]` ordered by `startsOn` (nulls last), then title |
 | GET | `/summary` | `today?` (ISO date, defaults to server UTC date) | `{ byStatus: Record<status, number>, upcomingDeadlines: ShowcaseEvent[] }` — up to 5 with `applicationDeadline ≥ today`, status not `skipped`/`rejected`, soonest first |
-| POST | `` | all mutable fields; `status` defaults to `shortlisted`, `priority` to `normal`, `datePrecision` to `day` when `startsOn` is set else `unknown` | `ShowcaseEvent` |
+| POST | `` | all mutable fields but `scope`; `status` defaults to `shortlisted`, `priority` to `normal`, `datePrecision` to `day` when `startsOn` is set else `unknown` | `ShowcaseEvent` |
 | GET | `/{eventId}` | — | `ShowcaseEvent` |
 | PUT | `/{eventId}` | `{ expectedRevision, …all mutable fields }` | `ShowcaseEvent` |
 | DELETE | `/{eventId}` | `expectedRevision` query | `{ id }` |
@@ -59,7 +59,7 @@ Base: `/api/organizations/{organizationId}/events`. Reads need membership; write
 `query` matches title, organizer, city, venue, country and key (case-insensitive, `%`/`_` escaped).
 
 ```ts
-type EventScope = 'local' | 'regional' | 'international';
+type EventScope = 'local' | 'regional' | 'international' | 'unknown'; // the `scope` filter takes the first three
 type EventFormat = 'runway' | 'trade-fair' | 'market' | 'exhibition' | 'competition' | 'festival' | 'conference' | 'other';
 type EventStatus = 'candidate' | 'shortlisted' | 'applying' | 'applied' | 'confirmed' | 'attended' | 'skipped' | 'rejected';
 type DatePrecision = 'day' | 'month' | 'estimated' | 'unknown';

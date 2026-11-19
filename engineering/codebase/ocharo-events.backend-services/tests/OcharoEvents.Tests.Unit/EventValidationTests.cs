@@ -88,7 +88,6 @@ public sealed class EventValidationTests
     }
 
     [Theory]
-    [InlineData("scope", "galactic")]
     [InlineData("format", "gala")]
     [InlineData("status", "won")]
     [InlineData("priority", "urgent")]
@@ -100,7 +99,6 @@ public sealed class EventValidationTests
     {
         EventFields fields = field switch
         {
-            "scope" => Fields() with { Scope = value },
             "format" => Fields() with { Format = value },
             "status" => Fields(status: value),
             "priority" => Fields() with { Priority = value },
@@ -164,7 +162,6 @@ public sealed class EventValidationTests
         new(
             title,
             organizer,
-            "local",
             "runway",
             country,
             city,

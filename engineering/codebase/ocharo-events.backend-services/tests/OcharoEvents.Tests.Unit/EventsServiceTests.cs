@@ -47,9 +47,27 @@ public sealed class EventsServiceTests
     [InlineData("KZ", "regional")]
     [InlineData("RU", "regional")]
     [InlineData("TR", "international")]
-    [InlineData(null, "international")]
+    [InlineData(null, "unknown")]
+    [InlineData("", "unknown")]
+    [InlineData(" ", "unknown")]
     public void Scope_ShouldFollowTheCountry(string? country, string scope) =>
         EventsServiceMapper.Scope(country).Should().Be(scope);
+
+    [Fact]
+    public async Task Read_ShouldListAnEventWithNoCountryAsUnknownScope_OutsideEveryScopeFilter()
+    {
+        var service = new FakeEventsService();
+        service.Add(Facts("Online crafts market", null, Day("2026-12-05")));
+        service.Add(Facts("Tashkent Fashion Week", "UZ", Day("2026-12-03")));
+        var repository = Repository(service);
+
+        IReadOnlyList<ShowcaseEvent> all = await repository.GetEventsAsync(Organization, All, 200, 0, Token);
+        IReadOnlyList<ShowcaseEvent> international = await repository.GetEventsAsync(
+            Organization, All with { Scope = "international" }, 200, 0, Token);
+
+        all.Single(item => item.Title == "Online crafts market").Scope.Should().Be("unknown");
+        international.Should().BeEmpty();
+    }
 
     [Fact]
     public void Map_ShouldKeepMonthAndEstimatePrecision_TrackingAndFields()
@@ -556,7 +574,7 @@ public sealed class EventsServiceTests
     public void Validation_ShouldTakeEventsNameLimits()
     {
         var fields = new EventFields(
-            "Ikat Week", new string('o', 180), "local", "festival", "UZ", new string('c', 150), null, null, null,
+            "Ikat Week", new string('o', 180), "festival", "UZ", new string('c', 150), null, null, null,
             "unknown", null, "", null, null, null, "shortlisted", "normal", "");
         var validation = new EventValidationService();
 
@@ -619,7 +637,7 @@ public sealed class EventsServiceTests
     private static EventWhen Day(string value) => new() { Value = value, Precision = DatePrecision.Day };
 
     private static ShowcaseEventInput Input(string precision, DateOnly? startsOn) => new(
-        "Ikat Week", "Ikat House", "local", "festival", "UZ", "Margilan", null, startsOn, null, precision,
+        "Ikat Week", "Ikat House", "festival", "UZ", "Margilan", null, startsOn, null, precision,
         startsOn?.AddDays(-30), "Application package", "Free", "https://example.org", "https://example.org/found",
         "candidate", "normal", "Bring scarves.");
 
@@ -627,7 +645,7 @@ public sealed class EventsServiceTests
         new(status, "normal", "Application package", "USD 500", "Ask for a stand.");
 
     private static ShowcaseEventInput InputOf(ShowcaseEvent item) => new(
-        item.Title, item.Organizer, item.Scope, item.Format, item.Country, item.City, item.Venue, item.StartsOn,
+        item.Title, item.Organizer, item.Format, item.Country, item.City, item.Venue, item.StartsOn,
         item.EndsOn, item.DatePrecision, item.ApplicationDeadline, item.Participation, item.Cost, item.Website,
         item.SourceUrl, item.Status, item.Priority, item.Notes);
 }

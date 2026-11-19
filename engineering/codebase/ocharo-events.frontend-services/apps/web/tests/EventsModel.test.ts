@@ -18,6 +18,7 @@ import {
   readEventsAddress,
   readEventsOrganizationId,
   safeEventUrl,
+  scopeOfCountry,
   sourceLabel,
   ticketPriceLabel,
   titleLanguageTag,
@@ -338,6 +339,25 @@ describe('event form validation', () => {
       cost: null,
       notes: 'Fit',
     });
+  });
+});
+
+describe('derived scope', () => {
+  it('derives the scope from the country as the server does, and none without a country', () => {
+    expect(scopeOfCountry('UZ')).toBe('local');
+    expect(scopeOfCountry(' uz ')).toBe('local');
+    expect(scopeOfCountry('KZ')).toBe('regional');
+    expect(scopeOfCountry('RU')).toBe('regional');
+    expect(scopeOfCountry('TR')).toBe('international');
+    expect(scopeOfCountry('')).toBe('unknown');
+    expect(scopeOfCountry(null)).toBe('unknown');
+    expect(scopeOfCountry('UZB')).toBe('unknown');
+  });
+
+  it('sends no scope with a new event', () => {
+    const { input } = validateEventDraft({ ...eventDraft(), title: 'Expo', datePrecision: 'unknown' });
+    expect(input).not.toBeNull();
+    expect(input).not.toHaveProperty('scope');
   });
 });
 

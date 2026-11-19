@@ -18,6 +18,8 @@ namespace OcharoEvents.Infrastructure.Events.Services;
 public static class EventsServiceMapper
 {
     public const string UntrackedStatus = "candidate";
+    /// <summary>Holds the scope of an event that names no country; the feed's scope filters never offer it.</summary>
+    public const string UnknownScope = "unknown";
     private const string ApplicationDeadline = "application";
     /// <summary>Holds the title languages tried after the caller's own: undetermined, English, then Ocharo's two operator
     /// languages, so an event with no title in the caller's language still reads the same way every time.</summary>
@@ -170,8 +172,9 @@ public static class EventsServiceMapper
             && current.Website == input.Website && current.SourceUrl == input.SourceUrl;
     }
 
-    /// <summary>Derives the page's scope from the country: Uzbekistan is local, its neighbours regional, the rest international.</summary>
-    public static string Scope(string? country) => country switch
+    /// <summary>Derives the page's scope from the country: Uzbekistan is local, its neighbours regional, any other country
+    /// international, and no country <see cref="UnknownScope"/>.</summary>
+    public static string Scope(string? country) => string.IsNullOrWhiteSpace(country) ? UnknownScope : country switch
     {
         "UZ" => "local",
         { } code when RegionalCountries.Contains(code) => "regional",

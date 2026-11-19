@@ -6,11 +6,11 @@ import { ApiFailureFactory } from '@wow-two-beta/fe/foundation/http';
 import {
   attendanceLabels,
   datePrecisions,
+  derivedScopes,
   eventAttendances,
   eventFormats,
   eventHappenings,
   eventPriorities,
-  eventScopes,
   eventStatuses,
   formatLabels,
   happeningLabels,
@@ -59,7 +59,7 @@ describe('interface messages', () => {
 
   it('translates the labels looked up by value: event values, failures, startup problems and the apps menu', () => {
     const labels = [
-      ...eventScopes.map((value) => scopeLabels[value]),
+      ...derivedScopes.map((value) => scopeLabels[value]),
       ...eventFormats.map((value) => formatLabels[value]),
       ...eventStatuses.map((value) => statusLabels[value]),
       ...datePrecisions.map((value) => precisionLabels[value]),
