@@ -7,10 +7,9 @@ import { useUiLocale } from '@/application/shared/UseUiLocale';
 import {
   eventsApiPrefix,
   eventsPath,
-  ocharoWorkflowSpec,
   readEventsAddress,
   readEventsOrganizationId,
-  workflowAligned,
+  workflowForPage,
   type EventsLocation,
 } from '@/domain/events/Events';
 
@@ -18,9 +17,20 @@ import { createOcharoEventsClient } from '@/integration/events/EventsClient';
 
 import type { EventsAccess } from './UseEventsAccess';
 
-/** The Events page's `fe-events` client over this app's mirror of WoW2 Events for the organization (OE07). */
+/**
+ * The Events page's `fe-events` client over this app's mirror of WoW2 Events for the organization (OE07). It only reads
+ * the workflow: a screen that asks for it (the event's tracking form) gets the stored one with Ocharo's labels filling
+ * what it lacks (`workflowForPage`). The deploy writes the workflow (`engineering/deployment/deployment.md`), a visit never.
+ */
 export function createEventsPageClient(organizationId: string): EventsClient {
-  return createOcharoEventsClient(eventsApiPrefix(organizationId));
+  const client = createOcharoEventsClient(eventsApiPrefix(organizationId));
+  return {
+    ...client,
+    getWorkflow: async (signal) => {
+      const stored = await client.getWorkflow(signal);
+      return stored.ok ? { ...stored, value: workflowForPage(stored.value) } : stored;
+    },
+  };
 }
 
 /** Keeps the person's calendar day current across midnight and sleeping browser tabs, for deadlines and past events. */
@@ -43,23 +53,6 @@ export function useEventToday() {
     document.removeEventListener('visibilitychange', update);
   });
   return today;
-}
-
-/**
- * Aligns the workflow WoW2 Events holds for the organization with Ocharo's (`ocharoWorkflowSpec`): its stage labels in
- * the three interface languages, `skipped` and `rejected` as lost, and the custom fields' titles with the source link
- * read-only. It writes once, at the stored revision, only when the stored one differs; Events refuses anyone but an
- * admin, so the page asks only for an admin. Answers whether the stored workflow now reads as Ocharo's.
- */
-export async function alignOcharoWorkflow(client: EventsClient, signal?: AbortSignal): Promise<boolean> {
-  const stored = await client.getWorkflow(signal);
-  if (!stored.ok) return false;
-  if (workflowAligned(stored.value)) return true;
-  const written = await client.putWorkflow(
-    { ...ocharoWorkflowSpec(), expectedRevision: stored.value.revision },
-    signal,
-  );
-  return written.ok;
 }
 
 /** Moves between the feed and one event inside one document, guarding unsaved forms. */

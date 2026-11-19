@@ -1,6 +1,6 @@
 # Events deployment
 
-*Last updated: 2026-11-10*
+*Last updated: 2026-11-20*
 
 `Dockerfile` builds the single host (SPA in `wwwroot`) from the `engineering/codebase/` context: stage 1 builds
 `ocharo-events.frontend-services`, stage 2 publishes `OcharoEvents.Api`, stage 3 runs it. The service keeps no event
@@ -13,5 +13,10 @@ Wheelhouse deploys it as the `events` service and site of `../deploy.yml`, signe
 `events` resource. The image's `migrate` step applies the `ocharo_events` set (`001-baseline`, the key ring table) and
 the session cache's `distributed_cache` set; `config check` runs before each restart. A deployed boot refuses without
 `ConnectionStrings:Database`, `Identity:Client:*` or `Events:BaseUrl`, so the image has no stand-alone local compose file.
+
+`ocharo-workflow.json` is Ocharo's workflow in Events: the stage labels in uz, ru and en, their classes, the default
+stage and the tracking fields' titles. A deploy that changes it runs Events' `workflow put --spec -` once, through
+Wheelhouse Run ([deployment.md](../deployment.md#events-workflow)); the Events page reads the stored workflow and never
+writes it.
 
 Rules: wow-two-ws/conventions/development/repo/structure/repo-structure.md

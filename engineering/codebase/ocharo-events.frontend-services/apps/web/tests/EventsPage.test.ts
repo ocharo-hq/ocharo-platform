@@ -386,30 +386,73 @@ describe('one event through the fe-events kit', () => {
   });
 });
 
-describe("Ocharo's workflow in Events", () => {
-  it("aligns the stored workflow for an admin, once, with Ocharo's labels, classes and fields", async () => {
-    storedWorkflow = {
-      stages: ocharoWorkflowSpec().stages.map((stage) => ({
-        key: stage.key,
-        class: stage.key === 'rejected' ? 'lost' : 'open',
-      })),
-      defaultStage: 'candidate',
-      revision: 2,
-    };
-    await render('owner');
+const workflowWrites = () => sent.filter((item) => item.method === 'PUT' && item.url.pathname === `${MIRROR}/workflow`);
 
-    const writes = sent.filter((item) => item.method === 'PUT' && item.url.pathname === `${MIRROR}/workflow`);
-    expect(writes).toHaveLength(1);
-    expect(writes[0]!.body).toEqual(JSON.parse(JSON.stringify({ ...ocharoWorkflowSpec(), expectedRevision: 2 })));
+describe("Ocharo's workflow in Events", () => {
+  it('writes nothing on a visit, whatever the stored workflow holds and whoever visits', async () => {
+    const stored = [
+      { ...ocharoWorkflowSpec(), revision: 2 },
+      {
+        stages: ocharoWorkflowSpec().stages.map((stage) => ({
+          key: stage.key,
+          class: stage.key === 'rejected' ? 'lost' : 'open',
+        })),
+        defaultStage: 'candidate',
+        revision: 2,
+      },
+      { stages: [{ key: 'candidate' }], defaultStage: 'candidate', revision: 1 },
+      { stages: [{ key: 'interested' }], defaultStage: 'interested', revision: 0 },
+    ];
+    for (const role of ['owner', 'editor', 'viewer'] as const) {
+      for (const workflow of stored) {
+        storedWorkflow = workflow;
+        await render(role);
+        wrapper!.unmount();
+        await render(role, { view: 'event', eventId: FASHION_WEEK });
+        wrapper!.unmount();
+        wrapper = undefined;
+      }
+    }
+
+    expect(workflowWrites()).toEqual([]);
+    expect(sent.filter((item) => item.method !== 'GET' && item.method !== 'HEAD')).toEqual([]);
   });
 
-  it('writes nothing when the stored workflow already reads as Ocharo’s, nor for a member who is not an admin', async () => {
-    await render('owner');
-    wrapper!.unmount();
-    storedWorkflow = { stages: [{ key: 'candidate' }], defaultStage: 'candidate', revision: 1 };
-    await render('editor');
+  it("shows Ocharo's stage labels and field titles from the spec while Events holds only its default workflow", async () => {
+    useUiLocale().setUiLocale('uz');
+    storedWorkflow = {
+      stages: [{ key: 'interested', label: { en: 'Interested' }, class: 'open' }],
+      defaultStage: 'interested',
+      revision: 0,
+    };
+    await render('owner', { view: 'event', eventId: FASHION_WEEK });
 
-    expect(sent.filter((item) => item.method === 'PUT' && item.url.pathname === `${MIRROR}/workflow`)).toEqual([]);
+    const stages = wrapper!
+      .findAll('section[aria-labelledby="tracking-form-title"] select[name="stage"] option')
+      .map((option) => option.text());
+    expect(stages).toEqual(ocharoWorkflowSpec().stages.map((stage) => stage.label!.uz));
+    const label = wrapper!.get('[name="field-cost"]').element.closest('label')?.textContent ?? '';
+    expect(label).toContain('Ocharo xarajati');
+    expect(workflowWrites()).toEqual([]);
+  });
+
+  it("shows the stored workflow's own labels, with Ocharo's filling the languages it lacks", async () => {
+    useUiLocale().setUiLocale('uz');
+    storedWorkflow = {
+      ...ocharoWorkflowSpec(),
+      stages: ocharoWorkflowSpec().stages.map((stage) => ({
+        ...stage,
+        label: stage.key === 'shortlisted' ? { en: 'Short list' } : { en: stage.label!.en },
+      })),
+      revision: 5,
+    };
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
+
+    const stages = wrapper!
+      .findAll('section[aria-labelledby="tracking-form-title"] select[name="stage"] option')
+      .map((option) => option.text());
+    expect(stages).toEqual(ocharoWorkflowSpec().stages.map((stage) => stage.label!.uz));
+    expect(workflowWrites()).toEqual([]);
   });
 
   it('links the Telegram delivery for an admin only', async () => {

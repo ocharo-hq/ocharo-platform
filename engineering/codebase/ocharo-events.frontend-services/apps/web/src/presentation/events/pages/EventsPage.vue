@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef } from 'vue';
+import { computed, ref, shallowRef } from 'vue';
 import { RouterLink } from 'vue-router';
 import { EventDetail, EventsDeadlines, EventsFeed, type EventsClient } from '@wow-two-beta/fe-events/kit';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { EventsAccess, EventsWorkspace } from '@/application/events/UseEventsAccess';
-import {
-  alignOcharoWorkflow,
-  createEventsPageClient,
-  useEventToday,
-  useEventsNavigation,
-} from '@/application/events/UseEvents';
+import { createEventsPageClient, useEventToday, useEventsNavigation } from '@/application/events/UseEvents';
 import { deliveryPath } from '@/domain/delivery/TelegramDelivery';
 import {
   eventsPath,
@@ -94,11 +89,6 @@ function afterClose(): void {
 function setDirty(dirty: boolean): void {
   props.access.setDirty(dirty);
 }
-
-// An admin's visit aligns the organization's stored workflow with Ocharo's labels, classes and fields, once.
-onMounted(() => {
-  if (props.workspace.canAdmin?.value) void alignOcharoWorkflow(client);
-});
 </script>
 
 <template>

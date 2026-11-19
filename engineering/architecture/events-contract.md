@@ -51,7 +51,7 @@ anything else answers 404. Unsafe requests carry `X-Csrf-Token`. Answers are Eve
 | Stages | `candidate` (open, the default: an untracked event reads as it) · `shortlisted` (open) · `applying`, `applied`, `confirmed` (active) · `attended` (won) · `skipped`, `rejected` (lost: out of the nearest deadlines) |
 | Stage labels | en, uz and ru, from the app's interface messages |
 | Custom fields | `participation` "How to take part" (≤ 2000), `cost` "Ocharo's cost" (≤ 500, unknown stays empty, never `0`), `sourceUrl` "Source link" (read-only: shown, never edited, kept on save) |
-| Workflow in Events | an admin's visit aligns the stored workflow with the above, once, at the stored revision, when it differs |
+| Workflow in Events | the deploy writes it from `deployment/events/ocharo-workflow.json` with Events' `workflow put --spec` (`deployment/deployment.md` § Events workflow); the page only reads it and shows Ocharo's labels from the spec for what the stored one lacks |
 | Kinds | `runway` · `trade-fair` · `market` · `exhibition` · `competition` · `festival` · `conference` · `other`, labelled in en, uz and ru |
 | Scopes | derived from the country: `local` (UZ) · `regional` (KZ, KG, TJ, TM, AF, AZ, RU) · `international` (any other country); no country reads "Scope unknown" and no chip selects it |
 | Feed | skipped and rejected hidden until "Show Skipped, Rejected" or a stage filter asks; quick Shortlist and Skip on untracked cards; Ocharo's cost on each card |

@@ -107,8 +107,8 @@ public sealed class EventsApiController(EventsApiService events, TimeProvider ti
     public async Task<IActionResult> GetWorkflow(CancellationToken cancellationToken) =>
         Answer(await events.GetWorkflowAsync(cancellationToken));
 
-    /// <summary>Writes the organization's workflow at the revision the page read: Ocharo's stage labels and classes and its
-    /// custom fields, which the page aligns for an admin.</summary>
+    /// <summary>Writes the organization's workflow at the revision the caller read, for an admin's own edit. No page calls
+    /// it: the deploy writes Ocharo's stage labels, classes and custom fields with Events' <c>workflow put --spec</c>.</summary>
     [HttpPut("workflow")]
     public async Task<IActionResult> PutWorkflow([FromBody] WorkflowSpec spec, CancellationToken cancellationToken) =>
         OrganizationAccessFilter.GetAccess(HttpContext).CanAdmin

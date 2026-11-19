@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import type { WorkflowModel } from '@wow-two-beta/fe-events/contracts';
 import { regionOfCountry, regionQuery } from '@wow-two-beta/fe-events/kit';
 
 import {
@@ -15,7 +18,7 @@ import {
   previousIsoDate,
   readEventsAddress,
   readEventsOrganizationId,
-  workflowAligned,
+  workflowForPage,
 } from '@/domain/events/Events';
 
 const organization = '11111111-1111-4111-8111-111111111111';
@@ -102,23 +105,70 @@ describe("Ocharo's workflow in WoW2 Events", () => {
     expect(fields.properties.participation?.readOnly).toBeUndefined();
   });
 
-  it('reads a stored workflow as aligned whatever key order the store kept, and not once a label or class differs', () => {
+  it("equals the file the deploy writes with Events' `workflow put --spec`, so the page and the stored workflow never drift", () => {
+    const file = resolve(import.meta.dirname, '../../../../../deployment/events/ocharo-workflow.json');
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(JSON.parse(JSON.stringify(ocharoWorkflowSpec())));
+  });
+
+  it("shows Ocharo's own stages and fields outright while Events still holds its default workflow (revision 0)", () => {
+    const events: WorkflowModel = {
+      stages: [{ key: 'interested', label: { en: 'Interested' }, class: 'open' }],
+      defaultStage: 'interested',
+      revision: 0,
+    };
+    expect(workflowForPage(events)).toEqual({ ...ocharoWorkflowSpec(), revision: 0 });
+  });
+
+  it("keeps what Events stored and fills only the labels and titles it lacks from Ocharo's spec", () => {
     const spec = ocharoWorkflowSpec();
-    const reordered = JSON.parse(JSON.stringify(spec), (_key, value: unknown) =>
-      value && typeof value === 'object' && !Array.isArray(value)
-        ? Object.fromEntries(Object.entries(value).reverse())
-        : value,
-    ) as typeof spec;
-    expect(workflowAligned({ ...reordered, revision: 4 } as never)).toBe(true);
-    expect(workflowAligned({ ...spec, stages: spec.stages.map((stage) => ({ key: stage.key })) })).toBe(false);
-    expect(
-      workflowAligned({
-        ...spec,
-        stages: spec.stages.map((stage) => (stage.key === 'skipped' ? { ...stage, class: 'open' as const } : stage)),
-      }),
-    ).toBe(false);
-    expect(workflowAligned({ ...spec, fields: null })).toBe(false);
-    expect(workflowAligned({ ...spec, defaultStage: 'shortlisted' })).toBe(false);
+    const stored: WorkflowModel = {
+      stages: [
+        { key: 'candidate', label: { en: 'Candidate' }, class: 'open' },
+        { key: 'shortlisted', label: { en: 'Short list', ru: 'Список' }, class: 'active' },
+        { key: 'extra', label: { en: 'Extra' }, class: 'open' },
+      ],
+      defaultStage: 'extra',
+      fields: {
+        type: 'object',
+        properties: {
+          cost: { type: 'string', title: { en: 'Price' }, maxLength: 50 },
+          participation: { type: 'string', maxLength: 10 },
+          internal: { type: 'string' },
+        },
+      },
+      revision: 3,
+    };
+
+    const shown = workflowForPage(stored);
+
+    expect(shown.revision).toBe(3);
+    expect(shown.defaultStage).toBe('extra');
+    expect(shown.stages.map((stage) => [stage.key, stage.class])).toEqual([
+      ['candidate', 'open'],
+      ['shortlisted', 'active'],
+      ['extra', 'open'],
+    ]);
+    expect(shown.stages[0]!.label).toEqual(spec.stages[0]!.label);
+    expect(shown.stages[1]!.label).toEqual({ ...spec.stages[1]!.label, en: 'Short list', ru: 'Список' });
+    expect(shown.stages[2]!.label).toEqual({ en: 'Extra' });
+    const properties = (shown.fields as { properties: Record<string, Record<string, unknown>> }).properties;
+    expect(properties.cost).toEqual({ type: 'string', title: { en: 'Price' }, maxLength: 50 });
+    expect(properties.participation).toEqual({
+      type: 'string',
+      maxLength: 10,
+      title: (spec.fields as { properties: { participation: { title: unknown } } }).properties.participation.title,
+    });
+    expect(properties.internal).toEqual({ type: 'string' });
+  });
+
+  it("reads Ocharo's fields when the stored workflow has none", () => {
+    const stored: WorkflowModel = {
+      stages: [{ key: 'candidate', class: 'open' }],
+      defaultStage: 'candidate',
+      revision: 2,
+    };
+    expect(workflowForPage(stored).fields).toEqual(ocharoWorkflowSpec().fields);
+    expect(workflowForPage({ ...stored, fields: { type: 'object' } }).fields).toEqual(ocharoWorkflowSpec().fields);
   });
 });
 

@@ -5,7 +5,6 @@ import type {
   StageClass,
   WorkflowModel,
   WorkflowSpec,
-  WorkflowStageModel,
 } from '@wow-two-beta/fe-events/contracts';
 import type {
   EventCalendarOptions,
@@ -108,7 +107,8 @@ export const trackingFieldKeys = { participation: 'participation', cost: 'cost',
 /**
  * Ocharo's workflow as WoW2 Events should hold it: the eight stages with their labels in the three interface languages
  * and their classes, `candidate` as the default, and the custom fields with localized titles, the source link read-only
- * (shown, never offered for editing, and kept on save). An admin's visit aligns the stored workflow with it.
+ * (shown, never offered for editing, and kept on save). The deploy writes it with Events' `workflow put --spec` from
+ * `engineering/deployment/events/ocharo-workflow.json`, which a test keeps equal to this; a page visit never writes it.
  */
 export function ocharoWorkflowSpec(): Omit<WorkflowSpec, 'expectedRevision'> {
   return {
@@ -141,45 +141,45 @@ export function ocharoWorkflow(): Pick<WorkflowModel, 'stages' | 'defaultStage'>
   return { stages, defaultStage };
 }
 
-/** Writes a JSON value with every object's keys sorted, so two values compare whatever order a store kept. */
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`;
-  if (value !== null && typeof value === 'object')
-    return `{${Object.keys(value)
-      .sort()
-      .filter((key) => (value as Record<string, unknown>)[key] !== undefined)
-      .map((key) => `${JSON.stringify(key)}:${canonical((value as Record<string, unknown>)[key])}`)
-      .join(',')}}`;
-  return JSON.stringify(value ?? null);
+type JsonObject = { readonly [key: string]: JsonValue };
+const isJsonObject = (value: JsonValue | undefined): value is JsonObject =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+/** Keeps the stored fields' schema, adding Ocharo's title to a stored field that has none; no stored fields read as Ocharo's. */
+function fieldsForPage(stored: JsonValue | undefined, wanted: JsonValue | undefined): JsonValue | undefined {
+  const storedProperties = isJsonObject(stored) ? stored.properties : undefined;
+  if (!isJsonObject(storedProperties)) return wanted;
+  const wantedProperties = isJsonObject(wanted) && isJsonObject(wanted.properties) ? wanted.properties : {};
+  const properties = Object.fromEntries(
+    Object.entries(storedProperties).map(([key, property]) => {
+      const wantedProperty = wantedProperties[key];
+      return isJsonObject(property) &&
+        property.title === undefined &&
+        isJsonObject(wantedProperty) &&
+        wantedProperty.title
+        ? [key, { ...property, title: wantedProperty.title }]
+        : [key, property];
+    }),
+  );
+  return { ...(stored as JsonObject), properties };
 }
 
-const stageShape = (stage: WorkflowStageModel) => ({
-  key: stage.key,
-  label: stage.label ?? {},
-  class: stage.class ?? 'open',
-});
-
 /**
- * Tells whether the workflow Events holds already reads as Ocharo's: the same stages in order, with the same labels and
- * classes, the same default stage and the same custom fields. PostgreSQL reorders a stored object's keys, so objects
- * compare by content, never by key order.
+ * The workflow the page shows for what WoW2 Events stored: its stages and fields as stored, with Ocharo's labels from
+ * `ocharoWorkflowSpec` filling any language a stage label lacks and any field without a title. Events' default workflow
+ * (revision 0, before the deploy wrote Ocharo's) is not Ocharo's stages at all, so it reads as the spec outright. The
+ * page only reads: the stored workflow is written by the deploy step, never by a visit.
  */
-export function workflowAligned(
-  stored: Pick<WorkflowModel, 'stages' | 'defaultStage'> & { readonly fields?: JsonValue | null | undefined },
-  wanted: Omit<WorkflowSpec, 'expectedRevision'> = ocharoWorkflowSpec(),
-): boolean {
-  return (
-    canonical({
-      stages: stored.stages.map(stageShape),
-      defaultStage: stored.defaultStage,
-      fields: stored.fields ?? null,
-    }) ===
-    canonical({
-      stages: wanted.stages.map(stageShape),
-      defaultStage: wanted.defaultStage,
-      fields: wanted.fields ?? null,
-    })
-  );
+export function workflowForPage(stored: WorkflowModel): WorkflowModel {
+  const wanted = ocharoWorkflowSpec();
+  if (stored.revision === 0) return { ...wanted, revision: 0 };
+  const labels = new Map(wanted.stages.map((stage) => [stage.key, stage.label]));
+  const fields = fieldsForPage(stored.fields, wanted.fields);
+  return {
+    ...stored,
+    stages: stored.stages.map((stage) => ({ ...stage, label: { ...labels.get(stage.key), ...stage.label } })),
+    ...(fields === undefined ? {} : { fields }),
+  };
 }
 
 /** Ocharo's event kinds with their labels in the three interface languages, for the kind filter and badges. */

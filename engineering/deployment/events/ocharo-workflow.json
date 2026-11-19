@@ -1,0 +1,111 @@
+{
+  "stages": [
+    {
+      "key": "candidate",
+      "label": {
+        "en": "Candidate",
+        "uz": "Nomzod",
+        "ru": "Кандидат"
+      },
+      "class": "open"
+    },
+    {
+      "key": "shortlisted",
+      "label": {
+        "en": "Shortlisted",
+        "uz": "Saralangan",
+        "ru": "В шорт-листе"
+      },
+      "class": "open"
+    },
+    {
+      "key": "applying",
+      "label": {
+        "en": "Applying",
+        "uz": "Ariza tayyorlanmoqda",
+        "ru": "Готовим заявку"
+      },
+      "class": "active"
+    },
+    {
+      "key": "applied",
+      "label": {
+        "en": "Applied",
+        "uz": "Ariza topshirilgan",
+        "ru": "Заявка подана"
+      },
+      "class": "active"
+    },
+    {
+      "key": "confirmed",
+      "label": {
+        "en": "Confirmed",
+        "uz": "Tasdiqlangan",
+        "ru": "Подтверждено"
+      },
+      "class": "active"
+    },
+    {
+      "key": "attended",
+      "label": {
+        "en": "Attended",
+        "uz": "Qatnashilgan",
+        "ru": "Участвовали"
+      },
+      "class": "won"
+    },
+    {
+      "key": "skipped",
+      "label": {
+        "en": "Skipped",
+        "uz": "O‘tkazib yuborilgan",
+        "ru": "Пропущено"
+      },
+      "class": "lost"
+    },
+    {
+      "key": "rejected",
+      "label": {
+        "en": "Rejected",
+        "uz": "Rad etilgan",
+        "ru": "Отклонено"
+      },
+      "class": "lost"
+    }
+  ],
+  "defaultStage": "candidate",
+  "fields": {
+    "type": "object",
+    "properties": {
+      "participation": {
+        "type": "string",
+        "title": {
+          "en": "How to take part",
+          "uz": "Qanday qatnashish mumkin",
+          "ru": "Как принять участие"
+        },
+        "maxLength": 2000,
+        "format": "textarea"
+      },
+      "cost": {
+        "type": "string",
+        "title": {
+          "en": "Ocharo's cost",
+          "uz": "Ocharo xarajati",
+          "ru": "Расходы Ocharo"
+        },
+        "maxLength": 500
+      },
+      "sourceUrl": {
+        "type": "string",
+        "title": {
+          "en": "Source link",
+          "uz": "Manba havolasi",
+          "ru": "Ссылка на источник"
+        },
+        "format": "uri",
+        "readOnly": true
+      }
+    }
+  }
+}

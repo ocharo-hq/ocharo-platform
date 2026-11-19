@@ -277,6 +277,27 @@ separate work before storing real brand data. No real brand account is provision
 
 Executed verification is recorded in [verification](../research/previous-work/verification.md).
 
+## Events workflow
+
+WoW2 Events holds Ocharo's workflow (the eight stages with their labels in three languages and the tracking fields'
+titles); the Events page only reads it, so a page view writes nothing. The canonical file is
+`events/ocharo-workflow.json`, which a frontend test keeps equal to the page's `ocharoWorkflowSpec()`. After a deploy that
+changes that file, run this on the WoW2 Events product through Wheelhouse Run, with the file as the stdin file:
+
+```bash
+dotnet Events.Api.dll workflow put --owner-org <Ocharo's organization id> --spec -
+```
+
+- `<Ocharo's organization id>` is the environment's `Brand:OrganizationId` setting, Ocharo's organization in that
+  environment's Identity and the `org_id` of every token the page exchanges for Events; take it from that setting (dev's
+  is also recorded in `research/events-adoption.md` #1), never from this file.
+- The verb is idempotent: it writes at the stored revision only when the stored workflow differs, and its last line reads
+  `workflow-put-result ok=true stages=8 changed=<true|false> revision=<n>`. A spec Events refuses exits 1 with
+  `ok=false reason=…` and writes nothing.
+- Until the first run Events holds only its default workflow (other stage keys): the page still shows Ocharo's labels
+  from its own spec, but Events refuses a tracking write to a stage it does not hold.
+- The page's `PUT workflow` route stays for an admin's own edits; nothing in the app calls it.
+
 ## Convention adoption status
 
 `deploy.yml` lists Desk, jobs, the private image worker and the Brand and Catalogue pilots
