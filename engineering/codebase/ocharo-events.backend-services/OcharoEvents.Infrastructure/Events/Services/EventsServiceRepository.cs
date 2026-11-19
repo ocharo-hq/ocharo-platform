@@ -85,7 +85,10 @@ public sealed class EventsServiceRepository(
         };
     }
 
-    /// <summary>Proposes the event to the catalog as a candidate and records this organization's tracking of it.</summary>
+    /// <summary>
+    /// Proposes the event to the catalog and records this organization's tracking of it. Events publishes a member's proposal
+    /// in the organization's private catalog at once (its OE03), so the feed lists the new event with no review step.
+    /// </summary>
     public async Task<Result<ShowcaseEvent>> CreateEventAsync(
         Guid organizationId, string actor, ShowcaseEventInput input, CancellationToken token)
     {

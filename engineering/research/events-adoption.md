@@ -161,7 +161,9 @@ are fixed, since the seeder deletes a client that leaves the settings. Names fro
 
 - `Events:BaseUrl` set: Desk's `api/organizations/{organizationId}/events` reads proxy onto `IEventsClient`.
 - Create maps onto Events' member proposal (`POST …/catalogs/{c}/candidates`, `events.track` + `events:track`): the
-  event is a candidate Ocharo tracks at once, published only when a reviewer accepts it.
+  event is a candidate Ocharo tracks at once, published only when a reviewer accepts it. Amended 2026-11-19 (Events
+  OE03, `10.0.13-beta`): in a private catalog the organization owns, a member's proposal publishes at once, reviewed by
+  the proposer, so the feed lists it with no review step; a shared catalog keeps the candidate.
 - Tracking writes go through one Desk route onto Events' `PUT …/tracking/{eventId}`; the browser still calls only Desk's
   routes.
 - The old fact writes (`PUT /{eventId}`, `DELETE /{eventId}`) answer 410 with code `EventsMoved`: catalog facts change

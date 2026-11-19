@@ -79,7 +79,8 @@ interface ShowcaseEvent {
 
 Since v0.3 (2026-11-10) WoW2 Events owns the catalog and tracking; Desk keeps this page, its routes above and
 membership, and serves them from Events through its published client ([events-adoption.md](../research/events-adoption.md)
-#7, #8). A new event is a member proposal in Events; stage, priority, notes, participation and cost are Ocharo's
+#7, #8). A new event is a member proposal in Events, which publishes it at once because Ocharo's catalog is private to the
+organization (Events OE03, `10.0.13-beta`), so the feed lists it with no review step; stage, priority, notes, participation and cost are Ocharo's
 tracking there; changing an event's facts or deleting it answers 410 `Gone`, since facts change through Events'
 review.
 

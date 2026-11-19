@@ -528,19 +528,43 @@ public sealed class EventsServiceTests
     }
 
     [Fact]
-    public async Task Create_ShouldProposeACandidate_AndTrackIt()
+    public async Task Create_ShouldPublishTheProposalAtOnce_InThePrivateCatalog_TrackIt_AndShowItInTheFeed()
     {
         var service = new FakeEventsService();
+        var repository = Repository(service);
 
-        Result<ShowcaseEvent> created = await Repository(service).CreateEventAsync(
+        Result<ShowcaseEvent> created = await repository.CreateEventAsync(
             Organization, "user-1", Input("day", new DateOnly(2027, 3, 10)) with { Status = "shortlisted" }, Token);
 
         ShowcaseEvent item = created.Should().BeOfType<Result<ShowcaseEvent>.Success>().Which.Value;
-        service.Event(item.Id).Review.Should().Be(EventReviewState.Candidate);
-        service.Event(item.Id).Facts.Title.Should().Equal(new Dictionary<string, string> { ["und"] = "Ikat Week" });
+        EventModel stored = service.Event(item.Id);
+        stored.Review.Should().Be(EventReviewState.Published);
+        stored.ReviewedBy.Should().StartWith("person:");
+        stored.Facts.Title.Should().Equal(new Dictionary<string, string> { ["und"] = "Ikat Week" });
         item.Status.Should().Be("shortlisted");
         item.Revision.Should().Be(2);
         item.SourceUrl.Should().Be("https://example.org/found");
+        IReadOnlyList<ShowcaseEvent> feed = await repository.GetEventsAsync(Organization, All, 200, 0, Token);
+        feed.Should().ContainSingle().Which.Id.Should().Be(item.Id);
+    }
+
+    [Theory]
+    [InlineData(EventReviewState.Published, false, true)]
+    [InlineData(EventReviewState.Candidate, false, true)]
+    [InlineData(EventReviewState.Rejected, false, false)]
+    [InlineData(EventReviewState.Archived, false, false)]
+    [InlineData(EventReviewState.Published, true, false)]
+    public void IsVisible_ShouldShowPublishedAndCandidateEvents_NeverRejectedArchivedOrMergedOnes(
+        EventReviewState review, bool merged, bool visible)
+    {
+        var item = new EventModel
+        {
+            Id = Guid.NewGuid(), Catalog = "ocharo-fashion", Facts = EventsServiceMapper.ToFacts(Input("day", new DateOnly(2027, 3, 10))),
+            Review = review, MergedInto = merged ? Guid.NewGuid() : null, Revision = 1,
+            CreatedAtUtc = DateTimeOffset.UnixEpoch, UpdatedAtUtc = DateTimeOffset.UnixEpoch,
+        };
+
+        EventsServiceMapper.IsVisible(item).Should().Be(visible);
     }
 
     [Fact]

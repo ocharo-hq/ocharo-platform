@@ -1,6 +1,6 @@
 # Events
 
-*Last updated: 2026-10-08*
+*Last updated: 2026-11-19*
 
 Desk Events is one feed of every event where Ocharo could show its products — local fairs and
 fashion weeks in Uzbekistan, regional weeks across Central Asia, and international fairs and
@@ -14,7 +14,7 @@ and where Ocharo stands with each event. [Contract](../../engineering/architectu
 | Deadlines first | The five nearest application deadlines lead the page with days left |
 | Honest dates | Exact, month-only, expected-from-earlier-editions and not-announced dates read differently |
 | Pipeline | Candidate → shortlisted → applying → applied → confirmed → attended; skipped and rejected kept as record, out of the feed until "Show skipped and rejected" is on or Status names them, still counted |
-| Review | Found events arrive as candidates; an editor shortlists or skips each one |
+| Review | Found events arrive as candidates; an editor shortlists or skips each one; an event an editor adds in the app is published at once and shows in the feed with no review step |
 | Feed import | A validated, re-runnable bundle adds new events and never overwrites Desk edits |
 
 Unknown cost stays unknown, never zero. Desk never applies, registers or pays on Ocharo's behalf.

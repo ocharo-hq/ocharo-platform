@@ -59,7 +59,7 @@ public sealed class EventsServiceRouteTests
             title = "Margilan Ikat Days", format = "festival", country = "UZ",
             datePrecision = "unknown", participation = "", notes = "",
         }));
-        service.Event(proposed.GetProperty("id").GetGuid()).Review.Should().Be(EventReviewState.Candidate);
+        service.Event(proposed.GetProperty("id").GetGuid()).Review.Should().Be(EventReviewState.Published);
         proposed.GetProperty("scope").GetString().Should().Be("local");
 
         // A proposal naming no country derives no scope, whatever an older page still sends.
@@ -76,6 +76,29 @@ public sealed class EventsServiceRouteTests
         (await strangerClient.PutAsJsonAsync($"{Path}/{accepted.Id}", Body(listed, 2, status: "skipped"))).StatusCode
             .Should().Be(HttpStatusCode.NotFound);
         service.TrackingWrites.Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task CreateRoute_ShouldPublishTheProposalAtOnce_SoTheFeedListsIt()
+    {
+        var service = new FakeEventsService();
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), service);
+        using HttpClient editor = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Editor);
+        (await DataAsync(await editor.GetAsync(Path))).GetArrayLength().Should().Be(0);
+
+        JsonElement created = await DataAsync(await editor.PostAsJsonAsync(Path, new
+        {
+            title = "Margilan Ikat Days", format = "festival", country = "UZ",
+            datePrecision = "unknown", participation = "", notes = "",
+        }));
+
+        // Events publishes a member's proposal in Ocharo's private catalog, so the tracking list returns it with no review.
+        Guid id = created.GetProperty("id").GetGuid();
+        service.Event(id).Review.Should().Be(EventReviewState.Published);
+        JsonElement listed = (await DataAsync(await editor.GetAsync(Path))).EnumerateArray().Single();
+        listed.GetProperty("id").GetGuid().Should().Be(id);
+        listed.GetProperty("title").GetString().Should().Be("Margilan Ikat Days");
+        (await DataAsync(await editor.GetAsync($"{Path}/{id}"))).GetProperty("id").GetGuid().Should().Be(id);
     }
 
     [Fact]

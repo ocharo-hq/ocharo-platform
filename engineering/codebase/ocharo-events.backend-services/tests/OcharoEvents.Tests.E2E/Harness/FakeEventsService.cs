@@ -7,7 +7,8 @@ namespace OcharoEvents.Tests.Harness;
 
 /// <summary>
 /// An in-memory WoW2 Events catalog with one organization's tracking: the two brokers the events repository calls,
-/// with the service's revision rules; every other member is unused and throws.
+/// with the service's revision rules; every other member is unused and throws. As in Events, the tracking list holds
+/// published events only, and a member's proposal in a private catalog, which Ocharo's is, publishes at once (Events OE03).
 /// </summary>
 internal sealed class FakeEventsService : ICatalogEventsBroker, IEventTrackingBroker
 {
@@ -20,6 +21,12 @@ internal sealed class FakeEventsService : ICatalogEventsBroker, IEventTrackingBr
 
     /// <summary>Gets or sets the page size the fake answers with, so tests follow the cursor.</summary>
     public int PageSize { get; set; } = 200;
+
+    /// <summary>
+    /// Gets or sets whether the catalog is private to the organization, as Ocharo's is: a member's proposal then publishes
+    /// at once, reviewed by the proposer; in a shared catalog it waits as a candidate.
+    /// </summary>
+    public bool PrivateCatalog { get; set; } = true;
 
     public EventModel Add(EventFacts facts, EventReviewState review = EventReviewState.Published)
     {
@@ -62,7 +69,7 @@ internal sealed class FakeEventsService : ICatalogEventsBroker, IEventTrackingBr
     public Task<Result<TrackingPage>> ListAsync(string catalog, TrackingQuery query, CancellationToken cancellationToken = default)
     {
         int start = query.Cursor is { } cursor ? int.Parse(cursor, System.Globalization.CultureInfo.InvariantCulture) : 0;
-        var all = events.Values.OrderBy(item => item.Id).ToList();
+        var all = events.Values.Where(item => item.Review == EventReviewState.Published).OrderBy(item => item.Id).ToList();
         var page = all.Skip(start).Take(PageSize)
             .Select(item => new TrackedEventModel { Event = item, Tracking = trackings.GetValueOrDefault(item.Id) })
             .ToList();
@@ -91,8 +98,16 @@ internal sealed class FakeEventsService : ICatalogEventsBroker, IEventTrackingBr
         return Task.FromResult(Result<TrackingModel>.Ok(saved));
     }
 
-    public Task<Result<EventModel>> ProposeAsync(string catalog, EventSpec spec, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Result<EventModel>.Ok(Add(spec.Facts, EventReviewState.Candidate)));
+    public Task<Result<EventModel>> ProposeAsync(string catalog, EventSpec spec, CancellationToken cancellationToken = default)
+    {
+        if (!PrivateCatalog) return Task.FromResult(Result<EventModel>.Ok(Add(spec.Facts, EventReviewState.Candidate)));
+        EventModel published = Add(spec.Facts) with
+        {
+            ReviewedBy = "person:proposer", ReviewReason = "owner-organization proposal in a private catalog", ReviewedAtUtc = At,
+        };
+        events[published.Id] = published;
+        return Task.FromResult(Result<EventModel>.Ok(published));
+    }
 
     public Task<Result<EventPage>> ListAsync(string catalog, EventQuery query, CancellationToken cancellationToken = default) => throw Unused();
     Task<Result<EventModel>> ICatalogEventsBroker.GetAsync(string catalog, Guid id, CancellationToken cancellationToken) => throw Unused();
