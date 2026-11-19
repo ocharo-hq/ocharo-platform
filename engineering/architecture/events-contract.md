@@ -56,4 +56,5 @@ anything else answers 404. Unsafe requests carry `X-Csrf-Token`. Answers are Eve
 | Scopes | derived from the country: `local` (UZ) · `regional` (KZ, KG, TJ, TM, AF, AZ, RU) · `international` (any other country); no country reads "Scope unknown" and no chip selects it |
 | Feed | skipped and rejected hidden until "Show Skipped, Rejected" or a stage filter asks; quick Shortlist and Skip on untracked cards; Ocharo's cost on each card |
 | Deadlines | the five nearest `application` deadlines, untracked events included, cancelled and lost-stage events left out |
+| Past, not closed | ended events in `shortlisted`, `applying`, `applied` or `confirmed`: one list call (`stages`, `to` = yesterday, `includeUndated=false`), kept when their last day has passed; Attended or Skipped is one tracking write at the revision read (OE12) |
 | Proposal | "Add event": starts shortlisted, normal priority, with an application deadline and where it was found (kept in `sourceUrl`) |

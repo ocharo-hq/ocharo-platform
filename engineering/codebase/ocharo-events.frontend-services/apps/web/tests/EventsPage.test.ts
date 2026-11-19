@@ -75,6 +75,8 @@ interface Sent {
 let sent: Sent[] = [];
 let storedWorkflow: Record<string, unknown> = {};
 let listed: unknown[] = [];
+/** What the past-events strip's query answers (OE12); none unless a test sets it. */
+let pastOpen: unknown[] = [];
 let wrapper: VueWrapper | undefined;
 
 const ok = (data: unknown, status = 200) => Response.json({ data }, { status });
@@ -82,7 +84,8 @@ function answer(method: string, url: URL, body: unknown): Response {
   const path = url.pathname;
   if (path === `${MIRROR}/workflow`)
     return ok(method === 'PUT' ? { ...(body as object), revision: 3 } : storedWorkflow);
-  if (path === `${CATALOG}/tracking`) return ok({ items: listed, nextCursor: null });
+  if (path === `${CATALOG}/tracking`)
+    return ok({ items: url.searchParams.has('stages') ? pastOpen : listed, nextCursor: null });
   if (path === `${CATALOG}/tracking/summary`)
     return ok({
       byStage: { shortlisted: 1 },
@@ -120,6 +123,7 @@ beforeEach(() => {
   useUiLocale().setUiLocale('en');
   window.history.replaceState(null, '', '/');
   sent = [];
+  pastOpen = [];
   storedWorkflow = { ...ocharoWorkflowSpec(), revision: 2 };
   listed = [
     { event: fashionWeek(), tracking: fashionWeekTracking() },
@@ -182,7 +186,11 @@ async function render(
   return { access };
 }
 
-const lists = () => sent.filter((item) => item.method === 'GET' && item.url.pathname === `${CATALOG}/tracking`);
+const lists = () =>
+  sent.filter(
+    (item) =>
+      item.method === 'GET' && item.url.pathname === `${CATALOG}/tracking` && !item.url.searchParams.has('stages'),
+  );
 const lastList = () => lists().at(-1)!.url.searchParams;
 const card = (title: string) =>
   wrapper!.findAll('[data-test="event-card"]').find((item) => item.text().includes(title))!;
@@ -304,6 +312,44 @@ describe('events feed through the fe-events kit', () => {
 
     expect(wrapper!.find('[data-test="event-quick-stages"]').exists()).toBe(false);
     expect(wrapper!.findAll('button').some((item) => item.text().trim() === 'Propose an event')).toBe(false);
+  });
+});
+
+describe('past events not closed (OE12)', () => {
+  it('asks to close an ended event Ocharo was pursuing, and reads the feed again once it is closed', async () => {
+    pastOpen = [
+      {
+        event: event(
+          FASHION_WEEK,
+          { en: 'Tashkent Fashion Week' },
+          { city: 'Tashkent', country: 'UZ' },
+          {
+            value: '2026-09-20',
+            precision: 'day',
+          },
+        ),
+        tracking: { ...fashionWeekTracking(), stage: 'confirmed' },
+      },
+    ];
+    await render('editor');
+    const past = sent.find(
+      (item) => item.url.pathname === `${CATALOG}/tracking` && item.url.searchParams.has('stages'),
+    )!;
+    expect(past.url.searchParams.getAll('stages')).toEqual(['shortlisted', 'applying', 'applied', 'confirmed']);
+    expect(past.url.searchParams.get('to')).toBe('2026-10-07');
+    expect(past.url.searchParams.get('includeUndated')).toBe('false');
+    const strip = wrapper!.get('[data-test="past-open"]');
+    expect(strip.text()).toContain('Tashkent Fashion Week');
+    const before = lists().length;
+
+    await strip.get('[data-test="past-open-attended"]').trigger('click');
+    await flushPromises();
+
+    const writes = sent.filter((item) => item.method === 'PUT');
+    expect(writes).toHaveLength(1);
+    expect(writes[0]!.body).toMatchObject({ stage: 'attended', expectedRevision: 3 });
+    expect(wrapper!.find('[data-test="past-open"]').exists()).toBe(false);
+    expect(lists().length).toBe(before + 1);
   });
 });
 

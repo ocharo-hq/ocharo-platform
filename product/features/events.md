@@ -15,6 +15,7 @@ events and Ocharo's tracking; the app renders them with WoW2 Events' own screens
 | Deadlines first | The five nearest application deadlines lead the page with days left; skipped, rejected and cancelled events never appear there |
 | Honest dates | Exact, month-only, expected-from-earlier-editions and not-announced dates read differently; a start time names its zone only when it differs from the reader's |
 | Pipeline | Candidate → shortlisted → applying → applied → confirmed → attended; skipped and rejected kept as record, out of the feed until "Show Skipped, Rejected" is on or the stage filter names them, still counted |
+| Close-out | An ended event Ocharo was still pursuing (shortlisted, applying, applied or confirmed) waits under "Past, not closed" until one click records it as Attended or Skipped; an ended event Ocharo never tracked asks nothing |
 | Review | Found events arrive untracked ("New — review"); an editor shortlists or skips each one in one click; an event an editor adds is published at once and shows in the feed with no review step |
 | Event | Facts as the source gave them (ticket price apart from Ocharo's own cost, address, organizer site, each source by name with its listing state), the title in the reader's language with a language badge otherwise, a calendar file, and the tracking form with its history |
 

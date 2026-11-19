@@ -28,11 +28,14 @@ import {
   type EventsLocation,
 } from '@/domain/events/Events';
 
+import PastEventsStrip from '../PastEventsStrip.vue';
+
 /**
  * Records events where Ocharo could show its products; it never applies, registers or pays. The page renders WoW2
  * Events' own screens from `fe-events`' kit (OE07) over this app's mirror of Events' routes: the nearest application
  * deadlines, the organization's tracking feed (skipped and rejected hidden until asked, scope chips, quick Shortlist and
  * Skip, Ocharo's cost on each card, "Add event" publishing at once) and one event's detail with its tracking form.
+ * Between the deadlines and the feed, "Past, not closed" asks to close each ended event Ocharo was pursuing (OE12).
  */
 defineOptions({ name: 'EventsPage' });
 const props = defineProps<{
@@ -58,6 +61,7 @@ const costField = ocharoCostField();
 const participationField = ocharoParticipationField();
 const proposal = ocharoProposal();
 const deadlines = ref<{ reload: () => unknown } | null>(null);
+const past = ref<{ reload: () => unknown } | null>(null);
 
 /** The organization's Telegram delivery settings, linked for its admins only. */
 const deliveryHref = computed(() => {
@@ -72,14 +76,20 @@ function open(location: EventsLocation): void {
 function openEvent(id: string): void {
   open({ view: 'event', eventId: id });
 }
-/** A write in the feed (a quick stage, a new event) can change the nearest deadlines. */
+/** A write in the feed (a quick stage, a new event) can change the nearest deadlines and the past events to close. */
 function refreshSide(): void {
   deadlines.value?.reload();
+  past.value?.reload();
 }
 /** A tracking save in the detail moves the event's stage in the feed behind it too. */
 function refreshAll(): void {
   feedClient.value = { ...client };
   refreshSide();
+}
+/** A past event closed in the strip leaves the strip by itself; its new stage reaches the feed and the deadlines. */
+function afterClose(): void {
+  feedClient.value = { ...client };
+  deadlines.value?.reload();
 }
 function setDirty(dirty: boolean): void {
   props.access.setDirty(dirty);
@@ -125,6 +135,17 @@ onMounted(() => {
         :deadline-kinds="['application']"
         :event-href="eventHref"
         @open="openEvent"
+      />
+      <PastEventsStrip
+        ref="past"
+        :client="client"
+        :catalog="OcharoEventsCatalog"
+        :today="today"
+        :stages="workflow.stages"
+        :can-track="canTrack"
+        :event-href="eventHref"
+        @open="openEvent"
+        @changed="afterClose"
       />
       <EventsFeed
         :client="feedClient"
