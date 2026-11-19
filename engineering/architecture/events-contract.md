@@ -49,7 +49,7 @@ Base: `/api/organizations/{organizationId}/events`. Reads need membership; write
 
 | Method | Path | Body / query | Returns `data` |
 |---|---|---|---|
-| GET | `` | `query?`, `scope?`, `format?`, `status?`, `from?`, `to?` (ISO dates, filter by the event's last day ≥ from — `endsOn`, else the month's last day for `month`/`estimated`, else `startsOn` — and `startsOn` ≤ to), `includeUndated` (default true), `limit` (≤ 500, default 200), `offset` | `ShowcaseEvent[]` ordered by `startsOn` (nulls last), then title |
+| GET | `` | `query?`, `scope?`, `format?`, `status?`, `from?`, `to?` (ISO dates, filter by the event's last day ≥ from — `endsOn`, else the month's last day for `month`/`estimated`, else `startsOn` — and `startsOn` ≤ to), `includeUndated` (default true), `includeClosed` (default false: events whose `status` is `skipped` or `rejected` stay out unless `status` names a stage), `limit` (≤ 500, default 200), `offset` | `ShowcaseEvent[]` ordered by `startsOn` (nulls last), then title |
 | GET | `/summary` | `today?` (ISO date, defaults to server UTC date) | `{ byStatus: Record<status, number>, upcomingDeadlines: ShowcaseEvent[] }` — up to 5 with `applicationDeadline ≥ today`, status not `skipped`/`rejected`, soonest first |
 | POST | `` | all mutable fields but `scope`; `status` defaults to `shortlisted`, `priority` to `normal`, `datePrecision` to `day` when `startsOn` is set else `unknown` | `ShowcaseEvent` |
 | GET | `/{eventId}` | — | `ShowcaseEvent` |

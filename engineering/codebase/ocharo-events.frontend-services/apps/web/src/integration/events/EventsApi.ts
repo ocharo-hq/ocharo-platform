@@ -150,7 +150,7 @@ function event(value: unknown): unknown {
 const events = (v: unknown) => eachWithNulls(v, event);
 const summary = (v: unknown) => memberWithNulls(v, 'upcomingDeadlines', events);
 
-/** Builds the feed query; blank filters are omitted so the server defaults apply. */
+/** Builds the feed query; blank filters are omitted so the server defaults apply, which leave skipped and rejected out. */
 export function eventListQuery(filter: EventFilter, page: { limit: number; offset: number }): URLSearchParams {
   const query = new URLSearchParams();
   if (filter.query.trim()) query.set('query', filter.query.trim());
@@ -158,6 +158,7 @@ export function eventListQuery(filter: EventFilter, page: { limit: number; offse
   if (filter.format) query.set('format', filter.format);
   if (filter.status) query.set('status', filter.status);
   if (filter.from) query.set('from', filter.from);
+  if (filter.includeClosed) query.set('includeClosed', 'true');
   query.set('limit', String(page.limit));
   query.set('offset', String(page.offset));
   return query;

@@ -13,7 +13,7 @@ and where Ocharo stands with each event. [Contract](../../engineering/architectu
 | Filters | Scope (local · regional · international, derived from the country; an event with no country reads "Scope unknown" and no chip selects it), format, status and free-text search |
 | Deadlines first | The five nearest application deadlines lead the page with days left |
 | Honest dates | Exact, month-only, expected-from-earlier-editions and not-announced dates read differently |
-| Pipeline | Candidate → shortlisted → applying → applied → confirmed → attended; skipped and rejected kept as record |
+| Pipeline | Candidate → shortlisted → applying → applied → confirmed → attended; skipped and rejected kept as record, out of the feed until "Show skipped and rejected" is on or Status names them, still counted |
 | Review | Found events arrive as candidates; an editor shortlists or skips each one |
 | Feed import | A validated, re-runnable bundle adds new events and never overwrites Desk edits |
 

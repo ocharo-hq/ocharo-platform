@@ -570,6 +570,37 @@ public sealed class EventsServiceTests
         summary.UpcomingDeadlines.Select(item => item.Title).Should().Equal("Fair 1", "Fair 2", "Fair 3");
     }
 
+    /// <summary>OE05: an event Ocharo skipped or rejected leaves the feed unless it asks for closed events or names the
+    /// stage, while the summary still counts it.</summary>
+    [Fact]
+    public async Task Read_ShouldLeaveSkippedAndRejectedEventsOut_UnlessAskedForThem_AndStillCountThem()
+    {
+        var service = new FakeEventsService();
+        service.Add(Facts("Open fair", "UZ", Day("2027-06-01")));
+        EventModel skipped = service.Add(Facts("Skipped fair", "UZ", Day("2027-06-02")));
+        EventModel rejected = service.Add(Facts("Rejected fair", "UZ", Day("2027-06-03")));
+        EventModel applying = service.Add(Facts("Applying fair", "UZ", Day("2027-06-04")));
+        service.Track(skipped.Id, "skipped");
+        service.Track(rejected.Id, "rejected");
+        service.Track(applying.Id, "applying");
+        var repository = Repository(service);
+        ShowcaseEventFilter feed = All with { IncludeClosed = false };
+
+        IReadOnlyList<ShowcaseEvent> shown = await repository.GetEventsAsync(Organization, feed, 200, 0, Token);
+        IReadOnlyList<ShowcaseEvent> withClosed = await repository.GetEventsAsync(Organization, All, 200, 0, Token);
+        IReadOnlyList<ShowcaseEvent> onlySkipped = await repository.GetEventsAsync(
+            Organization, feed with { Status = "skipped" }, 200, 0, Token);
+        ShowcaseEventSummary summary = await repository.GetSummaryAsync(Organization, new DateOnly(2027, 1, 1), 5, Token);
+
+        shown.Select(item => item.Title).Should().Equal("Open fair", "Applying fair");
+        withClosed.Select(item => item.Title).Should().Equal("Open fair", "Skipped fair", "Rejected fair", "Applying fair");
+        onlySkipped.Select(item => item.Title).Should().Equal("Skipped fair");
+        summary.ByStatus.Should().Equal(new Dictionary<string, int>
+        {
+            ["candidate"] = 1, ["skipped"] = 1, ["rejected"] = 1, ["applying"] = 1,
+        });
+    }
+
     [Fact]
     public void Validation_ShouldTakeEventsNameLimits()
     {
@@ -602,7 +633,7 @@ public sealed class EventsServiceTests
         (await track.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Forbidden);
         (await trackOnly.Should().ThrowAsync<AppException>()).Which.Error.Type.Should().Be(AppErrorType.Forbidden);
         service.TrackingWrites.Should().BeEmpty();
-        (await events.GetEventsAsync(reader, null, null, null, null, null, null, true, 200, 0, Token)).Should().ContainSingle();
+        (await events.GetEventsAsync(reader, null, null, null, null, null, null, true, false, 200, 0, Token)).Should().ContainSingle();
     }
 
     [Fact]

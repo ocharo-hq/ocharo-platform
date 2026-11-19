@@ -209,14 +209,24 @@ describe('feed query parameters', () => {
   it('sends only the filters that are set, with from=today while past events are hidden', () => {
     const page = { limit: 200, offset: 0 };
     expect(
-      eventListQuery({ query: '  ', scope: '', format: '', status: '', from: '2026-10-08' }, page).toString(),
+      eventListQuery(
+        { query: '  ', scope: '', format: '', status: '', from: '2026-10-08', includeClosed: false },
+        page,
+      ).toString(),
     ).toBe('from=2026-10-08&limit=200&offset=0');
     expect(
       eventListQuery(
-        { query: ' silk ', scope: 'international', format: 'trade-fair', status: 'candidate', from: null },
+        {
+          query: ' silk ',
+          scope: 'international',
+          format: 'trade-fair',
+          status: 'candidate',
+          from: null,
+          includeClosed: true,
+        },
         page,
       ).toString(),
-    ).toBe('query=silk&scope=international&format=trade-fair&status=candidate&limit=200&offset=0');
+    ).toBe('query=silk&scope=international&format=trade-fair&status=candidate&includeClosed=true&limit=200&offset=0');
   });
 });
 

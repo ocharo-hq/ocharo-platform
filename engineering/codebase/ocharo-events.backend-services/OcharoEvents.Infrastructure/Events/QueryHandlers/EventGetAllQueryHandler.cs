@@ -24,6 +24,7 @@ public sealed class EventGetAllQueryHandler(EventService service)
             request.From,
             request.To,
             request.IncludeUndated,
+            request.IncludeClosed,
             request.Limit,
             request.Offset,
             cancellationToken);

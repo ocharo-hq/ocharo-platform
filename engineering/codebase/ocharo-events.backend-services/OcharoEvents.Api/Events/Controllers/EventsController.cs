@@ -18,7 +18,8 @@ namespace OcharoEvents.Api.Events.Controllers;
 [OrganizationAccess]
 public sealed class EventsController(ISender sender) : ControllerBase
 {
-    /// <summary>Gets the events matching the filters, a page at a time.</summary>
+    /// <summary>Gets the events matching the filters, a page at a time; events Ocharo skipped or rejected stay out unless
+    /// <paramref name="includeClosed"/> is set or <paramref name="status"/> names a stage.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? query,
@@ -28,6 +29,7 @@ public sealed class EventsController(ISender sender) : ControllerBase
         [FromQuery] string? from,
         [FromQuery] string? to,
         [FromQuery] bool? includeUndated,
+        [FromQuery] bool? includeClosed,
         [FromQuery] int? limit,
         [FromQuery] int? offset,
         CancellationToken cancellationToken)
@@ -42,6 +44,7 @@ public sealed class EventsController(ISender sender) : ControllerBase
             From = from,
             To = to,
             IncludeUndated = includeUndated ?? true,
+            IncludeClosed = includeClosed ?? false,
             Limit = limit ?? 200,
             Offset = offset ?? 0,
         }, cancellationToken);

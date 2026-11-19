@@ -80,6 +80,7 @@ export function useEvents(access: EventsAccess, workspace: EventsWorkspace) {
       filter.format,
       filter.status,
       filter.from,
+      filter.includeClosed,
     ],
     summary: (today: string) => [...scope(), 'summary', uiLocale.value, today],
     event: (id: string) => [...scope(), 'event', uiLocale.value, id],

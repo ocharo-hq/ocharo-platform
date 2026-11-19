@@ -197,7 +197,8 @@ public sealed class EventsServiceRepository(
         throw OcharoEventsErrors.Upstream("WoW2 Events answered more pages than this service reads.").ToException();
     }
 
-    /// <summary>Applies the page's feed filter, the rules of Desk's former SQL.</summary>
+    /// <summary>Applies the page's feed filter, the rules of Desk's former SQL; a skipped or rejected event leaves the feed
+    /// unless the filter includes closed events or asks for a status.</summary>
     private static bool Matches(ShowcaseEvent item, ShowcaseEventFilter filter)
     {
         if (filter.Query is { } query && !new[] { item.Title, item.Organizer, item.City, item.Venue, item.Country, item.Key }
@@ -206,6 +207,7 @@ public sealed class EventsServiceRepository(
         if (filter.Scope is { } scope && item.Scope != scope) return false;
         if (filter.Format is { } format && item.Format != format) return false;
         if (filter.Status is { } status && item.Status != status) return false;
+        if (filter.Status is null && !filter.IncludeClosed && ClosedStatuses.Contains(item.Status)) return false;
         if (item.StartsOn is not { } start) return filter.IncludeUndated;
         DateOnly last = item.EndsOn ?? (item.DatePrecision is "month" or "estimated"
             ? new DateOnly(start.Year, start.Month, 1).AddMonths(1).AddDays(-1)

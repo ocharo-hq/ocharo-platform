@@ -6,7 +6,16 @@ import { createEventsApi } from '@/integration/events/EventsApi';
 const ORG = '11111111-1111-4111-8111-111111111111';
 const EVENT = '22222222-2222-4222-8222-222222222222';
 const signal = new AbortController().signal;
-const filter = { query: '', scope: '', format: '', status: '', from: null, limit: 200, offset: 0 } as const;
+const filter = {
+  query: '',
+  scope: '',
+  format: '',
+  status: '',
+  from: null,
+  includeClosed: false,
+  limit: 200,
+  offset: 0,
+} as const;
 const wire = {
   id: EVENT,
   title: 'Moda haftaligi',

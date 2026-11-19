@@ -50,6 +50,10 @@ export const eventsUiMessages: UiMessageTable = {
   'All formats': { uz: 'Barcha formatlar', ru: 'Все форматы' },
   'All statuses': { uz: 'Barcha holatlar', ru: 'Все статусы' },
   'Show past events': { uz: 'O‘tgan tadbirlarni ko‘rsatish', ru: 'Показывать прошедшие' },
+  'Show skipped and rejected': {
+    uz: 'O‘tkazib yuborilgan va rad etilganlarni ko‘rsatish',
+    ru: 'Показывать пропущенные и отклонённые',
+  },
   'Loading events…': { uz: 'Tadbirlar yuklanmoqda…', ru: 'Загрузка мероприятий…' },
   'Events unavailable. Try refreshing.': {
     uz: 'Tadbirlar mavjud emas. Yangilab ko‘ring.',

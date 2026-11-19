@@ -39,7 +39,10 @@ import EventForm from './EventForm.vue';
 import EventsDeadlines from './EventsDeadlines.vue';
 import EventsSkeleton from '../common/EventsSkeleton.vue';
 
-/** The feed: next deadlines, filters, and every event grouped by the month it starts in. */
+/**
+ * The feed: next deadlines, filters, and every event grouped by the month it starts in. Events the team skipped or
+ * rejected stay out until "Show skipped and rejected" is on or Status names their stage; the status counts keep them.
+ */
 defineOptions({ name: 'EventsFeed' });
 const props = defineProps<{ access: EventsAccess; events: EventsControls; active: boolean }>();
 const emit = defineEmits<{ open: [location: EventsLocation] }>();
@@ -52,6 +55,8 @@ const scope = ref<EventScope | ''>('');
 const format = ref<EventFormat | ''>('');
 const status = ref<EventStatus | ''>('');
 const showPast = ref(false);
+// Events the team skipped or rejected leave the feed until asked for; choosing their stage in Status lists them too.
+const showClosed = ref(false);
 const adding = ref(false);
 let timer: ReturnType<typeof setTimeout> | undefined;
 watch(search, (value) => {
@@ -75,6 +80,7 @@ const filter = computed<EventFilter>(() => ({
   format: format.value,
   status: status.value,
   from: showPast.value ? null : today.value,
+  includeClosed: showClosed.value,
 }));
 const list = useEventList(props.events, () => filter.value);
 const summary = useEventSummary(props.events, () => today.value);
@@ -220,8 +226,12 @@ async function create(input: EventInput): Promise<EventSaveOutcome> {
           />
         </label>
         <label class="events-toggle">
-          <input v-model="showPast" type="checkbox" />
+          <input v-model="showPast" type="checkbox" data-test="show-past" />
           <span>{{ t('Show past events') }}</span>
+        </label>
+        <label class="events-toggle">
+          <input v-model="showClosed" type="checkbox" data-test="show-closed" />
+          <span>{{ t('Show skipped and rejected') }}</span>
         </label>
       </div>
 

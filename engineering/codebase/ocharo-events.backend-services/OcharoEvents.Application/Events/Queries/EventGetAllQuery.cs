@@ -32,6 +32,9 @@ public sealed record EventGetAllQuery : IQuery<AppResult<IReadOnlyList<ShowcaseE
     /// <summary>Gets whether events without dates match a date range.</summary>
     public required bool IncludeUndated { get; init; }
 
+    /// <summary>Gets whether events Ocharo skipped or rejected are listed when no status is asked for.</summary>
+    public required bool IncludeClosed { get; init; }
+
     /// <summary>Gets the largest number of events to return.</summary>
     public required int Limit { get; init; }
 

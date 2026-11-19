@@ -175,7 +175,16 @@ const buttonIn = (scope: { findAll(selector: string): DOMWrapper<Element>[] }, l
   scope.findAll('button').find((item) => item.text() === label);
 const detail = () => wrapper!.get('article[aria-labelledby="event-detail-title"]');
 const notesField = () => detail().get('[data-test="tracking-notes"]');
-const unfiltered = { query: '', scope: '', format: '', status: '', from: '2026-10-08', limit: 200, offset: 0 };
+const unfiltered = {
+  query: '',
+  scope: '',
+  format: '',
+  status: '',
+  from: '2026-10-08',
+  includeClosed: false,
+  limit: 200,
+  offset: 0,
+};
 
 describe('events feed', () => {
   it('shows the next deadlines, month groups and each card as precisely as announced', async () => {
@@ -363,13 +372,49 @@ describe('events feed', () => {
       expect.any(AbortSignal),
     );
 
-    await wrapper!.get('.events-toggle input').setValue(true);
+    await wrapper!.get('[data-test="show-past"]').setValue(true);
     await flushPromises();
     expect(api.listEvents).toHaveBeenLastCalledWith(
       ORG,
       { ...unfiltered, query: 'silk', scope: 'international', format: 'trade-fair', status: 'candidate', from: null },
       expect.any(AbortSignal),
     );
+  });
+
+  it('hides a skipped or rejected event by default and shows it with the toggle or its own status', async () => {
+    const skipped = showcase({ id: NEW_EVENT, title: 'CAEx Build', status: 'skipped', revision: 2 });
+    // Emulates the service: skipped and rejected stay out unless closed events are asked for or Status names them.
+    api.listEvents.mockImplementation((_o: string, asked: { includeClosed: boolean; status: string }) =>
+      ResultExtensions.ok(
+        [fashionWeek(), silkFair(), craftExpo(), skipped].filter((item) =>
+          asked.status
+            ? item.status === asked.status
+            : asked.includeClosed || !['skipped', 'rejected'].includes(item.status),
+        ),
+      ),
+    );
+    await render('editor', feed);
+    await flushPromises();
+    expect(api.listEvents).toHaveBeenLastCalledWith(ORG, unfiltered, expect.any(AbortSignal));
+    expect(wrapper!.text()).not.toContain('CAEx Build');
+    expect(wrapper!.get('[data-test="show-closed"]').element.closest('label')!.textContent).toContain(
+      'Show skipped and rejected',
+    );
+
+    await wrapper!.get('[data-test="show-closed"]').setValue(true);
+    await flushPromises();
+    expect(api.listEvents).toHaveBeenLastCalledWith(
+      ORG,
+      { ...unfiltered, includeClosed: true },
+      expect.any(AbortSignal),
+    );
+    expect(card('CAEx Build').text()).toContain('Skipped');
+
+    await wrapper!.get('[data-test="show-closed"]').setValue(false);
+    await chooseEventsValue(wrapper!, 'Status', 'skipped');
+    await flushPromises();
+    expect(api.listEvents).toHaveBeenLastCalledWith(ORG, { ...unfiltered, status: 'skipped' }, expect.any(AbortSignal));
+    expect(wrapper!.findAll('article.event-card').map((item) => item.get('h4').text())).toEqual(['CAEx Build']);
   });
 
   it('shortlists or skips a candidate with one tracking PUT carrying its revision', async () => {

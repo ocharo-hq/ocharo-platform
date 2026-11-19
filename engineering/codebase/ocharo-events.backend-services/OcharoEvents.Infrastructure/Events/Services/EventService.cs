@@ -23,12 +23,14 @@ public sealed class EventService(IEventRepository repository, EventValidationSer
         string? from,
         string? to,
         bool includeUndated,
+        bool includeClosed,
         int limit,
         int offset,
         CancellationToken token)
     {
         validation.Page(limit, offset);
-        ShowcaseEventFilter filter = validation.Filter(query, scope, format, status, from, to, includeUndated);
+        ShowcaseEventFilter filter = validation.Filter(query, scope, format, status, from, to, includeUndated)
+            with { IncludeClosed = includeClosed };
         return repository.GetEventsAsync(access.OrganizationId, filter, limit, offset, token);
     }
 

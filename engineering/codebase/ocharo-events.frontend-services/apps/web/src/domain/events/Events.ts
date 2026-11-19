@@ -142,13 +142,17 @@ export interface EventSummary {
   byStatus: Partial<Record<EventStatus, number>>;
   upcomingDeadlines: ShowcaseEvent[];
 }
-/** `from` hides events that ended before it; null shows past events too. */
+/**
+ * `from` hides events that ended before it; null shows past events too. Events Ocharo skipped or rejected stay out unless
+ * `includeClosed` is set or `status` names a stage.
+ */
 export interface EventFilter {
   query: string;
   scope: EventScope | '';
   format: EventFormat | '';
   status: EventStatus | '';
   from: string | null;
+  includeClosed: boolean;
 }
 
 /** Contract limits mirrored for early feedback; the server remains authoritative. */

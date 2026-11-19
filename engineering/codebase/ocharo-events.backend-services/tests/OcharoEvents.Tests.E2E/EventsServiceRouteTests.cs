@@ -323,6 +323,41 @@ public sealed class EventsServiceRouteTests
         service.TrackingWrites.Should().ContainSingle().Which.Stage.Should().Be("applying");
     }
 
+    /// <summary>OE05: the feed leaves out what Ocharo skipped or rejected by default; asking for closed events, or for the
+    /// stage itself, lists them again.</summary>
+    [Fact]
+    public async Task EventsPage_ShouldLeaveSkippedEventsOutByDefault_AndListThemWhenAsked()
+    {
+        var service = new FakeEventsService();
+        EventModel open = service.Add(Fair("Ambiente Frankfurt", "2027-01-29"));
+        EventModel skipped = service.Add(Fair("CAEx Build", "2027-01-30"));
+        EventModel rejected = service.Add(Fair("Furniture Fair", "2027-01-31"));
+        service.Track(skipped.Id, "skipped");
+        service.Track(rejected.Id, "rejected");
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), service);
+        using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        async Task<IReadOnlyList<Guid>> Ids(string query) =>
+            (await DataAsync(await client.GetAsync(Path + query))).EnumerateArray()
+                .Select(item => item.GetProperty("id").GetGuid()).ToList();
+
+        (await Ids("")).Should().Equal(open.Id);
+        (await Ids("?includeClosed=false")).Should().Equal(open.Id);
+        (await Ids("?includeClosed=true")).Should().Equal(open.Id, skipped.Id, rejected.Id);
+        (await Ids("?status=skipped")).Should().Equal(skipped.Id);
+        JsonElement summary = await DataAsync(await client.GetAsync($"{Path}/summary?today=2026-11-10"));
+        summary.GetProperty("byStatus").GetProperty("skipped").GetInt32().Should().Be(1);
+        summary.GetProperty("byStatus").GetProperty("rejected").GetInt32().Should().Be(1);
+
+        static EventFacts Fair(string title, string day) => new()
+        {
+            Title = new Dictionary<string, string> { ["und"] = title },
+            Kind = "trade-fair",
+            Place = new EventPlace { Country = "DE" },
+            Starts = new EventWhen { Value = day, Precision = DatePrecision.Day },
+        };
+    }
+
     [Fact]
     public async Task Summary_ShouldCountEveryStatus_AndListTheNearestDeadlines()
     {
