@@ -281,7 +281,7 @@ services:
         Identity:Organizations:Roles:viewer:1: { default: "events:read" }
         # Clients at fixed indexes, since the seeder deletes a client that leaves the settings: 0 desk, 1 brand,
         # 2 catalogue, 3 marketing, 4 editorial, 5 studio, 6 public-build, 7 assets-release, 8 events,
-        # 10 events-console and 11 ocharo-events; 9 is a gap (below). Each secret but 7's
+        # 10 events-console, 11 ocharo-events and 12 harvest-console; 9 is a gap (below). Each secret but 7's
         # is generated, and the app links its client-secret key to it with `from` (Desk above). The redirect URIs are
         # owner keys, typed once per environment as `{site URL}/api/identity/callback` and `{site URL}/`: the descriptor
         # has no URL template, and `from: Sites:<site>:Url` renders the bare origin (`https://<host>`, no path), which
@@ -452,6 +452,17 @@ services:
         Identity:Server:Clients:11:Scopes:0: { default: events.read }
         Identity:Server:Clients:11:Scopes:1: { default: events.track }
         Identity:Server:Clients:11:Scopes:2: { default: events.admin }
+        # Client 12, harvest-console: WoW2 SCFD's console signs operators in through its BFF (wow-two-sdk-beta.harvest
+        # S33). SCFD names its operators by `sub` and reads a client organization's `harvest:*` permissions. Its URIs are
+        # owner keys typed per environment from SCFD's app site URL (`{Url}api/identity/callback`, `{Url}`). SCFD maps no
+        # signal route, so the client has no SignalUrl. The secret is typed through `wow2` into both products' vaults,
+        # since harvest is another product.
+        Identity:Server:Clients:12:ClientId: { default: harvest-console }
+        Identity:Server:Clients:12:DisplayName: { default: WoW2 SCFD console }
+        Identity:Server:Clients:12:PermissionNamespace: { default: harvest }
+        Identity:Server:Clients:12:ClientSecret: { secret: true, required: true }
+        Identity:Server:Clients:12:RedirectUris:0: { type: url, required: true }
+        Identity:Server:Clients:12:PostSignOutRedirectUris:0: { type: url, required: true }
         Identity:Server:Resources:0:Name: { default: desk }
         Identity:Server:Resources:0:Uri: { type: url, required: true }
         Identity:Server:Resources:0:Scopes:0: { default: desk.remove-background }
