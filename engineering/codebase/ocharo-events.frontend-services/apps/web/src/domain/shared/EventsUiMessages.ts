@@ -10,7 +10,7 @@ export const eventsUiMessages: UiMessageTable = {
   // The kit's Ocharo fields and the past events to close (OE12)
   'Source link': { uz: 'Manba havolasi', ru: 'Ссылка на источник' },
   'Past, not closed': { uz: 'O‘tgan, lekin yopilmagan', ru: 'Прошли, но не закрыты' },
-  'Past to close': { uz: 'Yopiladigan o‘tganlar', ru: 'Прошедшие к закрытию' },
+  '{count} past to close': { uz: 'Yopiladigan o‘tganlar: {count}', ru: 'Прошедших к закрытию: {count}' },
   'These events have ended while Ocharo was still pursuing them. Record whether Ocharo attended or skipped each.': {
     uz: 'Bu tadbirlar Ocharo hali ular bilan shug‘ullanayotgan paytda tugadi. Har biri uchun Ocharo qatnashganmi yoki o‘tkazib yuborganmi, belgilang.',
     ru: 'Эти мероприятия закончились, пока Ocharo ещё работала с ними. Отметьте для каждого, участвовала Ocharo или пропустила его.',

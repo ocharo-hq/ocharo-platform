@@ -58,11 +58,17 @@ export const calendarTones: Readonly<Record<EventStatus, CalendarTone>> = {
   rejected: 'neutral',
 };
 
-/** The theme colour behind each tone: soft surfaces from the theme, so text keeps its contrast in both colour modes. */
+/**
+ * The theme colour behind each tone, built only from theme variables (never a hex value). The viewer cannot read a
+ * variable to pick a text colour, so each block keeps the page's own text, and every background stays one that text
+ * reads on in both colour modes: a pursued event is the theme's primary mixed into the card surface, strong enough to
+ * stand out, a confirmed or attended one the soft success surface, and an event not yet tracked a quiet tint of the info
+ * colour, visible against the card where the muted surface all but vanished on the dark calendar.
+ */
 export const calendarToneColors: Readonly<Record<CalendarTone, string>> = {
-  pursuing: 'var(--color-primary-soft)',
+  pursuing: 'color-mix(in srgb, var(--color-primary) 55%, var(--color-card))',
   participating: 'var(--color-success-soft)',
-  neutral: 'var(--color-muted)',
+  neutral: 'color-mix(in srgb, var(--color-info) 35%, var(--color-card))',
 };
 
 /** The stage an event without tracking reads as. */

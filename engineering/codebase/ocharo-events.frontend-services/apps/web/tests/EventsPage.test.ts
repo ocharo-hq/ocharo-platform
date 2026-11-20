@@ -5,6 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { EventsAccess, EventsWorkspace } from '@/application/events/UseEventsAccess';
 import { ocharoWorkflowSpec, type EventsLocation } from '@/domain/events/Events';
+import {
+  CountryPicker,
+  FacetBar,
+  type FacetDefinition,
+  type FacetSelection,
+} from '@wow-two-beta/fe/presentation/forms';
 import { EventsFeed } from '@wow-two-beta/fe-events/kit';
 import EventsPage from '@/presentation/events/pages/EventsPage.vue';
 import { eventsRouter } from './helpers/EventsRouter';
@@ -82,11 +88,38 @@ let deadlines: unknown[] = [];
 let pastOpen: unknown[] = [];
 let wrapper: VueWrapper | undefined;
 
+/** What the mirrored facets route answers for a list of `total` events: Tashkent (UZ) and Almaty (KZ), each counted once. */
+const facetsOf = (total: number) => ({
+  total,
+  countries: [
+    { value: 'UZ', count: 1 },
+    { value: 'KZ', count: 1 },
+  ],
+  cities: [
+    { value: 'tashkent', count: 1 },
+    { value: 'almaty', count: 1 },
+  ],
+  kinds: [
+    { value: 'runway', count: 1 },
+    { value: 'trade-fair', count: 1 },
+  ],
+  stages: [
+    { value: 'candidate', count: 1 },
+    { value: 'shortlisted', count: 1 },
+    { value: 'skipped', count: 3 },
+    { value: 'rejected', count: 0 },
+  ],
+  priorities: [{ value: 'high', count: 1 }],
+  sources: [],
+  openDeadline: { before: '2026-11-07', count: 1 },
+});
+
 const ok = (data: unknown, status = 200) => Response.json({ data }, { status });
 function answer(method: string, url: URL, body: unknown): Response {
   const path = url.pathname;
   if (path === `${MIRROR}/workflow`)
     return ok(method === 'PUT' ? { ...(body as object), revision: 3 } : storedWorkflow);
+  if (path === `${CATALOG}/tracking/facets`) return ok(facetsOf(listed.length));
   if (path === `${CATALOG}/tracking`)
     return ok({ items: url.searchParams.has('stages') ? pastOpen : listed, nextCursor: null });
   if (path === `${CATALOG}/tracking/summary`)
@@ -207,6 +240,18 @@ const pickStage = async (title: string, stage: string) => {
 };
 const button = (scope: VueWrapper | ReturnType<VueWrapper['get']>, label: string) =>
   scope.findAll('button').find((item) => item.text().trim() === label)!;
+/** A scope or kind chip: its label, then the server count it carries. */
+const chip = (label: string) => wrapper!.findAll('button').find((item) => item.text().trim().startsWith(label))!;
+const facetReads = () =>
+  sent.filter((item) => item.method === 'GET' && item.url.pathname === `${CATALOG}/tracking/facets`);
+const bar = () => wrapper!.getComponent(FacetBar);
+const facetOf = (key: string) =>
+  (bar().props('facets') as readonly FacetDefinition[]).find((definition) => definition.key === key);
+/** Reports a choice the way the bar does, so the feed takes the whole selection. */
+async function choose(selection: FacetSelection) {
+  bar().vm.$emit('update:modelValue', selection);
+  await flushPromises();
+}
 
 describe('feed header', () => {
   it('is the title alone: no eyebrow, no description, no Telegram delivery link, no freshness line', async () => {
@@ -224,13 +269,66 @@ describe('feed header', () => {
     expect(sent.some((item) => item.url.pathname === `${CATALOG}/freshness`)).toBe(false);
     expect(wrapper!.findAll('[data-test="event-media-card"]')).toHaveLength(2);
   });
+
+  it("shows no second heading: the kit's own feed title is for screen readers only", async () => {
+    await render('editor');
+
+    expect(wrapper!.findAll('h1')).toHaveLength(1);
+    expect(wrapper!.get('#events-feed-title').classes()).toContain('sr-only');
+  });
 });
 
 describe('events feed through the fe-events kit', () => {
-  it('shows the feed as image-first cards: `variant="cards"` reaches `EventsFeed`', async () => {
+  it('is the v2 feed: a facet bar with Ocharo’s scopes, kinds and server counts, a sort and no v1 props', async () => {
     await render('editor');
 
-    expect(wrapper!.getComponent(EventsFeed).props('variant')).toBe('cards');
+    const feed = wrapper!.getComponent(EventsFeed);
+    expect(Object.keys(feed.props())).not.toContain('variant');
+    expect(Object.keys(feed.props())).not.toContain('shownFields');
+    expect(wrapper!.find('[data-test="events-toolbar"]').exists()).toBe(true);
+    expect(wrapper!.get('[data-facet-match]').text()).toBe('2 of 2');
+    expect(facetReads().length).toBeGreaterThan(0);
+    const scopes = facetOf('scope')!.options;
+    expect(scopes.map((option) => option.label)).toEqual(['All', 'Local', 'Regional', 'International']);
+    expect(scopes.map((option) => option.count)).toEqual([undefined, 1, 1, 0]);
+    expect(facetOf('kind')!.options.map((option) => [option.label, option.count])).toEqual([
+      ['Runway show', 1],
+      ['Trade fair', 1],
+    ]);
+    expect(facetOf('stage')!.options.map((option) => option.label)).toEqual([
+      'Candidate',
+      'Shortlisted',
+      'Skipped',
+      'Rejected',
+    ]);
+    expect(wrapper!.findAll('select[name="sort"] option').map((option) => option.text())).toEqual([
+      'Start date',
+      'Recently added',
+      'Nearest deadline',
+    ]);
+  });
+
+  it('sends the sort with the tracking read and starts over from no cursor', async () => {
+    await render('editor');
+    const before = lists().length;
+
+    await wrapper!.get('select[name="sort"]').setValue('deadline');
+    await flushPromises();
+
+    expect(lists()).toHaveLength(before + 1);
+    expect(lastList().get('sort')).toBe('deadline');
+    expect(lastList().has('cursor')).toBe(false);
+  });
+
+  it('shows a month divider under the start-date sort and a flat grid under another', async () => {
+    await render('editor');
+    expect(wrapper!.findAll('[data-test="event-group"] > h3').length).toBeGreaterThan(0);
+
+    await wrapper!.get('select[name="sort"]').setValue('added');
+    await flushPromises();
+
+    expect(wrapper!.findAll('[data-test="event-group"] > h3')).toHaveLength(0);
+    expect(wrapper!.findAll('[data-test="event-media-card"]')).toHaveLength(2);
   });
 
   it('lists the tracking feed with one mirrored request: skipped and rejected left out, filters and paging server-side', async () => {
@@ -268,18 +366,33 @@ describe('events feed through the fe-events kit', () => {
   it('lists skipped and rejected events when asked, and filters by scope chips on the server', async () => {
     await render('editor');
 
-    await wrapper!.get('input[name="showHidden"]').setValue(true);
-    await flushPromises();
+    await choose({ hidden: 'show' });
     expect(lastList().has('excludeStages')).toBe(false);
+    await choose({});
+    expect(lastList().getAll('excludeStages')).toEqual(['skipped', 'rejected']);
 
-    await wrapper!.get('[data-region="regional"]').trigger('click');
+    await chip('Regional').trigger('click');
     await flushPromises();
     expect(lastList().getAll('countries')).toEqual(['KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU']);
 
-    await wrapper!.get('[data-region="international"]').trigger('click');
+    await chip('International').trigger('click');
     await flushPromises();
     expect(lastList().getAll('excludeCountries')).toEqual(['UZ', 'KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU']);
     expect(lastList().has('countries')).toBe(false);
+  });
+
+  it('reads the facets again with each filter, so the counts follow it, and leaves out the sort and the cursor', async () => {
+    await render('editor');
+    const before = facetReads().length;
+
+    await choose({ city: ['tashkent'] });
+
+    expect(facetReads()).toHaveLength(before + 1);
+    const query = facetReads().at(-1)!.url.searchParams;
+    expect(query.getAll('cities')).toEqual(['tashkent']);
+    expect(query.has('sort')).toBe(false);
+    expect(query.has('limit')).toBe(false);
+    expect(wrapper!.get('[data-facet-chips]').text()).toContain('Tashkent');
   });
 
   it('shortlists an untracked event with one tracking write, then reads the feed again', async () => {
@@ -301,7 +414,8 @@ describe('events feed through the fe-events kit', () => {
 
     await button(wrapper!, 'Propose an event').trigger('click');
     await wrapper!.get('input[name="title"]').setValue('Margilan Ikat Days');
-    await wrapper!.get('input[name="country"]').setValue('UZ');
+    wrapper!.getComponent(CountryPicker).vm.$emit('update:modelValue', 'UZ');
+    await flushPromises();
     expect(wrapper!.get('[data-test="facts-scope"]').text()).toContain('Local');
     await wrapper!.get('input[name="foundAt"]').setValue('https://listings.example.test/ikat');
     await wrapper!.get('form').trigger('submit');
@@ -349,30 +463,32 @@ const deadlineSummaries = () =>
   );
 const pastReads = () =>
   sent.filter((item) => item.url.pathname === `${CATALOG}/tracking` && item.url.searchParams.has('stages'));
-const pill = (name: 'deadlines' | 'past') => wrapper!.find(`[data-test="attention-${name}-pill"]`);
+const pill = (name: 'deadlines' | 'past') => wrapper!.find(`[data-pill="${name}"]`);
 
-describe('attention pills under the title', () => {
-  it('folds the deadlines and the past events behind two pills with their counts, and loads no list until asked', async () => {
+describe('attention pills between the facet bar and the cards', () => {
+  it('shows the kit’s deadlines pill and Ocharo’s past pill with their counts, and loads no list until asked', async () => {
     pastOpen = [endedItem()];
     await render('editor');
 
-    expect(pill('deadlines').text()).toContain('Deadlines');
-    expect(pill('deadlines').get('[data-test="attention-count"]').text()).toBe('1');
+    expect(pill('deadlines').text()).toBe('1 deadline in 14 days');
     expect(pill('deadlines').attributes('aria-expanded')).toBe('false');
-    expect(pill('past').text()).toContain('Past to close');
-    expect(pill('past').get('[data-test="attention-count"]').text()).toBe('1');
+    expect(pill('past').text()).toBe('1 past to close');
     expect(pill('past').attributes('aria-expanded')).toBe('false');
-    // The pills sit under the title, ahead of the feed.
-    const order = wrapper!.get('[data-test="events-feed"]').element.children;
-    expect(order[0]!.getAttribute('data-test')).toBe('attention');
+    expect(wrapper!.find('[data-test="attention-panel"]').exists()).toBe(false);
     expect(wrapper!.find('[data-test="deadline"]').exists()).toBe(false);
-    expect(wrapper!.get('#attention-past').isVisible()).toBe(false);
+    expect(wrapper!.find('[data-test="past-open"]').exists()).toBe(false);
+    // The pills sit under the bar and ahead of the cards.
+    const toolbar = wrapper!.get('[data-test="events-toolbar"]').element;
+    const pills = wrapper!.get('[data-test="attention-pills"]').element;
+    const cards = wrapper!.get('[data-test="event-cards"]').element;
+    expect(toolbar.compareDocumentPosition(pills) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(pills.compareDocumentPosition(cards) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('counts the nearest application deadlines from the summary the list reads, today as the day', async () => {
+  it('counts the nearest application deadlines from the summary the feed reads, today as the day', async () => {
     await render('editor');
 
-    expect(deadlineSummaries()).toHaveLength(1);
+    expect(deadlineSummaries().length).toBeGreaterThan(0);
     expect(deadlineSummaries()[0]!.url.searchParams.getAll('deadlineKinds')).toEqual(['application']);
     expect(deadlineSummaries()[0]!.url.searchParams.get('today')).toBe('2026-10-08');
   });
@@ -404,9 +520,10 @@ describe('attention pills under the title', () => {
     expect(wrapper!.find('article[aria-labelledby="event-detail-title"]').exists()).toBe(true);
   });
 
-  it('unfolds the past events, closes one in a tracking write, hides its pill and reads the feed again', async () => {
+  it('reads the past events by stage and last start day, once, and names the pill in the interface language', async () => {
     pastOpen = [endedItem()];
     await render('editor');
+
     expect(pastReads()).toHaveLength(1);
     expect(pastReads()[0]!.url.searchParams.getAll('stages')).toEqual([
       'shortlisted',
@@ -416,6 +533,15 @@ describe('attention pills under the title', () => {
     ]);
     expect(pastReads()[0]!.url.searchParams.get('to')).toBe('2026-10-07');
     expect(pastReads()[0]!.url.searchParams.get('includeUndated')).toBe('false');
+
+    useUiLocale().setUiLocale('ru');
+    await flushPromises();
+    expect(pill('past').text()).toBe('Прошедших к закрытию: 1');
+  });
+
+  it('unfolds the past events in the slot, closes one in a tracking write, drops its pill and reads the feed again', async () => {
+    pastOpen = [endedItem()];
+    await render('editor');
 
     await pill('past').trigger('click');
     expect(pill('past').attributes('aria-expanded')).toBe('true');
@@ -440,21 +566,21 @@ describe('attention pills under the title', () => {
     deadlines = [];
     await render('editor');
 
+    expect(wrapper!.find('[data-test="attention-pills"]').exists()).toBe(false);
     expect(pill('deadlines').exists()).toBe(false);
     expect(pill('past').exists()).toBe(false);
-    expect(wrapper!.find('[data-test="attention-count"]').exists()).toBe(false);
     expect(wrapper!.findAll('[data-test="event-media-card"]')).toHaveLength(2);
   });
 
-  it('reads both counts again after a write in the feed', async () => {
+  it('reads the past events again after a write in the feed', async () => {
     await render('editor');
-    const summaries = deadlineSummaries().length;
     const past = pastReads().length;
+    const summaries = deadlineSummaries().length;
 
     await pickStage('Silk Road Trade Fair', 'shortlisted');
 
-    expect(deadlineSummaries().length).toBe(summaries + 1);
     expect(pastReads().length).toBe(past + 1);
+    expect(deadlineSummaries().length).toBe(summaries + 1);
   });
 
   it('offers a viewer the past events to read but no stage action', async () => {

@@ -1,5 +1,6 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { EventCalendarViewer, type EventCalendarViewerEvent } from '@wow-two-beta/fe/presentation/display';
 
 import { calendarEventCap } from '@/application/events/UseEventsCalendar';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
@@ -130,10 +131,17 @@ describe('calendar place', () => {
     ];
     await render();
 
-    const background = (title: string) => blocks(title)[0]!.element.style.background;
-    expect(background('Pursued')).toContain(calendarToneColors.pursuing);
-    expect(background('Confirmed')).toContain(calendarToneColors.participating);
-    expect(background('Untracked')).toContain(calendarToneColors.neutral);
+    // The colour reaches the viewer as the block's own; a DOM style would drop the `color-mix` of a tone in happy-dom.
+    const colours = Object.fromEntries(
+      (wrapper!.getComponent(EventCalendarViewer).props('events') as readonly EventCalendarViewerEvent[]).map(
+        (block) => [block.title, block.color],
+      ),
+    );
+    expect(colours).toEqual({
+      Pursued: calendarToneColors.pursuing,
+      Confirmed: calendarToneColors.participating,
+      Untracked: calendarToneColors.neutral,
+    });
   });
 
   it('pages through the cursor until the window is complete', async () => {

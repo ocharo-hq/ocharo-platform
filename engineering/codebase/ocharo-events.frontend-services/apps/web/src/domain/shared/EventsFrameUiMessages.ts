@@ -50,7 +50,6 @@ export const eventsFrameUiMessages: UiMessageTable = {
   'Back to events': { uz: 'Tadbirlarga qaytish', ru: 'Вернуться к мероприятиям' },
   Feed: { uz: 'Lenta', ru: 'Лента' },
   Calendar: { uz: 'Taqvim', ru: 'Календарь' },
-  Deadlines: { uz: 'Muddatlar', ru: 'Сроки' },
   Reminders: { uz: 'Eslatmalar', ru: 'Напоминания' },
   'Events sections': { uz: 'Tadbirlar bo‘limlari', ru: 'Разделы мероприятий' },
   'Expand sidebar': { uz: 'Yon panelni yoyish', ru: 'Развернуть боковую панель' },

@@ -69,9 +69,21 @@ export interface EventsHostOptions {
   readonly freshness?: Record<string, unknown>;
 }
 
+/** What the mirrored facets route answers by default: an empty catalog, every facet counted at zero. */
+const emptyFacets = {
+  total: 0,
+  countries: [],
+  cities: [],
+  kinds: [],
+  stages: [],
+  priorities: [],
+  sources: [],
+  openDeadline: { before: '2099-01-01', count: 0 },
+};
+
 /**
  * Stubs the host's own routes (runtime settings, status, the session and sign-out), the mirrored Events routes, which
- * answer an empty tracking feed, an empty summary, Ocharo's workflow as Events holds it and, when asked, the catalog's
+ * answer an empty tracking feed, empty facets, an empty summary, Ocharo's workflow as Events holds it and, when asked, the catalog's
  * freshness, and the Telegram delivery's digest list, which answers none.
  */
 export function stubEventsHost(options: EventsHostOptions = {}): void {
@@ -94,6 +106,8 @@ export function stubEventsHost(options: EventsHostOptions = {}): void {
         return Promise.resolve(Response.json({ data: options.freshness }));
       if (events && /^catalogs\/[^/]+\/tracking\/summary$/.test(events))
         return Promise.resolve(Response.json({ data: { byStage: {}, untracked: 0, upcomingDeadlines: [] } }));
+      if (events && /^catalogs\/[^/]+\/tracking\/facets$/.test(events))
+        return Promise.resolve(Response.json({ data: emptyFacets }));
       if (events && /^catalogs\/[^/]+\/tracking$/.test(events))
         return Promise.resolve(Response.json({ data: { items: [], nextCursor: null } }));
       if (/^\/api\/organizations\/[^/]+\/delivery\/api\/events\/v1\/catalogs\/[^/]+\/digests$/.test(pathname))

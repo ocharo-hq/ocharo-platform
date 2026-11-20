@@ -192,6 +192,10 @@ describe('calendar events', () => {
   });
 });
 
+/** A theme variable, or a mix of theme variables: never a hex, rgb or named colour. */
+const themeColor =
+  /^(?:var\(--color-[a-z-]+\)|color-mix\(in srgb, var\(--color-[a-z-]+\) \d{1,2}%, var\(--color-[a-z-]+\)\))$/;
+
 describe('calendar colours', () => {
   it('sets the pursued stages apart from confirmed and attended, and both from an event not yet tracked', () => {
     const pursuing = ['shortlisted', 'applying', 'applied'].map((stage) => calendarToneColors[calendarTone(stage)]);
@@ -218,6 +222,13 @@ describe('calendar colours', () => {
       calendarToneColors.participating,
       calendarToneColors.neutral,
     ]);
-    for (const color of Object.values(calendarToneColors)) expect(color).toMatch(/^var\(--color-[a-z-]+\)$/);
+    for (const color of Object.values(calendarToneColors)) expect(color).toMatch(themeColor);
+  });
+
+  it('keeps an event not yet tracked visible: a tint of the info colour, never the muted surface that vanished on the dark calendar', () => {
+    expect(calendarToneColors.neutral).toContain('var(--color-info)');
+    expect(calendarToneColors.neutral).not.toContain('--color-muted');
+    expect(calendarToneColors.pursuing).toContain('var(--color-primary)');
+    expect(calendarToneColors.participating).toBe('var(--color-success-soft)');
   });
 });

@@ -1,6 +1,5 @@
 import type {
   CatalogKindModel,
-  DeadlineKind,
   JsonValue,
   LocalizedText,
   StageClass,
@@ -93,8 +92,6 @@ export const statusClasses: Record<EventStatus, StageClass> = {
   rejected: 'lost',
 };
 
-/** The deadline kinds the nearest-deadlines list and its count read: the dates an application is due by. */
-export const ocharoDeadlineKinds: readonly DeadlineKind[] = ['application'];
 /** The stages a team has left: the feed hides them until asked (OE05), and a digest leaves them out by default. */
 export const ocharoClosedStages: readonly EventStatus[] = ['skipped', 'rejected'];
 /** The stages a card at the default stage offers as one click. */
@@ -205,7 +202,7 @@ export function ocharoRegions(): EventRegion[] {
   ];
 }
 
-/** Ocharo's own cost of taking part, on every card and the detail, apart from the event's ticket price (E09). */
+/** Ocharo's own cost of taking part, on the event's detail, apart from the event's ticket price (E09); the feed's cards leave it off. */
 export function ocharoCostField(): TrackingShownField {
   return { key: trackingFieldKeys.cost, label: localized("Ocharo's cost"), empty: localized('Cost not stated') };
 }
