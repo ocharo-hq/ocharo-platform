@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Clock, TriangleAlert } from 'lucide-vue-next';
-import { toRelativeTimeParts } from '@wow-two-beta/fe/foundation/i18n';
+import { formatRelativeTime, toRelativeTimeParts } from '@wow-two-beta/fe/foundation/i18n';
 
 import { useSourcesFreshness } from '@/application/events/UseSourcesFreshness';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
@@ -34,7 +34,7 @@ const text = computed(() => {
   if (age)
     parts.push(
       t('Sources updated {time}', {
-        time: new Intl.RelativeTimeFormat(uiLocale.value, { numeric: 'auto' }).format(age.value, age.unit),
+        time: formatRelativeTime(age.value, age.unit, uiLocale.value, { numeric: 'auto' }),
       }),
     );
   if (current.stale) parts.push(t('No new records in over 24 hours.'));

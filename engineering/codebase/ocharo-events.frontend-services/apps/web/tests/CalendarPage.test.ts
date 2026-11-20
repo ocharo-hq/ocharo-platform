@@ -112,8 +112,10 @@ describe('calendar place', () => {
     ];
     await render();
 
-    // Three days of the grid carry the block; the month-only event has no day and is not drawn.
-    expect(blocks('Tashkent Fashion Week')).toHaveLength(3);
+    // One bar spans the three days within its week (SDK 0.0.54 draws a multi-day event as a bar); the month-only event has no day and is not drawn.
+    const bar = blocks('Tashkent Fashion Week');
+    expect(bar).toHaveLength(1);
+    expect(bar[0]!.attributes('data-bar-span')).toBe('3');
     expect(blocks('Silk Road Trade Fair')).toHaveLength(0);
   });
 
