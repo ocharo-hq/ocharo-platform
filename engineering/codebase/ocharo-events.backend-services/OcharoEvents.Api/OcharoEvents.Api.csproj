@@ -7,6 +7,8 @@
     <PackageReference Include="WoW2.Sdk.Beta.Be.Identity.Client" />
     <!-- WoW2 Events over HTTP, by the person's token exchanged with this host's own `ocharo-events` client. -->
     <PackageReference Include="WoW2.Sdk.Beta.Be.Events.Client" />
+    <!-- WoW2 Files over HTTP, by the read-only tenant API key of SCFD's copies of event images. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Files.Client" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
   </ItemGroup>
 

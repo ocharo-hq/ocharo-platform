@@ -26,7 +26,7 @@ public static partial class HostConfiguration
             options.TrustProxiesFrom(builder.Configuration.GetSection("Deployment"));
         });
 
-        return builder.AddPostgresDatabase().AddAccess().AddEvents().AddRuntimeConfig().AddHttpSurface();
+        return builder.AddPostgresDatabase().AddAccess().AddEvents().AddEventImages().AddRuntimeConfig().AddHttpSurface();
     }
 
     /// <summary>Runs startup tasks, then configures middleware and endpoints.</summary>

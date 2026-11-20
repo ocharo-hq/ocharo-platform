@@ -29,10 +29,13 @@ namespace OcharoEvents.Api.Events.Controllers;
 [Route("api/organizations/{organizationId:guid}/events-api/api/events/v1")]
 [Authorize]
 [OrganizationAccess]
-public sealed class EventsApiController(EventsApiService events, TimeProvider time) : ControllerBase
+public sealed class EventsApiController(EventsApiService events, EventImagesService images, TimeProvider time) : ControllerBase
 {
     /// <summary>Holds the calendar file's media type.</summary>
     private const string CalendarMediaType = "text/calendar; charset=utf-8";
+
+    /// <summary>Holds how long a browser may reuse an image's redirect: a minute, within the signed link's five.</summary>
+    private const int ImageRedirectMaxAgeSeconds = 60;
 
     /// <summary>Lists the catalog's published events with the organization's tracking: one Events call with the page's
     /// filters and cursor.</summary>
@@ -106,6 +109,27 @@ public sealed class EventsApiController(EventsApiService events, TimeProvider ti
     [HttpGet("catalogs/{catalog}/events/{id:guid}")]
     public async Task<IActionResult> GetEvent(string catalog, Guid id, CancellationToken cancellationToken) =>
         Answer(await events.GetEventAsync(catalog, id, cancellationToken));
+
+    /// <summary>Redirects to an event's image: SCFD's stored copy, as a short-lived signed WoW2 Files URL, else the image's own
+    /// source link. The route reads the event and takes the file id from <c>facts.images[index].fileRef</c>, never from the
+    /// browser. Files left unconfigured, failing or slow answers 302 to the image's <c>url</c> instead (only an absolute https
+    /// link), so a card keeps the source photo until the copy is served. 404 when the index is out of range, the image has no
+    /// <c>fileRef</c> or no usable source link.</summary>
+    [HttpGet("catalogs/{catalog}/events/{id:guid}/images/{index:int}")]
+    public async Task<IActionResult> GetEventImage(string catalog, Guid id, int index, CancellationToken cancellationToken)
+    {
+        switch (await images.GetImageLinkAsync(catalog, id, index, cancellationToken))
+        {
+            case Result<Uri>.Success { Value: var link }:
+                // Private, and shorter than a signed link's own life, so a browser never follows an expired one.
+                Response.Headers.CacheControl = $"private, max-age={ImageRedirectMaxAgeSeconds}";
+                return Redirect(link.AbsoluteUri);
+            case Result<Uri>.Failure failure:
+                return this.ToProblem(failure.Error);
+            default:
+                throw new InvalidOperationException("A result is a success or a failure.");
+        }
+    }
 
     /// <summary>Proposes an event; Events publishes a member's proposal in Ocharo's private catalog at once (OE03).</summary>
     [HttpPost("catalogs/{catalog}/candidates")]

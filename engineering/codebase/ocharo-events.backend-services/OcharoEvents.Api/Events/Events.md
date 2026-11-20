@@ -17,6 +17,7 @@ one broker through `EventsApiService` and answers Events' model in the SDK envel
 | GET, PUT, DELETE | `catalogs/{catalog}/tracking/{eventId}` (`expectedRevision` on delete) | read; writes `events:track` |
 | GET | `catalogs/{catalog}/tracking/{eventId}/history` | `events:read` |
 | GET | `catalogs/{catalog}/events/{id}` | `events:read` |
+| GET | `catalogs/{catalog}/events/{id}/images/{index}` (302 to a signed Files URL of SCFD's stored copy, else to the image's own https `url`; no envelope) | `events:read` |
 | POST | `catalogs/{catalog}/candidates` (published at once in Ocharo's private catalog, OE03) | `events:track` |
 | GET, PUT | `workflow` (the page reads it; the deploy writes Ocharo's with Events' `workflow put --spec`, so no app caller of `PUT` remains and it stays for an admin's own edits) | read; write `events:admin` |
 | GET | `catalogs/{catalog}/events.ics` (calendar file, no envelope) | `events:read` |
@@ -24,6 +25,16 @@ one broker through `EventsApiService` and answers Events' model in the SDK envel
 
 A catalog other than `Events:Catalog` answers 404 and an unconfigured Events 503 before any call; Events checks the
 exchanged token's scopes and permissions again.
+
+The image route serves SCFD's stored copy of an event's image from WoW2 Files (`EventImagesService`): it authorizes as the
+event read does (the session's organization equals the route's and holds `events:read`, else 404; no session 401), reads
+the event through the same Events broker, takes the file id from `facts.images[index].fileRef` and never one the browser
+sends, and asks Files, by the read-only tenant key `Files:ApiKey` at `Files:BaseUrl`, for a 5-minute signed link, answered
+as 302 with `Cache-Control: private, max-age=60` (the one organization route that is not `no-store`). It answers 404 for
+an index out of range and an image with no `fileRef`. With Files unconfigured (either setting missing), failing or slower
+than `Files:LinkTimeout` (5 s), it answers 302 to the image's own `url` instead, only when that is an absolute https link
+without credentials (else 404), so a card keeps its source photo until the copy is served; the log keeps Files' error kind,
+never its answer. The image's `url` stays the credit link.
 
 The freshness read (E24) serves the page's own "Sources updated {time}" line, not a kit screen: the page calls the kit's
 `getIntakeFreshness`, and the route makes one `IEventIntakeBroker.GetFreshnessAsync` call for the signed-in member, so

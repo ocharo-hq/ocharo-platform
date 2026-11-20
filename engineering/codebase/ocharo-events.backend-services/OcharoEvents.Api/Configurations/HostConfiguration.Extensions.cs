@@ -9,6 +9,7 @@ using WoW.Two.Sdk.Beta.Be.Data.Abstractions;
 using WoW.Two.Sdk.Beta.Be.Data.EntityFrameworkCore;
 using WoW.Two.Sdk.Beta.Be.Data.Migrations.Bespoke;
 using WoW.Two.Sdk.Beta.Be.Events.Client;
+using WoW.Two.Sdk.Beta.Be.Files.Client;
 using WoW.Two.Sdk.Beta.Be.Foundation.Configuration;
 using WoW.Two.Sdk.Beta.Be.Foundation.Options;
 using WoW.Two.Sdk.Beta.Be.Identity.Bff;
@@ -23,6 +24,12 @@ public static partial class HostConfiguration
 {
     /// <summary>Holds the root URL of the WoW2 Events instance that serves the Events page.</summary>
     private const string EventsBaseUrlKey = "Events:BaseUrl";
+
+    /// <summary>Holds the root URL of the WoW2 Files instance that keeps SCFD's copies of event images.</summary>
+    private const string FilesBaseUrlKey = "Files:BaseUrl";
+
+    /// <summary>Holds the read-only tenant API key of SCFD's Files tenant.</summary>
+    private const string FilesApiKeyKey = "Files:ApiKey";
 
     /// <summary>Registers the service's place in the product database (<c>ConnectionStrings:Database</c>, filled per target
     /// by Wheelhouse): the <c>ocharo_events</c> migration set in schema <c>ocharo_events</c>, which holds only the Data
@@ -92,6 +99,29 @@ public static partial class HostConfiguration
         builder.Services.AddScoped<EventsApiService>();
         // Telegram delivery: the organization's digests in WoW2 Events, through the same client and person flow.
         builder.Services.AddScoped<EventDigestsService>();
+        return builder;
+    }
+
+    /// <summary>
+    /// Registers the event image route's reach to SCFD's stored copies: WoW2 Files over HTTP by a read-only tenant API key
+    /// (<see cref="FilesBaseUrlKey"/> and <see cref="FilesApiKeyKey"/>). Both are optional: with either missing the client
+    /// is left unconfigured, never resolved, and the route answers the image's source link. Settings read at resolve time,
+    /// so a test host's settings decide.
+    /// </summary>
+    private static WebApplicationBuilder AddEventImages(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddOptions<FilesServiceOptions>().BindConfiguration(FilesServiceOptions.SectionName);
+        builder.Services.AddFilesClient(_ => { });
+        builder.Services.AddOptions<FilesClientOptions>().Configure<IConfiguration>((files, configuration) =>
+        {
+            if (configuration[FilesBaseUrlKey] is not { Length: > 0 } url
+                || configuration[FilesApiKeyKey] is not { Length: > 0 } key
+                || !Uri.TryCreate(url, UriKind.Absolute, out var address))
+                return;
+            files.BaseAddress = address;
+            files.ApiKey = key;
+        });
+        builder.Services.AddScoped<EventImagesService>();
         return builder;
     }
 

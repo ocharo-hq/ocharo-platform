@@ -1,8 +1,9 @@
 import { onScopeDispose, ref, shallowRef, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { IntakeFreshnessModel } from '@wow-two-beta/fe-events/contracts';
-import { localIsoDate, type EventsClient } from '@wow-two-beta/fe-events/kit';
+import type { EventModel, IntakeFreshnessModel } from '@wow-two-beta/fe-events/contracts';
+import { localIsoDate, type EventsClient, type EventsResult } from '@wow-two-beta/fe-events/kit';
 
+import { eventImagePath, withStoredImages } from '@/domain/events/EventImages';
 import {
   eventsApiPrefix,
   eventsPath,
@@ -20,15 +21,35 @@ import type { EventsAccess } from './UseEventsAccess';
  * The Events page's `fe-events` client over this app's mirror of WoW2 Events for the organization (OE07). It only reads
  * the workflow: a screen that asks for it (the event's tracking form) gets the stored one with Ocharo's labels filling
  * what it lacks (`workflowForPage`). The deploy writes the workflow (`engineering/deployment/deployment.md`), a visit never.
+ * An event's images that SCFD stored a copy of read from this app's image route (`withStoredImages`) wherever the page
+ * shows an event: the feed's cards, the calendar, the event's detail.
  */
-export function createEventsPageClient(organizationId: string): EventsClient {
-  const client = createOcharoEventsClient(eventsApiPrefix(organizationId));
+export function createEventsPageClient(organizationId: string, origin: string = window.location.origin): EventsClient {
+  const prefix = eventsApiPrefix(organizationId);
+  const client = createOcharoEventsClient(prefix);
+  const show = (event: EventModel): EventModel =>
+    withStoredImages(event, (index) => new URL(eventImagePath(prefix, event, index), origin).href);
+  const shown = async <T>(result: EventsResult<T>, adapt: (value: T) => T): EventsResult<T> => {
+    const read = await result;
+    return read.ok ? { ...read, value: adapt(read.value) } : read;
+  };
   return {
     ...client,
     getWorkflow: async (signal) => {
       const stored = await client.getWorkflow(signal);
       return stored.ok ? { ...stored, value: workflowForPage(stored.value) } : stored;
     },
+    getEvent: (catalog, id, signal) => shown(client.getEvent(catalog, id, signal), show),
+    listEvents: (catalog, query, signal) =>
+      shown(client.listEvents(catalog, query, signal), (page) => ({ ...page, items: page.items.map(show) })),
+    proposeEvent: (catalog, spec, signal) => shown(client.proposeEvent(catalog, spec, signal), show),
+    listTracking: (catalog, query, signal) =>
+      shown(client.listTracking(catalog, query, signal), (page) => ({
+        ...page,
+        items: page.items.map((item) => ({ ...item, event: show(item.event) })),
+      })),
+    getTracking: (catalog, eventId, signal) =>
+      shown(client.getTracking(catalog, eventId, signal), (item) => ({ ...item, event: show(item.event) })),
   };
 }
 

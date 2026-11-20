@@ -42,14 +42,18 @@ const event = (id: string, title: Record<string, string>, place: Record<string, 
   createdAtUtc: at,
   updatedAtUtc: at,
 });
+/** The images the runway show carries, as Events sends them: the source `url` and, for SCFD's copy, a Files `fileRef`. */
+let fashionWeekImages: object[] = [];
 /** A runway show Ocharo shortlisted, titled by its source in Russian and by SCFD's machine English (OE06). */
-const fashionWeek = () =>
-  event(
+const fashionWeek = () => {
+  const show = event(
     FASHION_WEEK,
     { 'ru-Cyrl': 'Неделя моды в Ташкенте', en: 'Tashkent Fashion Week' },
     { city: 'Tashkent', country: 'UZ' },
     { value: '2026-10-12', precision: 'day' },
   );
+  return fashionWeekImages.length ? { ...show, facts: { ...show.facts, images: fashionWeekImages } } : show;
+};
 const fashionWeekTracking = () => ({
   id: '99999999-9999-4999-8999-999999999999',
   eventId: FASHION_WEEK,
@@ -154,6 +158,7 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
   sent = [];
   pastOpen = [];
+  fashionWeekImages = [];
   deadlines = [
     {
       eventId: FASHION_WEEK,
@@ -610,6 +615,82 @@ describe('one event through the fe-events kit', () => {
 });
 
 const workflowWrites = () => sent.filter((item) => item.method === 'PUT' && item.url.pathname === `${MIRROR}/workflow`);
+
+describe('event images through the fe-events kit', () => {
+  const SOURCE = 'https://source.example.test/runway.jpg';
+  const POSTER = 'https://source.example.test/poster.jpg';
+  const COPY = '0197a8a0-1111-7aaa-8bbb-000000000001';
+  /** The backend route of one image's stored copy, as the page resolves it against its own origin. */
+  const route = (index: number) =>
+    new URL(`${CATALOG}/events/${FASHION_WEEK}/images/${index}`, window.location.origin).href;
+  /** Sets the runway show's images and lists it again, as a read after Events changed them would. */
+  const showImages = (images: object[]) => {
+    fashionWeekImages = images;
+    listed = [
+      { event: fashionWeek(), tracking: fashionWeekTracking() },
+      { event: silkFair(), tracking: null },
+    ];
+  };
+
+  it("shows SCFD's stored copy through the backend route on a card whose image has a fileRef", async () => {
+    showImages([{ url: SOURCE, fileRef: COPY }]);
+    await render('editor');
+
+    const image = card('Tashkent Fashion Week').get('[data-test="event-image"]');
+    expect(image.attributes('src')).toBe(route(0));
+    expect(image.attributes('src')).not.toContain(SOURCE);
+    expect(image.attributes('src')).not.toContain(COPY);
+    expect(image.attributes('referrerpolicy')).toBe('no-referrer');
+    expect(image.attributes('loading')).toBe('lazy');
+    expect(image.attributes('alt')).toBe('Tashkent Fashion Week');
+    expect(card('Tashkent Fashion Week').find('[data-test="event-date-tile"]').exists()).toBe(false);
+  });
+
+  it('keeps the date tile on a card whose event has no image', async () => {
+    showImages([{ url: SOURCE, fileRef: COPY }]);
+    await render('editor');
+
+    const untracked = card('Silk Road Trade Fair');
+    expect(untracked.find('[data-test="event-image"]').exists()).toBe(false);
+    expect(untracked.find('[data-test="event-date-tile"]').exists()).toBe(true);
+  });
+
+  it("keeps the kit's own image, the source link, on a card whose image has no stored copy", async () => {
+    showImages([{ url: SOURCE }]);
+    await render('editor');
+
+    expect(card('Tashkent Fashion Week').get('[data-test="event-image"]').attributes('src')).toBe(SOURCE);
+  });
+
+  it("falls back to the kit's date tile when the stored copy fails to load", async () => {
+    showImages([{ url: SOURCE, fileRef: COPY }]);
+    await render('editor');
+
+    await card('Tashkent Fashion Week').get('[data-test="event-image"]').trigger('error');
+    await flushPromises();
+
+    expect(card('Tashkent Fashion Week').find('[data-test="event-image"]').exists()).toBe(false);
+    expect(card('Tashkent Fashion Week').find('[data-test="event-date-tile"]').exists()).toBe(true);
+  });
+
+  it("falls back to the kit's date tile when a source image fails to load, as before", async () => {
+    showImages([{ url: SOURCE }]);
+    await render('editor');
+
+    await card('Tashkent Fashion Week').get('[data-test="event-image"]').trigger('error');
+    await flushPromises();
+
+    expect(card('Tashkent Fashion Week').find('[data-test="event-date-tile"]').exists()).toBe(true);
+  });
+
+  it("shows each stored copy in the event's detail through the route of its own place, and a source image as it is", async () => {
+    fashionWeekImages = [{ url: POSTER }, { url: SOURCE, fileRef: COPY }];
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
+
+    const sources = wrapper!.findAll('[data-test="event-images"] img').map((image) => image.attributes('src'));
+    expect(sources).toEqual([POSTER, route(1)]);
+  });
+});
 
 describe("Ocharo's workflow in Events", () => {
   it('writes nothing on a visit, whatever the stored workflow holds and whoever visits', async () => {

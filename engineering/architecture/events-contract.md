@@ -33,6 +33,7 @@ anything else answers 404. Unsafe requests carry `X-Csrf-Token`. Answers are Eve
 | DELETE | `catalogs/{catalog}/tracking/{eventId}` | `expectedRevision` | `events:track` |
 | GET | `catalogs/{catalog}/tracking/{eventId}/history` | — | read |
 | GET | `catalogs/{catalog}/events/{id}` | — | read |
+| GET | `catalogs/{catalog}/events/{id}/images/{index}` | 302 to a short-lived signed WoW2 Files URL of SCFD's stored copy of `facts.images[index]`, else to the image's own https `url`; no body | read |
 | POST | `catalogs/{catalog}/candidates` | `EventSpec` (`facts`) | `events:track` |
 | GET | `workflow` | — | read |
 | PUT | `workflow` | `WorkflowSpec` | `events:admin` |
@@ -42,6 +43,14 @@ anything else answers 404. Unsafe requests carry `X-Csrf-Token`. Answers are Eve
   and paged in Events' database.
 - A catalog other than `Events:Catalog` (`ocharo-fashion`) answers 404, an unconfigured Events 503, before any call;
   Events checks the exchanged token's scope and permission again.
+- The image route reads the event through Events, takes the file id from `facts.images[index].fileRef` (never one the
+  browser sends) and asks WoW2 Files, by a read-only key of SCFD's tenant (`Files:BaseUrl`, `Files:ApiKey`), for a
+  5-minute signed link, answered as 302 with `Cache-Control: private, max-age=60`. When Files is unconfigured, fails or
+  answers late (5 s), the route answers 302 to the image's own `url` instead, only if that is an absolute https link without
+  credentials (else 404), so a card keeps its source photo until the copy is served. 404 for an index out of range and an
+  image with no `fileRef`. An image's `url` stays the source link that credits it; the page's client shows a copy by giving
+  the kit this route as the image's address, and an image without a copy keeps the kit's own rendering (the source image,
+  then the date tile).
 - A member's proposal publishes at once: Ocharo's catalog is private to the organization (Events OE03), so the feed
   lists it with no review step. An event's facts change only through Events' review.
 

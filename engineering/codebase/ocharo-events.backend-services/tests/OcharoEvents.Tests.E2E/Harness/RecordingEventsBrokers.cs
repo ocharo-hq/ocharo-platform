@@ -48,8 +48,12 @@ internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEve
         FailingSources = 0,
     };
 
+    /// <summary>Gets or sets the images the single-event read answers with, as SCFD's copies reach Events: each the source
+    /// <c>url</c> and, for a copy, its Files <c>fileRef</c>.</summary>
+    public IReadOnlyList<EventImage> Images { get; set; } = [];
+
     /// <summary>Builds a published event of the catalog with a title in one language.</summary>
-    public static EventModel Event(Guid id, string title, string language = "und") => new()
+    public static EventModel Event(Guid id, string title, string language = "und", IReadOnlyList<EventImage>? images = null) => new()
     {
         Id = id,
         Catalog = "ocharo-fashion",
@@ -59,6 +63,7 @@ internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEve
             Kind = "runway",
             Place = new EventPlace { City = "Tashkent", Country = "UZ" },
             Starts = new EventWhen { Value = "2026-12-03", Precision = DatePrecision.Day },
+            Images = images ?? [],
         },
         Review = EventReviewState.Published,
         Revision = 1,
@@ -134,7 +139,7 @@ internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEve
         Answer(nameof(ICatalogEventsBroker.ListAsync) + ":events", catalog, query, new EventPage([], null));
 
     Task<Result<EventModel>> ICatalogEventsBroker.GetAsync(string catalog, Guid id, CancellationToken cancellationToken) =>
-        Answer("GetEventAsync", catalog, id, Event(id, "Tashkent Fashion Week"));
+        Answer("GetEventAsync", catalog, id, Event(id, "Tashkent Fashion Week", images: Images));
 
     public Task<Result<EventModel>> CreateAsync(string catalog, EventSpec spec, CancellationToken cancellationToken = default) =>
         Answer(nameof(CreateAsync), catalog, spec, Event(Guid.NewGuid(), "created"));

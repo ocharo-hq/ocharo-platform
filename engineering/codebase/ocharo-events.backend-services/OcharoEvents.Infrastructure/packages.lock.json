@@ -153,11 +153,20 @@
       },
       "WoW2.Sdk.Beta.Be.Events.Abstractions": {
         "type": "Direct",
-        "requested": "[10.0.21-beta, )",
-        "resolved": "10.0.21-beta",
-        "contentHash": "LBvMfD+PxRjrUZWe8R1dYpWXr1IblmQbmYd5jne4IPCRwOxMgqafvVJSun+3IIlM8SdkH9swWWog88GumaT3jA==",
+        "requested": "[10.0.22-beta, )",
+        "resolved": "10.0.22-beta",
+        "contentHash": "zNaUrLn94huL49uRmzASfe9r28mkpy1MTCSYmvvSDmdf6ocBX6fOaNcWas2vihWwvQOImD01MJ2xBxWNpBd/LA==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be.Abstractions": "10.0.112-beta"
+        }
+      },
+      "WoW2.Sdk.Beta.Be.Files.Abstractions": {
+        "type": "Direct",
+        "requested": "[10.0.6-beta, )",
+        "resolved": "10.0.6-beta",
+        "contentHash": "mNJisXWGQkrndJxaDejOjXNVyGXTK84cHRjUaZHZub8P+Bk2/kke6CYSPBYbnN2+FHmmJlUDRtIFu7Hf4NMy4Q==",
+        "dependencies": {
+          "WoW2.Sdk.Beta.Be.Abstractions": "10.0.105-beta"
         }
       },
       "Ardalis.GuardClauses": {

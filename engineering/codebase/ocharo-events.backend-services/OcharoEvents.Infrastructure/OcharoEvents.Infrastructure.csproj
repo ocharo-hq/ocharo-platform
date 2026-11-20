@@ -5,6 +5,8 @@
     <PackageReference Include="WoW2.Sdk.Beta.Be" />
     <!-- WoW2 Events' brokers, which the Events page's mirror and the digest routes pass through to. -->
     <PackageReference Include="WoW2.Sdk.Beta.Be.Events.Abstractions" />
+    <!-- WoW2 Files' signed-URL broker, which the event image route asks for the stored copy's link. -->
+    <PackageReference Include="WoW2.Sdk.Beta.Be.Files.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>

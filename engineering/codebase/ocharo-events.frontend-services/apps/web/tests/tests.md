@@ -13,6 +13,12 @@ network is needed: each test stubs `fetch` (the session, status, runtime-setting
   or history, and no tracking read), no workflow write on a visit (any role, any stored workflow), Ocharo's stage labels in the feed; and the attention pills between the bar and the cards: the kit's deadlines pill and its
   list with links, the past pill with its count, a past event closed from the slot's strip, no pill at zero, both read again
   after a write in the feed. Scroll loading stays the kit's own test.
+  Event images: a card whose image has a `fileRef` shows the backend route (not the source link, not the file id), lazy, with no referrer
+  and the title as its alt text; a card with no image keeps the date tile; an image with no copy keeps the kit's own source image; a failed
+  stored copy or source image falls back to the date tile; the detail shows each stored copy through the route of its own place.
+- `EventImages.test.ts` — the image route's path under the organization's prefix, and the display model: an image with a `fileRef` takes the
+  route as its address and keeps its source link in `sourceUrl`, one with no copy (none, null or blank) is left as Events sent it, the place of each
+  image is its index, nothing but the images changes, and an event with no copy comes back as the same object.
 - `CalendarPage.test.ts` — the calendar place: the visible month read through the feed's calls and paged by cursor (capped at 1000),
   all-day and month-only events, stage colours, a new read for the next month and none inside the days read, loading, failure with retry,
   a block opening its event in the feed; and the scope pills: National, Central Asia and International above the calendar with the loaded window's counts

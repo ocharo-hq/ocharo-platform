@@ -2,7 +2,9 @@
 
 _Last updated: 2026-11-20_
 
-Orchestration hooks: the Events page's `fe-events` client, its feed-or-event navigation (held while the session signs out; the page has no form, so no unsaved-edit guard), the
+Orchestration hooks: the Events page's `fe-events` client (the workflow with Ocharo's labels, and each event the page reads with
+its stored image copies shown through the backend's image route: the kit has no image resolver, so the client hands it the
+route as the image's address, resolved against the page's origin), its feed-or-event navigation (held while the session signs out; the page has no form, so no unsaved-edit guard), the
 person's current day, and the workflow read the event's tracking form gets (the stored one with Ocharo's labels filling
 what it lacks; a visit never writes it; the detail shows no tracking form for now), the freshness read of the catalog's intake behind "Sources updated {time}", repeated
 every five minutes and on return to the tab, made once by the frame and offered to the sidebar's foot and the feed's title

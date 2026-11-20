@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.Extensions.Primitives;
 using Npgsql;
 using OcharoEvents.Api.Access.Extensions;
 using OcharoEvents.Application.Events.Errors;
@@ -41,7 +42,7 @@ public static partial class HostConfiguration
     }
 
     /// <summary>Configures the session pipeline after routing: the session and organization routes answer uncached and
-    /// only over HTTPS, as Desk's did; then the BFF (authentication, the <c>X-Csrf-Token</c> check, authorization). The
+    /// only over HTTPS, as Desk's did, unless a route sets its own <c>Cache-Control</c> (the event image redirect); then the BFF (authentication, the <c>X-Csrf-Token</c> check, authorization). The
     /// organization access filter on the Events controller checks the route's organization.</summary>
     private static IApplicationBuilder UseAccess(this IApplicationBuilder app)
     {
@@ -52,6 +53,9 @@ public static partial class HostConfiguration
             {
                 context.Response.OnStarting(() =>
                 {
+                    // A route that states its own caching keeps it: the event image redirect is private and a minute old at most.
+                    if (!StringValues.IsNullOrEmpty(context.Response.Headers.CacheControl))
+                        return Task.CompletedTask;
                     context.Response.Headers.CacheControl = "no-store";
                     context.Response.Headers.Pragma = "no-cache";
                     return Task.CompletedTask;

@@ -650,6 +650,14 @@ services:
         # service keeps no events store, so a deployed boot refuses without it.
         Events:BaseUrl: { from: Identity:Server:Resources:3:Uri }
         Events:Catalog: { default: ocharo-fashion }
+        # SCFD's stored copies of event images: the card shows them through the service's own image route, which asks
+        # WoW2 Files, tenant `scfd`, for a short-lived signed link with a read-only key (`files.read`; SCFD keeps its own
+        # read+write key). Both are optional and typed by the owner, never linked: with either missing, or Files failing,
+        # the route answers 302 to the image's own source link (https only; else 404), so a card keeps its source photo
+        # until the copy is served. They wait for the Files `scfd` tenant's read-only key (SCFD images plan,
+        # events-integration); the secret goes in with `wow2 secret set`, never into a file.
+        Files:BaseUrl: { type: url }
+        Files:ApiKey: { secret: true }
         # The Ocharo app menu, served anonymously at /api/runtime-config; an unset key leaves that app out. Apps whose
         # site root is the place to land link to that site, so nobody types them; Editorial, Atlas and Wear sit under a
         # path of the blog site, so the owner types those.

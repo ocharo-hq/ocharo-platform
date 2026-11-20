@@ -14,6 +14,14 @@ Wheelhouse deploys it as the `events` service and site of `../deploy.yml`, signe
 the session cache's `distributed_cache` set; `config check` runs before each restart. A deployed boot refuses without
 `ConnectionStrings:Database`, `Identity:Client:*` or `Events:BaseUrl`, so the image has no stand-alone local compose file.
 
+SCFD's stored copies of event images reach the card through two optional settings, `Files:BaseUrl` (typed `url`) and
+`Files:ApiKey` (a secret), the address of WoW2 Files and a read-only key (`files.read`) of SCFD's tenant `scfd`; the key
+is SCFD's sibling key, so SCFD's own read+write key is never shared. With either missing, or when Files fails or answers late, the
+image route answers 302 to that image's own source `url` instead (only an absolute https link without credentials, else
+404), so a card keeps the source photo it shows today until the copy is served, and the service boots and runs as before. Both wait for the Files `scfd`
+read-only key: until the Files owner declares and issues it, leave them unset. Set the secret with `wow2 secret set` (it
+prompts for the value), never in a file, a log or a chat.
+
 `ocharo-workflow.json` is Ocharo's workflow in Events: the stage labels in uz, ru and en, their classes, the default
 stage and the tracking fields' titles. A deploy that changes it runs Events' `workflow put --spec -` once, through
 Wheelhouse Run ([deployment.md](../deployment.md#events-workflow)); the Events page reads the stored workflow and never
