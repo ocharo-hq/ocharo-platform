@@ -1,6 +1,6 @@
 import type { DigestSpec } from '@wow-two-beta/fe-events/contracts';
 
-import { ocharoClosedStages, type EventStatus } from '@/domain/events/Events';
+import { ocharoClosedStages } from '@/domain/events/Events';
 
 export { OcharoEventsCatalog, ocharoClosedStages, ocharoWorkflow } from '@/domain/events/Events';
 
@@ -32,12 +32,6 @@ export function eventLinkTemplate(origin: string, organizationId: string): strin
   return `${origin}/organizations/${organizationId.toLowerCase()}/events/{id}`;
 }
 
-/** The stages of events the team is pursuing, which a deadline reminder is about. */
-export const ocharoPursuedStages: readonly EventStatus[] = ['shortlisted', 'applying', 'applied'];
-
-/** The name of the second digest an admin can add (OE05), in Uzbek like the default's: "Deadline reminders". */
-export const ocharoDeadlineReminderName = 'Muddat eslatmalari';
-
 /**
  * Ocharo's default digest (O17): weekly on Monday at 09:00 in Tashkent, new events and those starting within 30 days plus
  * deadlines within 14 days, in Uzbek, leaving out the events the team skipped or rejected (OE05). Recipients default to
@@ -59,28 +53,5 @@ export function ocharoDigestDefaults(): Partial<DigestSpec> {
     recipients: [{ role: 'member' }],
     language: 'uz-Latn',
     itemCap: 20,
-  };
-}
-
-/**
- * The "Deadline reminders" preset (OE05): every day at 09:00 in Tashkent, the events the team shortlisted, is applying to
- * or has applied to with an open deadline within 7 days, to every member, in Uzbek. It is created switched off, for an
- * admin to review and switch on; a link template, when given, fixes each event's link as the editor does.
- */
-export function ocharoDeadlineReminder(linkTemplate: string | null = null): DigestSpec {
-  return {
-    name: ocharoDeadlineReminderName,
-    enabled: false,
-    channel: 'telegram',
-    schedule: {
-      days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
-      times: ['09:00'],
-      timeZone: 'Asia/Tashkent',
-    },
-    selection: { deadlineWithinDays: 7, stages: [...ocharoPursuedStages] },
-    recipients: [{ role: 'member' }],
-    language: 'uz-Latn',
-    itemCap: 20,
-    ...(linkTemplate ? { linkTemplate } : {}),
   };
 }

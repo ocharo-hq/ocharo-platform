@@ -62,15 +62,21 @@ const intakeFreshnessRefreshMs = 5 * 60 * 1000;
 /**
  * Reads how fresh the catalog's intake is (E24): when its sources last received records and how many failed their last
  * poll. It reads on mount, every five minutes and when the tab is back in view; `now` is the instant of the last read.
- * A read that fails leaves `freshness` null (a person outside the catalog's organization reads 404), so the page shows
- * nothing and adds no error surface.
+ * `source` gives the client to read through, `null` while there is none (it reads again when that changes). A read that
+ * fails leaves `freshness` null (a person outside the catalog's organization reads 404), so the page shows nothing and
+ * adds no error surface.
  */
-export function useIntakeFreshness(client: EventsClient, catalog: string) {
+export function useIntakeFreshness(source: () => EventsClient | null, catalog: string) {
   const freshness = shallowRef<IntakeFreshnessModel | null>(null);
   const now = ref(Date.now());
   let generation = 0;
   async function load(): Promise<void> {
     const run = ++generation;
+    const client = source();
+    if (!client) {
+      freshness.value = null;
+      return;
+    }
     const result = await client.getIntakeFreshness(catalog);
     if (run !== generation) return;
     now.value = Date.now();
@@ -80,6 +86,7 @@ export function useIntakeFreshness(client: EventsClient, catalog: string) {
     if (document.visibilityState !== 'hidden') void load();
   }
   const timer = setInterval(reload, intakeFreshnessRefreshMs);
+  watch(source, () => void load());
   window.addEventListener('focus', reload);
   document.addEventListener('visibilitychange', reload);
   onScopeDispose(() => {

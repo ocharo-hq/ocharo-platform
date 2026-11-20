@@ -19,7 +19,8 @@ import { ocharoClosingStages, ocharoPursuingStages, previousIsoDate, type EventS
  * "Past, not closed" (OE12): the events that have ended while Ocharo was still pursuing them (shortlisted, applying,
  * applied or confirmed), each closed with one click as Attended or Skipped through one tracking write. Events lists them
  * server-side by stage and by a start no later than yesterday; the strip keeps those whose last day has passed. An ended
- * event Ocharo never tracked needs no action, and the strip hides itself when nothing is left to close.
+ * event Ocharo never tracked needs no action, and the strip hides itself when nothing is left to close. It tells the page
+ * how many events wait (`count`), which the feed's "Past to close" pill shows while the strip is folded away.
  */
 defineOptions({ name: 'PastEventsStrip' });
 const props = defineProps<{
@@ -37,6 +38,8 @@ const emit = defineEmits<{
   open: [eventId: string];
   /** Fires after an event was closed, so the page reloads the views that show its stage. */
   changed: [];
+  /** Fires with how many events wait to be closed, whenever that number changes (0 while the strip shows nothing). */
+  count: [rows: number];
 }>();
 const { t, uiLocale } = useUiLocale();
 
@@ -104,6 +107,11 @@ function follow(event: MouseEvent, id: string): void {
 
 onMounted(load);
 watch([() => props.today, () => props.client], () => void load());
+watch(
+  () => items.value.length,
+  (rows) => emit('count', rows),
+  { immediate: true },
+);
 defineExpose({ reload: load });
 </script>
 

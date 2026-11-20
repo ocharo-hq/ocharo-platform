@@ -1,5 +1,6 @@
 import type {
   CatalogKindModel,
+  DeadlineKind,
   JsonValue,
   LocalizedText,
   StageClass,
@@ -92,6 +93,8 @@ export const statusClasses: Record<EventStatus, StageClass> = {
   rejected: 'lost',
 };
 
+/** The deadline kinds the nearest-deadlines list and its count read: the dates an application is due by. */
+export const ocharoDeadlineKinds: readonly DeadlineKind[] = ['application'];
 /** The stages a team has left: the feed hides them until asked (OE05), and a digest leaves them out by default. */
 export const ocharoClosedStages: readonly EventStatus[] = ['skipped', 'rejected'];
 /** The stages a card at the default stage offers as one click. */
@@ -265,6 +268,14 @@ export function eventsPath(organizationId: string, location: EventsLocation): st
 }
 export function isEventIdentifier(value: string): boolean {
   return identifier.test(value);
+}
+
+/** The places an organization has beside the feed and the Telegram delivery, each addressed by one path segment. */
+export type EventsPlace = 'calendar' | 'reminders';
+/** The address of one of an organization's places: `/organizations/{id}/calendar`, `/organizations/{id}/reminders`. */
+export function eventsPlacePath(organizationId: string, place: EventsPlace): string {
+  if (!identifier.test(organizationId)) throw new Error('Invalid workspace destination.');
+  return `/organizations/${organizationId}/${place}`;
 }
 
 /** Where this app mirrors Events' tracking, event, workflow and calendar routes for the organization (OE07). */

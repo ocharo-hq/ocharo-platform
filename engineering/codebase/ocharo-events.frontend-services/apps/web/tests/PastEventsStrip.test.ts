@@ -162,6 +162,20 @@ describe('past events not closed (OE12)', () => {
     expect(wrapper!.find('[data-test="past-open-attended"]').exists()).toBe(false);
   });
 
+  it('tells how many events wait, as the list reads and as each one is closed', async () => {
+    await render();
+    expect(wrapper!.emitted('count')?.at(-1)).toEqual([1]);
+
+    await rows()[0]!.get('[data-test="past-open-attended"]').trigger('click');
+    await flushPromises();
+    expect(wrapper!.emitted('count')?.at(-1)).toEqual([0]);
+    wrapper!.unmount();
+
+    client.listTracking.mockResolvedValue(ResultExtensions.ok({ items: [page()[1], page()[2]], nextCursor: null }));
+    await render();
+    expect(wrapper!.emitted('count')?.at(-1)).toEqual([0]);
+  });
+
   it('opens the event inside the page on a plain click', async () => {
     await render();
 

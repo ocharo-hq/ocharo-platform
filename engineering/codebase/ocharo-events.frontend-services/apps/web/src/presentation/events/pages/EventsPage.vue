@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef } from 'vue';
-import { RouterLink } from 'vue-router';
-import { EventDetail, EventsDeadlines, EventsFeed, type EventsClient } from '@wow-two-beta/fe-events/kit';
+import { EventDetail, EventsFeed, type EventsClient } from '@wow-two-beta/fe-events/kit';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { EventsAccess, EventsWorkspace } from '@/application/events/UseEventsAccess';
 import { createEventsPageClient, useEventToday, useEventsNavigation } from '@/application/events/UseEvents';
-import { deliveryPath } from '@/domain/delivery/TelegramDelivery';
 import {
   eventsPath,
-  isEventIdentifier,
   ocharoCalendarOptions,
   ocharoClosedStages,
   ocharoCostField,
@@ -23,17 +20,17 @@ import {
   type EventsLocation,
 } from '@/domain/events/Events';
 
-import PastEventsStrip from '../PastEventsStrip.vue';
+import AttentionPills from '../AttentionPills.vue';
 import SourcesFreshness from '../SourcesFreshness.vue';
 
 /**
  * Records events where Ocharo could show its products; it never applies, registers or pays. The page renders WoW2
- * Events' own screens from `fe-events`' kit (OE07) over this app's mirror of Events' routes: the nearest application
- * deadlines, the organization's tracking feed (skipped and rejected hidden until asked, scope chips, quick Shortlist and
- * Skip, Ocharo's cost on each card, "Add event" publishing at once) and one event's detail with its tracking form.
- * Between the deadlines and the feed, "Past, not closed" asks to close each ended event Ocharo was pursuing (OE12).
- * Under the title, "Sources updated {time}" says when the intake last delivered, as a warning when it is over a day old or
- * a source fails (E24).
+ * Events' own screens from `fe-events`' kit (OE07) over this app's mirror of Events' routes: the organization's tracking
+ * feed (skipped and rejected hidden until asked, scope chips, quick Shortlist and Skip, Ocharo's cost on each card,
+ * "Add event" publishing at once) and one event's detail with its tracking form. Under the title, two folded pills
+ * (`AttentionPills`) open the nearest application deadlines and "Past, not closed", which asks to close each ended event
+ * Ocharo was pursuing (OE12); each shows its count and is gone at zero. "Sources updated {time}" (E24) is the frame's,
+ * at the sidebar's foot; below `md`, where there is no sidebar, its icon stands beside the title, from the same read.
  */
 defineOptions({ name: 'EventsPage' });
 const props = defineProps<{
@@ -58,14 +55,7 @@ const regions = ocharoRegions();
 const costField = ocharoCostField();
 const participationField = ocharoParticipationField();
 const proposal = ocharoProposal();
-const deadlines = ref<{ reload: () => unknown } | null>(null);
-const past = ref<{ reload: () => unknown } | null>(null);
-
-/** The organization's Telegram delivery settings, linked for its admins only. */
-const deliveryHref = computed(() => {
-  const id = organizationId();
-  return props.workspace.canAdmin?.value && id && isEventIdentifier(id) ? deliveryPath(id) : null;
-});
+const attention = ref<{ reload: () => unknown } | null>(null);
 const eventHref = (id: string) => eventsPath(organizationId(), { view: 'event', eventId: id });
 
 function open(location: EventsLocation): void {
@@ -76,18 +66,16 @@ function openEvent(id: string): void {
 }
 /** A write in the feed (a quick stage, a new event) can change the nearest deadlines and the past events to close. */
 function refreshSide(): void {
-  deadlines.value?.reload();
-  past.value?.reload();
+  attention.value?.reload();
 }
-/** A tracking save in the detail moves the event's stage in the feed behind it too. */
+/** The feed reads again with its filters kept: a stage written elsewhere on the page reaches it. */
+function refreshFeed(): void {
+  feedClient.value = { ...client };
+}
+/** A tracking save in the detail moves the event's stage in the feed behind it, and can change the pills' lists. */
 function refreshAll(): void {
-  feedClient.value = { ...client };
+  refreshFeed();
   refreshSide();
-}
-/** A past event closed in the strip leaves the strip by itself; its new stage reaches the feed and the deadlines. */
-function afterClose(): void {
-  feedClient.value = { ...client };
-  deadlines.value?.reload();
 }
 function setDirty(dirty: boolean): void {
   props.access.setDirty(dirty);
@@ -96,42 +84,14 @@ function setDirty(dirty: boolean): void {
 
 <template>
   <section class="space-y-6">
-    <header>
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <p class="eyebrow">{{ t('Showcase events') }}</p>
-        <RouterLink
-          v-if="deliveryHref"
-          :to="deliveryHref"
-          class="text-sm font-medium text-primary underline-offset-4 hover:underline"
-          data-test="telegram-delivery-link"
-          >{{ t('Telegram delivery') }}</RouterLink
-        >
-      </div>
-      <h1 class="page-title">{{ t('Events') }}</h1>
-      <SourcesFreshness :client="client" :catalog="OcharoEventsCatalog" />
-      <p class="max-w-2xl text-muted-foreground">
-        {{
-          t(
-            "Every event where Ocharo could show its products — local, regional and international — with dates, deadlines, costs and where Ocharo stands. Events records decisions; it never applies, registers or pays on Ocharo's behalf.",
-          )
-        }}
-      </p>
+    <header class="flex items-center gap-3">
+      <h1 class="page-title my-0">{{ t('Feed') }}</h1>
+      <SourcesFreshness compact class="md:hidden" data-test="sources-freshness-title" />
     </header>
     <!-- The feed stays mounted behind an open event, so its filters survive the round trip. -->
     <div v-show="showsFeed" class="space-y-6" data-test="events-feed">
-      <EventsDeadlines
-        ref="deadlines"
-        :client="client"
-        :catalog="OcharoEventsCatalog"
-        :locale="uiLocale"
-        :today="today"
-        :stages="workflow.stages"
-        :deadline-kinds="['application']"
-        :event-href="eventHref"
-        @open="openEvent"
-      />
-      <PastEventsStrip
-        ref="past"
+      <AttentionPills
+        ref="attention"
         :client="client"
         :catalog="OcharoEventsCatalog"
         :today="today"
@@ -139,7 +99,7 @@ function setDirty(dirty: boolean): void {
         :can-track="canTrack"
         :event-href="eventHref"
         @open="openEvent"
-        @changed="afterClose"
+        @changed="refreshFeed"
       />
       <EventsFeed
         :client="feedClient"

@@ -8,8 +8,6 @@ import {
   deliveryApiPrefix,
   deliveryPath,
   eventLinkTemplate,
-  ocharoDeadlineReminder,
-  ocharoDeadlineReminderName,
   ocharoDigestDefaults,
   OcharoEventsCatalog,
   ocharoWorkflow,
@@ -52,26 +50,6 @@ describe('Telegram delivery defaults', () => {
       itemCap: 20,
     });
     expect(OcharoEventsCatalog).toBe('ocharo-fashion');
-  });
-
-  it('adds a switched-off daily 09:00 Tashkent reminder for events being pursued, with a deadline within 7 days', () => {
-    expect(ocharoDeadlineReminder()).toEqual({
-      name: ocharoDeadlineReminderName,
-      enabled: false,
-      channel: 'telegram',
-      schedule: {
-        days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
-        times: ['09:00'],
-        timeZone: 'Asia/Tashkent',
-      },
-      selection: { deadlineWithinDays: 7, stages: ['shortlisted', 'applying', 'applied'] },
-      recipients: [{ role: 'member' }],
-      language: 'uz-Latn',
-      itemCap: 20,
-    });
-    expect(ocharoDeadlineReminder('https://events.example.test/e/{id}').linkTemplate).toBe(
-      'https://events.example.test/e/{id}',
-    );
   });
 
   it("offers the digest editor Ocharo's eight stages in three languages, an untracked event reading as candidate", () => {
@@ -143,119 +121,45 @@ describe('Telegram delivery page', () => {
   });
 });
 
-describe('Telegram delivery: deadline reminders', () => {
-  const reminders = () => wrapper!.find('[data-test="deadline-reminders"]');
-  /** The stubbed fetch calls made with one HTTP method. */
-  const requestsOf = (method: string) =>
-    vi
-      .mocked(fetch)
-      .mock.calls.filter(
-        ([input, init]) => (input instanceof Request ? input.method : (init?.method ?? 'GET')) === method,
-      );
-
-  /** A digest as Events answers it, which the client's decoder reads in full. */
-  const digestModel = (fields: Record<string, unknown>) => ({
-    id: 'digest-0',
-    catalog: 'ocharo-fashion',
-    name: 'Ocharo tadbirlari',
-    enabled: true,
-    channel: 'telegram',
-    schedule: { days: ['monday'], times: ['09:00'], timeZone: 'Asia/Tashkent' },
-    selection: {},
-    recipients: [{ role: 'member' }],
-    language: 'uz-Latn',
-    itemCap: 20,
-    revision: 1,
-    createdAtUtc: '2026-11-19T04:00:00Z',
-    updatedAtUtc: '2026-11-19T04:00:00Z',
-    ...fields,
-  });
-
-  /** Stubs the mirror's digest list (the given digests) and create (answers the posted spec as a digest). */
-  function stubDigests(existing: { name: string }[], createStatus = 201) {
-    const created: Record<string, unknown>[] = [];
+describe('Telegram delivery: no deadline-reminder offer', () => {
+  it('lists the digests only, never offering or creating a "Deadline reminders" digest', async () => {
+    const requests: string[] = [];
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const request =
           input instanceof Request ? input : new Request(new URL(String(input), 'https://localhost'), init);
-        if (request.method === 'POST') {
-          if (createStatus !== 201) return Response.json({ title: 'No' }, { status: createStatus });
-          const spec = (await request.json()) as Record<string, unknown>;
-          created.push(spec);
-          return Response.json({ data: digestModel({ ...spec, id: 'digest-1' }) }, { status: 201 });
-        }
-        return Response.json({
-          data: existing.map((digest, index) => digestModel({ id: `digest-${index}`, ...digest })),
-        });
+        requests.push(request.method);
+        return Response.json({ data: [] });
       }),
     );
-    return created;
-  }
-
-  async function mountPage() {
     wrapper = mount(TelegramDeliveryPage, {
       props: { organizationId: OrganizationId, subject: 'owner-sub' },
       global: { plugins: [await eventsRouter(`/organizations/${OrganizationId}/telegram-delivery`)] },
       attachTo: document.body,
     });
+    await vi.waitFor(() => expect(requests.length).toBeGreaterThan(0));
     await flushPromises();
-  }
 
-  it('creates the reminder switched off through the mirror, then stops offering it', async () => {
-    const created = stubDigests([]);
-    await mountPage();
-    await vi.waitFor(() => expect(reminders().exists()).toBe(true));
-    expect(reminders().get('h2').text()).toBe('Deadline reminders');
-
-    await reminders().get('[data-test="deadline-reminders-add"]').trigger('click');
-
-    await vi.waitFor(() => expect(created).toHaveLength(1));
-    expect(created[0]).toMatchObject({
-      name: ocharoDeadlineReminderName,
-      enabled: false,
-      schedule: { times: ['09:00'], timeZone: 'Asia/Tashkent' },
-      selection: { deadlineWithinDays: 7, stages: ['shortlisted', 'applying', 'applied'] },
-      recipients: [{ role: 'member' }],
-      linkTemplate: `${location.origin}/organizations/${OrganizationId}/events/{id}`,
-    });
-    await vi.waitFor(() => expect(reminders().exists()).toBe(false));
-    expect(requestsOf('POST')).toHaveLength(1);
-  });
-
-  it('offers nothing when the organization already has a reminder digest', async () => {
-    stubDigests([{ name: ocharoDeadlineReminderName }]);
-    await mountPage();
-    // Both the panel and the offer read the list; only then does an absent offer mean something.
-    await vi.waitFor(() => expect(requestsOf('GET').length).toBeGreaterThanOrEqual(2));
-    await flushPromises();
-    expect(wrapper!.find('[data-test="digest-item"]').exists()).toBe(true);
-    expect(reminders().exists()).toBe(false);
-  });
-
-  it('shows why the reminder was not added, and keeps the offer', async () => {
-    stubDigests([], 403);
-    await mountPage();
-    await vi.waitFor(() => expect(reminders().exists()).toBe(true));
-
-    await reminders().get('[data-test="deadline-reminders-add"]').trigger('click');
-
-    await vi.waitFor(() => expect(wrapper!.find('[data-test="deadline-reminders-failure"]').exists()).toBe(true));
-    expect(wrapper!.get('[data-test="deadline-reminders-failure"]').text()).not.toBe('');
-    expect(reminders().exists()).toBe(true);
+    expect(wrapper.find('[data-test="deadline-reminders"]').exists()).toBe(false);
+    expect(wrapper.text()).not.toContain('Deadline reminders');
+    expect(wrapper.text()).not.toContain('Add deadline reminders');
+    expect(requests.every((method) => method === 'GET')).toBe(true);
+    // The weekly default stays the editor's starting digest.
+    expect(ocharoDigestDefaults().name).toBe('Ocharo tadbirlari');
   });
 });
 
 describe('Telegram delivery route', () => {
   const requested = () => vi.mocked(fetch).mock.calls.map(([input]) => String(input));
 
-  it('opens the settings for an admin, links them from the events page and lists the digests', async () => {
+  const deliveryLink = () => wrapper!.find(`aside a[href="/organizations/${OrganizationId}/telegram-delivery"]`);
+
+  it('opens the settings for an admin, links them from the sidebar and lists the digests', async () => {
     const mounted = await mountEvents(`/organizations/${OrganizationId}/events`, { identitySession: AdminSession });
     wrapper = mounted.wrapper;
-    await vi.waitFor(() => expect(wrapper!.find('[data-test="telegram-delivery-link"]').exists()).toBe(true));
-    expect(wrapper.get('[data-test="telegram-delivery-link"]').attributes('href')).toBe(
-      `/organizations/${OrganizationId}/telegram-delivery`,
-    );
+    await vi.waitFor(() => expect(deliveryLink().exists()).toBe(true));
+    expect(deliveryLink().text()).toBe('Telegram delivery');
 
     await mounted.router.push(`/organizations/${OrganizationId}/telegram-delivery`);
     await vi.waitFor(() => expect(wrapper!.find('main h1').text()).toBe('Telegram delivery'));
@@ -268,7 +172,8 @@ describe('Telegram delivery route', () => {
     const mounted = await mountEvents(`/organizations/${OrganizationId}/events`, { identitySession: EditorSession });
     wrapper = mounted.wrapper;
     await flushPromises();
-    expect(wrapper.find('[data-test="telegram-delivery-link"]').exists()).toBe(false);
+    expect(wrapper.find('aside').exists()).toBe(true);
+    expect(deliveryLink().exists()).toBe(false);
 
     await mounted.router.push(`/organizations/${OrganizationId}/telegram-delivery`);
     await vi.waitFor(() => expect(wrapper!.find('#delivery-refused-heading').exists()).toBe(true));

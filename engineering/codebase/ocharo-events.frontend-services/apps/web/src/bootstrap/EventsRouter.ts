@@ -8,6 +8,7 @@ import {
 
 import { useUiLocale } from '../application/shared/UseUiLocale';
 import { eventsPath } from '../domain/events/Events';
+import type { EventsSection } from '../domain/shared/EventsSections';
 import { identityBridge, identityStrategy, SignInErrorParameter } from '../integration/common/IdentitySession';
 import AppLayout from './AppLayout.vue';
 
@@ -16,9 +17,12 @@ export const DocumentTitleSuffix = 'Ocharo Events';
 
 const { t } = useUiLocale();
 
-/** A place's metadata. `label` is the English source the breadcrumb and the document title translate. */
-function place(label: string): RouteHandle {
-  return { label, title: () => t(label) };
+/**
+ * A place's metadata. `label` is the English source the breadcrumb and the document title translate; `section` names
+ * the sidebar entry the place belongs to, `null` for a place outside every section.
+ */
+function place(label: string, section: EventsSection | null): RouteHandle {
+  return { label, section, title: () => t(label) };
 }
 
 /**
@@ -40,7 +44,7 @@ export const openSessionOrganization: RouteGuard = (): GuardDecision => {
   return { redirect: eventsPath(organizationId.toLowerCase(), { view: 'feed', eventId: null }) };
 };
 
-/** Code-split, directly addressable places inside the frame; an unknown path is not found. */
+/** Code-split, directly addressable places inside the frame, each under the section it opens from; an unknown path is not found. */
 export const eventsRoutes: RouteConfig = [
   {
     layout: AppLayout,
@@ -50,22 +54,32 @@ export const eventsRoutes: RouteConfig = [
         index: true,
         guard: openSessionOrganization,
         lazy: () => import('../presentation/events/pages/NotFoundPage.vue'),
-        handle: place('Page not found'),
+        handle: place('Page not found', null),
       },
       {
         path: 'organizations/:organizationId/events/:view(.*)*',
         lazy: () => import('../presentation/events/pages/EventsRoute.vue'),
-        handle: place('Events'),
+        handle: place('Feed', 'feed'),
+      },
+      {
+        path: 'organizations/:organizationId/calendar',
+        lazy: () => import('../presentation/events/pages/CalendarRoute.vue'),
+        handle: place('Calendar', 'calendar'),
+      },
+      {
+        path: 'organizations/:organizationId/reminders',
+        lazy: () => import('../presentation/reminders/pages/RemindersRoute.vue'),
+        handle: place('Reminders', 'reminders'),
       },
       {
         path: 'organizations/:organizationId/telegram-delivery',
         lazy: () => import('../presentation/delivery/pages/TelegramDeliveryRoute.vue'),
-        handle: place('Telegram delivery'),
+        handle: place('Telegram delivery', 'telegram'),
       },
       {
         path: ':pathMatch(.*)*',
         lazy: () => import('../presentation/events/pages/NotFoundPage.vue'),
-        handle: place('Page not found'),
+        handle: place('Page not found', null),
       },
     ],
   },

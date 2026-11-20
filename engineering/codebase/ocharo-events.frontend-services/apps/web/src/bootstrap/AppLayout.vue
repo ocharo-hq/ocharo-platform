@@ -14,14 +14,19 @@ import {
 import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
 import { useBuildIdentity } from '../application/common/UseBuildIdentity';
+import { provideSourcesFreshness } from '../application/events/UseSourcesFreshness';
 import { useIdentitySession } from '../application/common/UseIdentitySession';
 import { useOcharoApps } from '../application/shared/UseOcharoApps';
 import { useUiLocale } from '../application/shared/UseUiLocale';
+import { eventsSection, readEventsSection } from '../domain/shared/EventsSections';
 import { OcharoAppKind } from '../domain/shared/OcharoApps';
 import IdentityConnection from '../presentation/common/IdentityConnection.vue';
+import EventsNav from '../presentation/frame/EventsNav.vue';
+import SourcesFreshness from '../presentation/events/SourcesFreshness.vue';
+import PhoneNav from '../presentation/frame/PhoneNav.vue';
 import { AppIcons } from '../presentation/frame/ShellIcons';
 
-/** Where this browser remembers the desktop sidebar's rail choice; Events has no sidebar yet, so it stays unread. @internal */
+/** Where this browser remembers the desktop sidebar's rail choice. @internal */
 const SidebarCollapsedKey = 'ocharo.events.sidebar-collapsed';
 /** The interface languages, each named in its own language. @internal */
 const UiLanguages: readonly AccountMenuLocale[] = [
@@ -32,8 +37,9 @@ const UiLanguages: readonly AccountMenuLocale[] = [
 
 /**
  * Events inside the frame every Ocharo app shares (the fe sdk's `AppFrame`): the bar and the page column are the
- * suite's, at one size in every app. Events passes what is its own: the app list, where you are, the account with its
- * languages, and its notices above the page. It has one place, so it gives the frame no sidebar.
+ * suite's, at one size in every app. Events passes what is its own: the app list, its sections (the feed, the calendar
+ * and the settings, in the sidebar and on a phone's bottom bar), when its sources last delivered (at the sidebar's foot,
+ * and beside the feed's title on a phone, from one read), where you are, the account with its languages, and its notices above the page.
  */
 defineOptions({ name: 'AppLayout' });
 const { t, uiLocale, setUiLocale } = useUiLocale();
@@ -41,6 +47,7 @@ const route = useRoute();
 const { isAuthenticated, person, organization, signingOut, signOut } = useIdentitySession();
 const { backendVersion, refresh: refreshBackendVersion, readRunningVersion } = useBuildIdentity();
 const apps = useOcharoApps();
+const section = computed(() => readEventsSection(route.meta));
 const appVersion = __APP_VERSION__;
 // The badge beside the app button follows the release the API serves; a local build has no release to compare.
 const { version: runningVersion } = useRunningVersion(() => (appVersion === 'dev' ? null : readRunningVersion()));
@@ -63,11 +70,19 @@ const switcher = computed<AppFrameSwitcher>(() => ({
   newTabLabel: t('(opens in a new tab)'),
   triggerLabel: t('Ocharo apps — {app}'),
 }));
-/** The place itself: its label comes from its route metadata. */
+/** The section, then the place itself where its label differs: the place's label comes from its route metadata. */
 const crumbs = computed(() => {
   const place = typeof route.meta.label === 'string' ? route.meta.label : null;
-  return place ? [t(place)] : [];
+  const labels = [eventsSection(section.value)?.label ?? null, place].filter((label): label is string =>
+    Boolean(label),
+  );
+  return labels.filter((label, index) => labels.indexOf(label) === index).map((label) => t(label));
 });
+/**
+ * The one read behind "Sources updated {time}", offered to the sidebar's foot below and, on a phone, to the feed's title:
+ * the session organization's, for a person who may read its events, none otherwise.
+ */
+provideSourcesFreshness();
 /** The switcher's second line: the session organization's name, or the suite's while none is named. */
 const appSubtitle = computed(() => organization.value?.name?.trim() || 'Ocharo');
 
@@ -127,6 +142,11 @@ watch(accountOpen, (open) => {
     @update:locale="setUiLocale"
   >
     <template #brand><span class="oc-mark">O</span></template>
+    <template #nav="{ isRail }"><EventsNav :current="section" :collapsed="isRail" /></template>
+    <template #nav-footer="{ isRail }">
+      <SourcesFreshness :compact="isRail" class="px-3 py-3" />
+    </template>
+    <template #phone-nav><PhoneNav :current="section" /></template>
     <template #notice><IdentityConnection /></template>
     <AppErrorBoundary>
       <RouterView />

@@ -75,10 +75,10 @@ interface Sent {
 let sent: Sent[] = [];
 let storedWorkflow: Record<string, unknown> = {};
 let listed: unknown[] = [];
+/** The nearest application deadlines the summary lists; the feed's own read ignores them. */
+let deadlines: unknown[] = [];
 /** What the past-events strip's query answers (OE12); none unless a test sets it. */
 let pastOpen: unknown[] = [];
-/** What Events' freshness read answers (E24); null answers 404, as for a person outside the catalog's organization. */
-let freshness: object | null = null;
 let wrapper: VueWrapper | undefined;
 
 const ok = (data: unknown, status = 200) => Response.json({ data }, { status });
@@ -88,20 +88,11 @@ function answer(method: string, url: URL, body: unknown): Response {
     return ok(method === 'PUT' ? { ...(body as object), revision: 3 } : storedWorkflow);
   if (path === `${CATALOG}/tracking`)
     return ok({ items: url.searchParams.has('stages') ? pastOpen : listed, nextCursor: null });
-  if (path === `${CATALOG}/freshness` && freshness) return ok(freshness);
   if (path === `${CATALOG}/tracking/summary`)
     return ok({
       byStage: { shortlisted: 1 },
       untracked: 1,
-      upcomingDeadlines: [
-        {
-          eventId: FASHION_WEEK,
-          title: fashionWeek().facts.title,
-          deadline: { kind: 'application', at: { value: '2026-10-15', precision: 'day' } },
-          stage: 'shortlisted',
-          tracked: true,
-        },
-      ],
+      upcomingDeadlines: deadlines,
     });
   if (path === `${CATALOG}/tracking/${FASHION_WEEK}` && method === 'GET')
     return ok({ event: fashionWeek(), tracking: fashionWeekTracking() });
@@ -127,7 +118,15 @@ beforeEach(() => {
   window.history.replaceState(null, '', '/');
   sent = [];
   pastOpen = [];
-  freshness = null;
+  deadlines = [
+    {
+      eventId: FASHION_WEEK,
+      title: fashionWeek().facts.title,
+      deadline: { kind: 'application', at: { value: '2026-10-15', precision: 'day' } },
+      stage: 'shortlisted',
+      tracked: true,
+    },
+  ];
   storedWorkflow = { ...ocharoWorkflowSpec(), revision: 2 };
   listed = [
     { event: fashionWeek(), tracking: fashionWeekTracking() },
@@ -201,6 +200,24 @@ const card = (title: string) =>
 const button = (scope: VueWrapper | ReturnType<VueWrapper['get']>, label: string) =>
   scope.findAll('button').find((item) => item.text().trim() === label)!;
 
+describe('feed header', () => {
+  it('is the title alone: no eyebrow, no description, no Telegram delivery link, no freshness line', async () => {
+    await render('owner');
+
+    const header = wrapper!.get('header');
+    expect(header.findAll('h1')).toHaveLength(1);
+    expect(header.get('h1').text()).toBe('Feed');
+    expect(header.element.children).toHaveLength(1);
+    expect(wrapper!.find('.eyebrow').exists()).toBe(false);
+    expect(wrapper!.text()).not.toContain('Showcase events');
+    expect(wrapper!.text()).not.toContain('Events records decisions');
+    expect(wrapper!.find('[data-test="telegram-delivery-link"]').exists()).toBe(false);
+    expect(wrapper!.find('[data-test="sources-freshness"]').exists()).toBe(false);
+    expect(sent.some((item) => item.url.pathname === `${CATALOG}/freshness`)).toBe(false);
+    expect(wrapper!.findAll('[data-test="event-card"]')).toHaveLength(2);
+  });
+});
+
 describe('events feed through the fe-events kit', () => {
   it('lists the tracking feed with one mirrored request: skipped and rejected left out, filters and paging server-side', async () => {
     await render('editor');
@@ -222,19 +239,6 @@ describe('events feed through the fe-events kit', () => {
     expect(untracked.get('[data-test="event-field-cost"]').text()).toBe('Cost not stated');
     expect(untracked.get('[data-test="event-scope"]').text()).toBe('Regional');
     expect(untracked.get('[data-test="event-quick-stages"]').text()).toContain('Shortlisted');
-  });
-
-  it('lists the nearest application deadlines from the summary, linked to each event page', async () => {
-    await render('editor');
-
-    const summary = sent.find(
-      (item) => item.url.pathname === `${CATALOG}/tracking/summary` && item.url.searchParams.has('deadlineKinds'),
-    )!;
-    expect(summary.url.searchParams.getAll('deadlineKinds')).toEqual(['application']);
-    expect(summary.url.searchParams.get('today')).toBe('2026-10-08');
-    const deadline = wrapper!.get('[data-test="deadline"]');
-    expect(deadline.text()).toContain('Tashkent Fashion Week');
-    expect(deadline.get('a').attributes('href')).toBe(`/organizations/${ORG}/events/${FASHION_WEEK}`);
   });
 
   it('shows a title in the interface language, SCFD’s English for an English reader, with the language badge otherwise', async () => {
@@ -319,32 +323,96 @@ describe('events feed through the fe-events kit', () => {
   });
 });
 
-describe('past events not closed (OE12)', () => {
-  it('asks to close an ended event Ocharo was pursuing, and reads the feed again once it is closed', async () => {
-    pastOpen = [
-      {
-        event: event(
-          FASHION_WEEK,
-          { en: 'Tashkent Fashion Week' },
-          { city: 'Tashkent', country: 'UZ' },
-          {
-            value: '2026-09-20',
-            precision: 'day',
-          },
-        ),
-        tracking: { ...fashionWeekTracking(), stage: 'confirmed' },
-      },
-    ];
+/** A confirmed event that ended on 20 September: past, and still to close (OE12). */
+const endedItem = () => ({
+  event: event(
+    FASHION_WEEK,
+    { en: 'Tashkent Fashion Week' },
+    { city: 'Tashkent', country: 'UZ' },
+    { value: '2026-09-20', precision: 'day' },
+  ),
+  tracking: { ...fashionWeekTracking(), stage: 'confirmed' },
+});
+const deadlineSummaries = () =>
+  sent.filter(
+    (item) => item.url.pathname === `${CATALOG}/tracking/summary` && item.url.searchParams.has('deadlineKinds'),
+  );
+const pastReads = () =>
+  sent.filter((item) => item.url.pathname === `${CATALOG}/tracking` && item.url.searchParams.has('stages'));
+const pill = (name: 'deadlines' | 'past') => wrapper!.find(`[data-test="attention-${name}-pill"]`);
+
+describe('attention pills under the title', () => {
+  it('folds the deadlines and the past events behind two pills with their counts, and loads no list until asked', async () => {
+    pastOpen = [endedItem()];
     await render('editor');
-    const past = sent.find(
-      (item) => item.url.pathname === `${CATALOG}/tracking` && item.url.searchParams.has('stages'),
-    )!;
-    expect(past.url.searchParams.getAll('stages')).toEqual(['shortlisted', 'applying', 'applied', 'confirmed']);
-    expect(past.url.searchParams.get('to')).toBe('2026-10-07');
-    expect(past.url.searchParams.get('includeUndated')).toBe('false');
+
+    expect(pill('deadlines').text()).toContain('Deadlines');
+    expect(pill('deadlines').get('[data-test="attention-count"]').text()).toBe('1');
+    expect(pill('deadlines').attributes('aria-expanded')).toBe('false');
+    expect(pill('past').text()).toContain('Past to close');
+    expect(pill('past').get('[data-test="attention-count"]').text()).toBe('1');
+    expect(pill('past').attributes('aria-expanded')).toBe('false');
+    // The pills sit under the title, ahead of the feed.
+    const order = wrapper!.get('[data-test="events-feed"]').element.children;
+    expect(order[0]!.getAttribute('data-test')).toBe('attention');
+    expect(wrapper!.find('[data-test="deadline"]').exists()).toBe(false);
+    expect(wrapper!.get('#attention-past').isVisible()).toBe(false);
+  });
+
+  it('counts the nearest application deadlines from the summary the list reads, today as the day', async () => {
+    await render('editor');
+
+    expect(deadlineSummaries()).toHaveLength(1);
+    expect(deadlineSummaries()[0]!.url.searchParams.getAll('deadlineKinds')).toEqual(['application']);
+    expect(deadlineSummaries()[0]!.url.searchParams.get('today')).toBe('2026-10-08');
+  });
+
+  it('unfolds the nearest deadlines on click, each linked to its event page, and folds them again', async () => {
+    await render('editor');
+
+    await pill('deadlines').trigger('click');
+    await flushPromises();
+    expect(pill('deadlines').attributes('aria-expanded')).toBe('true');
+    const deadline = wrapper!.get('[data-test="deadline"]');
+    expect(deadline.text()).toContain('Tashkent Fashion Week');
+    expect(deadline.get('a').attributes('href')).toBe(`/organizations/${ORG}/events/${FASHION_WEEK}`);
+
+    await pill('deadlines').trigger('click');
+    expect(pill('deadlines').attributes('aria-expanded')).toBe('false');
+    expect(wrapper!.find('[data-test="deadline"]').exists()).toBe(false);
+  });
+
+  it('opens an event from a deadline inside the page', async () => {
+    await render('editor');
+    await pill('deadlines').trigger('click');
+    await flushPromises();
+
+    await wrapper!.get('[data-test="deadline"] a').trigger('click');
+    await flushPromises();
+
+    expect(wrapper!.find('[data-test="back-to-feed"]').exists()).toBe(true);
+    expect(wrapper!.find('article[aria-labelledby="event-detail-title"]').exists()).toBe(true);
+  });
+
+  it('unfolds the past events, closes one in a tracking write, hides its pill and reads the feed again', async () => {
+    pastOpen = [endedItem()];
+    await render('editor');
+    expect(pastReads()).toHaveLength(1);
+    expect(pastReads()[0]!.url.searchParams.getAll('stages')).toEqual([
+      'shortlisted',
+      'applying',
+      'applied',
+      'confirmed',
+    ]);
+    expect(pastReads()[0]!.url.searchParams.get('to')).toBe('2026-10-07');
+    expect(pastReads()[0]!.url.searchParams.get('includeUndated')).toBe('false');
+
+    await pill('past').trigger('click');
+    expect(pill('past').attributes('aria-expanded')).toBe('true');
     const strip = wrapper!.get('[data-test="past-open"]');
     expect(strip.text()).toContain('Tashkent Fashion Week');
     const before = lists().length;
+    const summaries = deadlineSummaries().length;
 
     await strip.get('[data-test="past-open-attended"]').trigger('click');
     await flushPromises();
@@ -353,95 +421,40 @@ describe('past events not closed (OE12)', () => {
     expect(writes).toHaveLength(1);
     expect(writes[0]!.body).toMatchObject({ stage: 'attended', expectedRevision: 3 });
     expect(wrapper!.find('[data-test="past-open"]').exists()).toBe(false);
+    expect(pill('past').exists()).toBe(false);
     expect(lists().length).toBe(before + 1);
-  });
-});
-
-/** The instant `hours` before the test's clock, as the wire carries it. */
-const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000).toISOString();
-const freshnessLine = () => wrapper!.find('[data-test="sources-freshness"]');
-const freshnessReads = () => sent.filter((item) => item.url.pathname === `${CATALOG}/freshness`);
-
-describe('sources freshness under the title (E24)', () => {
-  it('says when the sources last delivered, with no warning while the last record is recent and nothing fails', async () => {
-    freshness = { lastReceivedAtUtc: hoursAgo(3), newestObservedAtUtc: hoursAgo(4), failingSources: 0 };
-    await render('editor');
-
-    expect(freshnessReads()).toHaveLength(1);
-    expect(freshnessReads()[0]!.method).toBe('GET');
-    const line = freshnessLine();
-    expect(line.text()).toBe('Sources updated 3 hours ago');
-    expect(line.attributes('data-state')).toBe('fresh');
-    expect(line.classes()).not.toContain('text-warning');
-    expect(line.attributes('role')).toBeUndefined();
-    expect(wrapper!.get('h1').element.nextElementSibling).toBe(line.element);
+    expect(deadlineSummaries().length).toBe(summaries + 1);
   });
 
-  it('warns when the last record is more than 24 hours old', async () => {
-    freshness = { lastReceivedAtUtc: hoursAgo(50), newestObservedAtUtc: hoursAgo(52), failingSources: 0 };
+  it('shows no pill while no deadline is near and no past event waits', async () => {
+    deadlines = [];
     await render('editor');
 
-    const line = freshnessLine();
-    expect(line.text()).toBe('Sources updated 2 days ago · No new records in over 24 hours.');
-    expect(line.attributes('data-state')).toBe('warning');
-    expect(line.classes()).toContain('text-warning');
-    expect(line.attributes('role')).toBe('status');
-  });
-
-  it('does not warn at 24 hours, the last moment a record still counts as fresh', async () => {
-    freshness = { lastReceivedAtUtc: hoursAgo(24), failingSources: 0 };
-    await render('editor');
-
-    expect(freshnessLine().text()).toBe('Sources updated yesterday');
-    expect(freshnessLine().attributes('data-state')).toBe('fresh');
-  });
-
-  it('warns with how many sources fail, even when the last record is recent', async () => {
-    freshness = { lastReceivedAtUtc: hoursAgo(1), newestObservedAtUtc: hoursAgo(2), failingSources: 2 };
-    await render('editor');
-
-    const line = freshnessLine();
-    expect(line.text()).toBe('Sources updated 1 hour ago · Sources failing: 2');
-    expect(line.attributes('data-state')).toBe('warning');
-  });
-
-  it('warns about a failing source before the catalog has received a record, with no time to give', async () => {
-    freshness = { lastReceivedAtUtc: null, newestObservedAtUtc: null, failingSources: 1 };
-    await render('editor');
-
-    expect(freshnessLine().text()).toBe('Sources failing: 1');
-    expect(freshnessLine().attributes('data-state')).toBe('warning');
-  });
-
-  it('shows nothing before the catalog has received a record and while no source fails', async () => {
-    freshness = { failingSources: 0 };
-    await render('editor');
-
-    expect(freshnessReads()).toHaveLength(1);
-    expect(freshnessLine().exists()).toBe(false);
-  });
-
-  it('shows nothing, and no error of its own, when the read fails', async () => {
-    await render('editor');
-
-    expect(freshnessReads()).toHaveLength(1);
-    expect(freshnessLine().exists()).toBe(false);
-    expect(wrapper!.find('[role="alert"]').exists()).toBe(false);
+    expect(pill('deadlines').exists()).toBe(false);
+    expect(pill('past').exists()).toBe(false);
+    expect(wrapper!.find('[data-test="attention-count"]').exists()).toBe(false);
     expect(wrapper!.findAll('[data-test="event-card"]')).toHaveLength(2);
   });
 
-  it('reads the age in the interface language', async () => {
-    freshness = { lastReceivedAtUtc: hoursAgo(3), failingSources: 0 };
+  it('reads both counts again after a write in the feed', async () => {
     await render('editor');
-    expect(freshnessLine().text()).toBe('Sources updated 3 hours ago');
+    const summaries = deadlineSummaries().length;
+    const past = pastReads().length;
 
-    useUiLocale().setUiLocale('uz');
+    await button(card('Silk Road Trade Fair'), 'Shortlisted').trigger('click');
     await flushPromises();
-    expect(freshnessLine().text()).toBe('Manbalar 3 soat oldin yangilandi');
 
-    useUiLocale().setUiLocale('ru');
-    await flushPromises();
-    expect(freshnessLine().text()).toBe('Источники обновлены 3 часа назад');
+    expect(deadlineSummaries().length).toBe(summaries + 1);
+    expect(pastReads().length).toBe(past + 1);
+  });
+
+  it('offers a viewer the past events to read but no stage action', async () => {
+    pastOpen = [endedItem()];
+    await render('viewer');
+
+    await pill('past').trigger('click');
+    expect(wrapper!.get('[data-test="past-open"]').text()).toContain('Tashkent Fashion Week');
+    expect(wrapper!.find('[data-test="past-open-attended"]').exists()).toBe(false);
   });
 });
 
@@ -545,15 +558,5 @@ describe("Ocharo's workflow in Events", () => {
       .map((option) => option.text());
     expect(stages).toEqual(ocharoWorkflowSpec().stages.map((stage) => stage.label!.uz));
     expect(workflowWrites()).toEqual([]);
-  });
-
-  it('links the Telegram delivery for an admin only', async () => {
-    await render('owner');
-    expect(wrapper!.find('[data-test="telegram-delivery-link"]').attributes('href')).toBe(
-      `/organizations/${ORG}/telegram-delivery`,
-    );
-    wrapper!.unmount();
-    await render('editor');
-    expect(wrapper!.find('[data-test="telegram-delivery-link"]').exists()).toBe(false);
   });
 });

@@ -1,11 +1,19 @@
 # Ocharo Platform — Catalogue design
 
-*Last updated: 2026-10-02*
+*Last updated: 2026-11-20*
 
 ## Screens
 
 Catalogue supports desktop (primary), tablet and phone. Review sizes are 1440 × 900,
 820 × 1180 and 390 × 844; 320px is the narrow-width boundary.
+
+Events supports desktop (primary) and phone. Review sizes are 1440 × 900 and 390 wide; the
+tablet icon rail and drawer belong to the shared frame and are not reviewed separately. Events
+navigates through the shared frame's sidebar at 1440: Feed and Calendar, then Settings with
+Reminders and, for an organization admin, Telegram delivery. At 390 the same three or four places
+are the bottom bar, with no More menu. "Sources updated" stands at the sidebar's foot and is an
+icon only on the rail; a phone, which has no sidebar, shows that icon beside the Feed title instead
+(the same read, hidden from `md` up).
 
 ## Catalogue header — selected option B
 

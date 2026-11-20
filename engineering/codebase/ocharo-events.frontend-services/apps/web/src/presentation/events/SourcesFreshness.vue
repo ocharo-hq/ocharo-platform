@@ -1,25 +1,29 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Clock, TriangleAlert } from 'lucide-vue-next';
 import { toRelativeTimeParts } from '@wow-two-beta/fe/foundation/i18n';
-import type { EventsClient } from '@wow-two-beta/fe-events/kit';
 
-import { useIntakeFreshness } from '@/application/events/UseEvents';
+import { useSourcesFreshness } from '@/application/events/UseSourcesFreshness';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { readIntakeFreshness } from '@/domain/events/IntakeFreshness';
 
 /**
- * "Sources updated 3 hours ago" under the page title (E24), from WoW2 Events' freshness read of the catalog, so the team
- * can tell a quiet week from a stalled SCFD pull: the line turns to a warning when the last record is more than 24 hours
- * old or a source failed its last poll (with how many). A read that fails shows nothing — the feed's own failure notice
- * (OE07) is the page's error surface, and this line adds none.
+ * "Sources updated 3 hours ago" (E24), from WoW2 Events' freshness read of the catalog that the frame makes once
+ * (`provideSourcesFreshness`), so the team can tell a quiet week from a stalled SCFD pull: the line turns to a warning
+ * when the last record is more than 24 hours old or a source failed its last poll (with how many). It stands at the foot of
+ * the sidebar and, on a phone, which has no sidebar, beside the feed's title. Compact it is only its icon (a clock, or a
+ * warning sign), with the full text as its tooltip and accessible name. A read that fails, or no frame around it, shows
+ * nothing — the feed's own failure notice (OE07) is the page's error surface, and this line adds none.
  */
 defineOptions({ name: 'SourcesFreshness' });
-const props = defineProps<{
-  client: EventsClient;
-  catalog: string;
+defineProps<{
+  /** Whether only the icon fits (the sidebar as an icon rail, a phone's title row); the text stays as its tooltip and name. */
+  compact?: boolean;
 }>();
 const { t, uiLocale } = useUiLocale();
-const { freshness, now } = useIntakeFreshness(props.client, props.catalog);
+const state = useSourcesFreshness();
+const freshness = computed(() => state?.freshness.value ?? null);
+const now = computed(() => state?.now.value ?? Date.now());
 
 const view = computed(() => (freshness.value ? readIntakeFreshness(freshness.value, now.value) : null));
 const text = computed(() => {
@@ -42,12 +46,19 @@ const text = computed(() => {
 <template>
   <p
     v-if="view && text"
-    class="text-sm"
-    :class="view.warns ? 'text-warning' : 'text-muted-foreground'"
+    class="flex items-start gap-2 text-xs leading-5"
+    :class="[view.warns ? 'text-warning' : 'text-muted-foreground', compact ? 'justify-center' : '']"
     :role="view.warns ? 'status' : undefined"
     :data-state="view.warns ? 'warning' : 'fresh'"
+    :data-compact="compact ? '' : undefined"
     data-test="sources-freshness"
   >
-    {{ text }}
+    <span v-if="compact" role="img" :aria-label="text" :title="text" class="grid size-5 place-items-center">
+      <component :is="view.warns ? TriangleAlert : Clock" :size="16" aria-hidden="true" />
+    </span>
+    <template v-else>
+      <component :is="view.warns ? TriangleAlert : Clock" :size="14" aria-hidden="true" class="mt-[3px] shrink-0" />
+      <span class="min-w-0">{{ text }}</span>
+    </template>
   </p>
 </template>

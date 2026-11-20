@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { RouterLink, useRoute } from 'vue-router';
+import { RouterLink } from 'vue-router';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { Card } from '@wow-two-beta/fe/presentation/display';
 
-import { useIdentitySession } from '@/application/common/UseIdentitySession';
+import { useServedOrganization } from '@/application/events/UseServedOrganization';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import { eventsPath } from '@/domain/events/Events';
 import NotFoundPage from '@/presentation/events/pages/NotFoundPage.vue';
@@ -16,16 +15,8 @@ import TelegramDeliveryPage from './TelegramDeliveryPage.vue';
  * anyone else reads not found.
  */
 defineOptions({ name: 'TelegramDeliveryRoute' });
-const route = useRoute();
 const { t } = useUiLocale();
-const { organization, canRead, canAdmin, person } = useIdentitySession();
-const organizationId = computed(() => organization.value?.id.toLowerCase() ?? null);
-const served = computed(
-  () =>
-    organizationId.value !== null &&
-    organizationId.value === String(route.params.organizationId).toLowerCase() &&
-    canRead.value,
-);
+const { served, organizationId, canAdmin, person } = useServedOrganization();
 </script>
 
 <template>

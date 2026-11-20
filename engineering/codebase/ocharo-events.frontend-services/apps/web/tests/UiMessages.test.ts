@@ -14,6 +14,7 @@ import {
   statusLabels,
 } from '@/domain/events/Events';
 import { OcharoAppsProblem } from '@/application/shared/UseOcharoApps';
+import { EventsGroupLabels, EventsSections } from '@/domain/shared/EventsSections';
 import { ocharoApps } from '@/domain/shared/OcharoApps';
 import { translateUi, uiMessages } from '@/domain/shared/UiMessages';
 
@@ -60,6 +61,8 @@ describe('interface messages', () => {
       'How to take part',
       'Source link',
       ...Object.values(OcharoAppsProblem),
+      ...EventsSections.map((section) => section.label),
+      ...Object.values(EventsGroupLabels).filter((label): label is string => label !== null),
       'Not checked',
       'Checking…',
       'Unavailable',
@@ -80,6 +83,35 @@ describe('interface messages', () => {
       ocharoParticipationField().label,
     ];
     expect(texts.filter((text) => !text.en || !text.uz || !text.ru || text.ru === text.en)).toEqual([]);
+  });
+
+  it('translates the SDK calendar’s own copy into Uzbek and Russian, each distinct from its English source', () => {
+    const keys = [
+      'Today',
+      'Previous',
+      'Next',
+      'View',
+      'Month',
+      'Week',
+      'Day',
+      'Agenda',
+      'Year',
+      'All day',
+      '(no title)',
+      '{date} at {time}',
+      '{title} at {time}',
+      'Upcoming from {date}',
+      'No upcoming events.',
+      '+{count} more',
+    ];
+    expect(keys.filter((key) => !(key in uiMessages))).toEqual([]);
+    expect(keys.filter((key) => uiMessages[key]!.uz === key || uiMessages[key]!.ru === key)).toEqual([]);
+  });
+
+  it('keeps no "Showcase events" string in the source tree', () => {
+    const offenders = sources(root).filter((file) => readFileSync(file, 'utf8').includes('Showcase events'));
+    expect(offenders.map((file) => file.replace(root, 'src/'))).toEqual([]);
+    expect('Showcase events' in uiMessages).toBe(false);
   });
 
   it('keeps every {parameter} of the English key in both translations', () => {
