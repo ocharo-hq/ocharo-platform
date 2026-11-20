@@ -31,7 +31,7 @@ export interface BrandSnapshot {
 export const RefreshMinimumMs = 400;
 
 /** The copy for a failure that left no API answer. */
-const UnexpectedFailure = 'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi; qayta urinib ko‘ring.';
+const UnexpectedFailure = 'The request did not complete. Your changes are still kept; try again.';
 
 // Local interface state shared by the frame and its pages; server values live in the query cache.
 const error = ref<string | null>(null);
@@ -185,23 +185,23 @@ export function useBrand() {
     currentVersion: (slot: string) =>
       draft.value?.logos.find((v) => v.id === draft.value?.draft.currentLogos[slot]) ?? null,
     versionsFor: (slot: string) => draft.value?.logos.filter((v) => v.slot === slot) ?? [],
-    pending: computed(() => (draft.value?.latestRelease ? draft.value.unpublishedChanges : ['Hali nashr qilinmagan'])),
+    pending: computed(() => (draft.value?.latestRelease ? draft.value.unpublishedChanges : ['Not published yet'])),
     async saveIdentity(identity: BrandIdentity, expectedRevision: number) {
       if (!draft.value) return null;
       return run(
         () => brandApi.saveIdentity(expectedRevision, identity),
-        'Identitet saqlandi (qoralama). Ilovalar nashrdan keyin ko‘radi.',
+        'Identity saved (draft). The apps see it after publishing.',
       );
     },
     async upload(slot: string, file: File, note: string | null) {
-      return run(() => brandApi.upload(slot, file, note), `${file.name} yuklandi.`);
+      return run(() => brandApi.upload(slot, file, note), `${file.name} uploaded.`);
     },
     async setCurrent(slot: string, versionId: string) {
       const current = draft.value;
       if (!current) return;
       await run(
         () => brandApi.setCurrent(slot, current.revision, versionId),
-        'Joriy fayl tanlandi — nashr qilinganda hamma ilovada almashadi.',
+        'Current file chosen — it changes in every app once published.',
       );
     },
     async setStatus(versionId: string, status: string) {
@@ -211,7 +211,7 @@ export function useBrand() {
       const current = draft.value;
       if (!current) return;
       const release = await run(() => brandApi.publish(current.revision, note));
-      if (release) notice.value = `${release.version}-nashr chiqdi: ${release.changes.join('; ')}.`;
+      if (release) notice.value = `Release ${release.version} published: ${release.changes.join('; ')}.`;
     },
     async saveAppearance(body: {
       id: string | null;
@@ -224,10 +224,10 @@ export function useBrand() {
       linkLabel: string | null;
       linkUrl: string | null;
     }) {
-      return run(() => brandApi.saveAppearance(body), 'Tadbir ko‘rinishi saqlandi.');
+      return run(() => brandApi.saveAppearance(body), 'Event appearance saved.');
     },
     async cancelAppearance(id: string) {
-      await run(() => brandApi.cancelAppearance(id), 'Tadbir bekor qilindi.');
+      await run(() => brandApi.cancelAppearance(id), 'Event cancelled.');
     },
   };
 }

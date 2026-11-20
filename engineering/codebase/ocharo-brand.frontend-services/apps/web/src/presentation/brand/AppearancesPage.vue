@@ -19,7 +19,7 @@ import {
 import { useBrand } from '../../application/brand';
 import { useIdentitySession } from '../../application/common/UseIdentitySession';
 import { slotLabels, slots } from '../../domain/brand/BrandModels';
-import { formatWhen } from '../../domain/brand/UzDates';
+import { formatWhen } from '../../domain/brand/BrandDates';
 
 /** Temporary event looks: during the window, chosen logos (and an accent colour) replace the released ones. */
 defineOptions({ name: 'AppearancesPage' });
@@ -105,15 +105,15 @@ async function save() {
 async function onFile(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0];
   if (!file || !form.value) return;
-  const version = await brand.upload(uploadSlot.value, file, `Tadbir: ${form.value.name || 'nomsiz'}`);
+  const version = await brand.upload(uploadSlot.value, file, `Event: ${form.value.name || 'unnamed'}`);
   if (version && form.value) form.value.overrides[uploadSlot.value] = version.id;
   if (fileInput.value) fileInput.value.value = '';
 }
 function state(a: { status: string; startsAt: string; endsAt: string }) {
-  if (a.status === 'cancelled') return { label: 'bekor qilingan', variant: 'neutral' } as const;
-  if (Date.parse(a.endsAt) <= now) return { label: 'tugagan', variant: 'neutral' } as const;
-  if (Date.parse(a.startsAt) <= now) return { label: 'faol', variant: 'success' } as const;
-  return { label: 'rejalashtirilgan', variant: 'brand' } as const;
+  if (a.status === 'cancelled') return { label: 'cancelled', variant: 'neutral' } as const;
+  if (Date.parse(a.endsAt) <= now) return { label: 'ended', variant: 'neutral' } as const;
+  if (Date.parse(a.startsAt) <= now) return { label: 'active', variant: 'success' } as const;
+  return { label: 'scheduled', variant: 'brand' } as const;
 }
 </script>
 
@@ -121,16 +121,15 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
   <section class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">Tadbir ko‘rinishlari</h1>
+        <h1 class="font-editorial text-4xl tracking-tight">Event appearances</h1>
         <p class="mt-2 max-w-3xl text-sm text-muted-foreground">
-          Navro‘z, Ramazon yoki kolleksiya haftasi uchun vaqtinchalik logotip. Belgilangan vaqtda barcha ilovalardagi
-          barqaror logotip manzillari shu faylni ko‘rsatadi, keyin avtomatik qaytadi. Asosiy yozuv (wordmark) qayta
-          chizilmaydi.
+          A temporary logo for Navruz, Ramadan or a collection week. During the set window, the stable logo addresses in
+          every app show this file, then switch back automatically. The main wordmark is not redrawn.
         </p>
       </div>
       <Button tone="primary" :is-disabled="!canEdit" @click="startNew">
         <template #leading><Icon :icon="CalendarPlus" :size="15" /></template>
-        Yangi tadbir
+        New event
       </Button>
     </div>
 
@@ -141,33 +140,33 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
       padding="xl"
     >
       <div class="flex items-start justify-between">
-        <h2 id="appearance-form-heading" class="font-editorial text-2xl">{{ form.id ? form.name : 'Yangi tadbir' }}</h2>
-        <Button variant="ghost" tone="neutral" shape="square" aria-label="Yopish" @click="form = null">
+        <h2 id="appearance-form-heading" class="font-editorial text-2xl">{{ form.id ? form.name : 'New event' }}</h2>
+        <Button variant="ghost" tone="neutral" shape="square" aria-label="Close" @click="form = null">
           <Icon :icon="X" :size="16" />
         </Button>
       </div>
       <div class="mt-4 grid gap-4 md:grid-cols-4">
-        <Field label="Nomi" class="md:col-span-2"><TextInput v-model="form.name" name="name" /></Field>
-        <Field label="Boshlanishi">
+        <Field label="Name" class="md:col-span-2"><TextInput v-model="form.name" name="name" /></Field>
+        <Field label="Starts">
           <DateTimeInput
             :model-value="wallClock(form.startsAt)"
             @update:model-value="form.startsAt = fromWallClock($event)"
           />
         </Field>
-        <Field label="Tugashi">
+        <Field label="Ends">
           <DateTimeInput
             :model-value="wallClock(form.endsAt)"
             @update:model-value="form.endsAt = fromWallClock($event)"
           />
         </Field>
       </div>
-      <h3 class="mt-5 text-sm font-semibold">Logotip almashtirishlari</h3>
+      <h3 class="mt-5 text-sm font-semibold">Logo overrides</h3>
       <div class="mt-2 grid gap-3 md:grid-cols-3">
         <Field v-for="slot in slots" :key="slot" :label="slotLabels[slot]!.label">
           <SelectPicker
             :model-value="form.overrides[slot] ?? ''"
             :options="[
-              { itemKey: '', value: '', label: '— asosiy nashrdagisi' },
+              { itemKey: '', value: '', label: '— the released file' },
               ...brand
                 .versionsFor(slot)
                 .map((version) => ({ itemKey: version.id, value: version.id, label: version.fileName })),
@@ -176,7 +175,7 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
           >
             <SelectPickerTrigger class="w-full" />
             <SelectPickerContent variant="glass-outline" class="z-[100] max-h-80 overflow-auto">
-              <SelectPickerItem item-key="" label="— asosiy nashrdagisi" />
+              <SelectPickerItem item-key="" label="— the released file" />
               <SelectPickerItem
                 v-for="version in brand.versionsFor(slot)"
                 :key="version.id"
@@ -188,30 +187,30 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
         </Field>
       </div>
       <div class="mt-3 flex flex-wrap items-center gap-2 text-sm">
-        <span class="text-muted-foreground">Tadbir uchun fayl yuklash:</span>
+        <span class="text-muted-foreground">Upload a file for the event:</span>
         <SelectPicker
           :model-value="uploadSlot"
           :options="slots.map((slot) => ({ itemKey: slot, value: slot, label: slotLabels[slot]!.label }))"
           @update:model-value="uploadSlot = $event ?? 'on-light'"
         >
-          <SelectPickerTrigger class="w-44" v-bind="{ 'aria-label': 'O‘rin' }" />
+          <SelectPickerTrigger class="w-44" v-bind="{ 'aria-label': 'Slot' }" />
           <SelectPickerContent variant="glass-outline" class="z-[100] max-h-80 overflow-auto">
             <SelectPickerItem v-for="slot in slots" :key="slot" :item-key="slot" :label="slotLabels[slot]!.label" />
           </SelectPickerContent>
         </SelectPicker>
         <Button variant="outline" tone="neutral" @click="fileInput?.click()">
           <template #leading><Icon :icon="Upload" :size="14" /></template>
-          Fayl
+          File
         </Button>
         <input ref="fileInput" type="file" accept="image/png,image/jpeg,image/webp" class="hidden" @change="onFile" />
       </div>
       <div class="mt-4 grid gap-4 md:grid-cols-[200px_1fr]">
-        <Field label="Urg‘u rangi (ixtiyoriy)">
+        <Field label="Accent color (optional)">
           <div class="flex gap-2">
             <ColorPicker
               :model-value="form.accentHex || null"
               trigger-variant="swatch"
-              v-bind="{ 'aria-label': 'Rang tanlash' }"
+              v-bind="{ 'aria-label': 'Pick a color' }"
               @update:model-value="form.accentHex = $event ?? ''"
             />
             <ColorInput
@@ -222,22 +221,21 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
             />
           </div>
         </Field>
-        <Field label="Izoh"><TextInput v-model="form.note" /></Field>
+        <Field label="Note"><TextInput v-model="form.note" /></Field>
       </div>
       <p class="mt-4 text-xs text-muted-foreground">
-        Tadbir havolasi (ixtiyoriy): saytda logotip yonida belgi bo‘lib chiqadi; logotipning o‘zi bosh sahifaga olib
-        boradi.
+        Event link (optional): shown on the site as a badge beside the logo; the logo itself leads to the home page.
       </p>
       <div class="mt-2 grid gap-4 md:grid-cols-[240px_1fr]">
-        <Field label="Belgi matni">
-          <TextInput v-model="form.linkLabel" maxlength="60" placeholder="Yangi to‘plam" />
+        <Field label="Badge text">
+          <TextInput v-model="form.linkLabel" maxlength="60" placeholder="New collection" />
         </Field>
-        <Field label="Havola (https://)">
+        <Field label="Link (https://)">
           <TextInput v-model="form.linkUrl" class="font-mono text-xs" placeholder="https://" />
         </Field>
       </div>
       <div class="mt-5 flex justify-end">
-        <Button tone="primary" :is-disabled="!canSave" @click="save">Saqlash</Button>
+        <Button tone="primary" :is-disabled="!canSave" @click="save">Save</Button>
       </div>
     </Card>
 
@@ -254,25 +252,25 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
               {{
                 Object.keys(a.overrides)
                   .map((s) => slotLabels[s]?.label ?? s)
-                  .join(', ') || (a.accentHex ? 'faqat rang' : 'faqat havola')
-              }}<template v-if="a.linkUrl"> · belgi: {{ a.linkLabel }}</template>
+                  .join(', ') || (a.accentHex ? 'color only' : 'link only')
+              }}<template v-if="a.linkUrl"> · badge: {{ a.linkLabel }}</template>
             </p>
           </div>
           <div v-if="a.status === 'scheduled'" class="flex gap-2">
-            <Button variant="outline" tone="neutral" @click="edit(a.id)">Tahrirlash</Button>
+            <Button variant="outline" tone="neutral" @click="edit(a.id)">Edit</Button>
             <Button
               variant="ghost"
               tone="danger"
               :is-disabled="!canEdit || brand.busy.value"
               @click="brand.cancelAppearance(a.id)"
             >
-              Bekor qilish
+              Cancel
             </Button>
           </div>
         </Card>
       </li>
       <li v-if="!list.length">
-        <Card radius="2xl" padding="2xl" class="text-center text-sm text-muted-foreground">Hali tadbir yo‘q.</Card>
+        <Card radius="2xl" padding="2xl" class="text-center text-sm text-muted-foreground">No events yet.</Card>
       </li>
     </ul>
   </section>

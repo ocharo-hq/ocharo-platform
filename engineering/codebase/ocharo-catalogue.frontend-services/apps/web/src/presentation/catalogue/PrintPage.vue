@@ -96,7 +96,7 @@ const products = computed<PublicProduct[]>(() => {
 function price(value: number | null) {
   if (value === null) return '—';
   const formatted = formatUzs(value);
-  return locale.value === 'uz' ? formatted : formatted.replace('so‘m', locale.value === 'ru' ? 'сум' : 'UZS');
+  return formatted.replace('UZS', { uz: 'so‘m', ru: 'сум', en: 'UZS' }[locale.value]);
 }
 /** A size cell is open when offered and not known to be sold out. */
 function sizeOpen(p: PublicProduct, size: string) {

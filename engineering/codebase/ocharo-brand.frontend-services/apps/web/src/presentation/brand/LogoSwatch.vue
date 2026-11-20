@@ -12,7 +12,7 @@ const props = defineProps<{ src: string; alt: string; compact?: boolean }>();
     <div class="flex aspect-[4/3] items-center justify-center rounded-lg border border-border bg-artwork-paper p-3">
       <img
         :src="props.src"
-        :alt="`${props.alt} — och fon`"
+        :alt="`${props.alt} — on light background`"
         class="max-h-full max-w-full object-contain"
         loading="lazy"
       />
@@ -20,7 +20,7 @@ const props = defineProps<{ src: string; alt: string; compact?: boolean }>();
     <div class="flex aspect-[4/3] items-center justify-center rounded-lg bg-artwork-ink p-3">
       <img
         :src="props.src"
-        :alt="`${props.alt} — to‘q fon`"
+        :alt="`${props.alt} — on dark background`"
         class="max-h-full max-w-full object-contain"
         loading="lazy"
       />
@@ -28,7 +28,7 @@ const props = defineProps<{ src: string; alt: string; compact?: boolean }>();
     <div class="artwork-check flex aspect-[4/3] items-center justify-center rounded-lg p-3">
       <img
         :src="props.src"
-        :alt="`${props.alt} — shaffoflik`"
+        :alt="`${props.alt} — transparency`"
         class="max-h-full max-w-full object-contain"
         loading="lazy"
       />

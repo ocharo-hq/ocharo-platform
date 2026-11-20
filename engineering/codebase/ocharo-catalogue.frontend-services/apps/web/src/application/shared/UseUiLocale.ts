@@ -1,36 +1,26 @@
 import { ref } from 'vue';
-import { localStorageStorageBroker } from '@wow-two-beta/fe/foundation/storage';
 
 import { translateUi, type UiLocale } from '../../domain/shared/UiMessages';
 
-const uiLocale = ref<UiLocale>('uz');
-/** Where this browser remembers the operator's interface language, as JSON through the SDK storage seam. */
-const StorageKey = 'ocharo.operator.locale';
-
-/** Whether `value` names an interface language. */
-function isUiLocale(value: unknown): value is UiLocale {
-  return value === 'uz' || value === 'ru' || value === 'en';
-}
-
 /**
- * Restores only the interface preference; document content language is owned by each design. A choice this browser
- * remembers wins, then the browser's language; storage a browser withholds reads as no choice.
+ * English-only until the SDKs' translation layer is improved (developer, 2026-11-20): the interface starts and stays
+ * `en`, ignoring a stored (`ocharo.operator.locale`, left as it is) or browser preference. The uz and ru message tables
+ * stay in the code for when the choice returns. Authored catalogue languages are content and have their own choice.
  */
+const uiLocale = ref<UiLocale>('en');
+
+/** Names the document language: always English. Document content language is owned by each design. */
 export function initializeUiLocale(): void {
-  const saved = localStorageStorageBroker.read<unknown>(StorageKey);
-  const preferred = isUiLocale(saved) ? saved : navigator.language.split('-')[0];
-  if (isUiLocale(preferred)) uiLocale.value = preferred;
+  uiLocale.value = 'en';
   document.documentElement.lang = uiLocale.value;
 }
 
-/** Shares the operator's explicit language choice without touching authored product or catalogue copy. */
+/** Shares the interface language without touching authored product or catalogue copy; any language but English is ignored. */
 export function useUiLocale() {
-  /** Switches the interface language and remembers it; a write the browser refuses still switches this tab. */
   function setUiLocale(value: string): void {
-    if (!isUiLocale(value)) return;
+    if (value !== 'en') return;
     uiLocale.value = value;
     if (typeof document !== 'undefined') document.documentElement.lang = value;
-    localStorageStorageBroker.write(StorageKey, value);
   }
   return {
     uiLocale,

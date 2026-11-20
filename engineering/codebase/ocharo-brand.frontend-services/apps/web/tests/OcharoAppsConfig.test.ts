@@ -43,7 +43,6 @@ beforeEach(() => useUiLocale().setUiLocale('en'));
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
-  useUiLocale().setUiLocale('uz');
 });
 
 describe('Ocharo app addresses', () => {

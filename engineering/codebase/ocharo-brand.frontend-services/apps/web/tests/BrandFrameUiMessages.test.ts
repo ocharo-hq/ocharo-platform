@@ -1,55 +1,20 @@
-/// <reference types="node" />
-import { readFileSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { OcharoAppsProblem } from '../src/application/shared/UseOcharoApps';
 import { brandFrameUiMessages } from '../src/domain/shared/BrandFrameUiMessages';
-import { BrandGroupLabels, BrandSections } from '../src/domain/shared/BrandSections';
+import { BrandSections } from '../src/domain/shared/BrandSections';
 import { ocharoApps } from '../src/domain/shared/OcharoApps';
 import { translateUi, uiMessages } from '../src/domain/shared/UiMessages';
 
-describe('Ocharo frame interface languages', () => {
-  it('covers every literal phrase and route label of the frame and its shared controls', () => {
-    const root = resolve(import.meta.dirname, '../src');
-    const missing = new Set<string>();
-    for (const directory of [
-      'bootstrap',
-      'presentation/frame',
-      'presentation/common',
-      'application/shared',
-      'application/common',
-    ]) {
-      for (const filename of readdirSync(resolve(root, directory))) {
-        if (!/\.(vue|ts)$/.test(filename)) continue;
-        const source = readFileSync(resolve(root, directory, filename), 'utf8');
-        for (const match of source.matchAll(/\b(?:t|place)\(\s*(['"])(.*?)\1/gs)) {
-          const phrase = match[2];
-          if (phrase && !uiMessages[phrase]) missing.add(phrase);
-        }
-      }
-    }
-    expect([...missing]).toEqual([]);
+/** The interface is English only for now; the uz and ru entries stay in the tables for when the choice returns. */
+describe('Ocharo frame interface messages', () => {
+  it('answers the English source for a phrase with no entry, in every locale, so a new string needs English only', () => {
+    expect('A phrase nobody translated: {count}' in uiMessages).toBe(false);
+    for (const locale of ['en', 'uz', 'ru'] as const)
+      expect(translateUi('A phrase nobody translated: {count}', locale, { count: 3 })).toBe(
+        'A phrase nobody translated: 3',
+      );
   });
 
-  it('translates every app, section, group and startup message the frame shows', () => {
-    const everyApp = ocharoApps(
-      Object.fromEntries(
-        ['desk', 'catalogue', 'studio', 'marketing', 'editorial', 'brand', 'events', 'atlas', 'wear', 'blog'].map(
-          (key) => [key, 'https://example.test/'],
-        ),
-      ),
-    );
-    const phrases = [
-      ...everyApp.flatMap((app) => [app.label, app.summary]),
-      ...BrandSections.map((section) => section.label),
-      ...Object.values(BrandGroupLabels).filter((label): label is string => Boolean(label)),
-      ...Object.values(OcharoAppsProblem),
-    ];
-    expect(everyApp).toHaveLength(10);
-    expect(phrases.filter((phrase) => !uiMessages[phrase])).toEqual([]);
-  });
-
-  it('retains every interpolation parameter in both interface translations', () => {
+  it('retains every interpolation parameter in every translation the table holds', () => {
     for (const [source, messages] of Object.entries(brandFrameUiMessages)) {
       const parameters = (value: string) => [...value.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
       for (const locale of ['uz', 'ru'] as const) {

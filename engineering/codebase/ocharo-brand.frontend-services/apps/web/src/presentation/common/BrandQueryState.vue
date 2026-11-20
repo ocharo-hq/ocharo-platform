@@ -7,10 +7,10 @@ import { slotLabels, slots } from '../../domain/brand/BrandModels';
 defineOptions({ name: 'BrandQueryState' });
 defineProps<{ state: 'loading' | 'success' | 'unavailable'; kind: 'overview' | 'logos' | 'appearances' | 'connect' }>();
 const titles = {
-  overview: 'Brend markazi',
-  logos: 'Logotiplar',
-  appearances: 'Tadbir ko‘rinishlari',
-  connect: 'Ulanish',
+  overview: 'Brand hub',
+  logos: 'Logos',
+  appearances: 'Event appearances',
+  connect: 'Connect',
 } as const;
 </script>
 
@@ -21,7 +21,7 @@ const titles = {
       <SkeletonState v-if="state === 'loading'" class="mt-2 h-10 w-full max-w-3xl" />
     </div>
     <div v-if="state === 'loading'" aria-busy="true" class="space-y-6">
-      <span class="sr-only" role="status">Brend ma’lumotlari yuklanmoqda.</span>
+      <span class="sr-only" role="status">Brand data is loading.</span>
       <template v-if="kind === 'logos'">
         <Card
           v-for="slot in slots"
@@ -68,7 +68,7 @@ const titles = {
       </template>
       <template v-else-if="kind === 'connect'">
         <Card v-bind="{ role: 'region', 'aria-labelledby': 'loading-connect-urls' }" radius="2xl" padding="xl">
-          <h2 id="loading-connect-urls" class="font-editorial text-2xl">Barqaror logotip manzillari</h2>
+          <h2 id="loading-connect-urls" class="font-editorial text-2xl">Stable logo addresses</h2>
           <table class="mt-3 w-full text-sm">
             <tbody>
               <tr v-for="slot in slots" :key="slot" class="border-t border-border">
@@ -84,7 +84,7 @@ const titles = {
           padding="xl"
           class="space-y-3 text-sm"
         >
-          <h2 id="loading-connect-kit" class="font-editorial text-2xl">Ma’lumot va uslub</h2>
+          <h2 id="loading-connect-kit" class="font-editorial text-2xl">Data and style</h2>
           <SkeletonState v-for="line in 4" :key="line" class="h-5 w-full" />
         </Card>
         <Card
@@ -93,7 +93,7 @@ const titles = {
           padding="xl"
           class="space-y-3"
         >
-          <h2 id="loading-connect-code" class="font-editorial text-2xl">Namuna kod</h2>
+          <h2 id="loading-connect-code" class="font-editorial text-2xl">Sample code</h2>
           <SkeletonState v-for="snippet in 2" :key="snippet" class="h-10 w-full" />
         </Card>
       </template>
@@ -101,7 +101,7 @@ const titles = {
         <Card v-bind="{ role: 'region', 'aria-labelledby': 'loading-pending' }" radius="2xl" padding="xl">
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 id="loading-pending" class="font-editorial text-2xl">Nashrga tayyor o‘zgarishlar</h2>
+              <h2 id="loading-pending" class="font-editorial text-2xl">Changes ready to publish</h2>
               <SkeletonState class="mt-1 h-5 w-56" />
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -112,8 +112,8 @@ const titles = {
             <SkeletonState v-for="change in 3" :key="change" class="h-5 w-28" />
           </div>
         </Card>
-        <Card v-bind="{ role: 'region', 'aria-label': 'Brendni o‘qiyotgan ilovalar' }" radius="2xl" padding="xl">
-          <h2 class="font-editorial text-2xl">Brendni o‘qiyotgan ilovalar</h2>
+        <Card v-bind="{ role: 'region', 'aria-label': 'Apps reading the brand' }" radius="2xl" padding="xl">
+          <h2 class="font-editorial text-2xl">Apps reading the brand</h2>
           <ul class="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             <li v-for="consumer in 3" :key="consumer" class="rounded-xl border border-border p-3 text-sm">
               <SkeletonState class="h-5 w-2/3" /><SkeletonState class="mt-1 h-4 w-full" /><SkeletonState
@@ -122,8 +122,8 @@ const titles = {
             </li>
           </ul>
         </Card>
-        <Card v-bind="{ role: 'region', 'aria-label': 'Nashrlar tarixi' }" radius="2xl" padding="xl">
-          <h2 class="font-editorial text-2xl">Nashrlar tarixi</h2>
+        <Card v-bind="{ role: 'region', 'aria-label': 'Release history' }" radius="2xl" padding="xl">
+          <h2 class="font-editorial text-2xl">Release history</h2>
           <ol class="mt-3 space-y-2 text-sm">
             <li v-for="release in 2" :key="release" class="rounded-lg border border-border px-3 py-2">
               <SkeletonState class="h-5 w-64 max-w-full" /><SkeletonState class="mt-1 h-4 w-2/3" /><SkeletonState
@@ -135,7 +135,7 @@ const titles = {
       </template>
     </div>
     <div v-else class="brand-query-region text-sm text-muted-foreground">
-      <p>{{ state === 'unavailable' ? 'Brend ma’lumotlari hozir mavjud emas.' : 'Hali brend ma’lumotlari yo‘q.' }}</p>
+      <p>{{ state === 'unavailable' ? 'Brand data is not available right now.' : 'No brand data yet.' }}</p>
     </div>
   </section>
 </template>

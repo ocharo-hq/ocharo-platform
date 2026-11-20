@@ -18,15 +18,15 @@ const cssSnippet = computed(() => `<link rel="stylesheet" href="${origin.value}$
 <template>
   <section class="space-y-6">
     <div>
-      <h1 class="font-editorial text-4xl tracking-tight">Ulanish</h1>
+      <h1 class="font-editorial text-4xl tracking-tight">Connect</h1>
       <p class="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Ilovalar logotipni fayl sifatida nusxalamasdan, quyidagi barqaror manzillardan oladi. Nashr yoki tadbir
-        o‘zgarganda manzil o‘sha qoladi, fayl almashadi (5 daqiqalik kesh). Aniq bir faylga bog‘lanish kerak bo‘lsa,
-        o‘zgarmas media manzilidan foydalaning.
+        Apps get the logo from the stable addresses below instead of copying the file. When a release or an event
+        changes, the address stays the same and the file is swapped (5-minute cache). To link to one exact file, use the
+        immutable media address.
       </p>
     </div>
     <Card v-bind="{ role: 'region', 'aria-labelledby': 'connect-urls-heading' }" radius="2xl" padding="xl">
-      <h2 id="connect-urls-heading" class="font-editorial text-2xl">Barqaror logotip manzillari</h2>
+      <h2 id="connect-urls-heading" class="font-editorial text-2xl">Stable logo addresses</h2>
       <table class="mt-3 w-full text-sm">
         <tbody>
           <tr v-for="slot in slots" :key="slot" class="border-t border-border">
@@ -44,24 +44,24 @@ const cssSnippet = computed(() => `<link rel="stylesheet" href="${origin.value}$
       padding="xl"
       class="space-y-3 text-sm"
     >
-      <h2 id="connect-kit-heading" class="font-editorial text-2xl">Ma’lumot va uslub</h2>
+      <h2 id="connect-kit-heading" class="font-editorial text-2xl">Data and style</h2>
       <p>
-        <span class="font-semibold">JSON to‘plam:</span>
-        <code class="break-all text-xs">{{ origin }}{{ brand.urls.kit }}?locale=uz</code> (ru, en ham)
+        <span class="font-semibold">JSON kit:</span>
+        <code class="break-all text-xs">{{ origin }}{{ brand.urls.kit }}?locale=en</code> (uz and ru too)
       </p>
       <p>
-        <span class="font-semibold">Aniq nashr:</span>
+        <span class="font-semibold">Exact release:</span>
         <code class="break-all text-xs"
           >{{ origin }}/api/public/brand/releases/{{ brand.kit.value?.release ?? 1 }}</code
         >
       </p>
       <p>
-        <span class="font-semibold">CSS tokenlar:</span>
+        <span class="font-semibold">CSS tokens:</span>
         <code class="break-all text-xs">{{ origin }}{{ brand.urls.tokens }}</code>
       </p>
       <p class="text-muted-foreground">
-        Ilova o‘zini “Umumiy” sahifasida ko‘rsatishi uchun <code>X-Ocharo-App: nomi</code> sarlavhasini yoki
-        <code>?app=nomi</code> ni yuboradi.
+        For an app to appear on the Overview page, it sends the <code>X-Ocharo-App: name</code> header or
+        <code>?app=name</code>.
       </p>
     </Card>
     <Card
@@ -70,7 +70,7 @@ const cssSnippet = computed(() => `<link rel="stylesheet" href="${origin.value}$
       padding="xl"
       class="space-y-3"
     >
-      <h2 id="connect-code-heading" class="font-editorial text-2xl">Namuna kod</h2>
+      <h2 id="connect-code-heading" class="font-editorial text-2xl">Sample code</h2>
       <pre class="overflow-x-auto rounded-lg bg-muted p-3 text-xs"><code>{{ snippet }}</code></pre>
       <pre class="overflow-x-auto rounded-lg bg-muted p-3 text-xs"><code>{{ cssSnippet }}</code></pre>
     </Card>

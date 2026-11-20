@@ -1,8 +1,8 @@
-const months = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * Tashkent wall-clock label such as `28 sen 2026 · 19:08`. Browsers ship incomplete Uzbek ICU
- * data (`2026 M09 28`), so numbers come from a numeric formatter and month words from this table.
+ * Tashkent wall-clock label such as `28 Sep 2026 · 19:08`. Month names come from this table so the label reads the
+ * same on every browser, and the numbers come from a numeric formatter.
  */
 export function formatWhen(value: string | Date | null | undefined, withTime = true): string {
   if (!value) return '—';

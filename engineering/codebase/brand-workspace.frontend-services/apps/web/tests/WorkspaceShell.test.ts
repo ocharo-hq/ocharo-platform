@@ -292,7 +292,8 @@ describe('account menu in Desk', () => {
       [...row.children].map((cell) => cell.textContent?.trim()).join(' '));
     expect(versions).toEqual([`Desk ${__APP_VERSION__}`, `API ${ApiVersion}`]);
     const rows = accountRows(panel).map((row) => row.textContent?.trim());
-    expect(rows).toEqual(['Account settings', 'System', 'Light', 'Dark', 'O‘zbekcha', 'Русский', 'English', 'Sign out']);
+    expect(rows).toEqual(['Account settings', 'System', 'Light', 'Dark', 'Sign out']);
+    expect(panel.querySelector('[data-account-menu-languages]')).toBeNull();
   });
 
   it('opens account settings from its own row', async () => {
@@ -333,20 +334,20 @@ describe('account menu in Desk', () => {
     expect(assign).toHaveBeenCalledWith(`/organizations/${memberships[3]!.id}`);
   });
 
-  it('switches the interface language and renames its own controls', async () => {
+  it('stays in English: a language change is ignored and the menu keeps its English controls', async () => {
     await renderAt(`/organizations/${ORG}/brands`, 1440);
 
-    accountRow(await openAccountMenu(), 'Русский').click();
+    useUiLocale().setUiLocale('ru');
     await settle();
 
-    expect(useUiLocale().uiLocale.value).toBe('ru');
-    expect(document.documentElement.lang).toBe('ru');
-    expect(accountTrigger().getAttribute('aria-label')).toBe('Меню учётной записи Local verification operator');
+    expect(useUiLocale().uiLocale.value).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
+    expect(accountTrigger().getAttribute('aria-label')).toBe('Account menu for Local verification operator');
     const panel = await openAccountMenu();
-    expect(panel.getAttribute('aria-label')).toBe('Учётная запись');
-    expect(accountRow(panel, 'Выйти')).toBe(accountRows(panel).at(-1));
+    expect(panel.getAttribute('aria-label')).toBe('Account');
+    expect(accountRow(panel, 'Sign out')).toBe(accountRows(panel).at(-1));
     expect(accountRows(panel).map((row) => row.textContent?.trim())).toEqual(
-      expect.arrayContaining(['Системная', 'Светлая', 'Тёмная']),
+      expect.arrayContaining(['System', 'Light', 'Dark']),
     );
   });
 

@@ -32,10 +32,10 @@ function size(bytes: number) {
 <template>
   <section class="space-y-6">
     <div>
-      <h1 class="font-editorial text-4xl tracking-tight">Logotiplar</h1>
+      <h1 class="font-editorial text-4xl tracking-tight">Logos</h1>
       <p class="mt-2 max-w-3xl text-sm text-muted-foreground">
-        Har bir o‘ringa yangi faylni yuklang va “Joriy qilish”ni bosing. O‘zgarish qoralamada turadi; Umumiy sahifada
-        “Nashr qilish” bosilganda barcha ilovalar yangi logotipni oladi. Faqat PNG, JPEG, WebP.
+        Upload a new file for each slot and press “Make current”. The change stays in the draft; when “Publish” is
+        pressed on the Overview page, every app gets the new logo. PNG, JPEG and WebP only.
       </p>
     </div>
     <Card
@@ -56,8 +56,8 @@ function size(bytes: number) {
           <TextInput
             :model-value="notes[slot] ?? ''"
             class="w-56"
-            placeholder="Izoh (ixtiyoriy)"
-            :aria-label="`${slotLabels[slot]!.label} izohi`"
+            placeholder="Note (optional)"
+            :aria-label="`${slotLabels[slot]!.label} note`"
             @update:model-value="notes[slot] = $event"
           />
           <Button
@@ -67,7 +67,7 @@ function size(bytes: number) {
             @click="inputs[slot]?.click()"
           >
             <template #leading><Icon :icon="Upload" :size="14" /></template>
-            Yuklash
+            Upload
           </Button>
           <input
             :ref="(el) => (inputs[slot] = el as HTMLInputElement | null)"
@@ -85,11 +85,11 @@ function size(bytes: number) {
         />
       </div>
       <p v-else class="mt-4 rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-        Bu o‘ringa fayl tanlanmagan{{
+        No file is chosen for this slot{{
           slot === 'on-light' || slot === 'social'
-            ? ' — asosiy logotip ishlatiladi'
+            ? ' — the master logo is used'
             : slot === 'favicon'
-              ? ' — profil rasmi yoki och fon logotipi ishlatiladi'
+              ? ' — the profile picture or the on-light logo is used'
               : ''
         }}.
       </p>
@@ -116,7 +116,7 @@ function size(bytes: number) {
             <p v-if="v.note" class="mt-1 line-clamp-2 text-muted-foreground">{{ v.note }}</p>
             <div class="mt-2 flex flex-wrap items-center gap-1">
               <Badge :variant="v.status === 'approved' ? 'success' : 'neutral'" size="sm">
-                {{ v.status === 'approved' ? 'tasdiqlangan' : 'qoralama' }}
+                {{ v.status === 'approved' ? 'approved' : 'draft' }}
               </Badge>
               <Button
                 v-if="brand.draft.value?.draft.currentLogos[slot] !== v.id"
@@ -125,11 +125,11 @@ function size(bytes: number) {
                 :is-disabled="!canEdit || brand.busy.value"
                 @click="brand.setCurrent(slot, v.id)"
               >
-                Joriy qilish
+                Make current
               </Button>
               <Badge v-else variant="brand" size="sm">
                 <template #leading><Icon :icon="Check" :size="11" /></template>
-                joriy
+                current
               </Badge>
               <Button
                 tone="neutral"
@@ -137,7 +137,7 @@ function size(bytes: number) {
                 :is-disabled="!canEdit || brand.busy.value"
                 @click="brand.setStatus(v.id, v.status === 'approved' ? 'draft' : 'approved')"
               >
-                {{ v.status === 'approved' ? 'Tasdiqni olish' : 'Tasdiqlash' }}
+                {{ v.status === 'approved' ? 'Remove approval' : 'Approve' }}
               </Button>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initializeUiLocale, useUiLocale } from '../src/application/shared/UseUiLocale';
 import { sessionStorageStorageBroker } from '@wow-two-beta/fe/foundation/storage';
 
-/** Where the operator's interface language is remembered. */
+/** Where the operator's interface language was remembered before the interface became English only; no longer read. */
 const LocaleKey = 'ocharo.operator.locale';
 
 beforeEach(() => {
@@ -15,27 +15,26 @@ afterEach(() => {
 });
 
 describe('Catalogue local state through the SDK storage seam', () => {
-  it('remembers the interface language as JSON and restores it on the next start', () => {
-    useUiLocale().setUiLocale('ru');
-    expect(localStorage.getItem(LocaleKey)).toBe('"ru"');
-    useUiLocale().uiLocale.value = 'en';
-
-    initializeUiLocale();
-
-    expect(useUiLocale().uiLocale.value).toBe('ru');
-    expect(document.documentElement.lang).toBe('ru');
-  });
-
-  it('reads an unreadable or unknown remembered language as no choice and follows the browser', () => {
+  it('stays in English: a remembered or browser language is ignored and the stored key is left as it is', () => {
     vi.stubGlobal('navigator', { language: 'uz-UZ' });
-    for (const stored of ['ru', '"fr"', '{']) {
+    for (const stored of ['"ru"', '"uz"', '"fr"', '{']) {
       localStorage.setItem(LocaleKey, stored);
-      useUiLocale().uiLocale.value = 'en';
+      useUiLocale().uiLocale.value = 'ru';
 
       initializeUiLocale();
 
-      expect(useUiLocale().uiLocale.value).toBe('uz');
+      expect(useUiLocale().uiLocale.value).toBe('en');
+      expect(document.documentElement.lang).toBe('en');
+      expect(localStorage.getItem(LocaleKey)).toBe(stored);
     }
+  });
+
+  it('ignores a change to any language but English and stores nothing', () => {
+    for (const value of ['uz', 'ru', 'fr', '']) useUiLocale().setUiLocale(value);
+
+    expect(useUiLocale().uiLocale.value).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
+    expect(localStorage.getItem(LocaleKey)).toBeNull();
   });
 
   it('keeps a designer recovery copy in this tab only, and degrades a broken one to a miss', () => {

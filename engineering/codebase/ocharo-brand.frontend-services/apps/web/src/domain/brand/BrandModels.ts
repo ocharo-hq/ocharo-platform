@@ -127,12 +127,12 @@ export interface PublicBrand {
 }
 
 export const slotLabels: Record<string, { label: string; hint: string }> = {
-  master: { label: 'Asosiy (master)', hint: 'Tasdiqlangan asl logotip' },
-  'on-light': { label: 'Och fonda', hint: 'Qora yozuv, shaffof fon' },
-  'on-dark': { label: 'To‘q fonda', hint: 'Oq yozuv, shaffof fon' },
-  avatar: { label: 'Profil rasmi', hint: 'Kvadrat, ijtimoiy tarmoqlar uchun' },
-  favicon: { label: 'Favicon', hint: 'Kichik kvadrat belgi' },
-  social: { label: 'Ulashish rasmi', hint: '1200×630, havola ulashilganda' },
+  master: { label: 'Master', hint: 'The approved original logo' },
+  'on-light': { label: 'On light', hint: 'Black wordmark, transparent background' },
+  'on-dark': { label: 'On dark', hint: 'White wordmark, transparent background' },
+  avatar: { label: 'Profile picture', hint: 'Square, for social networks' },
+  favicon: { label: 'Favicon', hint: 'Small square mark' },
+  social: { label: 'Share image', hint: '1200×630, when a link is shared' },
 };
 
 export const slots = ['master', 'on-light', 'on-dark', 'avatar', 'favicon', 'social'];

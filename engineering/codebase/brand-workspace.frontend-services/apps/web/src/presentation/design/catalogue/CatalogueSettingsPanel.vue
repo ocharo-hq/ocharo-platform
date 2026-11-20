@@ -407,9 +407,6 @@ function photo(elementId: string, hash: string): void {
           {{ t("Refresh saved product values") }}
         </button>
       </div>
-      <p>
-        {{ t("Interface language and catalogue language are independent.") }}
-      </p>
       <details>
         <summary>{{ t("Shared text and prices") }}</summary>
         <div class="copy-grid">

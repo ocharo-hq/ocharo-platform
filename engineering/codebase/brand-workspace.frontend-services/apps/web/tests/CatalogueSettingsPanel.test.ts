@@ -9,6 +9,7 @@ import type { AccessControls } from "@/application/common/hooks/UseAccess";
 import { createCatalogueCover } from "@/domain/design/catalogue/CatalogueComposer";
 import { initialCommerce } from "@/domain/common/models/Commerce";
 import { translateDesignerNotice } from "@/domain/common/DesignerUiMessages";
+import { translateUi } from "@/domain/common/UiMessages";
 const { get } = vi.hoisted(() => ({ get: vi.fn() }));
 vi.mock("@/application/common/hooks/UseCommerce", () => ({
   useCommerce: () => ({ get }),
@@ -49,28 +50,27 @@ async function mountPanel() {
   return { wrapper, snapshot };
 }
 describe("independent catalogue and operator languages", () => {
-  it("keeps English catalogue content when the operator selects Uzbek or Russian", async () => {
-    controls.setUiLocale("uz");
+  it("keeps English catalogue content in the English interface, which a language change does not alter", async () => {
     const { wrapper, snapshot } = await mountPanel();
     const before = JSON.stringify(snapshot);
-    expect(wrapper.text()).toContain("Katalog tili");
+    expect(wrapper.text()).toContain("Catalogue language");
     expect(deskSelect(wrapper, controls.t('Catalogue language')).props('modelValue')).toBe("en");
     controls.setUiLocale("ru");
     await flushPromises();
-    expect(wrapper.text()).toContain("Язык каталога");
+    expect(controls.uiLocale.value).toBe("en");
+    expect(wrapper.text()).toContain("Catalogue language");
     expect(JSON.stringify(snapshot)).toBe(before);
     expect(wrapper.emitted("change")).toBeUndefined();
     wrapper.unmount();
   });
   it("changes only the catalogue locale and flags untranslated shared text", async () => {
-    controls.setUiLocale("uz");
     const { wrapper, snapshot } = await mountPanel();
     await chooseDeskValue(wrapper, controls.t('Catalogue language'), 'fr');
     const change = wrapper.emitted("change")![0]![0] as typeof snapshot;
     expect(change.locale).toBe("fr");
-    expect(controls.uiLocale.value).toBe("uz");
+    expect(controls.uiLocale.value).toBe("en");
     expect(snapshot.locale).toBe("en");
-    expect(wrapper.text()).toContain("fr tilidagi umumiy matnini");
+    expect(wrapper.text()).toContain("Complete the shared fr catalogue text.");
     expect(
       change.pages[0]!.elements.find(
         (item) => item.binding?.field === "collection",
@@ -78,7 +78,7 @@ describe("independent catalogue and operator languages", () => {
     ).toBe("");
     wrapper.unmount();
   });
-  it("emits one replacement for a global photo-group switch and translates dynamic notices", async () => {
+  it("emits one replacement for a global photo-group switch and resolves dynamic notices through the retained tables", async () => {
     const { wrapper } = await mountPanel();
     await chooseDeskValue(wrapper, controls.t('Photo group for all products'), 'model');
     expect(wrapper.emitted("change")).toHaveLength(1);
@@ -89,19 +89,17 @@ describe("independent catalogue and operator languages", () => {
         >
       ).catalogueSettings?.mediaGroup,
     ).toBe("model");
-    controls.setUiLocale("ru");
     expect(
       translateDesignerNotice(
         "No model images for abaya-v01; existing photographs retained.",
         controls.t,
       ),
-    ).toContain("abaya-v01");
-    expect(
-      translateDesignerNotice(
-        "No model images for abaya-v01; existing photographs retained.",
-        controls.t,
-      ),
-    ).not.toContain("No model");
+    ).toBe("No model images for abaya-v01; existing photographs retained.");
+    // The Russian text stays in the tables for when the interface language choice returns.
+    const russian = (source: string, variables?: Record<string, string | number>) => translateUi(source, "ru", variables);
+    const notice = translateDesignerNotice("No model images for abaya-v01; existing photographs retained.", russian);
+    expect(notice).toContain("abaya-v01");
+    expect(notice).not.toContain("No model");
     wrapper.unmount();
   });
 });

@@ -29,6 +29,15 @@ Brand and Catalogue companion sources are adopted here. The authenticated Commer
 - Moving a repository does not repair path-bound records; never edit records or replay user events.
 - Use a WoW2-rooted coding chat for native hook configuration; changing a shell working directory alone does not change the chat's active adapter.
 
+## Interface language
+
+- English only for Desk, Brand, Catalogue and Events until the WoW2 SDKs' translation layer is improved (developer,
+  2026-11-20: "we gonna stick to english until we improve the translations layer in all sdks"; the current
+  translations are "really not good") — the [Ocharo rule](../../CLAUDE.md) in full.
+- Each app starts in English, ignores a stored or browser language and offers no language choice; the uz and ru
+  tables stay in the code, untouched, and new interface strings are written in English only.
+- Catalogue's authored catalogue languages are content, not the interface, and keep their own settings.
+
 ## Dedicated Catalogue app — current review target
 
 The requested authoring app is **Ocharo Catalogue**, frontend `https://localhost:8282`,

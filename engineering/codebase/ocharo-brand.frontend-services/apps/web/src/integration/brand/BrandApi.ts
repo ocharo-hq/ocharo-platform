@@ -21,12 +21,11 @@ const isArray = (value: unknown) => Array.isArray(value);
 /** Selects safe operator copy without displaying server diagnostics. */
 export function describeFailure(failure: ApiFailure): string {
   if (failure.code === 'cancelled') return '';
-  if (failure.status === 401) return 'Qayta kiring. O‘zgarishlaringiz saqlanib turibdi.';
-  if (failure.status === 403) return 'Ruxsatingiz o‘zgardi. O‘zgarishlaringiz saqlanib turibdi.';
-  if (failure.status === 409) return 'Yangi talqin mavjud. O‘zgarishlaringiz saqlanib turibdi; holatni tekshiring.';
-  if ([400, 422].includes(failure.status))
-    return 'Kiritilgan qiymatlarni tekshiring. O‘zgarishlaringiz saqlanib turibdi.';
-  return 'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi; qayta urinib ko‘ring.';
+  if (failure.status === 401) return 'Sign in again. Your changes are still kept.';
+  if (failure.status === 403) return 'Your permissions changed. Your changes are still kept.';
+  if (failure.status === 409) return 'A newer version exists. Your changes are still kept; check the current state.';
+  if ([400, 422].includes(failure.status)) return 'Check the values you entered. Your changes are still kept.';
+  return 'The request did not complete. Your changes are still kept; try again.';
 }
 
 /**

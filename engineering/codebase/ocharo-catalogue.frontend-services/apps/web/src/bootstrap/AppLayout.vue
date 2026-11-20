@@ -7,12 +7,7 @@ import { useRunningVersion } from '@wow-two-beta/fe/foundation/net';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { Card } from '@wow-two-beta/fe/presentation/display';
 import { AppFrame, type AppFrameAccount, type AppFrameSwitcher } from '@wow-two-beta/fe/presentation/layout';
-import {
-  AppSwitcherKind,
-  type AccountMenuLocale,
-  type AccountMenuVersion,
-  type AppSwitcherItem,
-} from '@wow-two-beta/fe/presentation/nav';
+import { AppSwitcherKind, type AccountMenuVersion, type AppSwitcherItem } from '@wow-two-beta/fe/presentation/nav';
 import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
 import { useCatalogueSettings, useCatalogueStore } from '../application/catalogue';
@@ -30,20 +25,14 @@ import { AppIcons } from '../presentation/frame/ShellIcons';
 
 /** Where this browser remembers the desktop sidebar's rail choice; the key predates the shared frame. @internal */
 const SidebarCollapsedKey = 'ocharo.catalogue.sidebar-collapsed';
-/** The interface languages, each in its own language. @internal */
-const InterfaceLanguages: readonly AccountMenuLocale[] = [
-  { value: 'uz', label: 'O‘zbekcha' },
-  { value: 'ru', label: 'Русский' },
-  { value: 'en', label: 'English' },
-];
 
 /**
  * Catalogue inside the frame every Ocharo app shares (the fe sdk's `AppFrame`): the bar, the sidebar and the page column
  * are the suite's, at one size in every app. Catalogue passes what is its own: the app list, its sections, where you
- * are, notifications, the account with the interface languages, and its notices above the page.
+ * are, notifications, the account (no language choice: the interface is English only), and its notices above the page.
  */
 defineOptions({ name: 'AppLayout' });
-const { t, uiLocale, setUiLocale } = useUiLocale();
+const { t, uiLocale } = useUiLocale();
 const route = useRoute();
 const store = useCatalogueStore();
 // The frame reads the catalogue settings once for every place, from the session-bound query cache.
@@ -110,10 +99,9 @@ const versions = computed<AccountMenuVersion[]>(() => {
     { label: 'API', version: t(api), ...(commit ? { commit } : {}) },
   ];
 });
-/** The account menu: who is signed in, the versions, the interface languages, and sign-out while it runs. */
+/** The account menu: who is signed in, the versions, and sign-out while it runs. */
 const account = computed<AppFrameAccount>(() => ({
   ...accountIdentity.value,
-  locales: InterfaceLanguages,
   versions: versions.value,
   isBusy: signingOut.value,
 }));
@@ -138,7 +126,6 @@ watch(accountOpen, (open) => {
     :account="account"
     :collapse-storage-key="SidebarCollapsedKey"
     :content-max-width="1800"
-    @update:locale="setUiLocale"
   >
     <template #brand><span class="oc-mark">O</span></template>
     <template #nav="{ isRail }"><CatalogueNav :current="section" :collapsed="isRail" /></template>

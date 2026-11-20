@@ -102,7 +102,7 @@ describe('Ocharo frame in Catalogue', () => {
     expect(menu.find('[data-account-menu-sign-out]').exists()).toBe(false);
     expect(menu.find('[data-account-menu-identity]').exists()).toBe(false);
     expect(menu.find('[data-account-menu-appearance]').exists()).toBe(true);
-    expect(menu.find('[data-account-menu-languages]').exists()).toBe(true);
+    expect(menu.find('[data-account-menu-languages]').exists()).toBe(false);
   });
 
   it.each([

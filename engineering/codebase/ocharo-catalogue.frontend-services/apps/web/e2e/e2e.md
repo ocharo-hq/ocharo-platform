@@ -1,6 +1,6 @@
 # Catalogue browser suite
 
-*Last updated: 2026-11-09*
+*Last updated: 2026-11-20*
 
 Playwright tests that drive the gallery, the Web designer, the PDF designer and the public reader in Chromium
 against a real `OcharoCatalogue.Api`. Findings and results: the
@@ -61,7 +61,7 @@ refused stale save, allows it explicitly.
 | `gallery.spec.ts` | Create, rename, duplicate, activate, archive; web-only, PDF-only and combined catalogues |
 | `web-designer.spec.ts` | Ordered pages, theme, copy, image group, price flags; preview against the released reader |
 | `pdf-designer.spec.ts` | Exact page sizes and order; whole and current-page PDF/PNG exports; randomize and undo; field refresh |
-| `languages.spec.ts` | Uzbek, Russian and English interface over English content; untranslated interface text |
+| `languages.spec.ts` | The English-only interface over English content; no language choice in the account menu; the catalogue content language switching on its own |
 | `rtl.spec.ts` | Arabic, Persian and Urdu content: right-to-left layout, PDF glyphs, Persian price digits |
 | `release.spec.ts` | Missing translation omitted from web and PDF; release, reader, downloads; pinned releases |
 | `designer-safety.spec.ts` | Page duplicate/remove/undo, revision restore, recovery copy, stale-save conflict |

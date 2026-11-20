@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { test as base, expect, type Download, type Page } from '@playwright/test';
-import { translateUi, type UiLocale } from '../../src/domain/shared/UiMessages';
+import { translateUi } from '../../src/domain/shared/UiMessages';
 
 export interface Diagnostics {
   console: { type: string; text: string; url: string }[];
@@ -11,23 +11,22 @@ export interface Diagnostics {
 }
 
 interface CatalogueFixtures {
-  /** Interface language stored before the app boots; tests that switch it use the Settings page. */
-  uiLocale: UiLocale;
   /** Console messages that a test expects, such as a deliberately rejected request. */
   allowedConsole: RegExp[];
   diagnostics: Diagnostics;
-  /** Translates an English interface phrase into the test's interface language. */
+  /** The interface phrase as shown: the interface is English only until the SDKs' translation layer improves. */
   t: (source: string, variables?: Record<string, string | number>) => string;
 }
 
 const ignoredConsole = [/\[vite\]/, /Download the Vue Devtools/];
 
 export const test = base.extend<CatalogueFixtures>({
-  uiLocale: ['en', { option: true }],
   allowedConsole: [[], { option: true }],
-  t: async ({ uiLocale }, use) => use((source, variables) => translateUi(source, uiLocale, variables)),
+  // Playwright reads a fixture's dependencies from its destructured argument, which is empty here.
+  // eslint-disable-next-line no-empty-pattern
+  t: async ({}, use) => use((source, variables) => translateUi(source, 'en', variables)),
   diagnostics: [
-    async ({ context, uiLocale, allowedConsole }, use, testInfo) => {
+    async ({ context, allowedConsole }, use, testInfo) => {
       const diagnostics: Diagnostics = {
         console: [],
         pageErrors: [],
@@ -35,15 +34,6 @@ export const test = base.extend<CatalogueFixtures>({
         errorResponses: [],
         timings: [],
       };
-      await context.addInitScript((locale) => {
-        try {
-          // The app stores the choice as JSON through the SDK storage seam.
-          if (!localStorage.getItem('ocharo.operator.locale'))
-            localStorage.setItem('ocharo.operator.locale', JSON.stringify(locale));
-        } catch {
-          /* about:blank analysis pages have no storage. */
-        }
-      }, uiLocale);
       const watch = (page: Page) => {
         page.on('console', (message) => {
           if (!['error', 'warning'].includes(message.type())) return;

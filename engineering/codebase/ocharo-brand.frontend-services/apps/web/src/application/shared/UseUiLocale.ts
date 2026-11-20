@@ -3,22 +3,22 @@ import { ref } from 'vue';
 import { translateUi, type UiLocale } from '../../domain/shared/UiMessages';
 
 /**
- * The interface language. Brand's pages are still written in Uzbek, so the interface stays Uzbek and the account menu
- * offers no language rows; the frame's copy already resolves through English keys with Uzbek and Russian entries.
- * Localizing the pages is what lets Brand join the suite's shared operator locale.
+ * English-only until the SDKs' translation layer is improved (developer, 2026-11-20): the interface starts and stays
+ * `en`, ignoring a stored (`ocharo.operator.locale`, left as it is) or browser preference. The uz and ru message tables
+ * stay in the code for when the choice returns.
  */
-const uiLocale = ref<UiLocale>('uz');
+const uiLocale = ref<UiLocale>('en');
 
-/** Names the document language before the first mount. */
+/** Names the document language: always English. */
 export function initializeUiLocale(): void {
+  uiLocale.value = 'en';
   document.documentElement.lang = uiLocale.value;
 }
 
-/** Shares the interface language without touching authored brand text, which keeps its own uz/ru/en fields. */
+/** Shares the interface language without touching authored brand text, which keeps its own uz/ru/en fields; any language but English is ignored. */
 export function useUiLocale() {
-  /** Switches the interface language for this tab; nothing is stored. */
   function setUiLocale(value: string): void {
-    if (value !== 'uz' && value !== 'ru' && value !== 'en') return;
+    if (value !== 'en') return;
     uiLocale.value = value;
     if (typeof document !== 'undefined') document.documentElement.lang = value;
   }

@@ -9,7 +9,10 @@ import { brandApi } from '../../src/integration/brand';
 
 /** A draft on release `latestRelease` (none before the first), with `changes` waiting to be published; empty members are
  * absent, as the API omits them. */
-export function draftView(latestRelease: number | null = 3, changes: string[] = ['Ranglar', 'Logotip']): DraftView {
+export function draftView(
+  latestRelease: number | null = 3,
+  changes: string[] = ['Colors', 'Logo on-light: removed'],
+): DraftView {
   return {
     revision: 4,
     draft: {

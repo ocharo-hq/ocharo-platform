@@ -39,7 +39,6 @@ afterEach(() => {
   wrapper = undefined;
   document.body.innerHTML = '';
   vi.unstubAllGlobals();
-  useUiLocale().setUiLocale('uz');
 });
 
 describe('Ocharo frame in Brand', () => {
@@ -78,7 +77,7 @@ describe('Ocharo frame in Brand', () => {
     ]);
     expect(fetch).toHaveBeenCalledWith('/api/system/status', expect.objectContaining({ credentials: 'omit' }));
     expect(menu.find('[data-account-menu-appearance]').exists()).toBe(true);
-    // Brand's pages are Uzbek-only, so the menu offers no interface language until they are localized.
+    // The interface is English only, so the menu offers no interface language.
     expect(menu.find('[data-account-menu-languages]').exists()).toBe(false);
     expect(menu.find('[data-account-menu-sign-out]').exists()).toBe(true);
     expect(menu.find('[data-account-menu-identity]').exists()).toBe(true);
@@ -255,26 +254,26 @@ describe('Ocharo frame in Brand', () => {
   });
 });
 
-describe('Brand frame in Uzbek', () => {
-  it('names the sections, the breadcrumb, the controls and the document in the interface language', async () => {
+describe('Brand frame in English', () => {
+  it('names the sections, the breadcrumb, the controls and the document in English, whatever language is asked for', async () => {
     useUiLocale().setUiLocale('uz');
     await renderAt('/logos', 1440);
 
-    expect(document.documentElement.lang).toBe('uz');
-    const sections = wrapper!.get('aside').get('[aria-label="Brend bo‘limlari"]');
+    expect(document.documentElement.lang).toBe('en');
+    const sections = wrapper!.get('aside').get('[aria-label="Brand sections"]');
     expect(sections.findAll('a').map((link) => link.text())).toEqual([
-      'Umumiy',
-      'Identitet',
-      'Logotiplar',
-      'Tadbirlar',
-      'Ulanish',
+      'Overview',
+      'Identity',
+      'Logos',
+      'Appearances',
+      'Connect',
     ]);
-    expect(sections.text()).toContain('Boshqaruv');
-    expect(wrapper!.get('nav[aria-label="Siz shu yerdasiz"]').text()).toBe('Logotiplar');
+    expect(sections.text()).toContain('Admin');
+    expect(wrapper!.get('nav[aria-label="You are here"]').text()).toBe('Logos');
     const header = wrapper!.get('header[role="banner"]');
-    expect(header.find('button[aria-label="Ocharo ilovalari — Brend"]').exists()).toBe(true);
-    expect(header.text()).toContain('3-nashr · 2 ta nashr qilinmagan o‘zgarish');
-    expect(header.text()).toContain('Yangilash');
-    expect(document.title).toBe('Logotiplar · Ocharo Brand');
+    expect(header.find('button[aria-label="Ocharo apps — Brand"]').exists()).toBe(true);
+    expect(header.text()).toContain('Release 3 · 2 unpublished changes');
+    expect(header.text()).toContain('Refresh');
+    expect(document.title).toBe('Logos · Ocharo Brand');
   });
 });

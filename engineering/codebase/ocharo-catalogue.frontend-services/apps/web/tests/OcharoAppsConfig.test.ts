@@ -11,7 +11,7 @@ import {
   runtimeConfigSource,
 } from '../src/application/shared/UseOcharoApps';
 import { useUiLocale } from '../src/application/shared/UseUiLocale';
-import { ocharoApps } from '../src/domain/shared/OcharoApps';
+import { ocharoApps, resolveCatalogueDeskUrl } from '../src/domain/shared/OcharoApps';
 import { fetchBrandKit } from '../src/integration/brand';
 
 /** The local-run addresses Catalogue falls back to when nothing configures an app; the app keys match Desk's. */
@@ -111,6 +111,23 @@ describe('Ocharo app addresses', () => {
       expect.objectContaining({ key: 'desk', label: 'Desk', summary: 'Events, sourcing and products' }),
       expect.objectContaining({ key: 'catalogue', label: 'Catalogue', summary: 'Products, prices and editions' }),
     ]);
+  });
+});
+
+describe('Desk catalogue destination', () => {
+  it.each([
+    'http://localhost:8264/catalogue',
+    'javascript:alert(1)',
+    '/catalogue',
+    'https://user:password@desk.example/catalogue',
+    'https://desk.example/catalogue?token=value',
+  ])('rejects unsafe configured destination %s', (url) => {
+    expect(resolveCatalogueDeskUrl(url)).toBeNull();
+  });
+
+  it('falls back to the local-run address and supports an explicit HTTPS Desk deployment', () => {
+    expect(resolveCatalogueDeskUrl(undefined)).toBe('https://localhost:8264/catalogue');
+    expect(resolveCatalogueDeskUrl('https://desk.example/catalogue')).toBe('https://desk.example/catalogue');
   });
 });
 

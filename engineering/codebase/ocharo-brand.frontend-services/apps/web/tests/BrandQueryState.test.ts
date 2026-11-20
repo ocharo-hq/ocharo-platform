@@ -28,7 +28,7 @@ vi.mock('../src/integration/brand', () => ({
     kit: '/kit',
     tokens: '/tokens',
   },
-  describeFailure: () => 'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi.',
+  describeFailure: () => 'The request did not complete. Your changes are still kept.',
 }));
 
 function draft(name = 'Ocharo', revision = 1): DraftView {
@@ -84,7 +84,7 @@ describe('Brand read outcomes', () => {
     expect(brand.queryState.value).toBe('unavailable');
     expect(brand.draft.value).toBeNull();
     expect(brand.refreshing.value).toBe(false);
-    expect(brand.error.value).toContain('So‘rov bajarilmadi');
+    expect(brand.error.value).toContain('The request did not complete');
   });
 
   it('coalesces refreshes and preserves the complete last snapshot if a read fails', async () => {
@@ -181,22 +181,22 @@ describe('Identity query rendering', () => {
     const { wrapper } = await mountBrand('/identity');
     mounted.push(wrapper);
     expect(wrapper.findComponent({ name: 'IdentityFormSkeleton' }).exists()).toBe(true);
-    expect(wrapper.findAll('h2').map((heading) => heading.text())).toContain('Rasmiy havolalar');
+    expect(wrapper.findAll('h2').map((heading) => heading.text())).toContain('Official links');
     answerFirstRead(failed);
     await flushPromises();
-    expect(wrapper.text()).toContain('Identitet ma’lumotlari hozir mavjud emas.');
-    expect(wrapper.text()).not.toContain('Hali identitet ma’lumotlari yo‘q.');
+    expect(wrapper.text()).toContain('Identity data is not available right now.');
+    expect(wrapper.text()).not.toContain('No identity data yet.');
     expect(
       wrapper
         .find('main')
         .findAll('button')
-        .filter((button) => button.text().includes('Qayta urinish')),
+        .filter((button) => button.text().includes('Retry')),
     ).toHaveLength(0);
     const refresh = () =>
       wrapper
         .get('header')
         .findAll('button')
-        .find((button) => button.text().includes('Yangilash'))!;
+        .find((button) => button.text().includes('Refresh'))!;
     expect(refresh().exists()).toBe(true);
     api.draft.mockResolvedValue({ ok: true, value: draft() });
     await refresh().trigger('click');
@@ -234,7 +234,7 @@ describe('Identity query rendering', () => {
     expect(api.saveIdentity.mock.calls[0]?.[0]).toBe(1);
     expect(api.saveIdentity.mock.calls[0]?.[1].name).toBe('Unsaved local name');
     expect((wrapper.get('input[name="name"]').element as HTMLInputElement).value).toBe('Unsaved local name');
-    expect(brand.error.value).toContain('So‘rov bajarilmadi');
+    expect(brand.error.value).toContain('The request did not complete');
     expect(brand.draft.value?.draft.identity.name).toBe('Intervening server name');
   });
 
@@ -320,8 +320,8 @@ describe('Brand initial route geometry', () => {
     const { loaded, loading } = await pair(OverviewPage, 'overview');
     const consumers = loaded.get('[aria-labelledby="consumers-heading"] ul');
     const releases = loaded.get('[aria-labelledby="releases-heading"] ol');
-    const consumerSkeleton = loading.get('[aria-label="Brendni o‘qiyotgan ilovalar"] ul');
-    const releaseSkeleton = loading.get('[aria-label="Nashrlar tarixi"] ol');
+    const consumerSkeleton = loading.get('[aria-label="Apps reading the brand"] ul');
+    const releaseSkeleton = loading.get('[aria-label="Release history"] ol');
     expect(consumerSkeleton.classes()).toEqual(consumers.classes());
     expect(consumerSkeleton.findAll('li')).toHaveLength(consumers.findAll('li').length);
     expect(releaseSkeleton.element.tagName).toBe(releases.element.tagName);

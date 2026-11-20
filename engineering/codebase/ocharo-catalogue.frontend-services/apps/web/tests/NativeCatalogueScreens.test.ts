@@ -274,23 +274,18 @@ describe('native catalogue screens', () => {
     expect(wrapper.text()).not.toContain('Create your first catalogue.');
     wrapper.unmount();
   });
-  it.each([
-    { locale: 'uz' as const, expected: 'Katalog xizmati 503 xatosini qaytardi.' },
-    { locale: 'ru' as const, expected: 'Служба каталога вернула ошибку 503.' },
-  ])('localizes numeric request failures in the $locale gallery and designer', async ({ locale, expected }) => {
-    useUiLocale().setUiLocale(locale);
+  it('words numeric request failures in English in the gallery and designer, as a notice rather than page content', async () => {
+    const expected = 'The catalogue service returned error 503.';
     const failure = ResultExtensions.fail(ApiFailureFactory.create('http', new Response(null, { status: 503 })));
     vi.mocked(designApi.list).mockResolvedValue(failure);
     vi.mocked(designApi.get).mockResolvedValue(failure);
     const gallery = await open(CatalogueGalleryPage, '/catalogues');
     expect(gallery.wrapper.text()).not.toContain(expected);
     expect(messages).toContain(expected);
-    expect(gallery.wrapper.text()).not.toContain('The catalogue service returned error 503.');
     gallery.wrapper.unmount();
     const designer = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
     expect(designer.wrapper.text()).not.toContain(expected);
     expect(messages).toContain(expected);
-    expect(designer.wrapper.text()).not.toContain('The catalogue service returned error 503.');
     designer.wrapper.unmount();
   });
 
@@ -328,12 +323,11 @@ describe('native catalogue screens', () => {
     expect(args[2].pages).toHaveLength(1);
     wrapper.unmount();
   });
-  it('changes catalogue content language while preserving the Uzbek interface', async () => {
-    useUiLocale().setUiLocale('uz');
+  it('changes catalogue content language while preserving the English interface', async () => {
     const { wrapper } = await open(CatalogueWebDesignerPage, '/catalogues/' + documentFixture().id + '/web');
     const selector = wrapper.findAll('select')[0]!;
     await selector.setValue('fr');
-    expect(useUiLocale().uiLocale.value).toBe('uz');
+    expect(useUiLocale().uiLocale.value).toBe('en');
     const save = wrapper.findAll('button').find((button) => button.text() === useUiLocale().t('Save catalogue'))!;
     await save.trigger('click');
     await flushPromises();

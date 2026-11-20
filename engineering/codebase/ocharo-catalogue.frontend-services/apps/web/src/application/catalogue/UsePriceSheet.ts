@@ -41,7 +41,7 @@ export function usePriceSheet() {
         input.pricing = { ...pricing, tiers, status: 'draft' };
         const saved = await catalogueApi.updateProduct(productId, {
           ...input,
-          changeSummary: `Narx (${tier === 'retail' ? '1 dona' : 'ulgurji'}) o‘zgardi`,
+          changeSummary: `Price (${tier === 'retail' ? 'unit' : 'wholesale'}) changed`,
         });
         if (!saved.ok) return store.fail(describeFailure(saved.failure, t));
         store.succeed(

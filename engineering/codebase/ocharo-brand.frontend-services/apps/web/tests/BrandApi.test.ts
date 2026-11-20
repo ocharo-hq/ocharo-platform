@@ -79,7 +79,7 @@ describe('brand api', () => {
       expect(result.failure.status).toBe(415);
       expect(result.failure.problem?.['brandCode']).toBe('image_type_unsupported');
       expect(describeFailure(result.failure)).toBe(
-        'So‘rov bajarilmadi. O‘zgarishlaringiz saqlanib turibdi; qayta urinib ko‘ring.',
+        'The request did not complete. Your changes are still kept; try again.',
       );
     }
   });

@@ -60,7 +60,6 @@ afterEach(() => {
   document.body.innerHTML = '';
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-  useUiLocale().setUiLocale('uz');
 });
 
 describe('Account menu with an Ocharo session', () => {

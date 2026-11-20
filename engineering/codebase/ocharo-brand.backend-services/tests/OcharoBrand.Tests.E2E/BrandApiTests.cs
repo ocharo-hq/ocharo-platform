@@ -106,7 +106,7 @@ public sealed class BrandApiTests : IAsyncDisposable
         releasedPublic.StatusCode.Should().Be(HttpStatusCode.OK);
         set.StatusCode.Should().Be(HttpStatusCode.OK);
         beforePublish.Should().Be(TestArtwork.Sha(TestArtwork.Png(60)));
-        pending.GetProperty("unpublishedChanges").EnumerateArray().Should().Contain(c => c.GetString()!.Contains("on-light"));
+        pending.GetProperty("unpublishedChanges").EnumerateArray().Select(c => c.GetString()).Should().Contain("Logo on-light: och-logo-black-v2.png");
         stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
         published.StatusCode.Should().Be(HttpStatusCode.OK);
         afterPublish.Should().Be(TestArtwork.Sha(replacement));

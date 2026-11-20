@@ -7,7 +7,6 @@ import { AppFrame, type AppFrameAccount, type AppFrameSwitcher } from '@wow-two-
 import {
   AppSwitcherKind,
   MenuItem,
-  type AccountMenuLocale,
   type AccountMenuOrganization,
   type AccountMenuVersion,
   type AppSwitcherItem,
@@ -34,17 +33,11 @@ import { deskPageProps, readDeskPlace } from './router/DeskPlaces';
 
 /** Where this browser remembers the desktop sidebar's rail choice; the key predates the shared frame. @internal */
 const SidebarCollapsedKey = 'ocharo.desk.sidebar-collapsed';
-/** The interface languages, each named in its own language. @internal */
-const UiLanguages: readonly AccountMenuLocale[] = [
-  { value: 'uz', label: 'O‘zbekcha' },
-  { value: 'ru', label: 'Русский' },
-  { value: 'en', label: 'English' },
-];
 
 /**
  * Desk inside the frame every Ocharo app shares (the fe sdk's `AppFrame`): the bar, the sidebar and the page column are
  * the suite's. Desk passes what is its own: the app list with the open organization, its sections, where you are, the
- * refresh, the account with its organizations and languages, and its notices above the page.
+ * refresh, the account with its organizations (no language choice: the interface is English only), and its notices above the page.
  *
  * The frame owns the document's organization reads, so they stay loaded while places swap. Sourcing keeps
  * its page across its own views; every other place opens fresh on each navigation, as it did when each move loaded
@@ -53,7 +46,7 @@ const UiLanguages: readonly AccountMenuLocale[] = [
  */
 defineOptions({ name: 'AppLayout' });
 const props = defineProps<{ access: AccessControls }>();
-const { t, uiLocale, setUiLocale } = useUiLocale();
+const { t, uiLocale } = useUiLocale();
 const { backendVersion, refresh: refreshBackendVersion, readRunningVersion } = useBuildIdentity();
 const apps = useOcharoApps();
 const appVersion = __APP_VERSION__;
@@ -112,7 +105,6 @@ const account = computed<AppFrameAccount>(() => ({
   description: accountEmail.value,
   avatarSrc: user.value?.picture ?? null,
   organizations: memberships.value,
-  locales: UiLanguages,
   versions: versions.value,
   isBusy: props.access.busy.value,
   onSignOut: props.access.logout,
@@ -168,7 +160,6 @@ watch(
     :account="account"
     :collapse-storage-key="SidebarCollapsedKey"
     @update:organization="switchOrganization"
-    @update:locale="setUiLocale"
   >
     <template #brand><span class="oc-mark">O</span></template>
     <template #nav="{ isRail }"><DeskNav v-if="organization" :organization-id="organization.id" :current="section" :collapsed="isRail" /></template>

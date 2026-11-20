@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useUiLocale } from '@/application/common/hooks/UseUiLocale';
-import UiLanguagePicker from '@/presentation/common/UiLanguagePicker.vue';
 import BuildIdentity from '../common/BuildIdentity.vue';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
 
@@ -30,7 +29,6 @@ const signInFailed = new URLSearchParams(window.location.search).has('signInErro
       <p class="mt-8 text-sm text-muted-foreground">{{ t("Prepare and export manually. Social publishing is not connected.") }}</p>
     </div>
     <section class="workspace-card p-7 sm:p-10" aria-labelledby="signin-title">
-      <div class="mb-5"><UiLanguagePicker /></div>
       <h2 id="signin-title" class="text-2xl font-semibold">{{ t("Operator sign-in") }}</h2>
       <p class="mt-5 leading-7 text-muted-foreground">{{ t("Sign in with your phone; the code arrives in Telegram.") }}</p>
       <p v-if="signInFailed" role="alert" class="mt-4 text-sm text-destructive">{{ t("Sign-in was not completed. Try again.") }}</p>

@@ -10,7 +10,7 @@ import {
 
 describe('catalogue rules', () => {
   it('formats UZS with plain spaces', () => {
-    expect(formatUzs(130000)).toBe('130 000 so‘m');
+    expect(formatUzs(130000)).toBe('130 000 UZS');
     expect(formatUzs(null)).toBe('—');
   });
 

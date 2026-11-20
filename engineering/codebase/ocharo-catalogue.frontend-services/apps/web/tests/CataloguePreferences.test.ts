@@ -67,7 +67,7 @@ afterEach(() => {
 });
 
 describe('Catalogue interface preferences', () => {
-  it('keeps Settings to catalogue data; interface preferences live in the account menu', async () => {
+  it('keeps Settings to catalogue data; appearance lives in the account menu, which offers no interface language', async () => {
     const wrapper = await openApp();
     expect(wrapper.find('.interface-preferences').exists()).toBe(false);
     expect(wrapper.find('#interface-language').exists()).toBe(false);
@@ -82,54 +82,42 @@ describe('Catalogue interface preferences', () => {
       'System',
       'Light',
       'Dark',
-      'O‘zbekcha',
-      'Русский',
-      'English',
     ]);
-    expect(row(menu, 'English').attributes('aria-checked')).toBe('true');
+    expect(menu.find('[data-account-menu-languages]').exists()).toBe(false);
     expect(row(menu, 'System').attributes('aria-checked')).toBe('true');
   });
 
-  it('updates English, Uzbek and Russian immediately without translating or saving authored defaults', async () => {
+  it('applies the appearance immediately without saving authored defaults, and stays in English', async () => {
     const wrapper = await openApp();
     await wrapper.get('#brand').setValue('Unsaved authored name');
-    await choose(wrapper, 'O‘zbekcha');
-    expect(wrapper.get('h1').text()).toBe('Sozlamalar');
-    expect(wrapper.get('#import-heading').text()).toBe('Mahsulot yozuvlarini import qilish');
-    expect(wrapper.get('nav[aria-label="Siz shu yerdasiz"]').text()).toContain('Sozlamalar');
-    expect(wrapper.get('#brand').element).toHaveProperty('value', 'Unsaved authored name');
-    await choose(wrapper, 'Русский');
-    expect(wrapper.get('h1').text()).toBe('Настройки');
-    expect(document.title).toBe('Настройки · Ocharo Catalogue');
-    expect(wrapper.get('#import-heading').text()).toBe('Импорт записей товаров');
-    expect(wrapper.get('#export-heading').text()).toBe('Скачать данные каталога');
+    await choose(wrapper, 'Dark');
+    expect(wrapper.get('h1').text()).toBe('Settings');
+    expect(document.title).toBe('Settings · Ocharo Catalogue');
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+    expect(localStorage.getItem(ThemeStorageKey)).toBe('dark');
+    expect(localStorage.getItem('ocharo.operator.locale')).toBeNull();
     expect(wrapper.get('#brand').element).toHaveProperty('value', 'Unsaved authored name');
     expect(wrapper.get('#note').element).toHaveProperty('value', authoredDefaults.priceNote);
-    await choose(wrapper, 'Тёмная');
-    expect(document.documentElement.classList.contains('dark')).toBe(true);
-    expect(localStorage.getItem('ocharo.operator.locale')).toBe('"ru"');
-    expect(localStorage.getItem(ThemeStorageKey)).toBe('dark');
-    expect(wrapper.get('#brand').element).toHaveProperty('value', 'Unsaved authored name');
     expect(catalogueApi.saveSettings).not.toHaveBeenCalled();
     expect(catalogueApi.importWorkspace).not.toHaveBeenCalled();
   });
 
-  it('restores browser preferences on a new mount while catalogue defaults remain unchanged', async () => {
+  it('restores the appearance on a new mount while a remembered interface language is ignored and catalogue defaults remain unchanged', async () => {
+    localStorage.setItem('ocharo.operator.locale', '"ru"');
     const first = await openApp();
-    await choose(first, 'Русский');
-    await choose(first, 'Тёмная');
+    await choose(first, 'Dark');
     first.unmount();
     mounted.splice(mounted.indexOf(first), 1);
     // Reset in-memory state to prove startup reads the persisted browser choice.
-    useUiLocale().uiLocale.value = 'en';
     document.documentElement.classList.remove('dark');
     const second = await openApp();
-    expect(second.get('h1').text()).toBe('Настройки');
-    expect(document.documentElement.lang).toBe('ru');
+    expect(second.get('h1').text()).toBe('Settings');
+    expect(document.documentElement.lang).toBe('en');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     const menu = await openAccountMenu(second);
-    expect(row(menu, 'Русский').attributes('aria-checked')).toBe('true');
-    expect(row(menu, 'Тёмная').attributes('aria-checked')).toBe('true');
+    expect(row(menu, 'Dark').attributes('aria-checked')).toBe('true');
+    expect(localStorage.getItem('ocharo.operator.locale')).toBe('"ru"');
     expect(second.get('#brand').element).toHaveProperty('value', authoredDefaults.brandName);
     expect(catalogueApi.saveSettings).not.toHaveBeenCalled();
     expect(catalogueApi.importWorkspace).not.toHaveBeenCalled();
@@ -165,17 +153,14 @@ describe('Catalogue interface preferences', () => {
     const element = document.querySelector<HTMLElement>('[role="dialog"]');
     expect(element).not.toBeNull();
     const dialog = new DOMWrapper(element!);
-    expect(dialog.findAll('select').map((select) => select.attributes('id'))).toEqual([
-      'interface-language',
-      'interface-appearance',
-    ]);
+    expect(dialog.findAll('select').map((select) => select.attributes('id'))).toEqual(['interface-appearance']);
+    expect(dialog.find('#interface-language').exists()).toBe(false);
     expect(dialog.text()).not.toContain('Catalogue defaults');
     expect(dialog.text()).not.toContain('Import product records');
     expect(dialog.find('#brand').exists()).toBe(false);
-    await dialog.get('#interface-language').setValue('uz');
     await dialog.get('#interface-appearance').setValue('dark');
-    expect(dialog.text()).toContain('Interfeys tili');
-    expect(dialog.text()).toContain('Ko‘rinish');
+    expect(dialog.text()).toContain('Appearance');
+    expect(dialog.text()).not.toContain('Interface language');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     expect(catalogueApi.getSettings).not.toHaveBeenCalled();
     expect(catalogueApi.saveSettings).not.toHaveBeenCalled();

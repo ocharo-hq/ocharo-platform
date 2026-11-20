@@ -112,13 +112,12 @@ describe('Catalogue web draft preview', () => {
     expect(wrapper.find('dl').text()).toContain('Hand embroidery');
   });
 
-  it('localizes draft annotations using the interface language without translating authored content', () => {
-    useUiLocale().setUiLocale('ru');
+  it('annotates a draft in the English interface without translating authored content', () => {
     const product = productFixture();
     product.document.locales.en.status = 'draft';
     const wrapper = preview([product], [page([product.document.id])], true);
     expect(wrapper.find('.needs-review').text()).toBe(useUiLocale().t('Needs review'));
-    expect(wrapper.find('.needs-review').attributes('lang')).toBe('ru');
+    expect(wrapper.find('.needs-review').attributes('lang')).toBe('en');
     expect(wrapper.find('h3').text()).toBe('Waistcoat');
     expect(wrapper.attributes('lang')).toBe('en');
   });

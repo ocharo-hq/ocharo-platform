@@ -1,7 +1,4 @@
 import { chooseDeskValue, deskSelect } from './helpers/DeskSelect';
-import { readdirSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { mount, type VueWrapper } from '@vue/test-utils';
 import { defineComponent, h, nextTick, reactive } from 'vue';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -14,7 +11,6 @@ import { ocharoApps } from '@/domain/common/models/OcharoApps';
 import { translateUi, uiMessages, type UiLocale } from '@/domain/common/UiMessages';
 import { emptyCopy, productCopy, type Product } from '@/domain/common/models/Commerce';
 import ProductEditor from '@/presentation/commerce/ProductEditor.vue';
-import UiLanguagePicker from '@/presentation/common/UiLanguagePicker.vue';
 
 const mounted: VueWrapper[] = [];
 const locale = useUiLocale();
@@ -36,40 +32,36 @@ function productFixture(): Product {
 }
 
 describe('operator and catalogue language boundaries', () => {
-  it('changes the operator interface without replacing French product content or prices', async () => {
+  it('keeps French product content and prices in the English interface, which a language change does not alter', async () => {
     const product = reactive(productFixture());
     const editor = mount(ProductEditor, { props: { product, canApprove: true, imageUrl: hash => hash } });
-    const picker = mount(UiLanguagePicker);
-    mounted.push(editor, picker);
+    mounted.push(editor);
     await chooseDeskValue(editor, 'Product content language', 'fr');
     const original = JSON.stringify(product);
 
-    await chooseDeskValue(picker, translateUi('Interface language', locale.uiLocale.value), 'uz');
-    expect(editor.text()).toContain(translateUi('Product translations', 'uz'));
-    expect(deskSelect(editor, translateUi('Product content language', 'uz')).props('modelValue')).toBe('fr');
+    for (const other of ['uz', 'ru']) locale.setUiLocale(other);
+    await nextTick();
+    expect(editor.text()).toContain('Product translations');
+    expect(deskSelect(editor, 'Product content language').props('modelValue')).toBe('fr');
     expect(editor.findAll('input').map(field => (field.element as HTMLInputElement).value)).toContain('Gilet');
-    expect(document.documentElement.lang).toBe('uz');
-    expect(localStorage.getItem('ocharo.operator.locale')).toBe('uz');
-    expect(JSON.stringify(product)).toBe(original);
-
-    await chooseDeskValue(picker, translateUi('Interface language', locale.uiLocale.value), 'ru');
-    expect(editor.text()).toContain('Переводы товара');
+    expect(document.documentElement.lang).toBe('en');
     expect(productCopy(product, 'fr').fabric).toBe('Soie');
     expect(product.document.pricing?.tiers[0]?.unitPrice).toBe(350000);
     expect(JSON.stringify(product)).toBe(original);
-    await chooseDeskValue(picker, translateUi('Interface language', locale.uiLocale.value), 'en');
-    expect(editor.text()).toContain('Product translations');
   });
 
-  it('restores the saved interface preference while rejecting content-only languages', async () => {
+  it('stays in English: a stored or browser language is ignored and left stored, and a change to another language is a no-op', async () => {
     localStorage.setItem('ocharo.operator.locale', 'ru');
     initializeUiLocale();
     await nextTick();
-    expect(locale.uiLocale.value).toBe('ru');
-    expect(document.documentElement.lang).toBe('ru');
-    locale.setUiLocale('fr');
-    expect(locale.uiLocale.value).toBe('ru');
+    expect(locale.uiLocale.value).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
+    for (const other of ['uz', 'ru', 'fr']) locale.setUiLocale(other);
+    expect(locale.uiLocale.value).toBe('en');
     expect(localStorage.getItem('ocharo.operator.locale')).toBe('ru');
+    localStorage.clear();
+    locale.setUiLocale('uz');
+    expect(localStorage.getItem('ocharo.operator.locale')).toBeNull();
   });
 
   it('resolves variables and preserves authored wording absent from the operator dictionary', () => {
@@ -79,32 +71,14 @@ describe('operator and catalogue language boundaries', () => {
   });
 });
 
-/** A missing message silently falls back to English, so enforce both supported operator translations. */
-describe('operator translation coverage', () => {
-  it('has nonempty Uzbek and Russian text for every declared message', () => {
+/** The interface is English only for now; the uz and ru entries stay in the table for when the choice returns. */
+describe('operator translation tables', () => {
+  it('keeps nonempty Uzbek and Russian text in every message the table declares; a new phrase needs English only', () => {
     expect(Object.keys(uiMessages).length).toBeGreaterThan(700);
     const missing = Object.entries(uiMessages).filter(([, message]) => !message.uz.trim() || !message.ru.trim());
     expect(missing).toEqual([]);
-  });
-
-  it('covers every literal translated phrase used by presentation and application code', () => {
-    const sourceRoot = join(dirname(fileURLToPath(import.meta.url)), '../src');
-    const missing = new Set<string>();
-    function inspect(directory: string): void {
-      for (const entry of readdirSync(directory, { withFileTypes: true })) {
-        const path = join(directory, entry.name);
-        if (entry.isDirectory()) { inspect(path); continue; }
-        if (!/\.(vue|ts)$/.test(entry.name)) continue;
-        const source = readFileSync(path, 'utf8');
-        for (const match of source.matchAll(/\bt\(\s*(?:'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)")/g)) {
-          const key = match[1]?.replaceAll("\\'", "'") ?? JSON.parse(`"${match[2]}"`) as string;
-          if (!(key in uiMessages)) missing.add(key);
-        }
-      }
-    }
-    inspect(join(sourceRoot, 'application'));
-    inspect(join(sourceRoot, 'presentation'));
-    expect([...missing]).toEqual([]);
+    expect('A phrase nobody translated' in uiMessages).toBe(false);
+    for (const value of ['en', 'uz', 'ru'] as const) expect(translateUi('A phrase nobody translated', value)).toBe('A phrase nobody translated');
   });
 });
 
@@ -119,22 +93,19 @@ describe('Ocharo app names', () => {
 });
 
 describe('SDK component wording', () => {
-  it('names the password visibility toggle in the operator language', async () => {
+  it('names the password visibility toggle in English, whatever other language is asked for', async () => {
     const host = mount(defineComponent({ setup() { provideUiLocale(); return () => h(PasswordInput, { modelValue: 'secret' }); } }));
     mounted.push(host);
     const toggle = () => host.get('button[aria-pressed]');
     expect(toggle().attributes('aria-label')).toBe('Show password');
     locale.setUiLocale('ru');
     await nextTick();
-    expect(toggle().attributes('aria-label')).toBe('Показать пароль');
+    expect(toggle().attributes('aria-label')).toBe('Show password');
     await toggle().trigger('click');
-    expect(toggle().attributes('aria-label')).toBe('Скрыть пароль');
-    locale.setUiLocale('uz');
-    await nextTick();
-    expect(toggle().attributes('aria-label')).toBe('Parolni yashirish');
+    expect(toggle().attributes('aria-label')).toBe('Hide password');
   });
 
-  it('declares Uzbek and Russian for every SDK message key it overrides', () => {
+  it('keeps Uzbek and Russian text for every SDK message key it overrides', () => {
     const accountMenuKeys = ['menuLabel', 'triggerLabel', 'anonymousTriggerLabel', 'appearanceLabel', 'systemModeLabel', 'lightModeLabel',
       'darkModeLabel', 'languageLabel', 'organizationLabel', 'versionsLabel', 'signOutLabel'].map((key) => `AccountMenu.${key}`);
     expect(Object.keys(sdkUiMessages)).toEqual(expect.arrayContaining(['PasswordInput.revealLabel', 'PasswordInput.concealLabel', 'ToastHost.notifications', ...accountMenuKeys]));
