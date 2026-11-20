@@ -662,10 +662,14 @@ describe('event images through the fe-events kit', () => {
     expect(card('Tashkent Fashion Week').get('[data-test="event-image"]').attributes('src')).toBe(SOURCE);
   });
 
-  it("falls back to the kit's date tile when the stored copy fails to load", async () => {
+  it('falls back to the source link, then the date tile, when the stored copy fails to load', async () => {
     showImages([{ url: SOURCE, fileRef: COPY }]);
     await render('editor');
 
+    await card('Tashkent Fashion Week').get('[data-test="event-image"]').trigger('error');
+    await flushPromises();
+
+    expect(card('Tashkent Fashion Week').get('[data-test="event-image"]').attributes('src')).toBe(SOURCE);
     await card('Tashkent Fashion Week').get('[data-test="event-image"]').trigger('error');
     await flushPromises();
 

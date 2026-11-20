@@ -17,8 +17,8 @@ importers:
         specifier: 0.0.58
         version: 0.0.58(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
       '@wow-two-beta/fe-events':
-        specifier: 0.0.18
-        version: 0.0.18(@wow-two-beta/fe@0.0.58(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
+        specifier: 0.0.19
+        version: 0.0.19(@wow-two-beta/fe@0.0.58(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
       lucide-vue-next:
         specifier: ^0.460.0
         version: 0.460.0(vue@3.5.45(typescript@5.9.3))
@@ -785,8 +785,8 @@ packages:
       '@vue/server-renderer':
         optional: true
 
-  '@wow-two-beta/fe-events@0.0.18':
-    resolution: {integrity: sha512-K6m4FZ7ec0xwOExz2kQRi7SNKOq1KZALrmtnrF0Q29RP1+DGjYQSeHSO3INj8r+SZx379aD8o6YCKAHzz17Hbw==}
+  '@wow-two-beta/fe-events@0.0.19':
+    resolution: {integrity: sha512-kj8tHUaU1LSOOcsCIE6BPdiJ1GDDjQrzcNf8N+NPgNwXWG/2fWXKi9B+SRlAGTM/AWhsemzVt6tUijIlGHer2g==}
     peerDependencies:
       '@wow-two-beta/fe': '>=0.0.56 <0.1.0'
       vue: ^3.5.0
@@ -2283,7 +2283,7 @@ snapshots:
     optionalDependencies:
       '@vue/server-renderer': 3.5.45
 
-  '@wow-two-beta/fe-events@0.0.18(@wow-two-beta/fe@0.0.58(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))':
+  '@wow-two-beta/fe-events@0.0.19(@wow-two-beta/fe@0.0.58(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))':
     dependencies:
       '@wow-two-beta/fe': 0.0.58(@tanstack/vue-query@5.107.1(vue@3.5.45(typescript@5.9.3)))(@vue/test-utils@2.5.1(@vue/compiler-dom@3.5.45)(@vue/server-renderer@3.5.45)(vue@3.5.45(typescript@5.9.3)))(tailwindcss@4.3.5)(vue-router@4.6.4(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
       vue: 3.5.45(typescript@5.9.3)

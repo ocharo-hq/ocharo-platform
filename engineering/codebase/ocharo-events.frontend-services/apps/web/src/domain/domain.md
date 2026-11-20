@@ -6,8 +6,8 @@ Framework-free models and copy: Ocharo's configuration of the `fe-events` kit (`
 stages with their labels and classes, the workflow's custom fields (the spec `deployment/events/ocharo-workflow.json`
 mirrors), the labels shown for a stored workflow, kinds, scopes, how a new event is proposed; the scopes are National (UZ), Central Asia (KZ, KG, TJ, TM) and International (every other country), shared by the feed's chips and the calendar's pills) and the
 page's addresses, an event image's stored copy (`events/EventImages`: the backend route that serves SCFD's copy of an image
-and the display model that gives the kit that route as the address of each image with a `fileRef`, the image's source `url`
-moving to `sourceUrl`; an image with no copy is left as Events sent it), how Events' intake freshness reads: stale past 24 hours, a warning when stale or a source fails
+and the kit's `imageSrc` resolver that returns that route, absolute against the page's origin, for each image with a `fileRef` and
+`null` for one with no copy), how Events' intake freshness reads: stale past 24 hours, a warning when stale or a source fails
 (`events/IntakeFreshness`), and the calendar's model (`events/EventsCalendar`: the days one visible range needs, and how an
 event with a known day becomes an all-day or timed block, coloured by stage from theme variables, an event not yet tracked a visible quiet tint; an event known only to its month or year has
 no day and is left out; and the scope pills' model: an event's scope from its country by the feed's own rule (none for an event with no country), the events kept by the chosen scopes, the count the window draws per scope, and the `?scope=` query's reading and writing); Events' sections (`shared/EventsSections`: the feed, the calendar, the reminders and the admins'

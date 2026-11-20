@@ -1,99 +1,52 @@
 import { describe, expect, it } from 'vitest';
 import type { EventModel } from '@wow-two-beta/fe-events/contracts';
 
-import { eventImagePath, withStoredImages } from '@/domain/events/EventImages';
+import { eventImagePath, storedImageSrc } from '@/domain/events/EventImages';
 
-const prefix = '/api/organizations/11111111-1111-4111-8111-111111111111/events-api';
+const organization = '11111111-1111-4111-8111-111111111111';
+const prefix = `/api/organizations/${organization}/events-api`;
+const origin = 'https://ocharo.example.test';
 const id = '22222222-2222-4222-8222-222222222222';
 const copy = '0197a8a0-1111-7aaa-8bbb-000000000001';
 const at = '2026-10-01T00:00:00Z';
 
-const event = (images?: EventModel['facts']['images']): EventModel => ({
+const event: EventModel = {
   id,
   catalog: 'ocharo-fashion',
-  facts: { title: { und: 'Tashkent Fashion Week' }, ...(images ? { images } : {}) },
+  facts: { title: { und: 'Tashkent Fashion Week' } },
   review: 'published',
   revision: 1,
   createdAtUtc: at,
   updatedAtUtc: at,
-});
-const imageUrl = (index: number) => `https://ocharo.example.test/image/${index}`;
+};
+const route = (index: number) =>
+  `${origin}${prefix}/api/events/v1/catalogs/ocharo-fashion/events/${id}/images/${index}`;
 
 describe('the route of an event image', () => {
   it("is the mirror's event route with the image's place, under the organization's prefix", () => {
-    expect(eventImagePath(prefix, event(), 1)).toBe(
+    expect(eventImagePath(prefix, event, 1)).toBe(
       `${prefix}/api/events/v1/catalogs/ocharo-fashion/events/${id}/images/1`,
     );
   });
 });
 
-describe('stored copies of event images', () => {
-  it('gives an image with a fileRef the route as its address and keeps its source link as `sourceUrl`', () => {
-    const shown = withStoredImages(event([{ url: 'https://source.example.test/a.jpg', fileRef: copy }]), imageUrl);
+describe('the image resolver for stored copies', () => {
+  const imageSrc = storedImageSrc(organization, origin);
 
-    expect(shown.facts.images).toEqual([
-      {
-        url: imageUrl(0),
-        fileRef: copy,
-        sourceUrl: 'https://source.example.test/a.jpg',
-      },
-    ]);
+  it('resolves an image with a fileRef to the route, absolute against the origin, numbered by its place', () => {
+    expect(imageSrc(event, { url: 'https://source.example.test/a.jpg', fileRef: copy }, 0)).toBe(route(0));
+    expect(imageSrc(event, { url: 'https://source.example.test/b.jpg', fileRef: copy }, 2)).toBe(route(2));
   });
 
-  it("keeps an image's own `sourceUrl` and the rest of its fields", () => {
-    const shown = withStoredImages(
-      event([
-        {
-          url: 'https://source.example.test/a.jpg',
-          fileRef: copy,
-          sourceUrl: 'https://source.example.test/page',
-          attribution: 'Afisha',
-        },
-      ]),
-      imageUrl,
-    );
-
-    expect(shown.facts.images![0]).toEqual({
-      url: imageUrl(0),
-      fileRef: copy,
-      sourceUrl: 'https://source.example.test/page',
-      attribution: 'Afisha',
-    });
+  it('resolves an image with no fileRef, a null one or a blank one to null', () => {
+    expect(imageSrc(event, { url: 'https://source.example.test/a.jpg' }, 0)).toBeNull();
+    expect(imageSrc(event, { url: 'https://source.example.test/a.jpg', fileRef: null }, 0)).toBeNull();
+    expect(imageSrc(event, { url: 'https://source.example.test/a.jpg', fileRef: '  ' }, 0)).toBeNull();
   });
 
-  it('numbers each image by its place in the event and leaves one with no copy exactly as Events sent it', () => {
-    const poster = { url: 'https://source.example.test/poster.jpg' };
-    const blank = { url: 'https://source.example.test/blank.jpg', fileRef: '  ' };
-    const shown = withStoredImages(
-      event([poster, { url: 'https://source.example.test/b.jpg', fileRef: copy }, blank]),
-      imageUrl,
-    );
+  it("uses the page's origin when none is given", () => {
+    const own = storedImageSrc(organization)(event, { url: 'https://source.example.test/a.jpg', fileRef: copy }, 0);
 
-    expect(shown.facts.images![0]).toBe(poster);
-    expect(shown.facts.images![1]!.url).toBe(imageUrl(1));
-    expect(shown.facts.images![2]).toBe(blank);
-  });
-
-  it('returns the same event when no image has a copy, none or null', () => {
-    const none = event();
-    const sourceOnly = event([
-      { url: 'https://source.example.test/a.jpg' },
-      { url: 'https://source.example.test/b.jpg', fileRef: null },
-    ]);
-
-    expect(withStoredImages(none, imageUrl)).toBe(none);
-    expect(withStoredImages(sourceOnly, imageUrl)).toBe(sourceOnly);
-  });
-
-  it('changes nothing but the images', () => {
-    const original = event([{ url: 'https://source.example.test/a.jpg', fileRef: copy }]);
-
-    const shown = withStoredImages(original, imageUrl);
-
-    expect({ ...shown, facts: { ...shown.facts, images: undefined } }).toEqual({
-      ...original,
-      facts: { ...original.facts, images: undefined },
-    });
-    expect(original.facts.images![0]!.url).toBe('https://source.example.test/a.jpg');
+    expect(own).toBe(new URL(route(0).replace(origin, ''), window.location.origin).href);
   });
 });

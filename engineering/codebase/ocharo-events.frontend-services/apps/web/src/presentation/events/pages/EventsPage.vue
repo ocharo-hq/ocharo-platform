@@ -18,6 +18,7 @@ import {
   OcharoEventsCatalog,
   type EventsLocation,
 } from '@/domain/events/Events';
+import { storedImageSrc } from '@/domain/events/EventImages';
 
 import PastEventsStrip from '../PastEventsStrip.vue';
 import SourcesFreshness from '../SourcesFreshness.vue';
@@ -43,6 +44,8 @@ const props = defineProps<{
 const { t, uiLocale } = useUiLocale();
 const organizationId = () => props.workspace.organization.value?.id.toLowerCase() ?? '';
 const client = createEventsPageClient(organizationId());
+/** Gives the kit the backend route of an image's stored copy; it falls back to the image's source link when that fails. */
+const imageSrc = storedImageSrc(organizationId());
 /** The client the feed reads through; a fresh copy makes the feed read again with its filters kept. */
 const feedClient = shallowRef<EventsClient>(client);
 const feed: EventsLocation = { view: 'feed', eventId: null };
@@ -110,6 +113,7 @@ function refreshFeed(): void {
         :proposal="proposal"
         :attention="attention"
         :event-href="eventHref"
+        :image-src="imageSrc"
         @open="openEvent"
         @proposed="refreshSide"
         @tracked="refreshSide"
@@ -151,6 +155,7 @@ function refreshFeed(): void {
         :kinds="kinds"
         :regions="regions"
         :calendar-options="ocharoCalendarOptions(current.eventId)"
+        :image-src="imageSrc"
       />
     </div>
   </section>

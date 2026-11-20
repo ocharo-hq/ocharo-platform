@@ -15,10 +15,9 @@ network is needed: each test stubs `fetch` (the session, status, runtime-setting
   after a write in the feed. Scroll loading stays the kit's own test.
   Event images: a card whose image has a `fileRef` shows the backend route (not the source link, not the file id), lazy, with no referrer
   and the title as its alt text; a card with no image keeps the date tile; an image with no copy keeps the kit's own source image; a failed
-  stored copy or source image falls back to the date tile; the detail shows each stored copy through the route of its own place.
-- `EventImages.test.ts` — the image route's path under the organization's prefix, and the display model: an image with a `fileRef` takes the
-  route as its address and keeps its source link in `sourceUrl`, one with no copy (none, null or blank) is left as Events sent it, the place of each
-  image is its index, nothing but the images changes, and an event with no copy comes back as the same object.
+  stored copy falls back to the source link and then the date tile, and a failed source image to the date tile; the detail shows each stored copy through the route of its own place.
+- `EventImages.test.ts` — the image route's path under the organization's prefix, and the `imageSrc` resolver: an image with a `fileRef` resolves to
+  the route, absolute against the origin, numbered by its index; one with no copy (none, null or blank) resolves to `null`.
 - `CalendarPage.test.ts` — the calendar place: the visible month read through the feed's calls and paged by cursor (capped at 1000),
   all-day and month-only events, stage colours, a new read for the next month and none inside the days read, loading, failure with retry,
   a block opening its event in the feed; and the scope pills: National, Central Asia and International above the calendar with the loaded window's counts

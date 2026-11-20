@@ -5,12 +5,12 @@ _Last updated: 2026-11-20_
 Pages and their parts in SDK components. `frame/` is the sidebar (`EventsNav`: the feed and the calendar, then Settings with
 the reminders and, for an admin, the Telegram delivery; an icon rail when collapsed) and the phone's bottom bar
 (`PhoneNav`: the same places, none behind a menu). `events/pages/EventsPage` is the feed, rendering WoW2 Events' own
-screens from `fe-events`' kit (0.0.14) with Ocharo's configuration (OE07): the organization's tracking feed (`EventsFeed` v2: a
+screens from `fe-events`' kit (0.0.19) with Ocharo's configuration (OE07): the organization's tracking feed (`EventsFeed` v2: a
 facet bar with the match pill "n of N", search, scope and kind chips and a Filters popover, all with server counts, a sort, a
 grid of the kit's `EventMediaCard`s that loads more on scroll with month dividers under the start-date sort; skipped and
 rejected hidden until asked, quick Shortlist and Skip in each card's menu, "Add event" publishing at once, Ocharo's cost
 left to the detail) and one event's detail (`EventDetail`: the facts and sources, with no tracking card until it is redesigned,
-the page leaving the kit's `trackable` off); event facts come from their source and are never edited here. An image SCFD stored a copy of shows from the backend's image route on the card and in the detail (the page's client gives the kit the route as the image's address); an image with no copy keeps the kit's own rendering, the source image and then the date tile. Until the backend serves the copy (no Files key yet, or Files failing), the route redirects to the image's own source link, so the card shows the source photo as before. The kit's own heading is for screen readers only (`sr-only`), so the page's "Feed" is the one title.
+the page leaving the kit's `trackable` off); event facts come from their source and are never edited here. An image SCFD stored a copy of shows from the backend's image route on the card and in the detail (the page passes the kit's feed and detail an `imageSrc` resolver that returns the route); when the route fails to load the kit falls back to the image's source link and then to the date tile (card) or no image (detail), and an image with no copy keeps the kit's own rendering, the source image. Until the backend serves the copy (no Files key yet, or Files failing), the route redirects to the image's own source link, so the card shows the source photo as before. The kit's own heading is for screen readers only (`sr-only`), so the page's "Feed" is the one title.
 Between the bar and the grid sit the feed's attention pills, hidden at zero: the kit's own application deadlines in the next
 14 days, and Ocharo's "past to close", passed in through the `attention` prop whose `#attention` slot is
 `events/PastEventsStrip`: the ended events Ocharo was pursuing, each closed as Attended or Skipped in one tracking write
