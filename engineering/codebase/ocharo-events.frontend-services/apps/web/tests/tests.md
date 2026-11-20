@@ -6,7 +6,7 @@ Vitest unit and component tests over happy-dom; run `pnpm test` from the workspa
 network is needed: each test stubs `fetch` (the session, status, runtime-settings and mirrored Events routes).
 
 - `EventsPage.test.ts` — the feed on `fe-events`' kit through this app's mirror (OE07): the header as the title alone, one tracking
-  request with skipped and rejected left out, scope chips and the toggle sent server-side, titles by language, a quick Shortlist,
+  request with skipped and rejected left out, the image-first `cards` variant reaching `EventsFeed`, scope chips and the toggle sent server-side, titles by language, a quick Shortlist from the card's overflow menu,
   "Add event", one event's tracking save, and no workflow write on a visit (any role, any stored workflow), Ocharo's labels filling what
   Events lacks; and the two attention pills under the title: folded by default with their counts, the deadlines unfolding with their
   links, a past event closed from its strip, no pill at zero, both counts read again after a write in the feed.

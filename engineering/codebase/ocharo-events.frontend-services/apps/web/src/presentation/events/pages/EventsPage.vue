@@ -26,8 +26,9 @@ import SourcesFreshness from '../SourcesFreshness.vue';
 /**
  * Records events where Ocharo could show its products; it never applies, registers or pays. The page renders WoW2
  * Events' own screens from `fe-events`' kit (OE07) over this app's mirror of Events' routes: the organization's tracking
- * feed (skipped and rejected hidden until asked, scope chips, quick Shortlist and Skip, Ocharo's cost on each card,
- * "Add event" publishing at once) and one event's detail with its tracking form. Under the title, two folded pills
+ * feed as image-first cards (`variant="cards"`: the kit's `EventMediaCard`, quick Shortlist and Skip in each card's
+ * menu; skipped and rejected hidden until asked, scope chips above, "Add event" publishing at once; the cost stays in
+ * the detail) and one event's detail with its tracking form. Under the title, two folded pills
  * (`AttentionPills`) open the nearest application deadlines and "Past, not closed", which asks to close each ended event
  * Ocharo was pursuing (OE12); each shows its count and is gone at zero. "Sources updated {time}" (E24) is the frame's,
  * at the sidebar's foot; below `md`, where there is no sidebar, its icon stands beside the title, from the same read.
@@ -108,6 +109,7 @@ function setDirty(dirty: boolean): void {
         :today="today"
         :kinds="kinds"
         tracking
+        variant="cards"
         :workflow="workflow"
         :hidden-stages="ocharoClosedStages"
         :regions="regions"

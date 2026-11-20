@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
 import type { EventsAccess, EventsWorkspace } from '@/application/events/UseEventsAccess';
 import { ocharoWorkflowSpec, type EventsLocation } from '@/domain/events/Events';
+import { EventsFeed } from '@wow-two-beta/fe-events/kit';
 import EventsPage from '@/presentation/events/pages/EventsPage.vue';
 import { eventsRouter } from './helpers/EventsRouter';
 
@@ -196,7 +197,14 @@ const lists = () =>
   );
 const lastList = () => lists().at(-1)!.url.searchParams;
 const card = (title: string) =>
-  wrapper!.findAll('[data-test="event-card"]').find((item) => item.text().includes(title))!;
+  wrapper!.findAll('[data-test="event-media-card"]').find((item) => item.text().includes(title))!;
+/** Picks a quick stage from the card's overflow menu (image-first cards keep the quick stages there). */
+const pickStage = async (title: string, stage: string) => {
+  await card(title).get('[data-test="event-stage-menu"]').trigger('click');
+  await flushPromises();
+  await (document.body.querySelector(`[data-test="event-quick-stage"][data-stage="${stage}"]`) as HTMLElement).click();
+  await flushPromises();
+};
 const button = (scope: VueWrapper | ReturnType<VueWrapper['get']>, label: string) =>
   scope.findAll('button').find((item) => item.text().trim() === label)!;
 
@@ -214,11 +222,17 @@ describe('feed header', () => {
     expect(wrapper!.find('[data-test="telegram-delivery-link"]').exists()).toBe(false);
     expect(wrapper!.find('[data-test="sources-freshness"]').exists()).toBe(false);
     expect(sent.some((item) => item.url.pathname === `${CATALOG}/freshness`)).toBe(false);
-    expect(wrapper!.findAll('[data-test="event-card"]')).toHaveLength(2);
+    expect(wrapper!.findAll('[data-test="event-media-card"]')).toHaveLength(2);
   });
 });
 
 describe('events feed through the fe-events kit', () => {
+  it('shows the feed as image-first cards: `variant="cards"` reaches `EventsFeed`', async () => {
+    await render('editor');
+
+    expect(wrapper!.getComponent(EventsFeed).props('variant')).toBe('cards');
+  });
+
   it('lists the tracking feed with one mirrored request: skipped and rejected left out, filters and paging server-side', async () => {
     await render('editor');
 
@@ -228,30 +242,27 @@ describe('events feed through the fe-events kit', () => {
     expect(query.get('from')).toBe('2026-10-08');
     expect(query.get('limit')).toBe('50');
     expect(query.has('offset')).toBe(false);
-    expect(wrapper!.findAll('[data-test="event-card"]')).toHaveLength(2);
+    expect(wrapper!.findAll('[data-test="event-media-card"]')).toHaveLength(2);
 
     const shortlisted = card('Tashkent Fashion Week');
-    expect(shortlisted.get('[data-test="event-stage"]').text()).toBe('Shortlisted');
-    expect(shortlisted.get('[data-test="event-field-cost"]').text()).toContain('Stand from 300 USD');
-    expect(shortlisted.get('[data-test="event-scope"]').text()).toBe('Local');
+    expect(shortlisted.get('[data-test="event-stage"]').text().toLowerCase()).toBe('shortlisted');
+    expect(shortlisted.find('[data-test="event-stage-menu"]').exists()).toBe(false);
     const untracked = card('Silk Road Trade Fair');
-    expect(untracked.find('[data-test="event-untracked"]').exists()).toBe(true);
-    expect(untracked.get('[data-test="event-field-cost"]').text()).toBe('Cost not stated');
-    expect(untracked.get('[data-test="event-scope"]').text()).toBe('Regional');
-    expect(untracked.get('[data-test="event-quick-stages"]').text()).toContain('Shortlisted');
+    expect(untracked.find('[data-test="event-stage"]').exists()).toBe(false);
+    expect(untracked.find('[data-test="event-stage-menu"]').exists()).toBe(true);
   });
 
-  it('shows a title in the interface language, SCFD’s English for an English reader, with the language badge otherwise', async () => {
+  it('shows a title in the interface language, SCFD’s English otherwise (the cards carry no language badge)', async () => {
     await render('editor');
-    expect(card('Tashkent Fashion Week').find('[data-test="title-language"]').exists()).toBe(false);
+    expect(card('Tashkent Fashion Week').exists()).toBe(true);
 
     useUiLocale().setUiLocale('ru');
     await flushPromises();
-    expect(card('Неделя моды в Ташкенте').find('[data-test="title-language"]').exists()).toBe(false);
+    expect(card('Неделя моды в Ташкенте').exists()).toBe(true);
 
     useUiLocale().setUiLocale('uz');
     await flushPromises();
-    expect(card('Tashkent Fashion Week').get('[data-test="title-language"]').text()).toBe('EN');
+    expect(card('Tashkent Fashion Week').get('[data-test="event-title"]').text()).toBe('Tashkent Fashion Week');
   });
 
   it('lists skipped and rejected events when asked, and filters by scope chips on the server', async () => {
@@ -275,8 +286,7 @@ describe('events feed through the fe-events kit', () => {
     await render('editor');
     const before = lists().length;
 
-    await button(card('Silk Road Trade Fair'), 'Shortlisted').trigger('click');
-    await flushPromises();
+    await pickStage('Silk Road Trade Fair', 'shortlisted');
 
     const writes = sent.filter((item) => item.method === 'PUT');
     expect(writes).toHaveLength(1);
@@ -318,7 +328,7 @@ describe('events feed through the fe-events kit', () => {
   it('offers a viewer no stage actions and no proposal', async () => {
     await render('viewer');
 
-    expect(wrapper!.find('[data-test="event-quick-stages"]').exists()).toBe(false);
+    expect(wrapper!.find('[data-test="event-stage-menu"]').exists()).toBe(false);
     expect(wrapper!.findAll('button').some((item) => item.text().trim() === 'Propose an event')).toBe(false);
   });
 });
@@ -433,7 +443,7 @@ describe('attention pills under the title', () => {
     expect(pill('deadlines').exists()).toBe(false);
     expect(pill('past').exists()).toBe(false);
     expect(wrapper!.find('[data-test="attention-count"]').exists()).toBe(false);
-    expect(wrapper!.findAll('[data-test="event-card"]')).toHaveLength(2);
+    expect(wrapper!.findAll('[data-test="event-media-card"]')).toHaveLength(2);
   });
 
   it('reads both counts again after a write in the feed', async () => {
@@ -441,8 +451,7 @@ describe('attention pills under the title', () => {
     const summaries = deadlineSummaries().length;
     const past = pastReads().length;
 
-    await button(card('Silk Road Trade Fair'), 'Shortlisted').trigger('click');
-    await flushPromises();
+    await pickStage('Silk Road Trade Fair', 'shortlisted');
 
     expect(deadlineSummaries().length).toBe(summaries + 1);
     expect(pastReads().length).toBe(past + 1);

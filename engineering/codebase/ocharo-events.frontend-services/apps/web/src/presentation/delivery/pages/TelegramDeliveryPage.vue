@@ -1,24 +1,20 @@
 <script setup lang="ts">
-import { computed } from 'vue';
-import { RouterLink } from 'vue-router';
 import { DigestsPanel } from '@wow-two-beta/fe-events/admin';
 import { DigestChannelConstants } from '@wow-two-beta/fe-events/contracts';
 
 import { useTelegramDelivery } from '@/application/delivery/UseTelegramDelivery';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
-import { eventsPath } from '@/domain/events/Events';
 
 /**
  * The organization's Telegram delivery for its admins: WoW2 Events' digest editor for the Events page's catalog, its
  * list, editor with preview and send now, and run history, starting a new digest from Ocharo's weekly default. Each
- * event in a message links to its page in this app.
+ * event in a message links to its page in this app; the sidebar leads back to the feed.
  */
 defineOptions({ name: 'TelegramDeliveryPage' });
 const props = defineProps<{ organizationId: string; subject: string | null }>();
 const { t, uiLocale } = useUiLocale();
 const { client, catalog, defaults, workflow, linkTemplate } = useTelegramDelivery(props.organizationId);
 const channels = [DigestChannelConstants.telegram];
-const eventsHref = computed(() => eventsPath(props.organizationId, { view: 'feed', eventId: null }));
 </script>
 
 <template>
@@ -44,9 +40,6 @@ const eventsHref = computed(() => eventsPath(props.organizationId, { view: 'feed
         {{ t('Your account id: {id}', { id: subject }) }}
       </p>
     </header>
-    <RouterLink :to="eventsHref" class="text-sm font-medium text-primary underline-offset-4 hover:underline"
-      >← {{ t('All events') }}</RouterLink
-    >
     <DigestsPanel
       :client="client"
       :catalog="catalog"

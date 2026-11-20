@@ -117,7 +117,7 @@ describe('Telegram delivery page', () => {
     expect(panel.props('workflow')).toEqual(ocharoWorkflow());
     expect(wrapper.get('h1').text()).toBe('Telegram delivery');
     expect(wrapper.get('[data-test="own-subject"]').text()).toBe('Your account id: owner-sub');
-    expect(wrapper.get(`a[href="/organizations/${OrganizationId}/events"]`).text()).toBe('← All events');
+    expect(wrapper.text()).not.toContain('All events');
   });
 });
 
