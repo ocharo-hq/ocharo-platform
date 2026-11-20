@@ -325,6 +325,16 @@ describe('calendar scope pills', () => {
     'Tashkent Fashion Week',
   ];
 
+  it('passes the feed facet chips’ solid neutral item look to the scope group', async () => {
+    answers = [scoped];
+    await render();
+
+    const props = wrapper!.getComponent({ name: 'ToggleGroup' }).props();
+    expect(props.variant).toBe('pill');
+    expect(props.itemVariant).toBe('solid');
+    expect(props.itemTone).toBe('neutral');
+  });
+
   it('offers National, Central Asia and International above the calendar, each with the count of events it draws', async () => {
     answers = [scoped];
     await render();

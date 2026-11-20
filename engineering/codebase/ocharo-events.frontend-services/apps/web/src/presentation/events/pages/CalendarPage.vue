@@ -53,6 +53,8 @@ function openEvent(event: EventCalendarViewerEvent): void {
     <ToggleGroup
       type="multi"
       variant="pill"
+      item-variant="solid"
+      item-tone="neutral"
       :model-value="scopes"
       :options="pills"
       :aria-label="t('Scope')"
