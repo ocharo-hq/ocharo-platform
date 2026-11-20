@@ -368,7 +368,7 @@ describe('events feed through the fe-events kit', () => {
   it('lists skipped and rejected events when asked, and filters by scope chips on the server', async () => {
     await render('editor');
 
-    await choose({ hidden: 'show' });
+    await choose({ hidden: true });
     expect(lastList().has('excludeStages')).toBe(false);
     await choose({});
     expect(lastList().getAll('excludeStages')).toEqual(['skipped', 'rejected']);
