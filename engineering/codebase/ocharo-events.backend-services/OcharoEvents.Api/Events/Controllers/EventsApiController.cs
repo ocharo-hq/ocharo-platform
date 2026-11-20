@@ -16,11 +16,11 @@ using WoW.Two.Sdk.Beta.Be.Web.ExceptionHandling.Extensions;
 namespace OcharoEvents.Api.Events.Controllers;
 
 /// <summary>
-/// Exposes the Events page's reads and writes: WoW2 Events' tracking, event, proposal, workflow, calendar and intake
-/// freshness routes, mirrored under the organization so the page's <c>fe-events</c> client reaches them with
-/// <c>{prefix}/api/events/v1/…</c>, its prefix being <c>/api/organizations/{organizationId}/events-api</c> (OE07), as the
-/// digest routes are mirrored for the Telegram delivery page. Each route passes its query or body to Events as the kit
-/// sent it and answers Events' model in the SDK envelope, so no wire of Ocharo's own sits between the page and Events.
+/// Exposes the Events page's reads and writes: WoW2 Events' tracking (list, facets, summary), event, proposal, workflow,
+/// calendar and intake freshness routes, mirrored under the organization so the page's <c>fe-events</c> client reaches
+/// them with <c>{prefix}/api/events/v1/…</c>, its prefix being <c>/api/organizations/{organizationId}/events-api</c> (OE07),
+/// as the digest routes are mirrored for the Telegram delivery page. Each route passes its query or body to Events as the
+/// kit sent it and answers Events' model in the SDK envelope, so no wire of Ocharo's own sits between the page and Events.
 /// </summary>
 /// <remarks>Reads need <c>events:read</c> (the organization filter); tracking writes and proposals <c>events:track</c>;
 /// the workflow write <c>events:admin</c>; a person without one answers 403 before Events, which checks again. Another
@@ -42,6 +42,16 @@ public sealed class EventsApiController(EventsApiService events, TimeProvider ti
         parameters.TryMap(out var query) is { } invalid
             ? this.ToProblem(invalid)
             : Answer(await events.ListTrackingAsync(catalog, query, cancellationToken));
+
+    /// <summary>Counts what each filter chip of the tracking list would list, for the list's own query: one Events call, each
+    /// facet counted without its own selection, the total beside them. The list's filters bind as they do there; the
+    /// cursor, the limit and the sort play no part.</summary>
+    [HttpGet("catalogs/{catalog}/tracking/facets")]
+    public async Task<IActionResult> TrackingFacets(
+        string catalog, [FromQuery] TrackingQueryParameters parameters, CancellationToken cancellationToken) =>
+        parameters.TryMap(out var query) is { } invalid
+            ? this.ToProblem(invalid)
+            : Answer(await events.GetTrackingFacetsAsync(catalog, query, cancellationToken));
 
     /// <summary>Counts the organization's tracking per stage and lists the nearest open deadlines of the kinds named.</summary>
     [HttpGet("catalogs/{catalog}/tracking/summary")]

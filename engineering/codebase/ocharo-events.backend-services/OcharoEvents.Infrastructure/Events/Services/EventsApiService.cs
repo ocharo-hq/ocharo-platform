@@ -11,11 +11,11 @@ namespace OcharoEvents.Infrastructure.Events.Services;
 
 /// <summary>
 /// Serves the Events page from WoW2 Events as the <c>fe-events</c> kit reads it (OE07): the organization's tracking of the
-/// page's catalog, one event, a member's proposal, the organization's workflow, the catalog's calendar file and the
-/// freshness of the catalog's intake (E24), each passed through to Events' brokers as the kit sent it, so a filter, a
-/// cursor or a new fact reaches Events with no mapping here. Every call acts for the signed-in person through the
-/// brokers' token exchange, so Events keeps the tracking to the session's organization and checks its scopes and
-/// permissions again.
+/// page's catalog (its list, its facet counts and its summary), one event, a member's proposal, the organization's
+/// workflow, the catalog's calendar file and the freshness of the catalog's intake (E24), each passed through to Events'
+/// brokers as the kit sent it, so a filter, a cursor or a new fact reaches Events with no mapping here. Every call acts
+/// for the signed-in person through the brokers' token exchange, so Events keeps the tracking to the session's
+/// organization and checks its scopes and permissions again.
 /// </summary>
 /// <remarks>Only the configured catalog is served: another slug answers 404 before reaching Events, and an unconfigured
 /// Events answers 503, as the digest routes do.</remarks>
@@ -31,6 +31,11 @@ public sealed class EventsApiService(
     /// cursor as given.</summary>
     public Task<Result<TrackingPage>> ListTrackingAsync(string catalog, TrackingQuery query, CancellationToken token) =>
         Refused<TrackingPage>(catalog) ?? tracking.ListAsync(Catalog, query, token);
+
+    /// <summary>Counts what each filter chip of the tracking list would list, for the list's own query: one Events call,
+    /// the query as given.</summary>
+    public Task<Result<TrackingFacetsModel>> GetTrackingFacetsAsync(string catalog, TrackingQuery query, CancellationToken token) =>
+        Refused<TrackingFacetsModel>(catalog) ?? tracking.GetFacetsAsync(Catalog, query, token);
 
     /// <summary>Counts the organization's tracking per stage and lists the nearest open deadlines.</summary>
     public Task<Result<TrackingSummaryModel>> GetTrackingSummaryAsync(

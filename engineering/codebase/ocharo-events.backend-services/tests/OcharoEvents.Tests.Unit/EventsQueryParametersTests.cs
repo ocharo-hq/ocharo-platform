@@ -24,6 +24,12 @@ public sealed class EventsQueryParametersTests
             From = "2026-11-19",
             To = "2026-12-31",
             Kind = "trade-fair",
+            Kinds = ["runway", "festival"],
+            City = "Tashkent",
+            Cities = ["samarkand", "bukhara"],
+            Status = "movedOnline",
+            Sources = ["afisha", "curated"],
+            PublishedSince = "2026-11-12T00:00:00Z",
             Country = "UZ",
             Countries = ["KZ", "KG"],
             ExcludeCountries = ["RU"],
@@ -31,6 +37,7 @@ public sealed class EventsQueryParametersTests
             Text = "silk",
             DeadlineBefore = "2026-12-01",
             IncludeUndated = false,
+            Sort = "added",
             Cursor = "page-2",
             Limit = 25,
         };
@@ -47,6 +54,12 @@ public sealed class EventsQueryParametersTests
             From = new DateOnly(2026, 11, 19),
             To = new DateOnly(2026, 12, 31),
             Kind = "trade-fair",
+            Kinds = ["runway", "festival"],
+            City = "Tashkent",
+            Cities = ["samarkand", "bukhara"],
+            Status = EventStatus.MovedOnline,
+            Sources = ["afisha", "curated"],
+            PublishedSince = new DateTimeOffset(2026, 11, 12, 0, 0, 0, TimeSpan.Zero),
             Country = "UZ",
             Countries = ["KZ", "KG"],
             ExcludeCountries = ["RU"],
@@ -54,6 +67,7 @@ public sealed class EventsQueryParametersTests
             Text = "silk",
             DeadlineBefore = new DateOnly(2026, 12, 1),
             IncludeUndated = false,
+            Sort = TrackingSort.Added,
             Cursor = "page-2",
             Limit = 25,
         });
@@ -68,6 +82,12 @@ public sealed class EventsQueryParametersTests
         query.Stages.Should().BeEmpty();
         query.ExcludeStages.Should().BeEmpty();
         query.Countries.Should().BeEmpty();
+        query.Kinds.Should().BeEmpty();
+        query.Cities.Should().BeEmpty();
+        query.Sources.Should().BeEmpty();
+        query.Status.Should().BeNull();
+        query.PublishedSince.Should().BeNull();
+        query.Sort.Should().Be(TrackingSort.Starts);
         query.IncludeUnknownCountry.Should().BeFalse();
         query.IncludeUndated.Should().BeTrue();
         query.Limit.Should().Be(EventsConstants.DefaultPageSize);
@@ -78,6 +98,9 @@ public sealed class EventsQueryParametersTests
     [InlineData("to", "2026-13-01")]
     [InlineData("deadlineBefore", "soon")]
     [InlineData("priority", "urgent")]
+    [InlineData("status", "paused")]
+    [InlineData("sort", "random")]
+    [InlineData("publishedSince", "yesterday")]
     public void TrackingQuery_ShouldRefuseAMalformedValue(string name, string value)
     {
         var parameters = name switch
@@ -85,6 +108,9 @@ public sealed class EventsQueryParametersTests
             "from" => new TrackingQueryParameters { From = value },
             "to" => new TrackingQueryParameters { To = value },
             "deadlineBefore" => new TrackingQueryParameters { DeadlineBefore = value },
+            "status" => new TrackingQueryParameters { Status = value },
+            "sort" => new TrackingQueryParameters { Sort = value },
+            "publishedSince" => new TrackingQueryParameters { PublishedSince = value },
             _ => new TrackingQueryParameters { Priority = value },
         };
 
@@ -93,6 +119,25 @@ public sealed class EventsQueryParametersTests
         error.Should().NotBeNull();
         error!.Type.Should().Be(AppErrorType.Validation);
         error.Message.Should().StartWith(name);
+    }
+
+    [Theory]
+    [InlineData("starts", TrackingSort.Starts)]
+    [InlineData("added", TrackingSort.Added)]
+    [InlineData("deadline", TrackingSort.Deadline)]
+    public void TrackingQuery_ShouldReadEachSort_ByItsWireName(string wire, TrackingSort expected)
+    {
+        new TrackingQueryParameters { Sort = wire }.TryMap(out var query).Should().BeNull();
+
+        query.Sort.Should().Be(expected);
+    }
+
+    [Fact]
+    public void TrackingQuery_ShouldReadAPublishedSinceOffset_AsTheSameInstant()
+    {
+        new TrackingQueryParameters { PublishedSince = "2026-11-12T05:00:00+05:00" }.TryMap(out var query).Should().BeNull();
+
+        query.PublishedSince.Should().Be(new DateTimeOffset(2026, 11, 12, 0, 0, 0, TimeSpan.Zero));
     }
 
     [Fact]

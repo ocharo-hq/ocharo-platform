@@ -28,6 +28,10 @@ internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEve
     /// <summary>Gets or sets the page the tracking list answers.</summary>
     public TrackingPage Page { get; set; } = new([], null);
 
+    /// <summary>Gets or sets the tracked events the facets read counts: the fake's own data, over which the counts are
+    /// computed for the query the mirror passed, each facet without its own selection; empty by default.</summary>
+    public List<TrackedEventModel> Tracked { get; set; } = [];
+
     /// <summary>Gets or sets the workflow the workflow read answers.</summary>
     public WorkflowModel Workflow { get; set; } = new()
     {
@@ -93,6 +97,31 @@ internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEve
         Answer<IReadOnlyList<TrackingHistoryEntryModel>>(nameof(GetHistoryAsync), catalog, eventId,
             [new TrackingHistoryEntryModel { ToStage = "shortlisted", AtUtc = At }]);
 
+    /// <summary>Counts <see cref="Tracked"/> as Events counts a tracking list's chips: the total honours the whole query,
+    /// and the stage, kind, city and country facets each leave out their own selection. Priorities, sources and the open
+    /// deadline are Events' own rules, proven by its conformance suites, and answer empty here.</summary>
+    public Task<Result<TrackingFacetsModel>> GetFacetsAsync(string catalog, TrackingQuery query, CancellationToken cancellationToken = default)
+    {
+        IEnumerable<TrackedEventModel> Without(Facet facet) => Tracked.Where(item => Matches(item, query, facet));
+        static List<TrackingFacetCount> Counts(IEnumerable<string?> values) =>
+            values.OfType<string>().GroupBy(value => value).Select(group => new TrackingFacetCount(group.Key, group.Count(), null))
+                .OrderByDescending(count => count.Count).ToList();
+
+        var model = new TrackingFacetsModel
+        {
+            Total = Without(Facet.None).Count(),
+            Countries = Counts(Without(Facet.Country).Select(item => item.Event.Facts.Place?.Country)),
+            Cities = Counts(Without(Facet.City).Select(item => item.Event.Facts.Place?.City?.ToLowerInvariant())),
+            Kinds = Counts(Without(Facet.Kind).Select(item => item.Event.Facts.Kind)),
+            Stages = Workflow.Stages.Select(stage => new TrackingFacetCount(
+                stage.Key, Without(Facet.Stage).Count(item => StageOf(item) == stage.Key), null)).ToList(),
+            Priorities = [],
+            Sources = [],
+            OpenDeadline = new TrackingDeadlineFacet(query.DeadlineBefore ?? DateOnly.FromDateTime(At.UtcDateTime), 0),
+        };
+        return Answer(nameof(GetFacetsAsync), catalog, query, model);
+    }
+
     public Task<Result<TrackingSummaryModel>> GetSummaryAsync(string catalog, DateOnly today, CancellationToken cancellationToken = default) =>
         GetSummaryAsync(catalog, new TrackingSummaryQuery { Today = today }, cancellationToken);
 
@@ -143,6 +172,28 @@ internal sealed class RecordingEventsBrokers : IEventTrackingBroker, ICatalogEve
     /// <summary>Gets the calls of one broker method.</summary>
     public IReadOnlyList<(string Method, string? Catalog, object? Argument)> Of(string method) =>
         Calls.Where(call => call.Method == method).ToList();
+
+    private string StageOf(TrackedEventModel item) => item.Tracking?.Stage ?? Workflow.DefaultStage;
+
+    /// <summary>Says whether an event matches the query's selections, leaving out the one of the facet being counted.</summary>
+    private bool Matches(TrackedEventModel item, TrackingQuery query, Facet skipped)
+    {
+        EventFacts facts = item.Event.Facts;
+        string stage = StageOf(item);
+        bool Selected(IEnumerable<string?> selection, string? value, bool ignoreCase = false) =>
+            !selection.OfType<string>().Any()
+            || selection.OfType<string>().Contains(value, ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+        return (skipped == Facet.Stage || (Selected([query.Stage, ..query.Stages], stage) && !query.ExcludeStages.Contains(stage)))
+            && (skipped == Facet.Kind || Selected([query.Kind, ..query.Kinds], facts.Kind))
+            && (skipped == Facet.City || Selected([query.City, ..query.Cities], facts.Place?.City, ignoreCase: true))
+            && (skipped == Facet.Country
+                || (Selected([query.Country, ..query.Countries], facts.Place?.Country)
+                    && !query.ExcludeCountries.Contains(facts.Place?.Country ?? "")))
+            && (!query.TrackedOnly || item.Tracking is not null);
+    }
+
+    private enum Facet { None, Stage, Kind, City, Country }
 
     private Task<Result<T>> Answer<T>(string method, string? catalog, object? argument, T value) where T : notnull
     {

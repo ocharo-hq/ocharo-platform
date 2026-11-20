@@ -162,12 +162,12 @@
       },
       "WoW2.Sdk.Beta.Be.Events.Client": {
         "type": "Direct",
-        "requested": "[10.0.20-beta, )",
-        "resolved": "10.0.20-beta",
-        "contentHash": "WL97aPT2Lc1rkEp+jykiuMM/TYukk5L5hGUXcFm5Hoy3jwesyeC4zuXg1kjNAOv6u14Smaavuic0gt9TwqjcLw==",
+        "requested": "[10.0.21-beta, )",
+        "resolved": "10.0.21-beta",
+        "contentHash": "lo47zKFclwy+G0ndg27GC18PQvcOEXgu5EMVdvW2CgeoEXc2Gqm9YjpApZ1JuJc2lWSzKrGmnMWEYGYkvSJq9Q==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be": "10.0.112-beta",
-          "WoW2.Sdk.Beta.Be.Events.Abstractions": "10.0.20-beta"
+          "WoW2.Sdk.Beta.Be.Events.Abstractions": "10.0.21-beta"
         }
       },
       "WoW2.Sdk.Beta.Be.Identity.Client": {
@@ -2210,7 +2210,7 @@
           "OcharoEvents.Application": "[0.0.0, )",
           "OcharoEvents.Domain": "[0.0.0, )",
           "WoW2.Sdk.Beta.Be": "[10.0.112-beta, )",
-          "WoW2.Sdk.Beta.Be.Events.Abstractions": "[10.0.20-beta, )"
+          "WoW2.Sdk.Beta.Be.Events.Abstractions": "[10.0.21-beta, )"
         }
       },
       "ocharoevents.persistence": {
@@ -2244,9 +2244,9 @@
       },
       "WoW2.Sdk.Beta.Be.Events.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[10.0.20-beta, )",
-        "resolved": "10.0.20-beta",
-        "contentHash": "iJ6651d2YeEkkdIe7onjg6MG/hJQ4eqKiD/UcVoTpyQN7F28xAEN9uiicsAgGD7qT00YFkp0FIGNQE6EviOvHw==",
+        "requested": "[10.0.21-beta, )",
+        "resolved": "10.0.21-beta",
+        "contentHash": "LBvMfD+PxRjrUZWe8R1dYpWXr1IblmQbmYd5jne4IPCRwOxMgqafvVJSun+3IIlM8SdkH9swWWog88GumaT3jA==",
         "dependencies": {
           "WoW2.Sdk.Beta.Be.Abstractions": "10.0.112-beta"
         }

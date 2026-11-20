@@ -42,6 +42,7 @@ public sealed class AccessTests
 
         (await client.GetAsync($"{OwnPath}/tracking")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await client.GetAsync($"{OwnPath}/tracking/summary")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await client.GetAsync($"{OwnPath}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await client.GetAsync($"{OwnPath}/freshness")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await client.GetAsync($"{OwnPath}/tracking/{Item}")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await client.PostAsJsonAsync($"{OwnPath}/candidates", new { facts = new { kind = "other" } })).StatusCode
@@ -60,6 +61,7 @@ public sealed class AccessTests
         // An Ocharo owner reaching another organization's path, by list, summary, read and write.
         (await owner.GetAsync($"{OtherPath}/tracking")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await owner.GetAsync($"{OtherPath}/tracking/summary")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await owner.GetAsync($"{OtherPath}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await owner.GetAsync($"{OtherPath}/freshness")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await owner.GetAsync($"{OtherPath}/tracking/{Item}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await owner.PostAsJsonAsync($"{OtherPath}/candidates", new { facts = new { kind = "other" } })).StatusCode
@@ -74,6 +76,7 @@ public sealed class AccessTests
             var read = await client.GetAsync($"{OwnPath}/tracking");
             read.StatusCode.Should().Be(HttpStatusCode.NotFound, person.Subject);
             (await client.GetAsync($"{OwnPath}/tracking/{Item}")).StatusCode.Should().Be(HttpStatusCode.NotFound, person.Subject);
+            (await client.GetAsync($"{OwnPath}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.NotFound, person.Subject);
             (await client.GetAsync($"{OwnPath}/freshness")).StatusCode.Should().Be(HttpStatusCode.NotFound, person.Subject);
             (await CodeAsync(read)).Should().Be("NotFound");
         }

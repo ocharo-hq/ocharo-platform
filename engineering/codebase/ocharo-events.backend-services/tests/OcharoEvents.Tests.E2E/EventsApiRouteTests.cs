@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OcharoEvents.Infrastructure.Delivery.Services;
 using OcharoEvents.Infrastructure.Events.Services;
+using WoW.Two.Sdk.Beta.Be.Events;
 using WoW.Two.Sdk.Beta.Be.Events.CatalogEvents;
 using WoW.Two.Sdk.Beta.Be.Events.Client;
 using WoW.Two.Sdk.Beta.Be.Events.Digests;
@@ -91,6 +92,131 @@ public sealed class EventsApiRouteTests
         query.IncludeUndated.Should().BeFalse();
         query.ExcludeCountries.Should().Equal("UZ");
         query.Priority.Should().Be(TrackingPriority.High);
+    }
+
+    [Fact]
+    public async Task TrackingList_ShouldPassTheFeedV2Filters_AndTheSort_AsTheKitSentThem()
+    {
+        var events = new RecordingEventsBrokers();
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient viewer = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        (await viewer.GetAsync($"{Catalog}/tracking?cities=tashkent&cities=samarkand&city=Bukhara&kinds=runway&kinds=festival"
+            + "&sources=afisha&sources=curated&publishedSince=2026-11-12T00:00:00Z&status=movedOnline&sort=added"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var query = events.Of("ListAsync").Should().ContainSingle().Which.Argument.Should().BeOfType<TrackingQuery>().Which;
+        query.Cities.Should().Equal("tashkent", "samarkand");
+        query.City.Should().Be("Bukhara");
+        query.Kinds.Should().Equal("runway", "festival");
+        query.Sources.Should().Equal("afisha", "curated");
+        query.PublishedSince.Should().Be(new DateTimeOffset(2026, 11, 12, 0, 0, 0, TimeSpan.Zero));
+        query.Status.Should().Be(EventStatus.MovedOnline);
+        query.Sort.Should().Be(TrackingSort.Added);
+    }
+
+    [Fact]
+    public async Task TrackingList_ShouldReadNoSort_AsStarts_AndTheDeadlineSort_ByItsWireName()
+    {
+        var events = new RecordingEventsBrokers();
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient viewer = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        (await viewer.GetAsync($"{Catalog}/tracking")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await viewer.GetAsync($"{Catalog}/tracking?sort=deadline")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        events.Of("ListAsync").Select(call => ((TrackingQuery)call.Argument!).Sort).Should().Equal(TrackingSort.Starts, TrackingSort.Deadline);
+    }
+
+    [Fact]
+    public async Task Facets_ShouldBeReadByAMember_AsOneEventsCall_CountingEachFacetWithoutItsOwnSelection()
+    {
+        var events = new RecordingEventsBrokers
+        {
+            Tracked =
+            [
+                Tracked("runway", "Tashkent", "candidate"),
+                Tracked("runway", "Samarkand", "skipped"),
+                Tracked("trade-fair", "Tashkent", "candidate"),
+                Tracked("festival", "Bukhara", null),
+            ],
+        };
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient viewer = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        JsonElement facets = await DataAsync(await viewer.GetAsync(
+            $"{Catalog}/tracking/facets?stages=candidate&kinds=runway&sources=afisha&sort=added&cities=tashkent&publishedSince=2026-11-12T00:00:00Z"));
+
+        var call = events.Calls.Should().ContainSingle().Which;
+        call.Method.Should().Be("GetFacetsAsync");
+        call.Catalog.Should().Be("ocharo-fashion");
+        var query = call.Argument.Should().BeOfType<TrackingQuery>().Which;
+        query.Stages.Should().Equal("candidate");
+        query.Kinds.Should().Equal("runway");
+        query.Cities.Should().Equal("tashkent");
+        query.Sources.Should().Equal("afisha");
+        query.Sort.Should().Be(TrackingSort.Added);
+        query.PublishedSince.Should().Be(new DateTimeOffset(2026, 11, 12, 0, 0, 0, TimeSpan.Zero));
+
+        // The whole query lists one event; each chip counts what picking it would list, without its own selection.
+        facets.GetProperty("total").GetInt32().Should().Be(1);
+        Counts(facets, "stages").Should().Equal(("candidate", 1), ("skipped", 0));
+        Counts(facets, "kinds").Should().BeEquivalentTo(new[] { ("runway", 1), ("trade-fair", 1) });
+        Counts(facets, "cities").Should().Equal(("tashkent", 1));
+        facets.GetProperty("openDeadline").GetProperty("count").GetInt32().Should().Be(0);
+        facets.GetProperty("openDeadline").GetProperty("before").GetString().Should().Be("2026-11-19");
+    }
+
+    [Fact]
+    public async Task Facets_ShouldCountTheWholeCatalog_ForAnEmptyQuery_WithTheEditorsToo()
+    {
+        var events = new RecordingEventsBrokers { Tracked = [Tracked("runway", "Tashkent", "skipped"), Tracked("festival", "Bukhara", null)] };
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient editor = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Editor);
+
+        JsonElement facets = await DataAsync(await editor.GetAsync($"{Catalog}/tracking/facets"));
+
+        facets.GetProperty("total").GetInt32().Should().Be(2);
+        Counts(facets, "stages").Should().Equal(("candidate", 1), ("skipped", 1));
+        events.Of("GetFacetsAsync").Should().ContainSingle().Which.Argument.Should().BeOfType<TrackingQuery>()
+            .Which.Sort.Should().Be(TrackingSort.Starts);
+    }
+
+    [Fact]
+    public async Task Facets_ShouldRefuseAnotherCatalog_AnotherOrganization_AMemberWithoutRead_AndNoSession_BeforeEvents()
+    {
+        var events = new RecordingEventsBrokers();
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient owner = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Owner);
+        using HttpClient outsider = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Outsider);
+        using HttpClient billing = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Billing);
+        using HttpClient unaffiliated = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Unaffiliated);
+        using HttpClient anonymous = EventsTestIdentity.Anonymous(host.Factory);
+        string other = $"/api/organizations/{EventsTestIdentity.OtherOrganization}/events-api/api/events/v1/catalogs/ocharo-fashion";
+
+        (await owner.GetAsync($"{Base}/catalogs/another-catalog/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await owner.GetAsync($"{other}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await outsider.GetAsync($"{Catalog}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await unaffiliated.GetAsync($"{Catalog}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await billing.GetAsync($"{Catalog}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await anonymous.GetAsync($"{Catalog}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await owner.GetAsync($"{Catalog}/tracking/facets?sort=random")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await owner.GetAsync($"{Catalog}/tracking/facets?publishedSince=yesterday")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        events.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Events400_ShouldReachThePage_As400_ForAnOldCursor_OnTheListAndTheFacets()
+    {
+        var events = new RecordingEventsBrokers { Failure = EventsErrors.CursorInvalid() };
+        await using var host = EventsHost.Create(new Dictionary<string, string?>(), events);
+        using HttpClient viewer = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Viewer);
+
+        (await viewer.GetAsync($"{Catalog}/tracking?cursor=40&sort=added")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await viewer.GetAsync($"{Catalog}/tracking/facets?cursor=40&sort=added")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        events.Calls.Select(call => call.Method).Should().Equal("ListAsync", "GetFacetsAsync");
     }
 
     [Fact]
@@ -299,6 +425,9 @@ public sealed class EventsApiRouteTests
         (await outsider.GetAsync($"{Catalog}/tracking")).StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await owner.GetAsync($"{Catalog}/tracking?from=03.12.2026")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await owner.GetAsync($"{Catalog}/tracking?priority=urgent")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await owner.GetAsync($"{Catalog}/tracking?sort=random")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await owner.GetAsync($"{Catalog}/tracking?status=paused")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await owner.GetAsync($"{Catalog}/tracking?publishedSince=last-week")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await owner.GetAsync($"{Catalog}/tracking/summary?deadlineKinds=someday")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         events.Calls.Should().BeEmpty();
@@ -353,9 +482,24 @@ public sealed class EventsApiRouteTests
         using HttpClient client = await EventsTestIdentity.SignedIn(host.Factory, EventsTestIdentity.Owner);
 
         (await client.GetAsync($"{Catalog}/tracking")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        (await client.GetAsync($"{Catalog}/tracking/facets")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         (await client.GetAsync($"{Catalog}/freshness")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         (await client.GetAsync($"{Base}/workflow")).StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
     }
+
+    private static TrackedEventModel Tracked(string kind, string city, string? stage)
+    {
+        EventModel model = RecordingEventsBrokers.Event(Guid.NewGuid(), kind + " in " + city);
+        return new TrackedEventModel
+        {
+            Event = model with { Facts = model.Facts with { Kind = kind, Place = new EventPlace { City = city, Country = "UZ" } } },
+            Tracking = stage is null ? null : RecordingEventsBrokers.Tracking(model.Id, stage),
+        };
+    }
+
+    private static List<(string Value, int Count)> Counts(JsonElement facets, string name) =>
+        facets.GetProperty(name).EnumerateArray()
+            .Select(item => (item.GetProperty("value").GetString()!, item.GetProperty("count").GetInt32())).ToList();
 
     private static async Task<JsonElement> DataAsync(HttpResponseMessage response)
     {

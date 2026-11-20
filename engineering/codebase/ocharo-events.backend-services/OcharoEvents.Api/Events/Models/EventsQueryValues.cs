@@ -7,7 +7,7 @@ using WoW.Two.Sdk.Beta.Be.Foundation.Serialization;
 namespace OcharoEvents.Api.Events.Models;
 
 /// <summary>Reads mirrored query values as WoW2 Events' own routes read them: enums by their camelCase wire names
-/// (<c>high</c>, <c>movedOnline</c>), days as <c>yyyy-MM-dd</c>; an empty value is no filter.</summary>
+/// (<c>high</c>, <c>movedOnline</c>), days as <c>yyyy-MM-dd</c>, instants as ISO 8601 with an offset (<c>2026-11-19T00:00:00Z</c>); an empty value is no filter.</summary>
 internal static class EventsQueryValues
 {
     /// <summary>Reads an enum's wire name.</summary>
@@ -41,5 +41,20 @@ internal static class EventsQueryValues
             return null;
         }
         return OcharoEventsErrors.Invalid($"{name}: use a day such as 2026-12-03.");
+    }
+
+    /// <summary>Reads an instant.</summary>
+    /// <returns>The validation error for a value that is no ISO 8601 instant with an offset; none otherwise.</returns>
+    public static AppError? TryInstant(string name, string? value, out DateTimeOffset? parsed)
+    {
+        parsed = null;
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+        if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var instant))
+        {
+            parsed = instant;
+            return null;
+        }
+        return OcharoEventsErrors.Invalid($"{name}: use an instant such as 2026-11-19T00:00:00Z.");
     }
 }

@@ -25,7 +25,8 @@ anything else answers 404. Unsafe requests carry `X-Csrf-Token`. Answers are Eve
 
 | Method | Path | Query / body | Needs |
 |---|---|---|---|
-| GET | `catalogs/{catalog}/tracking` | `stage`, repeated `stages` / `excludeStages`, repeated `countries` / `excludeCountries`, `includeUnknownCountry`, `kind`, `text`, `from`, `to`, `priority`, `trackedOnly`, `deadlineBefore`, `includeUndated`, `cursor`, `limit` | read |
+| GET | `catalogs/{catalog}/tracking` | `stage`, repeated `stages` / `excludeStages`, repeated `countries` / `excludeCountries`, `includeUnknownCountry`, `kind`, repeated `kinds`, `city`, repeated `cities`, repeated `sources` (a source name or `curated`), `status`, `text`, `from`, `to`, `publishedSince`, `priority`, `trackedOnly`, `deadlineBefore`, `includeUndated`, `sort` (`starts`, `added`, `deadline`), `cursor`, `limit` | read |
+| GET | `catalogs/{catalog}/tracking/facets` | the tracking list's filters; answers `total` and counts per country, city, kind, stage, priority, source and open deadline, each counted without its own selection | read |
 | GET | `catalogs/{catalog}/tracking/summary` | `today`, repeated `deadlineKinds` | read |
 | GET | `catalogs/{catalog}/tracking/{eventId}` | — | read |
 | PUT | `catalogs/{catalog}/tracking/{eventId}` | `TrackingSpec` (`stage`, `priority`, `notes`, `fields`, `references`, `expectedRevision`) | `events:track` |
