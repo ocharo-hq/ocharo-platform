@@ -6,12 +6,7 @@ import type {
   WorkflowModel,
   WorkflowSpec,
 } from '@wow-two-beta/fe-events/contracts';
-import type {
-  EventCalendarOptions,
-  EventProposalOptions,
-  EventRegion,
-  TrackingShownField,
-} from '@wow-two-beta/fe-events/kit';
+import type { EventCalendarOptions, EventProposalOptions, EventRegion } from '@wow-two-beta/fe-events/kit';
 
 import { translateUi, type UiLocale } from '@/domain/shared/UiMessages';
 
@@ -187,29 +182,20 @@ export function ocharoKinds(): CatalogKindModel[] {
   return eventFormats.map((key) => ({ key, label: localized(formatLabels[key]) }));
 }
 
-/** The countries counted as regional to Ocharo in Uzbekistan. */
-export const regionalCountries: readonly string[] = ['KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU'];
+/** Uzbekistan's four neighbours that Ocharo counts as Central Asia. */
+export const centralAsiaCountries: readonly string[] = ['KZ', 'KG', 'TJ', 'TM'];
 
 /**
- * Ocharo's scopes, derived from an event's country: Uzbekistan local, its neighbours regional, any other country
- * international. An event with no country belongs to none and reads "Scope unknown" (OE08).
+ * Ocharo's scopes, derived from an event's country: Uzbekistan national, Kazakhstan, Kyrgyzstan, Tajikistan and
+ * Turkmenistan Central Asia, every other country international. An event with no country belongs to none and reads
+ * "Scope unknown" (OE08). The feed's scope chips and the calendar's scope pills take these labels and keys.
  */
 export function ocharoRegions(): EventRegion[] {
   return [
-    { key: 'local', label: localized('Local'), countries: ['UZ'] },
-    { key: 'regional', label: localized('Regional'), countries: [...regionalCountries] },
+    { key: 'national', label: localized('National'), countries: ['UZ'] },
+    { key: 'central-asia', label: localized('Central Asia'), countries: [...centralAsiaCountries] },
     { key: 'international', label: localized('International'), otherCountries: true },
   ];
-}
-
-/** Ocharo's own cost of taking part, on the event's detail, apart from the event's ticket price (E09); the feed's cards leave it off. */
-export function ocharoCostField(): TrackingShownField {
-  return { key: trackingFieldKeys.cost, label: localized("Ocharo's cost"), empty: localized('Cost not stated') };
-}
-
-/** How Ocharo takes part, on the detail. */
-export function ocharoParticipationField(): TrackingShownField {
-  return { key: trackingFieldKeys.participation, label: localized('How to take part') };
 }
 
 /**

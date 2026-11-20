@@ -10,9 +10,7 @@ import {
   eventsPath,
   ocharoCalendarOptions,
   ocharoClosedStages,
-  ocharoCostField,
   ocharoKinds,
-  ocharoParticipationField,
   ocharoProposal,
   ocharoQuickStages,
   ocharoRegions,
@@ -29,7 +27,8 @@ import SourcesFreshness from '../SourcesFreshness.vue';
  * own screens from `fe-events`' kit (OE07) over this app's mirror of Events' routes: the organization's tracking feed
  * (`EventsFeed` v2: a facet bar with server counts, a sort, a grid of the kit's `EventMediaCard`s that loads more on
  * scroll, quick Shortlist and Skip in each card's menu; skipped and rejected hidden until asked, scope chips, "Add event"
- * publishing at once; the cost stays in the detail) and one event's detail with its tracking form. The feed's attention
+ * publishing at once) and one event's detail: its facts and sources, with no tracking card until that is redesigned (developer,
+ * 2026-11-20; the kit's `EventDetail` shows the card only when `trackable`, so the page leaves it off). The feed's attention
  * pills sit between its bar and its grid: the kit's own application deadlines in the next 14 days, and Ocharo's "past to
  * close" (`attention` + the `#attention` slot), which unfolds `PastEventsStrip` to close each ended event Ocharo was
  * pursuing (OE12); each shows its count and is gone at zero. "Sources updated {time}" (E24) is the frame's, at the
@@ -55,8 +54,6 @@ const canTrack = computed(() => props.workspace.canEdit.value);
 const workflow = ocharoWorkflow();
 const kinds = ocharoKinds();
 const regions = ocharoRegions();
-const costField = ocharoCostField();
-const participationField = ocharoParticipationField();
 const proposal = ocharoProposal();
 const eventHref = (id: string) => eventsPath(organizationId(), { view: 'event', eventId: id });
 /** The key of Ocharo's one attention pill, which the feed hands back to the `#attention` slot. */
@@ -86,14 +83,6 @@ function refreshSide(): void {
 /** The feed reads again with its filters kept: a stage written elsewhere on the page reaches it. */
 function refreshFeed(): void {
   feedClient.value = { ...client };
-}
-/** A tracking save in the detail moves the event's stage in the feed behind it, and can change the past events to close. */
-function refreshAll(): void {
-  refreshFeed();
-  refreshSide();
-}
-function setDirty(dirty: boolean): void {
-  props.access.setDirty(dirty);
 }
 </script>
 
@@ -160,13 +149,8 @@ function setDirty(dirty: boolean): void {
         :locale="uiLocale"
         :today="today"
         :kinds="kinds"
-        trackable
-        :can-track="canTrack"
         :regions="regions"
-        :shown-fields="[participationField, costField]"
         :calendar-options="ocharoCalendarOptions(current.eventId)"
-        @dirty="setDirty"
-        @tracking-saved="refreshAll"
       />
     </div>
   </section>

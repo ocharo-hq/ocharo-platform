@@ -5,12 +5,7 @@ import { useRunningVersion } from '@wow-two-beta/fe/foundation/net';
 import { Button } from '@wow-two-beta/fe/presentation/actions';
 import { Card } from '@wow-two-beta/fe/presentation/display';
 import { AppFrame, type AppFrameAccount, type AppFrameSwitcher } from '@wow-two-beta/fe/presentation/layout';
-import {
-  AppSwitcherKind,
-  type AccountMenuLocale,
-  type AccountMenuVersion,
-  type AppSwitcherItem,
-} from '@wow-two-beta/fe/presentation/nav';
+import { AppSwitcherKind, type AccountMenuVersion, type AppSwitcherItem } from '@wow-two-beta/fe/presentation/nav';
 import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
 import { useBuildIdentity } from '../application/common/UseBuildIdentity';
@@ -28,21 +23,15 @@ import { AppIcons } from '../presentation/frame/ShellIcons';
 
 /** Where this browser remembers the desktop sidebar's rail choice. @internal */
 const SidebarCollapsedKey = 'ocharo.events.sidebar-collapsed';
-/** The interface languages, each named in its own language. @internal */
-const UiLanguages: readonly AccountMenuLocale[] = [
-  { value: 'uz', label: 'O‘zbekcha' },
-  { value: 'ru', label: 'Русский' },
-  { value: 'en', label: 'English' },
-];
 
 /**
  * Events inside the frame every Ocharo app shares (the fe sdk's `AppFrame`): the bar and the page column are the
  * suite's, at one size in every app. Events passes what is its own: the app list, its sections (the feed, the calendar
  * and the settings, in the sidebar and on a phone's bottom bar), when its sources last delivered (at the sidebar's foot,
- * and beside the feed's title on a phone, from one read), where you are, the account with its languages, and its notices above the page.
+ * and beside the feed's title on a phone, from one read), where you are, the account (no language choice: the interface is English only), and its notices above the page.
  */
 defineOptions({ name: 'AppLayout' });
-const { t, uiLocale, setUiLocale } = useUiLocale();
+const { t, uiLocale } = useUiLocale();
 const route = useRoute();
 const { isAuthenticated, person, organization, signingOut, signOut } = useIdentitySession();
 const { backendVersion, refresh: refreshBackendVersion, readRunningVersion } = useBuildIdentity();
@@ -115,7 +104,6 @@ const versions = computed<AccountMenuVersion[]>(() => {
 /** The account menu: who is signed in, the versions, and sign-out while it runs. */
 const account = computed<AppFrameAccount>(() => ({
   ...accountIdentity.value,
-  locales: UiLanguages,
   versions: versions.value,
   isBusy: signingOut.value,
 }));
@@ -139,7 +127,6 @@ watch(accountOpen, (open) => {
     :trail-label="t('You are here')"
     :account="account"
     :collapse-storage-key="SidebarCollapsedKey"
-    @update:locale="setUiLocale"
   >
     <template #brand><span class="oc-mark">O</span></template>
     <template #nav="{ isRail }"><EventsNav :current="section" :collapsed="isRail" /></template>

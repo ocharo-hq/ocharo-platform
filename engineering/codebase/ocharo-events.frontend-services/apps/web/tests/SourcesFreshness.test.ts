@@ -116,20 +116,6 @@ describe('sources freshness (E24)', () => {
     await flushPromises();
     expect(line().attributes('data-state')).toBe('warning');
   });
-
-  it('reads the age in the interface language', async () => {
-    answers({ lastReceivedAtUtc: hoursAgo(3), failingSources: 0 });
-    await render();
-    expect(line().text()).toBe('Sources updated 3 hours ago');
-
-    useUiLocale().setUiLocale('uz');
-    await flushPromises();
-    expect(line().text()).toBe('Manbalar 3 soat oldin yangilandi');
-
-    useUiLocale().setUiLocale('ru');
-    await flushPromises();
-    expect(line().text()).toBe('Источники обновлены 3 часа назад');
-  });
 });
 
 describe('sources freshness as the icon rail', () => {

@@ -1,47 +1,21 @@
-import { computed, onScopeDispose, ref } from 'vue';
+import { computed } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
 
 import { useIdentitySession } from '@/application/common/UseIdentitySession';
-import { requestConfirmation } from '@/application/common/UseFeedback';
-import { useUiLocale } from '@/application/shared/UseUiLocale';
 
 /**
- * What the Events page needs of the session: whether it is busy signing out, and whether the tracking form holds unsaved
- * edits, asking before a move or a closed tab discards them. The sign-in, the CSRF token and the session re-read after a
- * refusal live in the `fe-events` client (`createOcharoEventsClient`), so the page carries none of them.
+ * What the Events page needs of the session: whether it is busy signing out, which holds the page where it is. The
+ * sign-in, the CSRF token and the session re-read after a refusal live in the `fe-events` client
+ * (`createOcharoEventsClient`), so the page carries none of them. The page holds no form, so it has no unsaved edits to
+ * guard.
  */
 export function useEventsAccess() {
-  const { t } = useUiLocale();
   const { signingOut } = useIdentitySession();
-  const dirty = ref(false);
   const busy = computed(() => signingOut.value);
 
-  function setDirty(value: boolean): void {
-    dirty.value = value;
-  }
-  /** Asks before a router move discards unsaved edits; the page's own moves ask in `useEventsNavigation`. */
-  onBeforeRouteLeave(async () => {
-    if (busy.value) return false;
-    if (
-      dirty.value &&
-      !(await requestConfirmation(t('Discard unsaved changes and leave this page?'), {
-        confirmLabel: t('Discard changes'),
-      }))
-    )
-      return false;
-    dirty.value = false;
-    return true;
-  });
-  /** Prevents closing the tab with unsaved edits. */
-  function beforeUnload(event: BeforeUnloadEvent): void {
-    if (dirty.value) {
-      event.preventDefault();
-      event.returnValue = '';
-    }
-  }
-  window.addEventListener('beforeunload', beforeUnload);
-  onScopeDispose(() => window.removeEventListener('beforeunload', beforeUnload));
-  return { busy, dirty, setDirty };
+  /** Holds a router move while the session signs out. */
+  onBeforeRouteLeave(() => !busy.value);
+  return { busy };
 }
 export type EventsAccess = ReturnType<typeof useEventsAccess>;
 

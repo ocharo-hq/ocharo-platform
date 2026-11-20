@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DOMWrapper, flushPromises, type VueWrapper } from '@vue/test-utils';
 
-import { useUiLocale, UiLocaleStorageKey } from '../src/application/shared/UseUiLocale';
+import { useUiLocale } from '../src/application/shared/UseUiLocale';
 import { AdminSession, ApiVersion, EditorSession, OrganizationId, mountEvents } from './helpers/EventsApp';
 
 let wrapper: VueWrapper | undefined;
@@ -35,7 +35,6 @@ afterEach(() => {
   wrapper = undefined;
   document.body.innerHTML = '';
   vi.unstubAllGlobals();
-  useUiLocale().setUiLocale('uz');
   localStorage.clear();
 });
 
@@ -75,7 +74,7 @@ describe('Ocharo frame in Events', () => {
     expect(document.title).toBe('Feed · Ocharo Events');
   });
 
-  it('reads the API version only when the account menu opens, then offers sign-out, languages and the versions', async () => {
+  it('reads the API version only when the account menu opens, then offers sign-out and the versions, and no language choice', async () => {
     await renderAt(eventsPath);
     expect(fetch).not.toHaveBeenCalledWith('/api/system/status', expect.anything());
 
@@ -92,21 +91,21 @@ describe('Ocharo frame in Events', () => {
     ]);
     expect(fetch).toHaveBeenCalledWith('/api/system/status', expect.objectContaining({ credentials: 'omit' }));
     expect(menu.find('[data-account-menu-appearance]').exists()).toBe(true);
-    expect(menu.find('[data-account-menu-languages]').exists()).toBe(true);
+    expect(menu.find('[data-account-menu-languages]').exists()).toBe(false);
     expect(menu.find('[data-account-menu-sign-out]').exists()).toBe(true);
     expect(menu.find('[data-account-menu-identity]').text()).toContain('Dilnoza Karimova');
   });
 
-  it('keeps the language choice under the shared operator key and renames the frame in it', async () => {
+  it('stays in English: a language change is ignored, nothing is stored and the frame keeps its English names', async () => {
     await renderAt(eventsPath);
 
     useUiLocale().setUiLocale('ru');
     await flushPromises();
 
-    expect(localStorage.getItem(UiLocaleStorageKey)).toBe('ru');
-    expect(UiLocaleStorageKey).toBe('ocharo.operator.locale');
-    expect(wrapper!.find('button[aria-label="Приложения Ocharo — Мероприятия"]').exists()).toBe(true);
-    expect(wrapper!.get('main h1').text()).toBe('Лента');
+    expect(localStorage.getItem('ocharo.operator.locale')).toBeNull();
+    expect(document.documentElement.lang).toBe('en');
+    expect(wrapper!.find('button[aria-label="Ocharo apps — Events"]').exists()).toBe(true);
+    expect(wrapper!.get('main h1').text()).toBe('Feed');
   });
 
   it.each([
@@ -216,21 +215,9 @@ describe('Events sections', () => {
     expect(sidebar().get('[aria-current="page"]').text()).toBe('Feed');
   });
 
-  it('marks no section on an address no section owns, and names the sections in Uzbek and Russian', async () => {
+  it('marks no section on an address no section owns', async () => {
     await renderAt('/no-such-place', 1440, EditorSession);
     expect(sidebar().find('[aria-current="page"]').exists()).toBe(false);
-
-    useUiLocale().setUiLocale('uz');
-    await flushPromises();
-    const uz = wrapper!.get('aside').get('[aria-label="Tadbirlar bo‘limlari"]');
-    expect(uz.findAll('a').map((link) => link.text())).toEqual(['Lenta', 'Taqvim', 'Eslatmalar']);
-    expect(uz.text()).toContain('Sozlamalar');
-
-    useUiLocale().setUiLocale('ru');
-    await flushPromises();
-    const ru = wrapper!.get('aside').get('[aria-label="Разделы мероприятий"]');
-    expect(ru.findAll('a').map((link) => link.text())).toEqual(['Лента', 'Календарь', 'Напоминания']);
-    expect(ru.text()).toContain('Настройки');
   });
 
   it('keeps the sidebar rail choice this browser stored, and stores a change under the same key', async () => {

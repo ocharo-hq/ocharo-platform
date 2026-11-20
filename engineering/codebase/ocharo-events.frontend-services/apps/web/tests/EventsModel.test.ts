@@ -10,7 +10,6 @@ import {
   eventStatuses,
   eventsApiPrefix,
   eventsPath,
-  ocharoCostField,
   ocharoKinds,
   ocharoProposal,
   ocharoRegions,
@@ -181,20 +180,27 @@ describe("Ocharo's kit configuration", () => {
     for (const kind of kinds) expect(kind.label?.ru).not.toBe(kind.label?.en);
   });
 
-  it('derives the scope from the country: Uzbekistan local, its neighbours regional, others international, none unknown', () => {
+  it('derives the scope from the country: Uzbekistan national, four neighbours Central Asia, every other country international, none unknown', () => {
     const regions = ocharoRegions();
-    expect(regionOfCountry('UZ', regions)?.key).toBe('local');
-    expect(regionOfCountry('kz', regions)?.key).toBe('regional');
-    expect(regionOfCountry('FR', regions)?.key).toBe('international');
+    expect(regions.map((region) => [region.key, region.label.en])).toEqual([
+      ['national', 'National'],
+      ['central-asia', 'Central Asia'],
+      ['international', 'International'],
+    ]);
+    expect(regionOfCountry('UZ', regions)?.key).toBe('national');
+    for (const country of ['KZ', 'kg', 'TJ', 'TM']) expect(regionOfCountry(country, regions)?.key).toBe('central-asia');
+    for (const country of ['RU', 'AZ', 'AF', 'FR', 'US'])
+      expect(regionOfCountry(country, regions)?.key).toBe('international');
     expect(regionOfCountry(null, regions)).toBeNull();
+    expect(regionOfCountry('', regions)).toBeNull();
+    expect(regionQuery(regions[1], regions)).toEqual({ countries: ['KZ', 'KG', 'TJ', 'TM'] });
     expect(regionQuery(regions[2], regions)).toEqual({
-      excludeCountries: ['UZ', 'KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU'],
+      excludeCountries: ['UZ', 'KZ', 'KG', 'TJ', 'TM'],
       includeUnknownCountry: false,
     });
   });
 
-  it("shows Ocharo's cost apart from the ticket price, and proposes a published, shortlisted event", () => {
-    expect(ocharoCostField()).toMatchObject({ key: 'cost', empty: { en: 'Cost not stated' } });
+  it('proposes a published, shortlisted event', () => {
     expect(ocharoProposal()).toEqual({
       initialTracking: { stage: 'shortlisted', priority: 'normal' },
       sourceField: 'sourceUrl',

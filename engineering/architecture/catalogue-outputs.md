@@ -148,7 +148,7 @@ catalogue activity or archiving a design does not silently replace an earlier pu
 | Public response | [PublicProjection.cs](../codebase/brand-workspace.backend-services/BrandWorkspace.Infrastructure/Commerce/Services/PublicProjection.cs) |
 | Gallery and separate designers | [CatalogueGalleryPage.vue](../codebase/brand-workspace.frontend-services/apps/web/src/presentation/workspace/CatalogueGalleryPage.vue), [CatalogueWorkspacePage.vue](../codebase/brand-workspace.frontend-services/apps/web/src/presentation/workspace/CatalogueWorkspacePage.vue) |
 | Canonical navigation | [EditorNavigation.ts](../codebase/brand-workspace.frontend-services/apps/web/src/domain/workspace/EditorNavigation.ts) |
-| The Catalogue app's link to Desk | [OcharoApps.ts](../codebase/ocharo-catalogue.frontend-services/apps/web/src/domain/shared/OcharoApps.ts), [CatalogueDeskEntry.vue](../codebase/ocharo-catalogue.frontend-services/apps/web/src/presentation/common/CatalogueDeskEntry.vue) |
+| The Catalogue app's link to Desk | [OcharoApps.ts](../codebase/ocharo-catalogue.frontend-services/apps/web/src/domain/shared/OcharoApps.ts) |
 
 ## Verification boundary
 

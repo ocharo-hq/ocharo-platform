@@ -14,11 +14,24 @@ const CATALOG = `${MIRROR}/catalogs/ocharo-fashion`;
 const at = '2026-10-01T00:00:00Z';
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
-const item = (n: number, title: string, starts: object, stage: string | null = null, ends?: object) => ({
+const item = (
+  n: number,
+  title: string,
+  starts: object,
+  stage: string | null = null,
+  ends?: object,
+  country?: string,
+) => ({
   event: {
     id: id(n),
     catalog: 'ocharo-fashion',
-    facts: { title: { en: title }, kind: 'trade-fair', starts, ...(ends ? { ends } : {}) },
+    facts: {
+      title: { en: title },
+      kind: 'trade-fair',
+      starts,
+      ...(ends ? { ends } : {}),
+      ...(country ? { place: { country } } : {}),
+    },
     review: 'published',
     revision: 1,
     createdAtUtc: at,
@@ -254,7 +267,7 @@ describe('calendar place', () => {
     expect(blocks('Tashkent Fashion Week')).toHaveLength(1);
   });
 
-  it('titles a block in the interface language', async () => {
+  it('titles a block in English, whatever other languages the event carries', async () => {
     answers = [
       () =>
         page([
@@ -273,9 +286,170 @@ describe('calendar place', () => {
     ];
     await render();
     expect(blocks('Fashion Week')).toHaveLength(1);
+    expect(blocks('Неделя моды')).toHaveLength(0);
+  });
+});
 
-    useUiLocale().setUiLocale('ru');
+describe('calendar scope pills', () => {
+  /** Two national events, one in Central Asia, two international (Russia and France) and one with no country. */
+  const scoped = () =>
+    page([
+      item(1, 'Tashkent Fashion Week', dayOf('2026-10-12'), 'shortlisted', undefined, 'UZ'),
+      item(2, 'Bukhara Craft Fair', dayOf('2026-10-13'), null, undefined, 'UZ'),
+      item(3, 'Almaty Fashion Days', dayOf('2026-10-14'), null, undefined, 'KZ'),
+      item(4, 'Moscow Textile Show', dayOf('2026-10-15'), null, undefined, 'RU'),
+      item(5, 'Paris Showroom', dayOf('2026-10-16'), null, undefined, 'FR'),
+      item(6, 'Pop-up With No Country', dayOf('2026-10-17')),
+      item(
+        7,
+        'Month Only In Uzbekistan',
+        { value: '2026-10', precision: 'month', certainty: 'confirmed' },
+        null,
+        undefined,
+        'UZ',
+      ),
+    ]);
+  const group = () => wrapper!.get('[data-test="calendar-scopes"]');
+  const pills = () => group().findAll('button');
+  const pill = (label: string) => pills().find((button) => button.text().startsWith(label))!;
+  const drawn = () =>
+    (wrapper!.getComponent(EventCalendarViewer).props('events') as readonly EventCalendarViewerEvent[])
+      .map((block) => block.title)
+      .sort();
+  const everything = [
+    'Almaty Fashion Days',
+    'Bukhara Craft Fair',
+    'Moscow Textile Show',
+    'Paris Showroom',
+    'Pop-up With No Country',
+    'Tashkent Fashion Week',
+  ];
+
+  it('offers National, Central Asia and International above the calendar, each with the count of events it draws', async () => {
+    answers = [scoped];
+    await render();
+
+    expect(group().attributes('aria-label')).toBe('Scope');
+    expect(pills().map((button) => button.text())).toEqual(['National2', 'Central Asia1', 'International2']);
+    expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'false', 'false']);
+    // The pills come first: before the calendar in the page.
+    const order = wrapper!.html();
+    expect(order.indexOf('data-test="calendar-scopes"')).toBeLessThan(order.indexOf('data-test="calendar"'));
+  });
+
+  it('shows every event, those with no country included, while no pill is chosen', async () => {
+    answers = [scoped];
+    await render();
+
+    expect(drawn()).toEqual(everything);
+    expect(router.currentRoute.value.query.scope).toBeUndefined();
+  });
+
+  it('shows only the events of a chosen scope, keeps the counts of the others, and reads nothing again', async () => {
+    answers = [scoped];
+    await render();
+
+    await pill('National').trigger('click');
     await flushPromises();
-    expect(blocks('Неделя моды')).toHaveLength(1);
+
+    expect(drawn()).toEqual(['Bukhara Craft Fair', 'Tashkent Fashion Week']);
+    expect(pill('National').attributes('aria-pressed')).toBe('true');
+    expect(pills().map((button) => button.text())).toEqual(['National2', 'Central Asia1', 'International2']);
+    expect(reads).toHaveLength(1);
+  });
+
+  it('adds the events of a second pill, and shows a third scope on its own', async () => {
+    answers = [scoped];
+    await render();
+
+    await pill('National').trigger('click');
+    await pill('Central Asia').trigger('click');
+    await flushPromises();
+    expect(drawn()).toEqual(['Almaty Fashion Days', 'Bukhara Craft Fair', 'Tashkent Fashion Week']);
+
+    await pill('National').trigger('click');
+    await pill('Central Asia').trigger('click');
+    await pill('International').trigger('click');
+    await flushPromises();
+    expect(drawn()).toEqual(['Moscow Textile Show', 'Paris Showroom']);
+  });
+
+  it('shows all events again once the chosen pills are cleared', async () => {
+    answers = [scoped];
+    await render();
+
+    await pill('International').trigger('click');
+    await flushPromises();
+    expect(drawn()).toEqual(['Moscow Textile Show', 'Paris Showroom']);
+
+    await pill('International').trigger('click');
+    await flushPromises();
+    expect(drawn()).toEqual(everything);
+    expect(router.currentRoute.value.query.scope).toBeUndefined();
+  });
+
+  it('keeps the choice in the address as ?scope=, in the regions’ order, and keeps the other query', async () => {
+    answers = [scoped];
+    router = await eventsRouter(`/organizations/${ORG}/calendar?tab=x`);
+    await render();
+
+    await pill('Central Asia').trigger('click');
+    await pill('National').trigger('click');
+    await flushPromises();
+
+    expect(router.currentRoute.value.query.scope).toBe('national,central-asia');
+    expect(router.currentRoute.value.query.tab).toBe('x');
+    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/calendar`);
+  });
+
+  it('opens on the scopes the address names, and ignores a key that is not a scope', async () => {
+    answers = [scoped];
+    router = await eventsRouter(`/organizations/${ORG}/calendar?scope=central-asia,international,local`);
+    await render();
+
+    expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'true', 'true']);
+    expect(drawn()).toEqual(['Almaty Fashion Days', 'Moscow Textile Show', 'Paris Showroom']);
+  });
+
+  it('follows the address when it changes, as the back button does', async () => {
+    answers = [scoped];
+    await render();
+    expect(drawn()).toEqual(everything);
+
+    await router.replace({ query: { scope: 'central-asia' } });
+    await flushPromises();
+    expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'true', 'false']);
+    expect(drawn()).toEqual(['Almaty Fashion Days']);
+
+    await router.replace({ query: {} });
+    await flushPromises();
+    expect(drawn()).toEqual(everything);
+  });
+
+  it('shows every event for an address whose scope names no region', async () => {
+    answers = [scoped];
+    router = await eventsRouter(`/organizations/${ORG}/calendar?scope=regional`);
+    await render();
+
+    expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'false', 'false']);
+    expect(drawn()).toEqual(everything);
+  });
+
+  it('counts only what the loaded window holds: an empty window reads 0 in each scope, once it has answered', async () => {
+    await render();
+
+    expect(pills().map((button) => button.text())).toEqual(['National0', 'Central Asia0', 'International0']);
+  });
+
+  it('shows the pills without counts until the first read answers', async () => {
+    let release: (response: Response) => void = () => {};
+    answers = [() => new Promise<Response>((resolve) => (release = resolve))];
+    await render();
+
+    expect(pills().map((button) => button.text())).toEqual(['National', 'Central Asia', 'International']);
+
+    release(scoped());
+    await flushPromises();
+    expect(pills().map((button) => button.text())).toEqual(['National2', 'Central Asia1', 'International2']);
   });
 });

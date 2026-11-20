@@ -2,33 +2,25 @@ import { ref } from 'vue';
 
 import { translateUi, type UiLocale } from '../../domain/shared/UiMessages';
 
-/** The operator language every Ocharo app shares: one browser key, so a choice in one app holds in the others. */
-export const UiLocaleStorageKey = 'ocharo.operator.locale';
-const uiLocale = ref<UiLocale>('uz');
+/**
+ * English-only until the SDKs' translation layer is improved (developer, 2026-11-20): the interface starts and stays
+ * `en`, ignoring a stored (`ocharo.operator.locale`, left as it is) or browser preference. The uz and ru message tables
+ * stay in the code for when the choice returns.
+ */
+const uiLocale = ref<UiLocale>('en');
 
-/** Restores the saved interface language, Uzbek until the operator picks another, and names the document language. */
+/** Names the document language: always English. */
 export function initializeUiLocale(): void {
-  let saved: string | null = null;
-  try {
-    saved = localStorage.getItem(UiLocaleStorageKey);
-  } catch {
-    /* Storage is optional in restricted browser modes. */
-  }
-  uiLocale.value = saved === 'uz' || saved === 'ru' || saved === 'en' ? saved : 'uz';
+  uiLocale.value = 'en';
   document.documentElement.lang = uiLocale.value;
 }
 
-/** Shares the interface language; the account menu's choice is kept under the shared operator key. */
+/** Shares the interface language; any language but English is ignored, and nothing is stored. */
 export function useUiLocale() {
   function setUiLocale(value: string): void {
-    if (value !== 'uz' && value !== 'ru' && value !== 'en') return;
+    if (value !== 'en') return;
     uiLocale.value = value;
     if (typeof document !== 'undefined') document.documentElement.lang = value;
-    try {
-      localStorage.setItem(UiLocaleStorageKey, value);
-    } catch {
-      /* The current-tab choice still works. */
-    }
   }
   return {
     uiLocale,

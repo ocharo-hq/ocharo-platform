@@ -56,14 +56,13 @@ export const eventsUiMessages: UiMessageTable = {
     uz: 'Telegram orqali yuborishni faqat tashkilot administratorlari sozlaydi.',
     ru: 'Рассылку в Telegram настраивают только администраторы организации.',
   },
-  'Cost not stated': { uz: 'Narx ko‘rsatilmagan', ru: 'Стоимость не указана' },
 
   // Event details
   'How to take part': { uz: 'Qanday qatnashish mumkin', ru: 'Как принять участие' },
 
   // Scopes, kinds and stages, handed to the fe-events kit
-  Local: { uz: 'Mahalliy', ru: 'Местное' },
-  Regional: { uz: 'Mintaqaviy', ru: 'Региональное' },
+  National: { uz: 'Milliy', ru: 'Национальное' },
+  'Central Asia': { uz: 'Markaziy Osiyo', ru: 'Центральная Азия' },
   International: { uz: 'Xalqaro', ru: 'Международное' },
   'Runway show': { uz: 'Podium shousi', ru: 'Показ на подиуме' },
   'Trade fair': { uz: 'Savdo yarmarkasi', ru: 'Торговая ярмарка' },

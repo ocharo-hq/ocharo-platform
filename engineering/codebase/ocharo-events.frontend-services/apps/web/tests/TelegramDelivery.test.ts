@@ -29,13 +29,12 @@ afterEach(() => {
   wrapper = undefined;
   document.body.innerHTML = '';
   vi.unstubAllGlobals();
-  useUiLocale().setUiLocale('uz');
 });
 
 describe('Telegram delivery defaults', () => {
   it("starts a digest from Ocharo's weekly Monday 09:00 Tashkent default, in Uzbek, to every member", () => {
     expect(ocharoDigestDefaults()).toEqual({
-      name: 'Ocharo tadbirlari',
+      name: 'Ocharo events',
       enabled: true,
       channel: 'telegram',
       schedule: { days: ['monday'], times: ['09:00'], timeZone: 'Asia/Tashkent' },
@@ -146,7 +145,7 @@ describe('Telegram delivery: no deadline-reminder offer', () => {
     expect(wrapper.text()).not.toContain('Add deadline reminders');
     expect(requests.every((method) => method === 'GET')).toBe(true);
     // The weekly default stays the editor's starting digest.
-    expect(ocharoDigestDefaults().name).toBe('Ocharo tadbirlari');
+    expect(ocharoDigestDefaults().name).toBe('Ocharo events');
   });
 });
 

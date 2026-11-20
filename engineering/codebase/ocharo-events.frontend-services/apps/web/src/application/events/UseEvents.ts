@@ -3,8 +3,6 @@ import { useRoute, useRouter } from 'vue-router';
 import type { IntakeFreshnessModel } from '@wow-two-beta/fe-events/contracts';
 import { localIsoDate, type EventsClient } from '@wow-two-beta/fe-events/kit';
 
-import { requestConfirmation } from '@/application/common/UseFeedback';
-import { useUiLocale } from '@/application/shared/UseUiLocale';
 import {
   eventsApiPrefix,
   eventsPath,
@@ -99,25 +97,19 @@ export function useIntakeFreshness(source: () => EventsClient | null, catalog: s
   return { freshness, now };
 }
 
-/** Moves between the feed and one event inside one document, guarding unsaved forms. */
+/** Moves between the feed and one event inside one document. */
 export function useEventsNavigation(access: EventsAccess, organizationId: () => string, initial: EventsLocation) {
-  const { t } = useUiLocale();
   const current = shallowRef<EventsLocation>(initial);
   const route = useRoute();
   const router = useRouter();
-  const confirmDiscard = () =>
-    requestConfirmation(t('Discard unsaved changes and leave this page?'), { confirmLabel: t('Discard changes') });
   async function open(next: EventsLocation): Promise<boolean> {
     if (access.busy.value) return false;
-    if (access.dirty.value && !(await confirmDiscard())) return false;
-    if (access.busy.value) return false;
-    access.setDirty(false);
     const path = eventsPath(organizationId(), next);
     if (route.path !== path && (await router.push(path))) return false;
     current.value = next;
     return true;
   }
-  /* Back and forward arrive through the router, whose guard has already asked about unsaved edits. */
+  /* Back and forward arrive through the router, whose guard has already held a move while the session signs out. */
   watch(
     () => route.path,
     (path) => {

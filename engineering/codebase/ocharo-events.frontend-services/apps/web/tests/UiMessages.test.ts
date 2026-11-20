@@ -2,20 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import {
-  eventFormats,
-  eventStatuses,
-  formatLabels,
-  ocharoCostField,
-  ocharoKinds,
-  ocharoParticipationField,
-  ocharoRegions,
-  ocharoWorkflowSpec,
-  statusLabels,
-} from '@/domain/events/Events';
-import { OcharoAppsProblem } from '@/application/shared/UseOcharoApps';
-import { EventsGroupLabels, EventsSections } from '@/domain/shared/EventsSections';
-import { ocharoApps } from '@/domain/shared/OcharoApps';
+import { ocharoKinds, ocharoRegions, ocharoWorkflowSpec } from '@/domain/events/Events';
 import { translateUi, uiMessages } from '@/domain/shared/UiMessages';
 
 const root = join(process.cwd(), 'src') + '/';
@@ -29,83 +16,29 @@ function sources(directory: string): string[] {
   });
 }
 
-/** The string literals passed straight to `t(…)`, `notifyError(…)` or a form's `problems.push(…)`, unescaped. */
-function literals(): Map<string, string> {
-  const found = new Map<string, string>();
-  const pattern = /\b(?:t|notifyError|problems\.push)\(\s*(?:'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)")/g;
-  for (const file of sources(root)) {
-    const text = readFileSync(file, 'utf8');
-    for (const match of text.matchAll(pattern)) {
-      const raw = match[1] ?? match[2] ?? '';
-      found.set(raw.replace(/\\(['"\\])/g, '$1'), file.replace(root, 'src/'));
-    }
-  }
-  return found;
-}
-
 describe('interface messages', () => {
-  it('translates every literal the app passes to t(…) or notifyError(…)', () => {
-    const missing = [...literals()].filter(([key]) => !(key in uiMessages)).map(([key, file]) => `${key} (${file})`);
-    expect(missing).toEqual([]);
-  });
-
-  it('translates the labels looked up by value: stages, kinds, scopes, fields, startup problems and the apps menu', () => {
-    const labels = [
-      ...eventFormats.map((value) => formatLabels[value]),
-      ...eventStatuses.map((value) => statusLabels[value]),
-      'Local',
-      'Regional',
-      'International',
-      "Ocharo's cost",
-      'Cost not stated',
-      'How to take part',
-      'Source link',
-      ...Object.values(OcharoAppsProblem),
-      ...EventsSections.map((section) => section.label),
-      ...Object.values(EventsGroupLabels).filter((label): label is string => label !== null),
-      'Not checked',
-      'Checking…',
-      'Unavailable',
-      ...ocharoApps(
-        Object.fromEntries(['events', 'brand', 'desk'].map((key) => [key, `https://${key}.example.test/`])),
-      ).flatMap((app) => [app.label, app.summary]),
-    ];
-    expect(labels.filter((label) => !(label in uiMessages))).toEqual([]);
-  });
-
-  it("hands the kit Ocharo's labels in all three languages, the Russian never the English source", () => {
+  it("hands the kit Ocharo's labels with an English text each, the other languages optional", () => {
     const texts = [
       ...ocharoWorkflowSpec().stages.map((stage) => stage.label!),
       ...ocharoKinds().map((kind) => kind.label!),
       ...ocharoRegions().map((region) => region.label),
-      ocharoCostField().label,
-      ocharoCostField().empty!,
-      ocharoParticipationField().label,
     ];
-    expect(texts.filter((text) => !text.en || !text.uz || !text.ru || text.ru === text.en)).toEqual([]);
+    expect(texts.filter((text) => !text.en)).toEqual([]);
   });
 
-  it('translates the SDK calendar’s own copy into Uzbek and Russian, each distinct from its English source', () => {
-    const keys = [
-      'Today',
-      'Previous',
-      'Next',
-      'View',
-      'Month',
-      'Week',
-      'Day',
-      'Agenda',
-      'Year',
-      'All day',
-      '(no title)',
-      '{date} at {time}',
-      '{title} at {time}',
-      'Upcoming from {date}',
-      'No upcoming events.',
-      '+{count} more',
-    ];
-    expect(keys.filter((key) => !(key in uiMessages))).toEqual([]);
-    expect(keys.filter((key) => uiMessages[key]!.uz === key || uiMessages[key]!.ru === key)).toEqual([]);
+  it('keeps a well-formed uz and ru text in every entry the table holds, new phrases needing English only', () => {
+    const malformed = Object.entries(uiMessages)
+      .filter(([, value]) => !value.uz.trim() || !value.ru.trim() || value.en?.trim() === '')
+      .map(([key]) => key);
+    expect(malformed).toEqual([]);
+  });
+
+  it('answers the English source for a phrase with no entry, in every locale, filling its {parameters}', () => {
+    expect('A phrase nobody translated: {count}' in uiMessages).toBe(false);
+    for (const locale of ['en', 'uz', 'ru'] as const)
+      expect(translateUi('A phrase nobody translated: {count}', locale, { count: 3 })).toBe(
+        'A phrase nobody translated: 3',
+      );
   });
 
   it('keeps no "Showcase events" string in the source tree', () => {
@@ -114,7 +47,7 @@ describe('interface messages', () => {
     expect('Showcase events' in uiMessages).toBe(false);
   });
 
-  it('keeps every {parameter} of the English key in both translations', () => {
+  it('keeps every {parameter} of the English key in every translation present', () => {
     const parameters = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
     const broken = Object.entries(uiMessages)
       .filter(([key, value]) =>
@@ -124,7 +57,7 @@ describe('interface messages', () => {
     expect(broken).toEqual([]);
   });
 
-  it('answers Uzbek and Russian text distinct from the English source for the frame and the page', () => {
+  it('keeps the Uzbek and Russian text the tables hold, distinct from the English source, for when the choice returns', () => {
     expect(translateUi('Sign out', 'uz')).toBe('Chiqish');
     expect(translateUi('Sign out', 'ru')).toBe('Выйти');
     expect(translateUi('Sign out', 'en')).toBe('Sign out');

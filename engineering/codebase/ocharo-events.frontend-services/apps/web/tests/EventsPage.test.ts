@@ -129,6 +129,7 @@ function answer(method: string, url: URL, body: unknown): Response {
       untracked: 1,
       upcomingDeadlines: deadlines,
     });
+  if (path === `${CATALOG}/events/${FASHION_WEEK}` && method === 'GET') return ok(fashionWeek());
   if (path === `${CATALOG}/tracking/${FASHION_WEEK}` && method === 'GET')
     return ok({ event: fashionWeek(), tracking: fashionWeekTracking() });
   if (path.startsWith(`${CATALOG}/tracking/`) && path.endsWith('/history')) return ok([]);
@@ -193,10 +194,6 @@ async function render(
 ) {
   const access = {
     busy: ref(false),
-    dirty: ref(false),
-    setDirty: vi.fn((value: boolean) => {
-      access.dirty.value = value;
-    }),
   };
   const workspace = {
     organization: ref({ id: ORG, name: 'Ocharo' }),
@@ -291,7 +288,7 @@ describe('events feed through the fe-events kit', () => {
     expect(wrapper!.get('[data-facet-match]').text()).toBe('2 of 2');
     expect(facetReads().length).toBeGreaterThan(0);
     const scopes = facetOf('scope')!.options;
-    expect(scopes.map((option) => option.label)).toEqual(['All', 'Local', 'Regional', 'International']);
+    expect(scopes.map((option) => option.label)).toEqual(['All', 'National', 'Central Asia', 'International']);
     expect(scopes.map((option) => option.count)).toEqual([undefined, 1, 1, 0]);
     expect(facetOf('kind')!.options.map((option) => [option.label, option.count])).toEqual([
       ['Runway show', 1],
@@ -352,17 +349,11 @@ describe('events feed through the fe-events kit', () => {
     expect(untracked.find('[data-test="event-stage-menu"]').exists()).toBe(true);
   });
 
-  it('shows a title in the interface language, SCFD’s English otherwise (the cards carry no language badge)', async () => {
+  it('shows a title in English, whatever other languages the event carries (the cards carry no language badge)', async () => {
     await render('editor');
-    expect(card('Tashkent Fashion Week').exists()).toBe(true);
 
-    useUiLocale().setUiLocale('ru');
-    await flushPromises();
-    expect(card('Неделя моды в Ташкенте').exists()).toBe(true);
-
-    useUiLocale().setUiLocale('uz');
-    await flushPromises();
     expect(card('Tashkent Fashion Week').get('[data-test="event-title"]').text()).toBe('Tashkent Fashion Week');
+    expect(wrapper!.text()).not.toContain('Неделя моды в Ташкенте');
   });
 
   it('lists skipped and rejected events when asked, and filters by scope chips on the server', async () => {
@@ -373,13 +364,13 @@ describe('events feed through the fe-events kit', () => {
     await choose({});
     expect(lastList().getAll('excludeStages')).toEqual(['skipped', 'rejected']);
 
-    await chip('Regional').trigger('click');
+    await chip('Central Asia').trigger('click');
     await flushPromises();
-    expect(lastList().getAll('countries')).toEqual(['KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU']);
+    expect(lastList().getAll('countries')).toEqual(['KZ', 'KG', 'TJ', 'TM']);
 
     await chip('International').trigger('click');
     await flushPromises();
-    expect(lastList().getAll('excludeCountries')).toEqual(['UZ', 'KZ', 'KG', 'TJ', 'TM', 'AF', 'AZ', 'RU']);
+    expect(lastList().getAll('excludeCountries')).toEqual(['UZ', 'KZ', 'KG', 'TJ', 'TM']);
     expect(lastList().has('countries')).toBe(false);
   });
 
@@ -418,7 +409,7 @@ describe('events feed through the fe-events kit', () => {
     await wrapper!.get('input[name="title"]').setValue('Margilan Ikat Days');
     wrapper!.getComponent(CountryPicker).vm.$emit('update:modelValue', 'UZ');
     await flushPromises();
-    expect(wrapper!.get('[data-test="facts-scope"]').text()).toContain('Local');
+    expect(wrapper!.get('[data-test="facts-scope"]').text()).toContain('National');
     await wrapper!.get('input[name="foundAt"]').setValue('https://listings.example.test/ikat');
     await wrapper!.get('form').trigger('submit');
     await flushPromises();
@@ -522,7 +513,7 @@ describe('attention pills between the facet bar and the cards', () => {
     expect(wrapper!.find('article[aria-labelledby="event-detail-title"]').exists()).toBe(true);
   });
 
-  it('reads the past events by stage and last start day, once, and names the pill in the interface language', async () => {
+  it('reads the past events by stage and last start day, once, and names the pill with its count', async () => {
     pastOpen = [endedItem()];
     await render('editor');
 
@@ -535,10 +526,7 @@ describe('attention pills between the facet bar and the cards', () => {
     ]);
     expect(pastReads()[0]!.url.searchParams.get('to')).toBe('2026-10-07');
     expect(pastReads()[0]!.url.searchParams.get('includeUndated')).toBe('false');
-
-    useUiLocale().setUiLocale('ru');
-    await flushPromises();
-    expect(pill('past').text()).toBe('Прошедших к закрытию: 1');
+    expect(pill('past').text()).toBe('1 past to close');
   });
 
   it('unfolds the past events in the slot, closes one in a tracking write, drops its pill and reads the feed again', async () => {
@@ -596,35 +584,28 @@ describe('attention pills between the facet bar and the cards', () => {
 });
 
 describe('one event through the fe-events kit', () => {
-  it('shows the event with Ocharo’s fields and saves tracking at the revision read, guarding the unsaved draft', async () => {
-    const { access } = await render('editor', { view: 'event', eventId: FASHION_WEEK });
+  it('shows the event’s facts and sources and no tracking section: no stage, priority, notes, fields or history', async () => {
+    await render('editor', { view: 'event', eventId: FASHION_WEEK });
 
     const detail = wrapper!.get('article[aria-labelledby="event-detail-title"]');
-    expect(detail.get('[data-test="event-field-participation"]').text()).toContain('Application package');
-    expect(detail.get('[data-test="event-field-cost"]').text()).toContain('Stand from 300 USD');
-    // The Desk import's source link is shown, never offered for editing (read-only in Ocharo's workflow).
-    expect(wrapper!.get('[data-test="tracking-read-only"]').text()).toContain('https://listings.example.test/tfw');
-    expect(wrapper!.find('[name="field-sourceUrl"]').exists()).toBe(false);
-    const listsBefore = lists().length;
-
-    await wrapper!.get('textarea[name="notes"]').setValue('Bring the lookbook and the ikat coats.');
-    expect(access.setDirty).toHaveBeenLastCalledWith(true);
-    await wrapper!.get('section[aria-labelledby="tracking-form-title"] form').trigger('submit');
-    await flushPromises();
-
-    const save = sent.find(
-      (item) => item.method === 'PUT' && item.url.pathname === `${CATALOG}/tracking/${FASHION_WEEK}`,
-    )!;
-    expect(save.body).toMatchObject({
-      stage: 'shortlisted',
-      priority: 'high',
-      notes: 'Bring the lookbook and the ikat coats.',
-      fields: { cost: 'Stand from 300 USD', sourceUrl: 'https://listings.example.test/tfw' },
-      expectedRevision: 3,
-    });
-    expect(access.setDirty).toHaveBeenLastCalledWith(false);
-    // The feed behind the detail reads again, so the event's new stage shows on return.
-    expect(lists().length).toBe(listsBefore + 1);
+    expect(detail.get('#event-detail-title').text()).toBe('Tashkent Fashion Week');
+    expect(wrapper!.find('section[aria-labelledby="tracking-form-title"]').exists()).toBe(false);
+    for (const selector of [
+      '[name="stage"]',
+      '[name="priority"]',
+      'textarea[name="notes"]',
+      '[name="field-cost"]',
+      '[data-test="tracking-read-only"]',
+      '[data-test="event-field-cost"]',
+      '[data-test="event-field-participation"]',
+    ])
+      expect(wrapper!.find(selector).exists(), selector).toBe(false);
+    expect(wrapper!.text()).not.toContain('Bring the lookbook.');
+    expect(wrapper!.text()).not.toContain('Stand from 300 USD');
+    // The page reads the catalog's event alone: no tracking read, no history, nothing written.
+    expect(sent.some((item) => item.url.pathname === `${CATALOG}/events/${FASHION_WEEK}`)).toBe(true);
+    expect(sent.some((item) => item.url.pathname.startsWith(`${CATALOG}/tracking/${FASHION_WEEK}`))).toBe(false);
+    expect(sent.filter((item) => item.method !== 'GET')).toEqual([]);
   });
 });
 
@@ -660,40 +641,21 @@ describe("Ocharo's workflow in Events", () => {
     expect(sent.filter((item) => item.method !== 'GET' && item.method !== 'HEAD')).toEqual([]);
   });
 
-  it("shows Ocharo's stage labels and field titles from the spec while Events holds only its default workflow", async () => {
-    useUiLocale().setUiLocale('uz');
+  it("shows Ocharo's stage labels from the spec while Events holds only its default workflow", async () => {
     storedWorkflow = {
       stages: [{ key: 'interested', label: { en: 'Interested' }, class: 'open' }],
       defaultStage: 'interested',
       revision: 0,
     };
-    await render('owner', { view: 'event', eventId: FASHION_WEEK });
+    await render('owner');
 
-    const stages = wrapper!
-      .findAll('section[aria-labelledby="tracking-form-title"] select[name="stage"] option')
-      .map((option) => option.text());
-    expect(stages).toEqual(ocharoWorkflowSpec().stages.map((stage) => stage.label!.uz));
-    const label = wrapper!.get('[name="field-cost"]').element.closest('label')?.textContent ?? '';
-    expect(label).toContain('Ocharo xarajati');
-    expect(workflowWrites()).toEqual([]);
-  });
-
-  it("shows the stored workflow's own labels, with Ocharo's filling the languages it lacks", async () => {
-    useUiLocale().setUiLocale('uz');
-    storedWorkflow = {
-      ...ocharoWorkflowSpec(),
-      stages: ocharoWorkflowSpec().stages.map((stage) => ({
-        ...stage,
-        label: stage.key === 'shortlisted' ? { en: 'Short list' } : { en: stage.label!.en },
-      })),
-      revision: 5,
-    };
-    await render('editor', { view: 'event', eventId: FASHION_WEEK });
-
-    const stages = wrapper!
-      .findAll('section[aria-labelledby="tracking-form-title"] select[name="stage"] option')
-      .map((option) => option.text());
-    expect(stages).toEqual(ocharoWorkflowSpec().stages.map((stage) => stage.label!.uz));
+    const label = (key: string) => ocharoWorkflowSpec().stages.find((stage) => stage.key === key)!.label!.en!;
+    expect(facetOf('stage')!.options.map((option) => option.label)).toEqual(
+      ['candidate', 'shortlisted', 'skipped', 'rejected'].map(label),
+    );
+    expect(card('Tashkent Fashion Week').get('[data-test="event-stage"]').text().toLowerCase()).toBe(
+      label('shortlisted').toLowerCase(),
+    );
     expect(workflowWrites()).toEqual([]);
   });
 });

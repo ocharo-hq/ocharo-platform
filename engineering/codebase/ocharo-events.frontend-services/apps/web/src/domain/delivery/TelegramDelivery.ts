@@ -40,7 +40,7 @@ export function eventLinkTemplate(origin: string, organizationId: string): strin
  */
 export function ocharoDigestDefaults(): Partial<DigestSpec> {
   return {
-    name: 'Ocharo tadbirlari',
+    name: 'Ocharo events',
     enabled: true,
     channel: 'telegram',
     schedule: { days: ['monday'], times: ['09:00'], timeZone: 'Asia/Tashkent' },

@@ -1,11 +1,11 @@
 # Events contract — the Events page on WoW2 Events
 
-*Last updated: 2026-11-19*
+*Last updated: 2026-11-20*
 
 ## Increment
 
-One feed of every event where Ocharo could show its products — local (Uzbekistan), regional (Central Asia and
-neighbours) and international — with dates, deadlines, how to take part, what it costs, and where Ocharo stands with
+One feed of every event where Ocharo could show its products — national (Uzbekistan), Central Asia and
+international — with dates, deadlines, how to take part, what it costs, and where Ocharo stands with
 each one. WoW2 Events (`wow-two-sdk-beta.events`) owns the catalog `ocharo-fashion`, the organization's tracking and its
 workflow; the Ocharo Events app is their Ocharo face ([events-app.md](../research/events-app.md)). It never applies,
 registers or pays on Ocharo's behalf; Marketing later attaches campaign work to an event reference.
@@ -54,7 +54,8 @@ anything else answers 404. Unsafe requests carry `X-Csrf-Token`. Answers are Eve
 | Custom fields | `participation` "How to take part" (≤ 2000), `cost` "Ocharo's cost" (≤ 500, unknown stays empty, never `0`), `sourceUrl` "Source link" (read-only: shown, never edited, kept on save) |
 | Workflow in Events | the deploy writes it from `deployment/events/ocharo-workflow.json` with Events' `workflow put --spec` (`deployment/deployment.md` § Events workflow); the page only reads it and shows Ocharo's labels from the spec for what the stored one lacks |
 | Kinds | `runway` · `trade-fair` · `market` · `exhibition` · `competition` · `festival` · `conference` · `other`, labelled in en, uz and ru |
-| Scopes | derived from the country: `local` (UZ) · `regional` (KZ, KG, TJ, TM, AF, AZ, RU) · `international` (any other country); no country reads "Scope unknown" and no chip selects it |
+| Scopes | derived from the country: `national` "National" (UZ) · `central-asia` "Central Asia" (KZ, KG, TJ, TM) · `international` "International" (any other country, Afghanistan, Azerbaijan and Russia included); no country reads "Scope unknown" and no chip selects it. The feed's scope chips and the calendar's scope pills share these keys and labels (`ocharoRegions()`) |
+| Calendar scopes | three pills above the calendar choose scopes (several at once; none chosen shows every event, those with no country included), narrowing the loaded window's events in the browser by each event's country through the feed's rule (`regionOfCountry`); each pill counts the window's drawn events in its scope; the choice lives in the address as `?scope=national,central-asia` |
 | Feed | skipped and rejected hidden until "Show Skipped, Rejected" or a stage filter asks; quick Shortlist and Skip on untracked cards; Ocharo's cost on each card |
 | Deadlines | the five nearest `application` deadlines, untracked events included, cancelled and lost-stage events left out |
 | Past, not closed | ended events in `shortlisted`, `applying`, `applied` or `confirmed`: one list call (`stages`, `to` = yesterday, `includeUndated=false`), kept when their last day has passed; Attended or Skipped is one tracking write at the revision read (OE12) |

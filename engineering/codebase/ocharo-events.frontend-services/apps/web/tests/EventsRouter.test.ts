@@ -26,7 +26,6 @@ afterEach(() => {
   wrapper = undefined;
   document.body.innerHTML = '';
   vi.unstubAllGlobals();
-  useUiLocale().setUiLocale('uz');
 });
 
 describe('Events routes', () => {
