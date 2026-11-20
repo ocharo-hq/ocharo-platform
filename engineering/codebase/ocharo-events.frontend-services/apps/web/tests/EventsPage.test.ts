@@ -8,6 +8,7 @@ import { ocharoWorkflowSpec, type EventsLocation } from '@/domain/events/Events'
 import {
   CountryPicker,
   FacetBar,
+  type FacetChoiceDefinition,
   type FacetDefinition,
   type FacetSelection,
 } from '@wow-two-beta/fe/presentation/forms';
@@ -246,7 +247,8 @@ const facetReads = () =>
   sent.filter((item) => item.method === 'GET' && item.url.pathname === `${CATALOG}/tracking/facets`);
 const bar = () => wrapper!.getComponent(FacetBar);
 const facetOf = (key: string) =>
-  (bar().props('facets') as readonly FacetDefinition[]).find((definition) => definition.key === key);
+  (bar().props('facets') as readonly FacetDefinition[]).find((definition) => definition.key === key) as
+    FacetChoiceDefinition | undefined;
 /** Reports a choice the way the bar does, so the feed takes the whole selection. */
 async function choose(selection: FacetSelection) {
   bar().vm.$emit('update:modelValue', selection);
