@@ -16,7 +16,7 @@ const { t } = useUiLocale();
     padding="2xl"
     class="text-center"
   >
-    <h1 id="not-found-heading" class="font-editorial text-3xl">{{ t('Page not found.') }}</h1>
+    <h1 id="not-found-heading" class="page-title my-0">{{ t('Page not found.') }}</h1>
     <Button as-child tone="primary" class="mt-6">
       <RouterLink to="/">{{ t('Back to events') }}</RouterLink>
     </Button>

@@ -33,7 +33,8 @@ import SourcesFreshness from '../SourcesFreshness.vue';
  * pills sit between its bar and its grid: the kit's own application deadlines in the next 14 days, and Ocharo's "past to
  * close" (`attention` + the `#attention` slot), which unfolds `PastEventsStrip` to close each ended event Ocharo was
  * pursuing (OE12); each shows its count and is gone at zero. "Sources updated {time}" (E24) is the frame's, at the
- * sidebar's foot; below `md`, where there is no sidebar, its icon stands beside the title, from the same read.
+ * sidebar's foot; below `md`, where there is no sidebar, its full text stands as its own muted line under the title,
+ * from the same read — a phone has no room for a tooltip, so this copy carries no icon-only, tap-nothing mode.
  */
 defineOptions({ name: 'EventsPage' });
 const props = defineProps<{
@@ -91,9 +92,9 @@ function refreshFeed(): void {
 
 <template>
   <section class="space-y-6">
-    <header class="flex items-center gap-3">
+    <header>
       <h1 class="page-title my-0">{{ t('Feed') }}</h1>
-      <SourcesFreshness compact class="md:hidden" data-test="sources-freshness-title" />
+      <SourcesFreshness class="mt-1 md:hidden" data-test="sources-freshness-title" />
     </header>
     <!-- The feed stays mounted behind an open event, so its filters survive the round trip. -->
     <div v-show="showsFeed" data-test="events-feed">
@@ -138,7 +139,7 @@ function refreshFeed(): void {
     <div v-if="!showsFeed && current.eventId">
       <button
         type="button"
-        class="mb-4 text-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
+        class="mb-4 inline-flex h-10 items-center text-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
         :disabled="access.busy.value"
         data-test="back-to-feed"
         @click="open(feed)"

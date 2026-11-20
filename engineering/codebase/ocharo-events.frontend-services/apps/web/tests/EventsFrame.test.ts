@@ -235,16 +235,15 @@ describe('Events sections', () => {
 
     expect(wrapper!.find('aside').exists()).toBe(false);
     const bar = wrapper!.get('[aria-label="Events sections"]');
-    expect(bar.findAll('a').map((link) => link.text())).toEqual(['Feed', 'Calendar', 'Reminders', 'Telegram delivery']);
+    // The phone bar's own label stays short ("Telegram"), below its icon; the sidebar keeps the full name.
+    expect(bar.findAll('a').map((link) => link.text())).toEqual(['Feed', 'Calendar', 'Reminders', 'Telegram']);
     expect(bar.get('[aria-current="page"]').text()).toBe('Reminders');
     expect(bar.find('button').exists()).toBe(false);
     expect(document.querySelector('[role="dialog"]')).toBeNull();
 
     await bar.get(`a[href="${placePath('telegram-delivery')}"]`).trigger('click');
     await arrive(router, placePath('telegram-delivery'));
-    expect(wrapper!.get('[aria-label="Events sections"]').get('[aria-current="page"]').text()).toBe(
-      'Telegram delivery',
-    );
+    expect(wrapper!.get('[aria-label="Events sections"]').get('[aria-current="page"]').text()).toBe('Telegram');
   });
 
   it('offers a member three places on a phone', async () => {
@@ -266,7 +265,7 @@ describe('Sources updated', () => {
   const sourcesStale = { lastReceivedAtUtc: new Date(Date.now() - 50 * 3_600_000).toISOString(), failingSources: 1 };
   const staleTitle = 'Sources updated 2 days ago · No new records in over 24 hours. · Sources failing: 1';
   const footer = () => wrapper!.get('[data-app-frame-nav-footer]');
-  /** The copy beside the feed's title, which only a phone shows. */
+  /** The copy under the feed's title, which only a phone shows. */
   const beside = () => wrapper!.get('main header').find('[data-test="sources-freshness-title"]');
   const freshnessReads = () => vi.mocked(fetch).mock.calls.filter(([input]) => String(input).includes('/freshness'));
 
@@ -307,7 +306,7 @@ describe('Sources updated', () => {
     expect(line.get('[role="img"]').attributes('title')).toBe(staleTitle);
   });
 
-  it('stands beside the feed title on a phone, as its icon with the full text, in its warning tone', async () => {
+  it('stands as its own muted line under the feed title on a phone, with the full text, in its warning tone', async () => {
     await renderWith(eventsPath, 390, sourcesStale);
 
     // A phone has no sidebar, so no foot to stand at.
@@ -316,20 +315,20 @@ describe('Sources updated', () => {
     const header = wrapper!.get('main header');
     expect(header.get('h1').text()).toBe('Feed');
     expect(header.get('h1').element.nextElementSibling).toBe(beside().element);
-    expect(beside().attributes('data-compact')).toBeDefined();
+    // Not the icon-only, tooltip-only compact mode: a phone has no way to reveal a tooltip.
+    expect(beside().attributes('data-compact')).toBeUndefined();
     expect(beside().attributes('data-state')).toBe('warning');
     expect(beside().classes()).toContain('text-warning');
     expect(beside().attributes('role')).toBe('status');
-    expect(beside().text()).toBe('');
-    expect(beside().get('[role="img"]').attributes('aria-label')).toBe(staleTitle);
-    expect(beside().get('[role="img"]').attributes('title')).toBe(staleTitle);
+    expect(beside().text()).toBe(staleTitle);
+    expect(beside().find('[role="img"]').exists()).toBe(false);
   });
 
   it('keeps the title-row copy for a phone only: hidden from md up, where the sidebar carries it', async () => {
     await renderWith(eventsPath, 390, sourcesFresh);
 
     expect(beside().classes()).toContain('md:hidden');
-    expect(beside().get('[role="img"]').attributes('aria-label')).toBe('Sources updated 3 hours ago');
+    expect(beside().text()).toBe('Sources updated 3 hours ago');
     expect(beside().attributes('data-state')).toBe('fresh');
   });
 
@@ -356,7 +355,7 @@ describe('Sources updated', () => {
     window.dispatchEvent(new Event('focus'));
     await flushPromises();
     expect(freshnessReads()).toHaveLength(2);
-    expect(beside().get('[role="img"]').attributes('aria-label')).toBe('Sources updated 3 hours ago');
+    expect(beside().text()).toBe('Sources updated 3 hours ago');
   });
 
   it('reads nothing for a person without events:read, and shows no copy', async () => {

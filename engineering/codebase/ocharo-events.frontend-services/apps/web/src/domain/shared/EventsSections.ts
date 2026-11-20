@@ -12,8 +12,11 @@ export type EventsSection = 'feed' | 'calendar' | 'reminders' | 'telegram';
 /** One sidebar destination. */
 export interface EventsSectionEntry {
   readonly id: EventsSection;
-  /** The English source label; the frame translates it. */
+  /** The English source label; the frame translates it. The sidebar and every page title use this one. */
   readonly label: string;
+  /** The phone bottom bar's own label, for a section whose full `label` would wrap under its icon; the bar falls
+   *  back to `label` when this is unset, for a section whose name already fits. */
+  readonly shortLabel?: string;
   readonly group: EventsSectionGroup;
   /** Whether only an organization admin (`events:admin`) is offered it; the page answers a member itself. */
   readonly adminOnly: boolean;
@@ -33,7 +36,13 @@ export const EventsSections: readonly EventsSectionEntry[] = [
   { id: 'feed', label: 'Feed', group: EventsSectionGroup.Main, adminOnly: false },
   { id: 'calendar', label: 'Calendar', group: EventsSectionGroup.Main, adminOnly: false },
   { id: 'reminders', label: 'Reminders', group: EventsSectionGroup.Settings, adminOnly: false },
-  { id: 'telegram', label: 'Telegram delivery', group: EventsSectionGroup.Settings, adminOnly: true },
+  {
+    id: 'telegram',
+    label: 'Telegram delivery',
+    shortLabel: 'Telegram',
+    group: EventsSectionGroup.Settings,
+    adminOnly: true,
+  },
 ];
 
 /** The heading each group carries in the sidebar; the main group has none. */

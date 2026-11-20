@@ -32,7 +32,7 @@ const channels = [DigestChannelConstants.telegram];
       <p class="max-w-2xl text-sm text-muted-foreground" data-test="recipients-hint">
         {{
           t(
-            'Recipients default to role:member, every member of the organization at each run; to reach one person only, type their Ocharo account id instead, one per line. Someone who has not linked Telegram to their Ocharo account shows as not_linked in the run history.',
+            'Recipients default to every member of the organization; a member who has not linked Telegram shows as not linked in the run history.',
           )
         }}
       </p>

@@ -22,7 +22,7 @@ const { links } = useEventsSections();
   <BottomNavMenu :is-fixed="false" v-bind="{ 'aria-label': t('Events sections') }" variant="glass">
     <BottomNavMenuItem v-for="section in links" :key="section.id" as-child :is-active="props.current === section.id">
       <template #icon><component :is="SectionIcons[section.id]" :size="20" /></template>
-      <RouterLink :to="section.href">{{ t(section.label) }}</RouterLink>
+      <RouterLink :to="section.href">{{ t(section.shortLabel ?? section.label) }}</RouterLink>
     </BottomNavMenuItem>
   </BottomNavMenu>
 </template>
