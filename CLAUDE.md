@@ -1,6 +1,6 @@
 # Ocharo Platform — Ocharo Desk
 
-*Last updated: 2026-11-10*
+*Last updated: 2026-11-20*
 
 `ocharo-platform` owns Ocharo Desk, Ocharo's operator workspace. The existing Brand Workspace
 foundation provides authenticated organizations, content preparation and contextual design editors.
@@ -9,7 +9,7 @@ Brand and Catalogue companion sources are adopted here. The authenticated Commer
 ## Instructions
 
 - Apply [Ocharo workspace guidance](../../CLAUDE.md) and the upstream [WoW2 instructions](../../../../../../../CLAUDE.md).
-- Use the [WoW2 convention index](../../../../../../../conventions/conventions.md); local file references stay lazy.
+- Use the [WoW2 convention index](../../../../../../../conventions/conventions.md); local file references stay lazy (`.claude/file-references.md`).
 - Current product state lives in `product/context.md`; execution lives in `engineering/planning/`.
 - Preserve the foundation, preparation and catalogue/card-editor implementation and its independent Git history.
 - Retain organization membership, authorization and tenant isolation throughout Ocharo-specific integration.
@@ -31,12 +31,7 @@ Brand and Catalogue companion sources are adopted here. The authenticated Commer
 
 ## Interface language
 
-- English only for Desk, Brand, Catalogue and Events until the WoW2 SDKs' translation layer is improved (developer,
-  2026-11-20: "we gonna stick to english until we improve the translations layer in all sdks"; the current
-  translations are "really not good") — the [Ocharo rule](../../CLAUDE.md) in full.
-- Each app starts in English, ignores a stored or browser language and offers no language choice; the uz and ru
-  tables stay in the code, untouched, and new interface strings are written in English only.
-- Catalogue's authored catalogue languages are content, not the interface, and keep their own settings.
+- English only for Desk, Brand, Catalogue and Events until the WoW2 SDKs' translation layer improves -- the [Ocharo rule](../../CLAUDE.md) in full (developer, 2026-11-20); Catalogue's authored catalogue languages are content and keep their own settings
 
 ## Dedicated Catalogue app — current review target
 

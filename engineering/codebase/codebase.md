@@ -25,3 +25,8 @@ Build and runtime commands live in [development](../development/development.md) 
 | Catalogue | `ocharo-catalogue.backend-services/OcharoCatalogue.BackendServices.slnx` | `ocharo-catalogue.frontend-services/` | Product/price/stock editor, signed in through Ocharo's Identity; PostgreSQL schema `catalogue` |
 
 Each frontend retains its own `apps/web`, lockfile and deploy helper. These preserved service slugs are a temporary naming exception; the foundation prefix remains unchanged. The solutions are not automatically included in the foundation build. [Adoption commands](../research/adoption/adoption.md) select each companion explicitly.
+
+## Trends
+
+`ocharo-trends.backend-services/` owns source intake, the public guide snapshot and organization review decisions in schema `trends`.
+`ocharo-trends.frontend-services/` contains the public guide library and the authenticated reviewer. [Local preview and image build](../deployment/trends/trends.md)
