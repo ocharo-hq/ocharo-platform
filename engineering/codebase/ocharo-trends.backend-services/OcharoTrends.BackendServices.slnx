@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="OcharoTrends.Api/OcharoTrends.Api.csproj" />
+  <Folder Name="/tests/">
+    <Project Path="tests/OcharoTrends.Tests.E2E/OcharoTrends.Tests.E2E.csproj" />
+  </Folder>
+</Solution>
