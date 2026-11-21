@@ -1,0 +1,173 @@
+@import 'tailwindcss';
+@import '@wow-two-beta/fe/styles.css';
+@import '@wow-two-beta/fe/themes.css';
+@source '../../node_modules/@wow-two-beta/fe/dist';
+
+@theme {
+  --font-sans: 'Avenir Next', 'Segoe UI', sans-serif;
+  --font-editorial: Georgia, 'Times New Roman', serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  html {
+    @apply bg-background font-sans text-foreground;
+  }
+  body {
+    margin: 0;
+    min-width: 320px;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .trends-brand {
+    @apply inline-flex items-center gap-2 whitespace-nowrap text-sm font-semibold;
+  }
+  .trends-mark {
+    @apply grid size-8 place-items-center rounded-xl bg-primary font-editorial text-xl leading-none text-primary-foreground;
+  }
+  .trends-nav {
+    @apply flex gap-1 whitespace-nowrap text-sm;
+  }
+  .trends-nav a {
+    @apply rounded-lg px-2 py-1.5 text-muted-foreground sm:px-3;
+  }
+  .trends-nav a:hover,
+  .trends-nav a.current {
+    @apply bg-primary-soft text-primary-soft-foreground;
+  }
+  .board-page {
+    @apply flex flex-col gap-5 py-8 sm:py-12;
+  }
+  .board-heading {
+    @apply flex flex-col items-start gap-2;
+  }
+  .board-heading h1 {
+    @apply font-editorial text-4xl font-normal tracking-tight sm:text-5xl;
+  }
+  .board-heading p {
+    @apply max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base;
+  }
+  .board-state {
+    @apply flex min-h-40 flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card p-6 text-center;
+  }
+  .board-state h2,
+  .board-card h2 {
+    @apply text-lg font-semibold;
+  }
+  .board-card {
+    @apply min-w-0 rounded-2xl border border-border bg-card p-4 sm:p-6;
+  }
+  .board-type {
+    @apply w-fit rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold capitalize text-primary-soft-foreground;
+  }
+  .guide-grid {
+    @apply grid list-none gap-3 sm:grid-cols-2 lg:grid-cols-3;
+  }
+  .guide-grid .board-card {
+    @apply flex flex-col gap-3;
+  }
+  .guide-grid p {
+    @apply text-sm leading-relaxed text-muted-foreground;
+  }
+  .guide-link {
+    @apply flex items-start justify-between gap-2 hover:text-primary;
+  }
+  .guide-link svg,
+  .board-link svg {
+    flex-shrink: 0;
+  }
+  .guide-detail {
+    @apply max-w-3xl;
+  }
+  .guide-steps {
+    @apply mt-3 list-decimal space-y-3 pl-6 leading-relaxed;
+  }
+  .example-list {
+    @apply mt-3 list-none space-y-3;
+  }
+  .board-counts {
+    @apply grid grid-cols-2 gap-3 sm:grid-cols-4;
+  }
+  .board-counts div {
+    @apply flex flex-col gap-1 rounded-xl border border-border bg-card p-3 sm:p-4;
+  }
+  .board-counts dt {
+    @apply text-sm text-muted-foreground;
+  }
+  .board-counts dd {
+    @apply text-2xl font-semibold tabular-nums;
+  }
+  .board-counts small {
+    @apply text-xs font-normal text-muted-foreground;
+  }
+  .board-filters {
+    @apply grid gap-3 rounded-2xl border border-border bg-card p-4 md:grid-cols-[minmax(0,1fr)_minmax(9rem,12rem)_minmax(9rem,12rem)];
+  }
+  .guides-filters {
+    @apply md:grid-cols-[minmax(0,1fr)_12rem];
+  }
+  .board-filters label,
+  .video-form label {
+    @apply flex min-w-0 flex-col gap-1.5 text-sm font-medium;
+  }
+  .board-filters input,
+  .board-filters select,
+  .video-form select,
+  .video-form textarea {
+    @apply w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground;
+  }
+  .board-results {
+    @apply text-sm text-muted-foreground;
+  }
+  .video-list {
+    @apply flex list-none flex-col gap-2;
+  }
+  .video-card {
+    @apply grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)];
+  }
+  .video-card h2 {
+    @apply text-base leading-snug;
+  }
+  .video-details {
+    @apply flex min-w-0 flex-col gap-2;
+  }
+  .video-meta {
+    @apply text-xs text-muted-foreground;
+  }
+  .video-tags {
+    @apply flex list-none flex-wrap gap-1.5;
+  }
+  .video-tags li {
+    @apply rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground;
+  }
+  .video-form {
+    @apply grid items-end gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto];
+  }
+  .video-form textarea {
+    @apply resize-y;
+  }
+  .video-form button {
+    @apply justify-self-start;
+  }
+  .form-message {
+    @apply text-sm sm:col-span-3;
+  }
+  .board-link {
+    @apply inline-flex items-baseline gap-1.5 font-medium underline-offset-4 hover:text-primary hover:underline;
+  }
+  .board-sign-in {
+    @apply rounded-lg bg-primary px-4 py-2 text-primary-foreground hover:text-primary-foreground;
+  }
+  .board-paging {
+    @apply flex items-center justify-center gap-3 text-sm text-muted-foreground;
+  }
+}

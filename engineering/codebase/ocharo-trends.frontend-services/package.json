@@ -1,0 +1,15 @@
+{
+  "name": "ocharotrends-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=24.11.0 <25"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @ocharotrends/web dev",
+    "typecheck": "pnpm --filter @ocharotrends/web typecheck",
+    "build": "pnpm --filter @ocharotrends/web build"
+  }
+}

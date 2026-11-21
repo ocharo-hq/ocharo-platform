@@ -1,0 +1,28 @@
+{
+  "name": "@ocharotrends/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json",
+    "build": "pnpm typecheck && vite build"
+  },
+  "dependencies": {
+    "@tanstack/vue-query": "^5.102.8",
+    "@wow-two-beta/fe": "0.0.61",
+    "lucide-vue-next": "^0.460.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/node": "^24.0.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "tailwindcss": "^4.1.0",
+    "typescript": "~5.9.3",
+    "vite": "^6.0.0",
+    "vite-plugin-mkcert": "^1.17.8",
+    "vue-tsc": "^2.2.0"
+  }
+}
