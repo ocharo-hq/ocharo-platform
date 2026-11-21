@@ -98,7 +98,9 @@ describe('calendar place', () => {
     expect(wrapper!.get('h1').text()).toBe('Calendar');
     expect(wrapper!.get('[data-test="calendar"] h3').text()).toBe('October 2026');
     // Every view the viewer has is offered, the default switcher's.
-    expect(wrapper!.get('[data-test="calendar"] [role="group"]').findAll('button').length).toBeGreaterThanOrEqual(4);
+    expect(
+      wrapper!.get('[data-test="calendar"] [role="group"][aria-label="View"]').findAll('button').length,
+    ).toBeGreaterThanOrEqual(4);
     expect(control('month').attributes('aria-pressed')).toBe('true');
   });
 
@@ -335,16 +337,16 @@ describe('calendar scope pills', () => {
     expect(props.itemTone).toBe('neutral');
   });
 
-  it('offers National, Central Asia and International above the calendar, each with the count of events it draws', async () => {
+  it('offers National, Central Asia and International inside the calendar toolbar, each with the count of events it draws', async () => {
     answers = [scoped];
     await render();
 
     expect(group().attributes('aria-label')).toBe('Scope');
     expect(pills().map((button) => button.text())).toEqual(['National2', 'Central Asia1', 'International2']);
     expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'false', 'false']);
-    // The pills come first: before the calendar in the page.
-    const order = wrapper!.html();
-    expect(order.indexOf('data-test="calendar-scopes"')).toBeLessThan(order.indexOf('data-test="calendar"'));
+    // The pills sit inside the viewer's own toolbar, not above it.
+    const calendar = wrapper!.get('[data-test="calendar"]');
+    expect(calendar.element.contains(group().element)).toBe(true);
   });
 
   it('shows every event, those with no country included, while no pill is chosen', async () => {
@@ -451,12 +453,13 @@ describe('calendar scope pills', () => {
     expect(pills().map((button) => button.text())).toEqual(['National0', 'Central Asia0', 'International0']);
   });
 
-  it('shows the pills without counts until the first read answers', async () => {
+  it('shows no pills during the bare loading skeleton, already counted once the calendar mounts', async () => {
     let release: (response: Response) => void = () => {};
     answers = [() => new Promise<Response>((resolve) => (release = resolve))];
     await render();
 
-    expect(pills().map((button) => button.text())).toEqual(['National', 'Central Asia', 'International']);
+    // The pills live in the viewer's own toolbar — they don't exist before the viewer does.
+    expect(wrapper!.find('[data-test="calendar-scopes"]').exists()).toBe(false);
 
     release(scoped());
     await flushPromises();

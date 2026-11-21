@@ -91,10 +91,12 @@ function refreshFeed(): void {
 </script>
 
 <template>
-  <section class="space-y-6">
+  <section>
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only, and on a phone
+         the freshness line is the first thing on the page. -->
     <header>
-      <h1 class="page-title my-0">{{ t('Feed') }}</h1>
-      <SourcesFreshness class="mt-1 md:hidden" data-test="sources-freshness-title" />
+      <h1 class="sr-only">{{ t('Feed') }}</h1>
+      <SourcesFreshness class="mb-4 md:hidden" data-test="sources-freshness-title" />
     </header>
     <!-- The feed stays mounted behind an open event, so its filters survive the round trip. -->
     <div v-show="showsFeed" data-test="events-feed">

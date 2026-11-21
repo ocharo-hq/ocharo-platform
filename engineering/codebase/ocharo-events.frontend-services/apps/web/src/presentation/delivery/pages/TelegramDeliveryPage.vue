@@ -20,8 +20,7 @@ const channels = [DigestChannelConstants.telegram];
 <template>
   <section class="space-y-6">
     <header class="space-y-2">
-      <p class="eyebrow">{{ t('Settings') }}</p>
-      <h1 class="page-title">{{ t('Telegram delivery') }}</h1>
+      <h1 class="sr-only">{{ t('Telegram delivery') }}</h1>
       <p class="max-w-2xl text-muted-foreground">
         {{
           t(

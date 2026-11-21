@@ -20,9 +20,10 @@ network is needed: each test stubs `fetch` (the session, status, runtime-setting
   the route, absolute against the origin, numbered by its index; one with no copy (none, null or blank) resolves to `null`.
 - `CalendarPage.test.ts` — the calendar place: the visible month read through the feed's calls and paged by cursor (capped at 1000),
   all-day and month-only events, stage colours, a new read for the next month and none inside the days read, loading, failure with retry,
-  a block opening its event in the feed; and the scope pills: National, Central Asia and International above the calendar with the loaded window's counts
-  (none before the first read), each narrowing the viewer's events to its country group, none chosen showing every event, those with no country included,
-  the choice kept in `?scope=` (the regions' order, other query kept) and followed when the address changes, and an address naming no region ignored.
+  a block opening its event in the feed; and the scope pills: National, Central Asia and International inside the calendar's own toolbar
+  (the viewer's `toolbar-extra` slot), absent during the bare loading skeleton and already counted once the calendar mounts, each narrowing
+  the viewer's events to its country group, none chosen showing every event, those with no country included, the choice kept in `?scope=`
+  (the regions' order, other query kept) and followed when the address changes, and an address naming no region ignored.
 - `EventsCalendar.test.ts` — the calendar's model: the window each view reads, all-day blocks with an inclusive end, timed blocks in the
   event's zone shown in the browser's, events with no day and closed stages left out, titles in English, stage colours (theme variables only,
   never a hex; an untracked event never the muted surface), and the scopes: UZ National, KZ KG TJ TM Central Asia, RU AZ AF and the rest International, no country in none,

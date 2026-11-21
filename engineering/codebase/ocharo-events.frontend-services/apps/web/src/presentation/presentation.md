@@ -19,7 +19,7 @@ Between the bar and the grid sit the feed's attention pills, hidden at zero: the
 fails, nothing when the read fails, E24) stands at the sidebar's foot, as its icon alone on the rail, and as that icon beside the
 feed's title below `md`, where there is no sidebar, from the one read the frame makes. `events/pages/CalendarPage`
 puts the organization's events on the SDK calendar (`EventCalendarViewer`), coloured by Ocharo's stage (an event not yet
-tracked a quiet tint of the info colour, a pursued one a stronger mix of the primary), a block opening the event in the feed; three scope pills above it (the SDK's `ToggleGroup`, several at once: National, Central Asia, International, each with the number of events the loaded window draws in it, none chosen showing every event) narrow the events to those whose country is in a chosen scope;
+tracked a quiet tint of the info colour, a pursued one a stronger mix of the primary), a block opening the event in the feed; three scope pills in the calendar's own toolbar (the `EventCalendarViewer`'s `toolbar-extra` slot, the SDK's `ToggleGroup`, several at once: National, Central Asia, International, each with the number of events the loaded window draws in it, none chosen showing every event) narrow the events to those whose country is in a chosen scope; the page itself carries no visible heading, only a screen-reader-only one;
 `reminders/pages/RemindersPage` says the reminder settings are on their way. Each place has a route
 wrapper (`*Route`) that serves only the session's own organization, to a person who may read it, and answers anything else as
 not found. The session banner and the app menu icons; `delivery/` is the admins' Telegram delivery page, embedding

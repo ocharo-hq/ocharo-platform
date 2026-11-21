@@ -57,3 +57,17 @@ Read-only re-check of the 32 defect rows of [events-review.md](../events-review.
 - Calendar desktop: toolbar and view buttons are 24 px high (not a phone issue); info
 - Feed desktop: `Stage` buttons on cards and `1 past to close` are 32 px high; info
 - Load: on the first fresh load the app sat on its splash for about 10 s once and a toast read the app list "could not be loaded", then it loaded; one earlier load ended on a `Bad Gateway` from the sign-in route; not reproduced on the next load; low
+
+## T07 and T08 dev check
+
+Read-only check on dev after fe `0.0.61`, fe-events `0.0.21`, Ocharo `53197f3`. Chrome profile `wow2`; DOM measurements by `getBoundingClientRect`. Limit: the phone window could not go below 626 pt, so the page viewport read 570 px, not 390 (the `wow2` profile's window minimum; an iframe at 390 px is refused cross-origin); heights are measured at 570 px in the phone layout (bottom bar, toolbar, list chips). Window restored to 1512×949.
+
+| Item | Result | Measured | Screenshot |
+|---|---|---|---|
+| T08 1: dated tile, photo-less card | pass | `Artigiano in Fiera 2026`: day `5` 60 px, month `Dec`, tile 76×110, no icon (0 `svg`/`img` in all 43 tiles); `tile-year` slot is empty for 2026 and reads `2027` on 2027 events | [T08-01](T08-01-date-tile-dec.png) |
+| T08 2: month-only tile | pass | `TWIG Christmas Bazaar 2026`: day `?` at opacity 0.5, month `Dec`, tile 76×110, same height and month position as the dated tile, no icon | [T08-02](T08-02-date-tile-month-only.png) |
+| T07 3: day view all-day chips | pass | 4 all-day chips, each 28 px high (222-225 wide, two rows); timed chips 28 px; toolbar buttons 40 px | [T07-01](T07-01-calendar-day-all-day-chips.png) |
+| T07 4: month view day cells | pass | 42 day cells, each one `button` 75×96 px (min 96); `scrollWidth` 570 = `innerWidth` 570 | [T07-02](T07-02-calendar-month-cells.png) |
+
+- Undated or year-only cards: no `TBA` text anywhere in the feed; the 43 tiles all carry a month, many show `?` (month-only), none shows `?` with no month
+- Seen, not in the items: in the month view the event bars sit over the top of the day numbers (numbers half covered in the capture)

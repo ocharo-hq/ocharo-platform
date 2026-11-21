@@ -83,6 +83,7 @@ Built in v0.1 and checked by tests or the agent; the owner confirms each in the 
 | Ocharo frame | verification | Desk, Catalogue, Studio, Marketing, Editorial and Brand frames on desktop and phone. |
 | Desk on dev | verification | Deploy Desk to dev through Wheelhouse and sign in as the owner. |
 | Files review | verification | Product editing layouts and light and dark readability on desktop and mobile; Desk media prepared on dev reads back from Files. |
+| Page headings in Desk, Brand and Catalogue | design | Events drops its large page heading on Feed and Calendar, since the top bar names the page (developer, 2026-11-21); decide whether the other Ocharo apps follow, with their phone navigation kept reachable. |
 
 ## Catalogue integration
 
