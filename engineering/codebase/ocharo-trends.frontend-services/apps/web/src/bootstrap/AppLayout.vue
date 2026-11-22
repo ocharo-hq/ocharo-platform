@@ -8,6 +8,8 @@ const route = useRoute();
 const frame = ref<InstanceType<typeof AppFrame>>();
 const { person, signedIn, signOut } = useReviewSession();
 const version = __APP_VERSION__;
+/** The place itself, named by its route metadata (`label`): the top bar says where you are, the page body does not. */
+const crumbs = computed(() => (typeof route.meta.label === 'string' ? [route.meta.label] : []));
 const account = computed<AppFrameAccount>(() => ({
   name: person.value?.name ?? person.value?.email ?? undefined,
   description: person.value?.name ? (person.value.email ?? undefined) : undefined,
@@ -25,7 +27,14 @@ watch(
 </script>
 
 <template>
-  <AppFrame ref="frame" :version="version" :account="account" content-max-width="1200px">
+  <AppFrame
+    ref="frame"
+    :version="version"
+    :account="account"
+    :crumbs="crumbs"
+    trail-label="You are here"
+    content-max-width="1200px"
+  >
     <template #brand>
       <RouterLink to="/" class="trends-brand">
         <span class="trends-mark" aria-hidden="true">o</span>

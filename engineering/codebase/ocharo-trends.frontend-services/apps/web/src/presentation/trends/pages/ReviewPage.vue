@@ -36,7 +36,7 @@ watch(lastPage, (value) => {
 <template>
   <section class="board-page">
     <header class="board-heading">
-      <h1>Review</h1>
+      <h1 class="sr-only">Review</h1>
       <p>Review original videos and keep the references that can be reused.</p>
     </header>
     <p v-if="loading" role="status" class="board-state">Loading the review board…</p>

@@ -23,7 +23,7 @@ const filteredGuides = computed(() =>
 <template>
   <section class="board-page">
     <header class="board-heading">
-      <h1>Trends</h1>
+      <h1 class="sr-only">Trends</h1>
       <p>Explore video formats, camera moves and transitions with original examples.</p>
     </header>
     <p v-if="loading" role="status" class="board-state">Loading guides…</p>
