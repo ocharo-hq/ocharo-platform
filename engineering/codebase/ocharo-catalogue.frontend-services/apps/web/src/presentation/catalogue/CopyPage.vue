@@ -84,10 +84,11 @@ onMounted(() => grid.load());
 
 <template>
   <section>
-    <div class="flex flex-wrap items-end justify-between gap-4">
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">{{ t('Product copy') }}</h1>
-        <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
+        <h1 class="sr-only">{{ t('Product copy') }}</h1>
+        <p class="max-w-2xl text-sm text-muted-foreground">
           {{ t('Fill and approve copy in three languages.') }}
           {{ t('{approved} / {total} language versions approved.', { approved, total: grid.rows.value.length * 3 }) }}
           {{ t('A name is required before approval.') }}

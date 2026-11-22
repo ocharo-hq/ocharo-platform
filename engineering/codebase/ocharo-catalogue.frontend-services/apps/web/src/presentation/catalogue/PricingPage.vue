@@ -34,14 +34,15 @@ onMounted(() => list.load());
 
 <template>
   <section>
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
+    <h1 class="sr-only">{{ t('Prices') }}</h1>
     <div class="flex flex-wrap items-center justify-between gap-4">
-      <h1 class="font-editorial text-4xl tracking-tight">{{ t('Prices') }}</h1>
+      <p class="max-w-2xl text-sm text-muted-foreground">
+        {{ t('Edit a cell and press Enter or click elsewhere to save a draft price.') }}
+        {{ t('Select products on the Products page to apply a percentage adjustment.') }}
+      </p>
       <RefreshButton :busy="resultBusy" :disabled="sheet.saving.value !== null" @refresh="refresh" />
     </div>
-    <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
-      {{ t('Edit a cell and press Enter or click elsewhere to save a draft price.') }}
-      {{ t('Select products on the Products page to apply a percentage adjustment.') }}
-    </p>
     <div class="catalogue-result-region">
       <SkeletonStateGroup :is-loading="resultBusy" :label="t('Loading prices')">
         <ResultEmpty

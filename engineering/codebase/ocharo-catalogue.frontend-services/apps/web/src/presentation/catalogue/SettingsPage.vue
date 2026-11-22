@@ -35,7 +35,8 @@ onMounted(() => void settings.reload());
 
 <template>
   <section class="space-y-6">
-    <h1 class="font-editorial text-4xl tracking-tight">{{ t('Settings') }}</h1>
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
+    <h1 class="sr-only">{{ t('Settings') }}</h1>
 
     <Card
       v-if="form"

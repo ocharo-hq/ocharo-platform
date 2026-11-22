@@ -236,10 +236,10 @@ onScopeDispose(() => {
 </script>
 <template>
   <section class="catalogue-gallery">
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
     <header>
       <div>
-        <p class="eyebrow">{{ t('Your catalogues') }}</p>
-        <h1>{{ t('A collection, in every format.') }}</h1>
+        <h1 class="sr-only">{{ t('Catalogues') }}</h1>
         <p>{{ t('Create one catalogue and design its website, PDF, or both.') }}</p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
@@ -421,12 +421,6 @@ header,
   justify-content: space-between;
   flex-wrap: wrap;
 }
-h1 {
-  font:
-    42px/1.1 Georgia,
-    serif;
-  margin: 8px 0;
-}
 h2 {
   font-size: 19px;
   margin: 0;
@@ -512,9 +506,6 @@ fieldset {
   padding: 0;
 }
 @media (max-width: 600px) {
-  h1 {
-    font-size: 32px;
-  }
   .catalogue-settings-modal {
     width: 100%;
     max-width: none;

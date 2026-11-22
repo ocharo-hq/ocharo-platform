@@ -110,7 +110,7 @@ test.describe('catalogue gallery', () => {
       if (kind.web) {
         await card.getByRole('button', { name: t('Web designer'), exact: true }).click();
         await expect(page).toHaveURL(new RegExp(`/catalogues/${summary.id}/web$`));
-        await expect(page.getByRole('heading', { level: 1, name: t('Web designer') })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1, name: t('Web designer') })).toBeAttached();
         await expect(page.getByRole('link', { name: t('PDF designer'), exact: true })).toHaveCount(kind.pdf ? 1 : 0);
         await page.goBack();
         await page.getByRole('searchbox', { name: t('Find a catalogue') }).fill(token);
@@ -120,7 +120,7 @@ test.describe('catalogue gallery', () => {
           .getByRole('button', { name: t('PDF designer'), exact: true })
           .click();
         await expect(page).toHaveURL(new RegExp(`/catalogues/${summary.id}/pdf$`));
-        await expect(page.getByRole('heading', { level: 1, name: t('PDF designer') })).toBeVisible();
+        await expect(page.getByRole('heading', { level: 1, name: t('PDF designer') })).toBeAttached();
         await expect(page.getByRole('link', { name: t('Web designer'), exact: true })).toHaveCount(kind.web ? 1 : 0);
         await expect(page.locator('.page-rail li')).toHaveCount(1);
         await page.goBack();

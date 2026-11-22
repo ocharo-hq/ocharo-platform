@@ -124,8 +124,9 @@ const resultBusy = computed(() => editor.loading.value || refreshing.value);
 </script>
 <template>
   <section class="catalogue-query-surface">
-    <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
-      <h1 class="font-editorial text-2xl">{{ t('Web designer') }}</h1>
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
+    <div class="flex flex-wrap items-center justify-end gap-4">
+      <h1 class="sr-only">{{ t('Web designer') }}</h1>
       <RefreshButton :busy="resultBusy" :disabled="editor.busy.value && !editor.loading.value" @refresh="refresh" />
     </div>
     <div class="catalogue-result-region">

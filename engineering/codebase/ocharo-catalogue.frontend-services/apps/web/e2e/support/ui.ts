@@ -18,7 +18,7 @@ export function galleryCard(page: Page, title: string): Locator {
 /** Waits for a designer to finish loading its saved catalogue and product library. */
 export async function openDesigner(page: Page, id: string, mode: 'web' | 'pdf', heading: string): Promise<void> {
   await page.goto(`/catalogues/${id}/${mode}`);
-  await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeAttached();
   await expect(page.locator('.designer-bar')).toBeVisible();
   await expect(page.locator('.designer-bar .status')).not.toContainText('undefined');
 }

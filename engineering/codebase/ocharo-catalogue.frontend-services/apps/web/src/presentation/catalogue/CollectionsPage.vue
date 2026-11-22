@@ -84,10 +84,11 @@ onMounted(async () => {
 
 <template>
   <section>
-    <div class="flex flex-wrap items-end justify-between gap-4">
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">{{ t('Collections') }}</h1>
-        <p class="mt-2 text-sm text-muted-foreground">
+        <h1 class="sr-only">{{ t('Collections') }}</h1>
+        <p class="text-sm text-muted-foreground">
           {{ t('Seasonal selections, lookbooks and retailer collections.') }}
         </p>
       </div>

@@ -116,10 +116,11 @@ onMounted(() => feed.load(locale.value));
 
 <template>
   <section>
-    <div class="no-print flex flex-wrap items-end justify-between gap-4">
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
+    <div class="no-print flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">{{ t('Catalogue sheet') }}</h1>
-        <p class="mt-2 text-sm text-muted-foreground">
+        <h1 class="sr-only">{{ t('Catalogue sheet') }}</h1>
+        <p class="text-sm text-muted-foreground">
           {{ t('Only active products are included. Choose “Save as PDF” in the print dialog.') }}
         </p>
       </div>

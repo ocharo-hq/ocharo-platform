@@ -55,10 +55,11 @@ onMounted(() => sheet.load());
 
 <template>
   <section>
-    <div class="flex flex-wrap items-end justify-between gap-4">
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">{{ t('Stock') }}</h1>
-        <p class="mt-2 max-w-2xl text-sm text-muted-foreground">
+        <h1 class="sr-only">{{ t('Stock') }}</h1>
+        <p class="max-w-2xl text-sm text-muted-foreground">
           {{ t('Pieces by size') }}:
           <SkeletonStateSlot class="catalogue-value" :is-loading="!sheet.loaded.value && resultBusy">{{
             sheet.loaded.value ? sheet.total.value : '—'

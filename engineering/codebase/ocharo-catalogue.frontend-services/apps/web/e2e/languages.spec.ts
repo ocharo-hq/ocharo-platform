@@ -27,7 +27,7 @@ test('gallery and both designers show the English interface, with no language ch
   await page.goto('/catalogues');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.getByRole('button', { name: t('New catalogue'), exact: true })).toBeVisible();
-  await expect(page.getByText(t('Your catalogues'), { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: t('Catalogues'), exact: true })).toBeAttached();
   await page.getByRole('button', { name: t('Account menu') }).click();
   await expect(page.getByRole('group', { name: 'Interface language' })).toHaveCount(0);
   await page.keyboard.press('Escape');
@@ -74,7 +74,7 @@ test('switching the catalogue language leaves the English interface and the draf
   await choose(page, t('Catalogue language'), 'O‘zbekcha');
   await expect(page.locator('main.web-catalogue h3')).toHaveText(`${garmentName(0, token)} UZ`);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.getByRole('heading', { level: 1, name: t('Web designer') })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: t('Web designer') })).toBeAttached();
   await expect(designerStatus(page)).toContainText(t('Unsaved changes'));
   expect((await getDesign(request, document.id)).snapshot.locale).toBe('en');
 });
