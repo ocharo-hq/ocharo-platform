@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import type { WorkflowModel } from '@wow-two-beta/fe-events/contracts';
 import { regionOfCountry, regionQuery } from '@wow-two-beta/fe-events/kit';
 
-import { intakeStaleAfterMs, readIntakeFreshness } from '@/domain/events/IntakeFreshness';
 import {
   eventFormats,
   eventStatuses,
@@ -214,38 +213,5 @@ describe("Ocharo's kit configuration", () => {
     expect(previousIsoDate('2026-11-19')).toBe('2026-11-18');
     expect(previousIsoDate('2026-03-01')).toBe('2026-02-28');
     expect(previousIsoDate('2027-01-01')).toBe('2026-12-31');
-  });
-});
-
-describe("Events' intake freshness (E24)", () => {
-  const now = Date.parse('2026-11-20T12:00:00Z');
-  const at = (offset: number) => new Date(now - offset).toISOString();
-
-  it('reads a record newer than 24 hours as fresh, and one older as stale', () => {
-    expect(readIntakeFreshness({ lastReceivedAtUtc: at(intakeStaleAfterMs), failingSources: 0 }, now)).toMatchObject({
-      stale: false,
-      warns: false,
-    });
-    expect(
-      readIntakeFreshness({ lastReceivedAtUtc: at(intakeStaleAfterMs + 1), failingSources: 0 }, now),
-    ).toMatchObject({
-      stale: true,
-      warns: true,
-    });
-  });
-
-  it('warns for a failing source whatever the age, and reads none before the first record', () => {
-    expect(readIntakeFreshness({ lastReceivedAtUtc: at(1000), failingSources: 3 }, now)).toMatchObject({
-      stale: false,
-      failingSources: 3,
-      warns: true,
-    });
-    expect(readIntakeFreshness({ lastReceivedAtUtc: null, failingSources: 0 }, now)).toEqual({
-      receivedAt: null,
-      stale: false,
-      failingSources: 0,
-      warns: false,
-    });
-    expect(readIntakeFreshness({ lastReceivedAtUtc: 'not a time', failingSources: 0 }, now).receivedAt).toBeNull();
   });
 });

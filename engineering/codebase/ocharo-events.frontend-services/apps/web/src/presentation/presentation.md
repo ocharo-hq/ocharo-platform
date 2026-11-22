@@ -15,9 +15,7 @@ Between the bar and the grid sit the feed's attention pills, hidden at zero: the
 14 days, and Ocharo's "past to close", passed in through the `attention` prop whose `#attention` slot is
 `events/PastEventsStrip`: the ended events Ocharo was pursuing, each closed as Attended or Skipped in one tracking write
 (OE12). The strip only shows what the page's `usePastToClose` holds, since the pill needs the count before it unfolds.
-`events/SourcesFreshness` ("Sources updated {time}", a warning when the last record is over 24 hours old or a source
-fails, nothing when the read fails, E24) stands at the sidebar's foot, as its icon alone on the rail, and as that icon beside the
-feed's title below `md`, where there is no sidebar, from the one read the frame makes. `events/pages/CalendarPage`
+`events/pages/CalendarPage`
 puts the organization's events on the SDK calendar (`EventCalendarViewer`), coloured by Ocharo's stage (an event not yet
 tracked a quiet tint of the info colour, a pursued one a stronger mix of the primary), a block opening the event in the feed; three scope pills in the calendar's own toolbar (the `EventCalendarViewer`'s `toolbar-extra` slot, the SDK's `ToggleGroup`, several at once: National, Central Asia, International, each with the number of events the loaded window draws in it, none chosen showing every event) narrow the events to those whose country is in a chosen scope; the page itself carries no visible heading, only a screen-reader-only one;
 `reminders/pages/RemindersPage` says the reminder settings are on their way. Each place has a route

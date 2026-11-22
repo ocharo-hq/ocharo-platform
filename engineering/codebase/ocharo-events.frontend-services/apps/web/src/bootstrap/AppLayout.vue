@@ -9,7 +9,6 @@ import { AppSwitcherKind, type AccountMenuVersion, type AppSwitcherItem } from '
 import { AppErrorBoundary } from '@wow-two-beta/fe/router';
 
 import { useBuildIdentity } from '../application/common/UseBuildIdentity';
-import { provideSourcesFreshness } from '../application/events/UseSourcesFreshness';
 import { useIdentitySession } from '../application/common/UseIdentitySession';
 import { useOcharoApps } from '../application/shared/UseOcharoApps';
 import { useUiLocale } from '../application/shared/UseUiLocale';
@@ -17,7 +16,6 @@ import { eventsSection, readEventsSection } from '../domain/shared/EventsSection
 import { OcharoAppKind } from '../domain/shared/OcharoApps';
 import IdentityConnection from '../presentation/common/IdentityConnection.vue';
 import EventsNav from '../presentation/frame/EventsNav.vue';
-import SourcesFreshness from '../presentation/events/SourcesFreshness.vue';
 import PhoneNav from '../presentation/frame/PhoneNav.vue';
 import { AppIcons } from '../presentation/frame/ShellIcons';
 
@@ -27,8 +25,7 @@ const SidebarCollapsedKey = 'ocharo.events.sidebar-collapsed';
 /**
  * Events inside the frame every Ocharo app shares (the fe sdk's `AppFrame`): the bar and the page column are the
  * suite's, at one size in every app. Events passes what is its own: the app list, its sections (the feed, the calendar
- * and the settings, in the sidebar and on a phone's bottom bar), when its sources last delivered (at the sidebar's foot,
- * and beside the feed's title on a phone, from one read), where you are, the account (no language choice: the interface is English only), and its notices above the page.
+ * and the settings, in the sidebar and on a phone's bottom bar), where you are, the account (no language choice: the interface is English only), and its notices above the page.
  */
 defineOptions({ name: 'AppLayout' });
 const { t, uiLocale } = useUiLocale();
@@ -67,11 +64,6 @@ const crumbs = computed(() => {
   );
   return labels.filter((label, index) => labels.indexOf(label) === index).map((label) => t(label));
 });
-/**
- * The one read behind "Sources updated {time}", offered to the sidebar's foot below and, on a phone, to the feed's title:
- * the session organization's, for a person who may read its events, none otherwise.
- */
-provideSourcesFreshness();
 /** The switcher's second line: the session organization's name, or the suite's while none is named. */
 const appSubtitle = computed(() => organization.value?.name?.trim() || 'Ocharo');
 
@@ -130,9 +122,6 @@ watch(accountOpen, (open) => {
   >
     <template #brand><span class="oc-mark">O</span></template>
     <template #nav="{ isRail }"><EventsNav :current="section" :collapsed="isRail" /></template>
-    <template #nav-footer="{ isRail }">
-      <SourcesFreshness :compact="isRail" class="px-3 py-3" />
-    </template>
     <template #phone-nav><PhoneNav :current="section" /></template>
     <template #notice><IdentityConnection /></template>
     <AppErrorBoundary>

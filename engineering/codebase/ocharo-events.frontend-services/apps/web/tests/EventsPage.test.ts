@@ -258,7 +258,7 @@ async function choose(selection: FacetSelection) {
 }
 
 describe('feed header', () => {
-  it('is the title alone: no eyebrow, no description, no Telegram delivery link, no freshness line', async () => {
+  it('is the title alone: no eyebrow, no description, no Telegram delivery link', async () => {
     await render('owner');
 
     const header = wrapper!.get('header');
@@ -269,8 +269,6 @@ describe('feed header', () => {
     expect(wrapper!.text()).not.toContain('Showcase events');
     expect(wrapper!.text()).not.toContain('Events records decisions');
     expect(wrapper!.find('[data-test="telegram-delivery-link"]').exists()).toBe(false);
-    expect(wrapper!.find('[data-test="sources-freshness"]').exists()).toBe(false);
-    expect(sent.some((item) => item.url.pathname === `${CATALOG}/freshness`)).toBe(false);
     expect(wrapper!.findAll('[data-test="event-media-card"]')).toHaveLength(2);
   });
 

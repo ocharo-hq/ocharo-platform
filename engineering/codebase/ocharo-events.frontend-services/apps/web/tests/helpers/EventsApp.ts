@@ -65,8 +65,6 @@ export interface EventsHostOptions {
   readonly runtimeConfig?: Record<string, string>;
   /** The session `/api/identity/session` serves; default {@link EditorSession}. */
   readonly identitySession?: Record<string, unknown>;
-  /** What Events' freshness read of the catalog answers (E24); absent answers 404, as for a person outside it. */
-  readonly freshness?: Record<string, unknown>;
 }
 
 /** What the mirrored facets route answers by default: an empty catalog, every facet counted at zero. */
@@ -83,8 +81,7 @@ const emptyFacets = {
 
 /**
  * Stubs the host's own routes (runtime settings, status, the session and sign-out), the mirrored Events routes, which
- * answer an empty tracking feed, empty facets, an empty summary, Ocharo's workflow as Events holds it and, when asked, the catalog's
- * freshness, and the Telegram delivery's digest list, which answers none.
+ * answer an empty tracking feed, empty facets, an empty summary, Ocharo's workflow as Events holds it, and the Telegram delivery's digest list, which answers none.
  */
 export function stubEventsHost(options: EventsHostOptions = {}): void {
   vi.stubGlobal(
@@ -102,8 +99,6 @@ export function stubEventsHost(options: EventsHostOptions = {}): void {
       const events = pathname.match(/^\/api\/organizations\/[^/]+\/events-api\/api\/events\/v1\/(.+)$/)?.[1];
       if (events === 'workflow')
         return Promise.resolve(Response.json({ data: { ...ocharoWorkflowSpec(), revision: 1 } }));
-      if (events && /^catalogs\/[^/]+\/freshness$/.test(events) && options.freshness)
-        return Promise.resolve(Response.json({ data: options.freshness }));
       if (events && /^catalogs\/[^/]+\/tracking\/summary$/.test(events))
         return Promise.resolve(Response.json({ data: { byStage: {}, untracked: 0, upcomingDeadlines: [] } }));
       if (events && /^catalogs\/[^/]+\/tracking\/facets$/.test(events))

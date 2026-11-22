@@ -30,23 +30,16 @@ network is needed: each test stubs `fetch` (the session, status, runtime-setting
   the events kept by chosen scopes, the per-scope counts (closed stages, events with no day and no-country events counted in none), and the `?scope=` query's reading and writing.
 - `EventsSections.test.ts` — the sections, their groups and addresses, and Telegram delivery for an admin only.
 - `RemindersPage.test.ts` — the reminder settings' placeholder.
-- `SourcesFreshness.test.ts` — "Sources updated {time}" (E24) from the state the frame offers: fresh, stale past 24 hours (none at exactly 24),
-  failing sources, none before the first record, nothing before a read or outside the frame, and compact as an icon with
-  its tooltip and name.
-- `IntakeFreshnessRead.test.ts` — the one freshness read: once on mount, again every five minutes and on return to the tab, nothing while there
-  is no client, null when it fails, and stopped with its component.
 - `UsePastToClose.test.ts` — "Past, not closed" (OE12): the query by stage and last start day, an ended confirmed event listed and a
   running or untracked one not, Attended or Skipped as one tracking write that keeps the rest, a conflict reloading the list, another failure
   kept with the list, and the count of events waiting.
 - `PastEventsStrip.test.ts` — the strip (the attention pill's body) over what the hook holds: the ended events with their dates and stage, Attended
   and Skipped asking to close, a viewer offered no action, the changed notice, a failure with its reload, and an event opened in the page.
 - `EventsModel.test.ts` — Ocharo's kit configuration (workflow, kinds, scopes with their keys, labels and countries, proposal) and the page's addresses; the
-  workflow spec equals `deployment/events/ocharo-workflow.json`, and what the page shows of a stored workflow; the 24-hour
-  boundary of Events' intake freshness (E24).
+  workflow spec equals `deployment/events/ocharo-workflow.json`, and what the page shows of a stored workflow.
 - `EventsFrame.test.ts` — the Ocharo frame: bar, version badge, account menu with versions and no language list, English kept when another is asked, apps menu; the sidebar's
   places for an admin and a member, the open one following the route, the icon rail's stored choice, the phone's bottom bar with every
-  place and no More; and "Sources updated" at the sidebar's foot, as its icon on the rail, as that icon beside the feed's title on a phone only
-  (`md:hidden`), read once for both and not at all without `events:read`.
+  place and no More.
 - `EventsRouter.test.ts` — `/` to the session organization's feed, the feed, calendar and reminders places, other organizations and missing
   permission as not found, and no Deadlines place.
 - `OcharoAppsConfig.test.ts` — the Events entry of the apps menu and its runtime and build-time addresses.

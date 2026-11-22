@@ -21,7 +21,6 @@ import {
 import { storedImageSrc } from '@/domain/events/EventImages';
 
 import PastEventsStrip from '../PastEventsStrip.vue';
-import SourcesFreshness from '../SourcesFreshness.vue';
 
 /**
  * Records events where Ocharo could show its products; it never applies, registers or pays. The page renders WoW2 Events'
@@ -32,9 +31,7 @@ import SourcesFreshness from '../SourcesFreshness.vue';
  * 2026-11-20; the kit's `EventDetail` shows the card only when `trackable`, so the page leaves it off). The feed's attention
  * pills sit between its bar and its grid: the kit's own application deadlines in the next 14 days, and Ocharo's "past to
  * close" (`attention` + the `#attention` slot), which unfolds `PastEventsStrip` to close each ended event Ocharo was
- * pursuing (OE12); each shows its count and is gone at zero. "Sources updated {time}" (E24) is the frame's, at the
- * sidebar's foot; below `md`, where there is no sidebar, its full text stands as its own muted line under the title,
- * from the same read — a phone has no room for a tooltip, so this copy carries no icon-only, tap-nothing mode.
+ * pursuing (OE12); each shows its count and is gone at zero.
  */
 defineOptions({ name: 'EventsPage' });
 const props = defineProps<{
@@ -92,11 +89,9 @@ function refreshFeed(): void {
 
 <template>
   <section>
-    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only, and on a phone
-         the freshness line is the first thing on the page. -->
+    <!-- The top bar names the page (developer, 2026-11-21): the heading stays for screen readers only. -->
     <header>
       <h1 class="sr-only">{{ t('Feed') }}</h1>
-      <SourcesFreshness class="mb-4 md:hidden" data-test="sources-freshness-title" />
     </header>
     <!-- The feed stays mounted behind an open event, so its filters survive the round trip. -->
     <div v-show="showsFeed" data-test="events-feed">
