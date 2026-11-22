@@ -43,6 +43,8 @@ ChatGPT builds these in the pull order of wow-two-ws `system/sessions/events-int
 
 | Item | Type | Notes |
 |---|---|---|
+| Sidebar tooltips | design | The sidebar's rail (collapsed) shows icons with no labels, so each menu item needs the fe sdk's own tooltip with its label and any badge or state; build it once in the SDK's `SidebarMenu` so every Ocharo app gets it, and keep phone navigation unaffected (developer, 2026-11-22). |
+| Calendar filters | design | Rework the Events calendar's filters: a quick region control plus one Filters popover shared with the feed, active filters as removable chips; analysis in the 2026-11-22 chat, built after the developer picks a layout. |
 | Provider delivery | feature | Connect one authorized provider with durable send receipts. |
 | Publishing recovery | engineering | Verify restart, lease expiry and crash-after-send reconciliation. |
 | Metrics observations | feature | Distinguish unknown, stale, unsupported and measured zero. |
