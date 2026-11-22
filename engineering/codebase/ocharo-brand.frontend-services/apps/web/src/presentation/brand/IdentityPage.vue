@@ -60,10 +60,10 @@ const texts = [
 
 <template>
   <section class="space-y-6 pb-20">
-    <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">Identity</h1>
-        <p class="mt-2 text-sm text-muted-foreground">Saved to the draft; the apps see it after the next release.</p>
+        <h1 class="sr-only">Identity</h1>
+        <p class="text-sm text-muted-foreground">Saved to the draft; the apps see it after the next release.</p>
       </div>
       <Button tone="primary" :is-disabled="!canEdit || !dirty || brand.busy.value" :is-loading="saving" @click="save">
         <template #leading><Icon :icon="Save" :size="15" /></template>

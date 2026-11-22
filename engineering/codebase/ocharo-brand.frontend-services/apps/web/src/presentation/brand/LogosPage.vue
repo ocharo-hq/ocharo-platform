@@ -32,8 +32,8 @@ function size(bytes: number) {
 <template>
   <section class="space-y-6">
     <div>
-      <h1 class="font-editorial text-4xl tracking-tight">Logos</h1>
-      <p class="mt-2 max-w-3xl text-sm text-muted-foreground">
+      <h1 class="sr-only">Logos</h1>
+      <p class="max-w-3xl text-sm text-muted-foreground">
         Upload a new file for each slot and press “Make current”. The change stays in the draft; when “Publish” is
         pressed on the Overview page, every app gets the new logo. PNG, JPEG and WebP only.
       </p>

@@ -51,6 +51,8 @@ describe('Ocharo frame in Brand', () => {
     expect(wrapper!.get(`a[href="#${main.attributes('id')}"]`).text()).toBe('Skip to content');
     expect(main.attributes('tabindex')).toBe('-1');
     expect(main.findAll('h1')).toHaveLength(1);
+    // The top bar names the page; its title stays in the body for screen readers only.
+    expect(main.get('h1').classes()).toContain('sr-only');
     const header = wrapper!.get('header[role="banner"]');
     expect(header.find('button[aria-label="Ocharo apps — Brand"]').exists()).toBe(true);
     // The version badge stands beside the full brand; a phone's bar has room for the mark only.

@@ -18,8 +18,8 @@ const cssSnippet = computed(() => `<link rel="stylesheet" href="${origin.value}$
 <template>
   <section class="space-y-6">
     <div>
-      <h1 class="font-editorial text-4xl tracking-tight">Connect</h1>
-      <p class="mt-2 max-w-3xl text-sm text-muted-foreground">
+      <h1 class="sr-only">Connect</h1>
+      <p class="max-w-3xl text-sm text-muted-foreground">
         Apps get the logo from the stable addresses below instead of copying the file. When a release or an event
         changes, the address stays the same and the file is swapped (5-minute cache). To link to one exact file, use the
         immutable media address.

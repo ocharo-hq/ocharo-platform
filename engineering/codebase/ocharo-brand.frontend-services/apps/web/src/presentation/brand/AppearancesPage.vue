@@ -119,10 +119,10 @@ function state(a: { status: string; startsAt: string; endsAt: string }) {
 
 <template>
   <section class="space-y-6">
-    <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-4">
       <div>
-        <h1 class="font-editorial text-4xl tracking-tight">Event appearances</h1>
-        <p class="mt-2 max-w-3xl text-sm text-muted-foreground">
+        <h1 class="sr-only">Event appearances</h1>
+        <p class="max-w-3xl text-sm text-muted-foreground">
           A temporary logo for Navruz, Ramadan or a collection week. During the set window, the stable logo addresses in
           every app show this file, then switch back automatically. The main wordmark is not redrawn.
         </p>

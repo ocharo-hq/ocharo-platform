@@ -29,8 +29,8 @@ async function publish() {
 <template>
   <section class="space-y-6">
     <div>
-      <h1 class="font-editorial text-4xl tracking-tight">Brand hub</h1>
-      <p class="mt-2 max-w-3xl text-sm text-muted-foreground">
+      <h1 class="sr-only">Brand hub</h1>
+      <p class="max-w-3xl text-sm text-muted-foreground">
         The logo, colors and links change here once. When you publish, Catalogue, Marketing, Blog and the other apps get
         the new brand through stable addresses. Printed and exported copies do not change.
       </p>

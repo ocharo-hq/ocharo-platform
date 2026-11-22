@@ -17,8 +17,8 @@ const titles = {
 <template>
   <section class="space-y-6">
     <div>
-      <h1 class="font-editorial text-4xl tracking-tight">{{ titles[kind] }}</h1>
-      <SkeletonState v-if="state === 'loading'" class="mt-2 h-10 w-full max-w-3xl" />
+      <h1 class="sr-only">{{ titles[kind] }}</h1>
+      <SkeletonState v-if="state === 'loading'" class="h-10 w-full max-w-3xl" />
     </div>
     <div v-if="state === 'loading'" aria-busy="true" class="space-y-6">
       <span class="sr-only" role="status">Brand data is loading.</span>
