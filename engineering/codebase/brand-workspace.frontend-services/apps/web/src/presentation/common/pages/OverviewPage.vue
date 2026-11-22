@@ -125,8 +125,7 @@ function draftStatus(status: 'draft' | 'in-review' | 'approved'): string {
   <section class="business-overview" :class="`business-overview--${variation}`" aria-labelledby="overview-title">
     <header class="overview-intro">
       <div class="overview-intro-copy">
-        <p class="overview-kicker"><span aria-hidden="true"></span> {{ t("Your business, in view") }}</p>
-        <h1 id="overview-title">{{ t("The work,") }}<br /><em>{{ t("connected.") }}</em></h1>
+        <h1 id="overview-title" class="sr-only">{{ t("Overview") }}</h1>
         <p class="overview-intro-description">{{ t("A place for {name} to take shape.", {name:organizationName}) }}<br class="overview-desktop-break" /> {{ t("From the collection to the next conversation.") }}</p>
       </div>
       <div class="overview-view-picker">

@@ -54,8 +54,7 @@ function selectFile(files: readonly File[], rejected: readonly unknown[]): void 
 </script>
 
 <template>
-  <p class="eyebrow">{{ t("Originals & provenance") }}</p>
-  <h1 class="page-title">{{ t("Media library") }}</h1>
+  <h1 class="sr-only">{{ t("Media library") }}</h1>
   <p class="mb-7 max-w-2xl text-muted-foreground">{{ t("Keep your original images together with their source details.") }}</p>
   <div class="grid items-start gap-8 lg:grid-cols-[1fr_1.4fr]">
     <form

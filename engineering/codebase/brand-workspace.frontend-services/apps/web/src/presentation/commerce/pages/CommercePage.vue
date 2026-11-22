@@ -67,7 +67,7 @@ async function withdraw(release:CommerceRelease){if(dirty.value||!note.value.tri
 
 <template>
 <section class="space-y-6">
- <div class="flex flex-wrap items-end justify-between gap-4"><div><p class="eyebrow">{{ t("Brand authority") }}</p><h1 class="page-title">{{ t("Products & releases") }}</h1><p class="text-muted-foreground">{{ t("Manage your products, identity and the catalogue your customers see.") }}</p></div>
+ <div class="flex flex-wrap items-end justify-between gap-4"><div><h1 class="sr-only">{{ t("Products & releases") }}</h1><p class="text-muted-foreground">{{ t("Manage your products, identity and the catalogue your customers see.") }}</p></div>
  <div class="flex items-end gap-3"><Button variant="outline" :is-disabled="blocked||dirty||!brandId" :is-loading="loading" @click="load">{{t("Refresh")}}</Button><label>{{ t("Brand") }}<DeskSelect v-model="brandId" class="mt-2" :disabled="dirty||blocked" :label="t('Brand')" :options="[({ value: '' as const, label: (t('Choose a brand')) }), ...(workspace.brands.value ?? []).map(brand => ({ value: brand.id, label: (brand.name) }))]" /></label></div></div>
 <p v-if="message" role="status" class="rounded-lg bg-muted p-3 text-sm">{{ t(message) }}</p>
  <p v-if="!brandId" class="empty-state">{{ t("Create a brand in Brands to begin.") }}</p><ContentSkeleton v-if="loading&&!snapshot" variant="form" :label="t('Loading brand records…')" />

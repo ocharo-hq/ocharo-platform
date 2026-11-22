@@ -87,7 +87,7 @@ async function importFiles(): Promise<void> {
 
 <template>
   <section class="space-y-7">
-    <header class="space-y-2"><p class="eyebrow">{{ t("Your creative workspace") }}</p><h1 class="page-title">{{ t("Integrations") }}</h1><p class="max-w-2xl text-muted-foreground">{{ t("Open an Ocharo app. Each app signs you in through Ocharo's Identity.") }}</p></header>
+    <header><h1 class="sr-only">{{ t("Integrations") }}</h1><p class="max-w-2xl text-muted-foreground">{{ t("Open an Ocharo app. Each app signs you in through Ocharo's Identity.") }}</p></header>
 
     <SourceDirectoryPanel />
 

@@ -55,8 +55,7 @@ async function openSettings(): Promise<void> {
 <template>
   <section class="space-y-6">
     <header class="flex flex-wrap items-start justify-between gap-4"><div>
-      <p class="eyebrow">{{ t("Supplier sourcing") }}</p>
-      <h1 class="page-title">{{ t("Sourcing") }}</h1>
+      <h1 class="sr-only">{{ t("Sourcing") }}</h1>
       <p class="max-w-2xl text-muted-foreground">{{ t("Record material suppliers, the routes that reach them, and the photos and files they shared. Desk records outreach; it never sends messages.") }}</p>
     </div><Button variant="outline" :is-disabled="access.busy.value || !viewSettings.supported" @click="openSettings"><SlidersHorizontal :size="16" aria-hidden="true" />{{ t('View settings') }}</Button></header>
     <nav class="flex flex-wrap gap-2" :aria-label="t('Sourcing views')">

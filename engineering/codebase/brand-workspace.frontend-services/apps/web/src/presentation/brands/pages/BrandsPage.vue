@@ -37,8 +37,7 @@ onScopeDispose(() => {
 </script>
 
 <template>
-  <p class="eyebrow">{{ t("Organization configuration") }}</p>
-  <h1 class="page-title">{{ t("Brands") }}</h1>
+  <h1 class="sr-only">{{ t("Brands") }}</h1>
   <div class="grid gap-8 lg:grid-cols-2">
     <section :aria-label="t('Existing brands')" class="space-y-3">
       <div v-for="brand in workspace.brands.value" :key="brand.id" class="workspace-card p-5">

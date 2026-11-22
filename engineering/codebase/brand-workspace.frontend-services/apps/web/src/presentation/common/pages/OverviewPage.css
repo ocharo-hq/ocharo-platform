@@ -6,7 +6,7 @@
   --overview-line: #e3dccf;
   --overview-tan: #ad8967;
   color: var(--overview-ink);
-  padding: 26px 0 12px;
+  padding: 0 0 12px;
   font-family: 'Avenir Next', 'Segoe UI', sans-serif;
 }
 .business-overview *, .business-overview *::before, .business-overview *::after { box-sizing: border-box; }
@@ -14,11 +14,7 @@
 .business-overview button:disabled { cursor: wait; opacity: .55; }
 .business-overview button:focus-visible { outline: 2px solid #735536; outline-offset: 5px; }
 .overview-intro { display: flex; justify-content: space-between; gap: 36px; align-items: flex-end; margin: 0 0 38px; }
-.overview-kicker { display: flex; align-items: center; gap: 9px; color: var(--overview-muted); font-size: 10px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; margin: 0 0 16px; }
-.overview-kicker > span { width: 5px; height: 5px; border-radius: 50%; background: var(--overview-tan); }
-.overview-intro h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(40px, 4.9vw, 68px); font-weight: 400; line-height: 1.03; letter-spacing: -.055em; margin: 0; }
-.overview-intro h1 em { color: #907253; font-weight: 400; }
-.overview-intro-description { color: var(--overview-muted); font-size: 13px; line-height: 1.8; margin: 20px 0 0; }
+.overview-intro-description { color: var(--overview-muted); font-size: 13px; line-height: 1.8; margin: 0; }
 .overview-view-picker { max-width: 430px; padding-bottom: 4px; }
 .overview-view-label { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--overview-muted); margin-bottom: 11px; text-align: right; }
 .overview-variations { display: flex; gap: 3px; padding: 4px; border: 1px solid var(--overview-line); border-radius: 9px; background: #eeebe4; }
@@ -163,10 +159,7 @@
   .overview-horizon { flex-direction: column; gap: 17px; }
 }
 @media (max-width: 760px) {
-  .business-overview { padding-top: 17px; }
   .overview-intro { flex-direction: column; gap: 25px; margin-bottom: 28px; }
-  .overview-intro h1 { font-size: 48px; }
-  .overview-intro-description { margin-top: 16px; }
   .overview-view-picker { width: 100%; max-width: none; padding: 0; }
   .overview-view-label, .overview-view-caption { text-align: left; }
   .overview-variations button { flex: 1; padding: 11px 7px; font-size: 10px; }
@@ -211,7 +204,6 @@
   .overview-horizon ul { gap: 14px 20px; }
 }
 @media (max-width: 430px) {
-  .overview-intro h1 { font-size: 43px; }
   .overview-variations button { font-size: 9px; gap: 5px; padding: 10px 5px; }
   .overview-variations svg { width: 13px; height: 13px; }
   .overview-map { grid-template-columns: 1fr; padding: 18px 14px; gap: 10px; }

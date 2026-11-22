@@ -36,11 +36,8 @@ const workerLabel = computed(() => {
 
 <template>
   <section aria-labelledby="status-title" class="workspace-card max-w-3xl p-6 sm:p-8">
-    <div class="mb-7 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p class="eyebrow">{{ t("Secondary diagnostics") }}</p>
-        <h1 id="status-title" class="mt-3 text-2xl font-semibold">{{ t("Foundation status") }}</h1>
-      </div>
+    <h1 id="status-title" class="sr-only">{{ t("Foundation status") }}</h1>
+    <div class="mb-7 flex justify-end">
       <Button variant="outline" size="sm" :is-loading="busy" :loading-text="t('Checking…')" @click="refresh"
         >{{ t("Check status") }}</Button
       >

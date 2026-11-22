@@ -153,10 +153,7 @@ async function prepareExport(): Promise<void> {
 <template>
   <div class="mb-7 flex flex-wrap items-center justify-between gap-4">
     <div>
-      <p class="eyebrow">
-        {{ workspace.brands.value?.find((b) => b.id === form.values.brandId)?.name ?? t('Content preparation') }}
-      </p>
-      <h1 class="page-title mb-2">{{ t(saved ? 'Prepare your content' : 'A new draft') }}</h1>
+      <h1 class="sr-only">{{ t(saved ? 'Prepare your content' : 'A new draft') }}</h1>
       <p class="text-sm text-muted-foreground">
         {{ saved ? t('Saved revision {revision}',{revision:saved.revision}) : t('Not saved yet')
         }}<span v-if="form.state.isDirty"> {{ t("· Unsaved changes") }}</span>

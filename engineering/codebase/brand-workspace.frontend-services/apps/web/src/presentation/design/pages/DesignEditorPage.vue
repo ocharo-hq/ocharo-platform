@@ -262,7 +262,7 @@ async function exportFile(format: 'pdf'|'png'): Promise<void> {
 
 <template>
   <section class="design-app">
-    <header class="design-heading"><div><p class="eyebrow">{{ t("Ocharo / design atelier") }}</p><h1>{{ t(appName) }}</h1><p class="design-subtitle">{{ kind === 'catalogue' ? t("Shape the collection. Keep every detail yours.") : t("A small introduction, beautifully yours.") }}</p></div><button class="quiet-button" @click="library = !library">{{ library ? t("Hide") : t("Saved") }} {{ t("designs") }} <span>{{ store.documents.value.length }}</span></button></header>
+    <header class="design-heading"><div><h1 class="sr-only">{{ t(appName) }}</h1><p class="design-subtitle">{{ kind === 'catalogue' ? t("Shape the collection. Keep every detail yours.") : t("A small introduction, beautifully yours.") }}</p></div><button class="quiet-button" @click="library = !library">{{ library ? t("Hide") : t("Saved") }} {{ t("designs") }} <span>{{ store.documents.value.length }}</span></button></header>
     <div v-if="kind === 'catalogue'" class="flex flex-wrap gap-3"><Button variant="outline" :is-disabled="disabled" @click="builder = !builder">{{ builder ? t("Hide product builder") : t("Build from products") }}</Button><span class="template-note">{{ t("Product pages · continuation pages · photo collages") }}</span></div>
     <CatalogueBuilder v-if="kind === 'catalogue' && builder" :access="access" :workspace="workspace" :locale="store.snapshot.value?.locale ?? locale" :disabled="disabled" :has-document="!!store.snapshot.value" :initial-brand-id="page?.catalogueSource?.brandId ?? ''" @pages="insertPages" @close="builder = false" />
     <p v-if="navigationNotice" class="editor-alert" role="status">{{ t(navigationNotice) }}</p>

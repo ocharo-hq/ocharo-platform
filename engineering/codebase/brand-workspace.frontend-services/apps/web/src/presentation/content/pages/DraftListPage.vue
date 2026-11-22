@@ -17,8 +17,7 @@ defineProps<{ access: AccessControls; workspace: WorkspaceControls }>();
 <template>
   <div class="mb-8 flex flex-wrap items-end justify-between gap-4">
     <div>
-      <p class="eyebrow">{{ t("Content & preparation") }}</p>
-      <h1 class="page-title mb-2">{{ t("A clear path to ready.") }}</h1>
+      <h1 class="sr-only">{{ t("Content") }}</h1>
       <p class="text-muted-foreground">{{ t("Draft, review, and prepare an approved package for manual sharing.") }}</p>
     </div>
     <Button
