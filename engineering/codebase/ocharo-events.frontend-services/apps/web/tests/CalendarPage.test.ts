@@ -1,6 +1,7 @@
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EventCalendarViewer, type EventCalendarViewerEvent } from '@wow-two-beta/fe/presentation/display';
+import { FacetBar, type FacetChoiceDefinition, type FacetDefinition } from '@wow-two-beta/fe/presentation/forms';
 
 import { calendarEventCap } from '@/application/events/UseEventsCalendar';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
@@ -14,6 +15,14 @@ const CATALOG = `${MIRROR}/catalogs/ocharo-fashion`;
 const at = '2026-10-01T00:00:00Z';
 
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+
+/** What an event can say beyond its title, day, stage and country: its kind (a trade fair by default), city, organizer and the sources that reported it. */
+interface Extra {
+  kind?: string;
+  city?: string;
+  organizer?: string;
+  sources?: string[];
+}
 const item = (
   n: number,
   title: string,
@@ -21,17 +30,32 @@ const item = (
   stage: string | null = null,
   ends?: object,
   country?: string,
+  extra: Extra = {},
 ) => ({
   event: {
     id: id(n),
     catalog: 'ocharo-fashion',
     facts: {
       title: { en: title },
-      kind: 'trade-fair',
+      kind: extra.kind ?? 'trade-fair',
       starts,
       ...(ends ? { ends } : {}),
-      ...(country ? { place: { country } } : {}),
+      ...(country || extra.city
+        ? { place: { ...(country ? { country } : {}), ...(extra.city ? { city: extra.city } : {}) } }
+        : {}),
+      ...(extra.organizer ? { organizer: { name: extra.organizer } } : {}),
     },
+    ...(extra.sources
+      ? {
+          sources: extra.sources.map((name, index) => ({
+            kind: 'scfd',
+            id: `s${n}-${index}`,
+            name,
+            firstSeenAtUtc: at,
+            lastSeenAtUtc: at,
+          })),
+        }
+      : {}),
     review: 'published',
     revision: 1,
     createdAtUtc: at,
@@ -292,15 +316,36 @@ describe('calendar place', () => {
   });
 });
 
-describe('calendar scope pills', () => {
-  /** Two national events, one in Central Asia, two international (Russia and France) and one with no country. */
+describe('calendar filter card', () => {
+  /**
+   * Six events the window draws and one it does not (a month with no day):
+   *   1  UZ  runway       Tashkent  shortlisted  Afisha      organizer Ocharo Studio
+   *   2  UZ  market       Bukhara   candidate    Afisha and Timepad
+   *   3  KZ  runway       Almaty    applying     Timepad
+   *   4  RU  trade fair   Moscow    candidate    no source named
+   *   5  FR  trade fair   Paris     candidate    no source named
+   *   6  no country, trade fair, no city
+   */
   const scoped = () =>
     page([
-      item(1, 'Tashkent Fashion Week', dayOf('2026-10-12'), 'shortlisted', undefined, 'UZ'),
-      item(2, 'Bukhara Craft Fair', dayOf('2026-10-13'), null, undefined, 'UZ'),
-      item(3, 'Almaty Fashion Days', dayOf('2026-10-14'), null, undefined, 'KZ'),
-      item(4, 'Moscow Textile Show', dayOf('2026-10-15'), null, undefined, 'RU'),
-      item(5, 'Paris Showroom', dayOf('2026-10-16'), null, undefined, 'FR'),
+      item(1, 'Tashkent Fashion Week', dayOf('2026-10-12'), 'shortlisted', undefined, 'UZ', {
+        kind: 'runway',
+        city: 'Tashkent',
+        organizer: 'Ocharo Studio',
+        sources: ['Afisha'],
+      }),
+      item(2, 'Bukhara Craft Fair', dayOf('2026-10-13'), null, undefined, 'UZ', {
+        kind: 'market',
+        city: 'Bukhara',
+        sources: ['Afisha', 'Timepad'],
+      }),
+      item(3, 'Almaty Fashion Days', dayOf('2026-10-14'), 'applying', undefined, 'KZ', {
+        kind: 'runway',
+        city: 'Almaty',
+        sources: ['Timepad'],
+      }),
+      item(4, 'Moscow Textile Show', dayOf('2026-10-15'), null, undefined, 'RU', { city: 'Moscow' }),
+      item(5, 'Paris Showroom', dayOf('2026-10-16'), null, undefined, 'FR', { city: 'Paris' }),
       item(6, 'Pop-up With No Country', dayOf('2026-10-17')),
       item(
         7,
@@ -311,9 +356,13 @@ describe('calendar scope pills', () => {
         'UZ',
       ),
     ]);
-  const group = () => wrapper!.get('[data-test="calendar-scopes"]');
-  const pills = () => group().findAll('button');
-  const pill = (label: string) => pills().find((button) => button.text().startsWith(label))!;
+  const card = () => wrapper!.get('[data-test="event-filters"]');
+  const group = (label: string) => card().get(`[role="group"][aria-label="${label}"]`);
+  const pills = (label: string) => group(label).findAll('button');
+  const pill = (label: string, text: string) => pills(label).find((button) => button.text().startsWith(text))!;
+  const labelled = (label: string) => pills(label).map((button) => button.text());
+  const matchPill = () => card().get('[data-facet-match]').text();
+  const search = () => card().get('input[aria-label="Search events"]');
   const drawn = () =>
     (wrapper!.getComponent(EventCalendarViewer).props('events') as readonly EventCalendarViewerEvent[])
       .map((block) => block.title)
@@ -326,101 +375,214 @@ describe('calendar scope pills', () => {
     'Pop-up With No Country',
     'Tashkent Fashion Week',
   ];
+  const query = () => router.currentRoute.value.query;
 
-  it('passes the feed facet chips’ solid neutral item look to the scope group', async () => {
+  it('is one card under the heading and above the viewer, never inside the viewer’s toolbar', async () => {
     answers = [scoped];
     await render();
 
-    const props = wrapper!.getComponent({ name: 'ToggleGroup' }).props();
-    expect(props.variant).toBe('pill');
-    expect(props.itemVariant).toBe('solid');
-    expect(props.itemTone).toBe('neutral');
-  });
-
-  it('offers National, Central Asia and International inside the calendar toolbar, each with the count of events it draws', async () => {
-    answers = [scoped];
-    await render();
-
-    expect(group().attributes('aria-label')).toBe('Scope');
-    expect(pills().map((button) => button.text())).toEqual(['National2', 'Central Asia1', 'International2']);
-    expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'false', 'false']);
-    // The pills sit inside the viewer's own toolbar, not above it.
+    expect(wrapper!.findAll('[data-test="event-filters"]')).toHaveLength(1);
+    const section = wrapper!.get('section').element;
+    expect(section.children[0]!.tagName).toBe('H1');
+    expect(section.children[1]).toBe(card().element);
     const calendar = wrapper!.get('[data-test="calendar"]');
-    expect(calendar.element.contains(group().element)).toBe(true);
+    expect(card().element.compareDocumentPosition(calendar.element) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(calendar.element.contains(card().element)).toBe(false);
+    expect(calendar.find('[data-test="calendar-scopes"]').exists()).toBe(false);
+    expect(wrapper!.find('[data-test="calendar-scopes"]').exists()).toBe(false);
   });
 
-  it('shows every event, those with no country included, while no pill is chosen', async () => {
+  it('is a Card with radius 2xl and a padding that is smaller on a phone', async () => {
+    answers = [scoped];
+    await render();
+
+    const classes = card().classes();
+    expect(classes).toContain('rounded-2xl');
+    expect(classes).toContain('p-3');
+    expect(classes).toContain('sm:p-5');
+  });
+
+  it('leaves the viewer its own toolbar: today, previous, next, the title and the view switcher', async () => {
+    answers = [scoped];
+    await render();
+
+    const calendar = wrapper!.get('[data-test="calendar"]');
+    expect(calendar.get('h3').text()).toBe('October 2026');
+    expect(calendar.find('button[aria-label="Previous"]').exists()).toBe(true);
+    expect(calendar.find('button[aria-label="Next"]').exists()).toBe(true);
+    expect(calendar.get('[role="group"][aria-label="View"]').findAll('button').length).toBeGreaterThanOrEqual(4);
+    expect(calendar.findAll('button').some((button) => button.text() === 'Today')).toBe(true);
+  });
+
+  it('offers Region and Kind as pills with the count of events each would match, and the rest behind Filters', async () => {
+    answers = [scoped];
+    await render();
+
+    // The region is one choice, as on the feed: "All" leads it, with no count of its own.
+    expect(labelled('Region')).toEqual(['All', 'National2', 'Central Asia1', 'International2']);
+    expect(labelled('Kind')).toEqual([
+      'Runway show2',
+      'Trade fair3',
+      'Market1',
+      'Exhibition0',
+      'Competition0',
+      'Festival0',
+      'Conference0',
+      'Other0',
+    ]);
+    expect(pills('Region').map((button) => button.attributes('aria-pressed'))).toEqual([
+      'false',
+      'false',
+      'false',
+      'false',
+    ]);
+    expect(
+      card()
+        .findAll('button')
+        .some((button) => button.text().startsWith('Filters')),
+    ).toBe(true);
+    expect(card().find('[role="group"][aria-label="Stage"]').exists()).toBe(false);
+  });
+
+  it('reads "n of m" for the loaded window, with the search in the kit’s words', async () => {
+    answers = [scoped];
+    await render();
+
+    expect(matchPill()).toBe('6 of 6');
+    expect(search().attributes('placeholder')).toBe('Title, organizer or city');
+  });
+
+  it('shows every event, those with no country included, while nothing is chosen', async () => {
     answers = [scoped];
     await render();
 
     expect(drawn()).toEqual(everything);
-    expect(router.currentRoute.value.query.scope).toBeUndefined();
+    expect(query().kinds).toBeUndefined();
+    expect(query().regions).toBeUndefined();
   });
 
-  it('shows only the events of a chosen scope, keeps the counts of the others, and reads nothing again', async () => {
+  it('narrows the drawn events to a chosen kind and writes kinds to the address, reading nothing again', async () => {
     answers = [scoped];
     await render();
 
-    await pill('National').trigger('click');
+    await pill('Kind', 'Market').trigger('click');
+    await flushPromises();
+
+    expect(drawn()).toEqual(['Bukhara Craft Fair']);
+    expect(query().kinds).toEqual(['market']);
+    expect(pill('Kind', 'Market').attributes('aria-pressed')).toBe('true');
+    expect(matchPill()).toBe('1 of 6');
+    expect(reads).toHaveLength(1);
+
+    await pill('Kind', 'Runway show').trigger('click');
+    await flushPromises();
+
+    expect(drawn()).toEqual(['Almaty Fashion Days', 'Bukhara Craft Fair', 'Tashkent Fashion Week']);
+    // Several kinds are a repeated key, as the feed writes them.
+    expect(query().kinds).toEqual(['market', 'runway']);
+    expect(matchPill()).toBe('3 of 6');
+  });
+
+  it('shows only the events of a chosen region, keeps the region counts, and counts the kinds within it', async () => {
+    answers = [scoped];
+    await render();
+
+    await pill('Region', 'National').trigger('click');
     await flushPromises();
 
     expect(drawn()).toEqual(['Bukhara Craft Fair', 'Tashkent Fashion Week']);
-    expect(pill('National').attributes('aria-pressed')).toBe('true');
-    expect(pills().map((button) => button.text())).toEqual(['National2', 'Central Asia1', 'International2']);
+    expect(pill('Region', 'National').attributes('aria-pressed')).toBe('true');
+    expect(query().regions).toBe('national');
+    // A facet counts with the others’ choices applied, not its own: the regions stay, the kinds follow the region.
+    expect(labelled('Region')).toEqual(['All', 'National2', 'Central Asia1', 'International2']);
+    expect(labelled('Kind').slice(0, 3)).toEqual(['Runway show1', 'Trade fair0', 'Market1']);
     expect(reads).toHaveLength(1);
   });
 
-  it('adds the events of a second pill, and shows a third scope on its own', async () => {
+  it('takes one region at a time, as the feed does: choosing another replaces it', async () => {
     answers = [scoped];
     await render();
 
-    await pill('National').trigger('click');
-    await pill('Central Asia').trigger('click');
+    await pill('Region', 'National').trigger('click');
+    await pill('Region', 'Central Asia').trigger('click');
     await flushPromises();
-    expect(drawn()).toEqual(['Almaty Fashion Days', 'Bukhara Craft Fair', 'Tashkent Fashion Week']);
+    expect(drawn()).toEqual(['Almaty Fashion Days']);
+    expect(pills('Region').map((button) => button.attributes('aria-pressed'))).toEqual([
+      'false',
+      'false',
+      'true',
+      'false',
+    ]);
+    expect(query().regions).toBe('central-asia');
 
-    await pill('National').trigger('click');
-    await pill('Central Asia').trigger('click');
-    await pill('International').trigger('click');
+    await pill('Region', 'International').trigger('click');
     await flushPromises();
+    // The pop-up with no country belongs to no region, so choosing one leaves it out.
     expect(drawn()).toEqual(['Moscow Textile Show', 'Paris Showroom']);
   });
 
-  it('shows all events again once the chosen pills are cleared', async () => {
+  it('shows every region again for the All pill, which is no choice and leaves the key out of the address', async () => {
     answers = [scoped];
     await render();
 
-    await pill('International').trigger('click');
+    await pill('Region', 'National').trigger('click');
     await flushPromises();
-    expect(drawn()).toEqual(['Moscow Textile Show', 'Paris Showroom']);
+    expect(query().regions).toBe('national');
 
-    await pill('International').trigger('click');
+    await pill('Region', 'All').trigger('click');
     await flushPromises();
     expect(drawn()).toEqual(everything);
-    expect(router.currentRoute.value.query.scope).toBeUndefined();
+    expect(query().regions).toBeUndefined();
   });
 
-  it('keeps the choice in the address as ?scope=, in the regions’ order, and keeps the other query', async () => {
+  it('shows all events again once the chosen pills are cleared, and leaves the key out of the address', async () => {
     answers = [scoped];
-    router = await eventsRouter(`/organizations/${ORG}/calendar?tab=x`);
     await render();
 
-    await pill('Central Asia').trigger('click');
-    await pill('National').trigger('click');
+    await pill('Region', 'International').trigger('click');
+    await flushPromises();
+    expect(drawn()).toEqual(['Moscow Textile Show', 'Paris Showroom']);
+
+    await pill('Region', 'International').trigger('click');
+    await flushPromises();
+    expect(drawn()).toEqual(everything);
+    expect(query().regions).toBeUndefined();
+  });
+
+  it('keeps the choices in the address under the feed’s keys, and the other query keys, the feed’s own included', async () => {
+    answers = [scoped];
+    router = await eventsRouter(`/organizations/${ORG}/calendar?tab=x&when=past&sort=added`);
+    await render();
+
+    await pill('Region', 'Central Asia').trigger('click');
+    await pill('Kind', 'Runway show').trigger('click');
+    await search().setValue('fashion');
     await flushPromises();
 
-    expect(router.currentRoute.value.query.scope).toBe('national,central-asia');
-    expect(router.currentRoute.value.query.tab).toBe('x');
+    expect(query().regions).toBe('central-asia');
+    expect(query().kinds).toEqual(['runway']);
+    expect(query().q).toBe('fashion');
+    expect(query().tab).toBe('x');
+    // The date preset and the sort are the feed's: the calendar leaves them in the address, unread.
+    expect(query().when).toBe('past');
+    expect(query().sort).toBe('added');
+    expect(Object.keys(query()).sort()).toEqual(['kinds', 'q', 'regions', 'sort', 'tab', 'when']);
     expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/calendar`);
   });
 
-  it('opens on the scopes the address names, and ignores a key that is not a scope', async () => {
+  it('opens on the choices the address names, the region as the kit reads it, and ignores a region that is none', async () => {
     answers = [scoped];
-    router = await eventsRouter(`/organizations/${ORG}/calendar?scope=central-asia,international,local`);
+    router = await eventsRouter(`/organizations/${ORG}/calendar?regions=international&kinds=trade-fair`);
     await render();
 
-    expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'true', 'true']);
-    expect(drawn()).toEqual(['Almaty Fashion Days', 'Moscow Textile Show', 'Paris Showroom']);
+    expect(pills('Region').map((button) => button.attributes('aria-pressed'))).toEqual([
+      'false',
+      'false',
+      'false',
+      'true',
+    ]);
+    expect(pill('Kind', 'Trade fair').attributes('aria-pressed')).toBe('true');
+    expect(drawn()).toEqual(['Moscow Textile Show', 'Paris Showroom']);
   });
 
   it('follows the address when it changes, as the back button does', async () => {
@@ -428,41 +590,231 @@ describe('calendar scope pills', () => {
     await render();
     expect(drawn()).toEqual(everything);
 
-    await router.replace({ query: { scope: 'central-asia' } });
+    await router.replace({ query: { regions: 'central-asia', q: 'almaty' } });
     await flushPromises();
-    expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'true', 'false']);
+    expect(pills('Region').map((button) => button.attributes('aria-pressed'))).toEqual([
+      'false',
+      'false',
+      'true',
+      'false',
+    ]);
+    expect((search().element as HTMLInputElement).value).toBe('almaty');
     expect(drawn()).toEqual(['Almaty Fashion Days']);
 
     await router.replace({ query: {} });
     await flushPromises();
+    expect((search().element as HTMLInputElement).value).toBe('');
     expect(drawn()).toEqual(everything);
   });
 
-  it('shows every event for an address whose scope names no region', async () => {
+  it('shows every event for an address whose region is none of Ocharo’s', async () => {
     answers = [scoped];
-    router = await eventsRouter(`/organizations/${ORG}/calendar?scope=regional`);
+    router = await eventsRouter(`/organizations/${ORG}/calendar?regions=regional`);
     await render();
 
-    expect(pills().map((button) => button.attributes('aria-pressed'))).toEqual(['false', 'false', 'false']);
+    expect(pills('Region').map((button) => button.attributes('aria-pressed'))).toEqual([
+      'false',
+      'false',
+      'false',
+      'false',
+    ]);
     expect(drawn()).toEqual(everything);
   });
 
-  it('counts only what the loaded window holds: an empty window reads 0 in each scope, once it has answered', async () => {
+  it('searches the titles, the cities and the organizers, whatever the case, and writes the text to the address', async () => {
+    answers = [scoped];
     await render();
 
-    expect(pills().map((button) => button.text())).toEqual(['National0', 'Central Asia0', 'International0']);
+    await search().setValue('FASHION');
+    await flushPromises();
+    expect(drawn()).toEqual(['Almaty Fashion Days', 'Tashkent Fashion Week']);
+    expect(matchPill()).toBe('2 of 6');
+    expect(query().q).toBe('FASHION');
+
+    await search().setValue('moscow');
+    await flushPromises();
+    expect(drawn()).toEqual(['Moscow Textile Show']);
+
+    await search().setValue('ocharo studio');
+    await flushPromises();
+    expect(drawn()).toEqual(['Tashkent Fashion Week']);
+
+    await search().setValue('');
+    await flushPromises();
+    expect(drawn()).toEqual(everything);
+    expect(query().q).toBeUndefined();
   });
 
-  it('shows no pills during the bare loading skeleton, already counted once the calendar mounts', async () => {
+  it('counts the pills with the search applied', async () => {
+    answers = [scoped];
+    await render();
+
+    await search().setValue('fashion');
+    await flushPromises();
+
+    expect(labelled('Region')).toEqual(['All', 'National1', 'Central Asia1', 'International0']);
+  });
+
+  it('shows the choices behind Filters as removable chips, and removing one widens the events', async () => {
+    answers = [scoped];
+    router = await eventsRouter(
+      `/organizations/${ORG}/calendar?stages=candidate&cities=bukhara&cities=paris&sources=afisha`,
+    );
+    await render();
+
+    expect(drawn()).toEqual(['Bukhara Craft Fair']);
+    const chips = () => card().get('[data-facet-chips]');
+    expect(chips().text()).toContain('Stage: Candidate');
+    expect(chips().text()).toContain('City: Bukhara');
+    expect(chips().text()).toContain('City: Paris');
+    expect(chips().text()).toContain('Source: Afisha');
+
+    await card().get('button[aria-label="Remove City: Bukhara"]').trigger('click');
+    await flushPromises();
+    expect(query().cities).toEqual(['paris']);
+    expect(drawn()).toEqual([]);
+
+    await card().get('button[aria-label="Remove Source: Afisha"]').trigger('click');
+    await flushPromises();
+    expect(query().sources).toBeUndefined();
+    expect(drawn()).toEqual(['Paris Showroom']);
+  });
+
+  it('narrows by a stage, a city or a source from the address', async () => {
+    answers = [scoped];
+    router = await eventsRouter(`/organizations/${ORG}/calendar?stages=applying`);
+    await render();
+    expect(drawn()).toEqual(['Almaty Fashion Days']);
+
+    await router.replace({ query: { cities: 'tashkent' } });
+    await flushPromises();
+    expect(drawn()).toEqual(['Tashkent Fashion Week']);
+
+    await router.replace({ query: { sources: 'timepad' } });
+    await flushPromises();
+    expect(drawn()).toEqual(['Almaty Fashion Days', 'Bukhara Craft Fair']);
+
+    await router.replace({ query: { sources: 'curated' } });
+    await flushPromises();
+    expect(drawn()).toEqual(['Moscow Textile Show', 'Paris Showroom', 'Pop-up With No Country']);
+  });
+
+  it('clears the choices and the search together with Clear all', async () => {
+    answers = [scoped];
+    router = await eventsRouter(`/organizations/${ORG}/calendar?regions=national&kinds=market&q=bukhara`);
+    await render();
+    expect(drawn()).toEqual(['Bukhara Craft Fair']);
+
+    const clear = card()
+      .findAll('button')
+      .find((button) => button.text() === 'Clear all')!;
+    await clear.trigger('click');
+    await flushPromises();
+
+    expect(drawn()).toEqual(everything);
+    expect(query().regions).toBeUndefined();
+    expect(query().kinds).toBeUndefined();
+    expect(query().q).toBeUndefined();
+    expect(matchPill()).toBe('6 of 6');
+  });
+
+  it('counts only what the loaded window holds: an empty window reads 0 of 0, once it has answered', async () => {
+    await render();
+
+    expect(labelled('Region')).toEqual(['All', 'National0', 'Central Asia0', 'International0']);
+    expect(matchPill()).toBe('0 of 0');
+  });
+
+  it('shows the card with no counts and no match pill during the bare loading skeleton, counted once the calendar mounts', async () => {
     let release: (response: Response) => void = () => {};
     answers = [() => new Promise<Response>((resolve) => (release = resolve))];
     await render();
 
-    // The pills live in the viewer's own toolbar — they don't exist before the viewer does.
-    expect(wrapper!.find('[data-test="calendar-scopes"]').exists()).toBe(false);
+    expect(wrapper!.find('[data-test="calendar"]').exists()).toBe(false);
+    expect(labelled('Region')).toEqual(['All', 'National', 'Central Asia', 'International']);
+    expect(card().get('[data-facet-match]').text()).toBe('');
 
     release(scoped());
     await flushPromises();
-    expect(pills().map((button) => button.text())).toEqual(['National2', 'Central Asia1', 'International2']);
+    expect(labelled('Region')).toEqual(['All', 'National2', 'Central Asia1', 'International2']);
+    expect(matchPill()).toBe('6 of 6');
+  });
+
+  it('reads the address the feed writes and narrows its events: the same keys, the feed’s own `when` and `sort` ignored', async () => {
+    answers = [scoped];
+    router = await eventsRouter(
+      `/organizations/${ORG}/calendar?regions=national&kinds=runway&kinds=market&stages=shortlisted&cities=tashkent&sources=afisha&q=fashion&when=past&sort=deadline`,
+    );
+    await render();
+
+    // The feed’s `kinds=runway&kinds=market` and the rest are one set of choices here: only Tashkent Fashion Week is left.
+    expect(drawn()).toEqual(['Tashkent Fashion Week']);
+    expect(pill('Region', 'National').attributes('aria-pressed')).toBe('true');
+    expect(pills('Kind').map((button) => button.attributes('aria-pressed'))).toEqual([
+      'true',
+      'false',
+      'true',
+      'false',
+      'false',
+      'false',
+      'false',
+      'false',
+    ]);
+    expect((search().element as HTMLInputElement).value).toBe('fashion');
+    const chips = card().get('[data-facet-chips]').text();
+    for (const chosen of ['Stage: Shortlisted', 'City: Tashkent', 'Source: Afisha']) expect(chips).toContain(chosen);
+    expect(matchPill()).toBe('1 of 6');
+    // It reads the window it shows, whatever the address says of dates or order.
+    expect(reads).toHaveLength(1);
+    expect(reads[0]!.searchParams.has('sort')).toBe(false);
+  });
+
+  it('counts the window it has read, client-side, and never asks the server for facet counts', async () => {
+    answers = [scoped];
+    await render();
+
+    expect(labelled('Region')).toEqual(['All', 'National2', 'Central Asia1', 'International2']);
+    expect(reads.every((read) => read.pathname === `${CATALOG}/tracking`)).toBe(true);
+  });
+
+  const barFacet = (key: string) =>
+    (wrapper!.getComponent(FacetBar).props('facets') as readonly FacetDefinition[]).find(
+      (facet) => facet.key === key,
+    ) as FacetChoiceDefinition;
+
+  it('gives the region and kind pills their one-line hints, and the feed’s calmer timing, and no other facet', async () => {
+    answers = [scoped];
+    await render();
+
+    const bar = wrapper!.getComponent(FacetBar);
+    expect(bar.props('hintOpenDelay')).toBe(5000);
+    expect(bar.props('hintFadeDuration')).toBe(200);
+    expect(barFacet('scope').options.map((option) => option.hint?.description)).toEqual([
+      undefined,
+      'Events in Uzbekistan.',
+      'Events in Kazakhstan, Kyrgyzstan, Tajikistan and Turkmenistan.',
+      'Events anywhere else in the world.',
+    ]);
+    expect(barFacet('kind').options.every((option) => option.hint !== undefined)).toBe(true);
+    for (const key of ['stage', 'city', 'source'])
+      expect(barFacet(key).options.some((option) => option.hint !== undefined)).toBe(false);
+  });
+
+  it('greys a pill that matches nothing and is not chosen, and keeps it pressable', async () => {
+    answers = [scoped];
+    await render();
+
+    expect(pill('Kind', 'Exhibition').attributes('data-empty')).toBeDefined();
+    expect(pill('Kind', 'Exhibition').attributes('disabled')).toBeUndefined();
+    expect(pill('Kind', 'Market').attributes('data-empty')).toBeUndefined();
+    expect(pill('Region', 'All').attributes('data-empty')).toBeUndefined();
+  });
+
+  it('lays the bar out as the feed does on a phone, with the kit’s class, and leaves no mount for the feed’s controls', async () => {
+    answers = [scoped];
+    await render();
+
+    expect(wrapper!.getComponent(FacetBar).classes()).toContain('max-sm:[&_[data-facet-inline]]:flex-nowrap');
+    expect(card().find('[data-test="event-filter-actions"]').exists()).toBe(false);
   });
 });

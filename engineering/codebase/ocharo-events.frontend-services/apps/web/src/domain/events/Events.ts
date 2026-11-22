@@ -188,7 +188,7 @@ export const centralAsiaCountries: readonly string[] = ['KZ', 'KG', 'TJ', 'TM'];
 /**
  * Ocharo's scopes, derived from an event's country: Uzbekistan national, Kazakhstan, Kyrgyzstan, Tajikistan and
  * Turkmenistan Central Asia, every other country international. An event with no country belongs to none and reads
- * "Scope unknown" (OE08). The feed's scope chips and the calendar's scope pills take these labels and keys.
+ * "Scope unknown" (OE08). The feed's scope chips and the calendar's region filter take these labels and keys.
  */
 export function ocharoRegions(): EventRegion[] {
   return [

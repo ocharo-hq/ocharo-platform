@@ -2,7 +2,6 @@ import { Temporal } from 'temporal-polyfill';
 import type { TrackedEventModel } from '@wow-two-beta/fe-events/contracts';
 import {
   eventTitle,
-  pickText,
   readEventWhen,
   regionOfCountry,
   type EventWhenParts,
@@ -79,7 +78,7 @@ export const calendarToneColors: Readonly<Record<CalendarTone, string>> = {
 };
 
 /** The stage an event without tracking reads as. */
-const untrackedStage: EventStatus = 'candidate';
+export const untrackedStage: EventStatus = 'candidate';
 
 /** The tone of a stage; a stage the table does not know (a workflow stored with others) reads as neutral. */
 export function calendarTone(stage: string | null | undefined): CalendarTone {
@@ -188,81 +187,9 @@ export function ocharoCalendarEntry(
 /**
  * The scope an event stands in: the key of Ocharo's region its country belongs to (`national`, `central-asia`,
  * `international`), by the rule the feed's scope chips use (`regionOfCountry`). An event with no country, or one that is
- * not a two-letter code, stands in none: the feed reads it as "Scope unknown" and no chip selects it, so no pill counts
- * or keeps it.
+ * not a two-letter code, stands in none: the feed reads it as "Scope unknown" and no chip selects it, so a chosen
+ * region never keeps it (`CalendarFilters`).
  */
 export function calendarScope(item: TrackedEventModel): string | null {
   return regionOfCountry(item.event.facts.place?.country, ocharoRegions())?.key ?? null;
-}
-
-/** Whether the chosen scopes keep an event: none chosen keeps every event, else only one standing in a chosen scope. */
-export function keepsScope(item: TrackedEventModel, scopes: readonly string[]): boolean {
-  if (scopes.length === 0) return true;
-  const scope = calendarScope(item);
-  return scope !== null && scopes.includes(scope);
-}
-
-/**
- * The calendar's blocks for what the tracking feed lists: every event with a known day, closed stages (`skipped`,
- * `rejected`) left out as the feed leaves them, each coloured by where Ocharo stands with it. With `scopes` chosen
- * (`calendarScope` keys), only events standing in one of them; none chosen draws them all.
- */
-export function ocharoCalendarEvents(
-  items: readonly TrackedEventModel[],
-  options: EventsCalendarOptions,
-  scopes: readonly string[] = [],
-): EventsCalendarEntry[] {
-  return items.flatMap((item) => {
-    const entry = keepsScope(item, scopes) ? ocharoCalendarEntry(item, options) : null;
-    return entry ? [entry] : [];
-  });
-}
-
-/** One scope pill: the region's key and label in the reader's language, and how many events the calendar draws in it. */
-export interface CalendarScopePill {
-  readonly value: string;
-  readonly label: string;
-  readonly count: number;
-}
-
-/**
- * The scope pills, one per Ocharo region in its order, each with the number of events the loaded window draws in it
- * (events with a known day and an open stage, whatever scopes are chosen); an event with no country counts in none.
- */
-export function calendarScopePills(
-  items: readonly TrackedEventModel[],
-  options: EventsCalendarOptions,
-): CalendarScopePill[] {
-  const counts = new Map<string, number>();
-  for (const item of items) {
-    const scope = calendarScope(item);
-    if (scope !== null && ocharoCalendarEntry(item, options)) counts.set(scope, (counts.get(scope) ?? 0) + 1);
-  }
-  return ocharoRegions().map((region) => ({
-    value: region.key,
-    label: pickText(region.label, options.locale) || region.key,
-    count: counts.get(region.key) ?? 0,
-  }));
-}
-
-/** The address's `scope` query separator: `?scope=national,central-asia`. */
-const scopeSeparator = ',';
-
-/**
- * Reads the scopes an address's `scope` query chooses: the keys it lists that are Ocharo's regions, once each, in the
- * regions' order; anything else in it is ignored.
- */
-export function readCalendarScopes(value: unknown): string[] {
-  const listed = (Array.isArray(value) ? value : [value])
-    .filter((part): part is string => typeof part === 'string')
-    .flatMap((part) => part.split(scopeSeparator));
-  return ocharoRegions()
-    .map((region) => region.key)
-    .filter((key) => listed.includes(key));
-}
-
-/** The `scope` query for chosen scopes, in the regions' order; undefined for none, which leaves the query out. */
-export function writeCalendarScopes(scopes: readonly string[]): string | undefined {
-  const keys = readCalendarScopes(scopes.join(scopeSeparator));
-  return keys.length ? keys.join(scopeSeparator) : undefined;
 }

@@ -6,6 +6,7 @@
   "description": "Ocharo Events — trade events and application deadlines for an organization.",
   "scripts": {
     "dev": "vite",
+    "dev:replay": "VITE_REPLAY=1 vite",
     "typecheck": "vue-tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && pnpm check:sfc",
     "check:sfc": "node scripts/check-sfc.mjs",
     "build": "pnpm typecheck && vite build",
@@ -17,8 +18,8 @@
   },
   "dependencies": {
     "@tanstack/vue-query": "^5.102.8",
-    "@wow-two-beta/fe": "0.0.62",
-    "@wow-two-beta/fe-events": "0.0.21",
+    "@wow-two-beta/fe": "0.0.63",
+    "@wow-two-beta/fe-events": "0.0.22",
     "lucide-vue-next": "^0.460.0",
     "temporal-polyfill": "^1.0.1",
     "vue": "^3.5.13",

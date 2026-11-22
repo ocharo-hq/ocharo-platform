@@ -3,13 +3,26 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { EventCalendarViewer, type EventCalendarViewerEvent } from '@wow-two-beta/fe/presentation/display';
 import { SkeletonState } from '@wow-two-beta/fe/presentation/feedback';
-import { ToggleGroup } from '@wow-two-beta/fe/presentation/forms';
-import { FailureNotice } from '@wow-two-beta/fe-events/kit';
+import {
+  FacetKind,
+  FacetPlacement,
+  type FacetDefinition,
+  type FacetSelection,
+} from '@wow-two-beta/fe/presentation/forms';
+import { eventsFacetBarLabels, eventsText, FailureNotice } from '@wow-two-beta/fe-events/kit';
 
 import { createEventsPageClient } from '@/application/events/UseEvents';
 import { useEventsCalendar } from '@/application/events/UseEventsCalendar';
 import { useUiLocale } from '@/application/shared/UseUiLocale';
+import {
+  allScopesValue,
+  calendarSelection,
+  withCalendarSelection,
+  type CalendarFacetKey,
+} from '@/domain/events/CalendarFilters';
 import { eventsPath } from '@/domain/events/Events';
+
+import EventFilterCard from '../EventFilterCard.vue';
 
 /**
  * The organization's events on a calendar (the fe sdk's `EventCalendarViewer`): each event with a known day as a block
@@ -17,28 +30,64 @@ import { eventsPath } from '@/domain/events/Events';
  * to its month or year has no day and is not drawn. Opening a block goes to the event's page in the feed. The viewer
  * offers every view it has: the fe sdk pinned now has month, week, day and agenda, and its re-pin adds the year.
  *
- * Three scope pills (National, Central Asia, International; the fe sdk's `ToggleGroup`, several at once) sit in the
- * viewer's own toolbar (its `toolbar-extra` slot), narrowing the events to those whose country stands in a chosen
- * scope, each with how many events the loaded window draws in it. None chosen shows every event, those with no
- * country included. The choice stays in the address (`?scope=national,central-asia`). The pills render only once the
- * viewer itself does — on load or failure, never during the bare loading skeleton.
+ * The filter card the feed shares (`EventFilterCard`) sits directly under the top bar, above the viewer, and narrows the
+ * events drawn: Region (All, National, Central Asia, International; one choice, as on the feed) and Kind as pills, Stage,
+ * City and Source behind "Filters", and a search of the titles, cities and organizers, each choice with how many events
+ * it would match and the match pill reading `n of m` for the loaded window. The counts describe the window the calendar
+ * has read, not the feed's upcoming range: they are counted here, never taken from the server. None chosen shows every
+ * event, those with no country included. The choices stay in the address under the feed's keys
+ * (`?regions=national&kinds=runway&q=silk`), so the same address filters both pages; the feed's `when` and `sort` mean
+ * nothing here. The viewer keeps its own toolbar (today, previous, next, the title and the view switcher). The card
+ * counts only once a read has answered and not failed; before then a count of 0 would mislead.
  */
 defineOptions({ name: 'CalendarPage' });
 const props = defineProps<{ organizationId: string }>();
 const { t, uiLocale } = useUiLocale();
 const router = useRouter();
-const { view, date, events, scopes, scopePills, setScopes, failure, loading, loaded, reload } = useEventsCalendar(
+const { view, date, events, filters, setFilters, facets, failure, loading, loaded, reload } = useEventsCalendar(
   createEventsPageClient(props.organizationId),
 );
 
-/** The pills show their counts once a read has answered and not failed; before then a count of 0 would mislead. */
-const pills = computed(() =>
-  loaded.value && !failure.value ? scopePills.value : scopePills.value.map(({ value, label }) => ({ value, label })),
-);
+/**
+ * Each facet's name, whether it takes one choice or several and where it sits, as the feed's card has them: the region
+ * (one choice) and the kind in the bar, the rest behind "Filters".
+ */
+const facetLayout = computed<
+  Readonly<Record<CalendarFacetKey, { label: string; kind: 'single' | 'multi'; placement: FacetPlacement }>>
+>(() => ({
+  scope: { label: t('Region'), kind: FacetKind.Single, placement: FacetPlacement.Inline },
+  kind: { label: t('Kind'), kind: FacetKind.Multi, placement: FacetPlacement.Inline },
+  stage: { label: t('Stage'), kind: FacetKind.Multi, placement: FacetPlacement.Popover },
+  city: { label: t('City'), kind: FacetKind.Multi, placement: FacetPlacement.Popover },
+  source: { label: t('Source'), kind: FacetKind.Multi, placement: FacetPlacement.Popover },
+}));
+const labels = computed(() => eventsFacetBarLabels(uiLocale.value));
 
-/** The pills' selection as the keys chosen; the group reports one key or none in single mode, never used here. */
-function chooseScopes(value: readonly string[] | string | null): void {
-  setScopes(Array.isArray(value) ? value : typeof value === 'string' ? [value] : []);
+const counted = computed(() => loaded.value && !failure.value);
+
+/**
+ * The facets for the card: those with a choice to make, each option with its count once the window is counted; the
+ * region leads with an "All" pill that has no count, as the feed's has.
+ */
+const facetDefinitions = computed<readonly FacetDefinition[]>(() =>
+  facets.value.facets
+    .filter((facet) => facet.options.length > 0)
+    .map((facet) => ({
+      key: facet.key,
+      ...facetLayout.value[facet.key],
+      options: [
+        ...(facet.key === 'scope' ? [{ value: allScopesValue, label: eventsText('all', uiLocale.value) }] : []),
+        ...facet.options.map(({ value, label, count }) => ({ value, label, ...(counted.value ? { count } : {}) })),
+      ],
+    })),
+);
+const selection = computed(() => calendarSelection(filters.value));
+
+function chooseFacets(next: FacetSelection): void {
+  setFilters(withCalendarSelection(filters.value, next));
+}
+function searchFor(search: string): void {
+  setFilters({ ...filters.value, search });
 }
 
 function openEvent(event: EventCalendarViewerEvent): void {
@@ -47,8 +96,18 @@ function openEvent(event: EventCalendarViewerEvent): void {
 </script>
 
 <template>
-  <section>
+  <section class="flex flex-col gap-4">
     <h1 class="sr-only">{{ t('Calendar') }}</h1>
+    <EventFilterCard
+      :facet-definitions="facetDefinitions"
+      :labels="labels"
+      :model-value="selection"
+      :search="filters.search"
+      :match-count="counted ? facets.match : undefined"
+      :total-count="counted ? facets.total : undefined"
+      @update:model-value="chooseFacets"
+      @update:search="searchFor"
+    />
     <FailureNotice v-if="failure" :failure="failure" :locale="uiLocale" retry @retry="reload" />
     <div v-if="!loaded && !failure" aria-busy="true" data-test="calendar-loading">
       <span class="sr-only" role="status">{{ t('Loading…') }}</span>
@@ -62,21 +121,6 @@ function openEvent(event: EventCalendarViewerEvent): void {
       v-bind="{ 'aria-busy': loading || undefined }"
       data-test="calendar"
       @event-click="openEvent"
-    >
-      <template #toolbar-extra>
-        <ToggleGroup
-          type="multi"
-          variant="pill"
-          item-variant="solid"
-          item-tone="neutral"
-          :model-value="scopes"
-          :options="pills"
-          :aria-label="t('Scope')"
-          data-test="calendar-scopes"
-          class="[&>button]:h-10 sm:[&>button]:h-7"
-          @update:model-value="chooseScopes"
-        />
-      </template>
-    </EventCalendarViewer>
+    />
   </section>
 </template>

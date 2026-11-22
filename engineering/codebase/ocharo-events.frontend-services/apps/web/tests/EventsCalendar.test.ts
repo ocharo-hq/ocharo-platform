@@ -5,13 +5,10 @@ import type { TrackedEventModel } from '@wow-two-beta/fe-events/contracts';
 import { eventStatuses } from '@/domain/events/Events';
 import {
   calendarScope,
-  calendarScopePills,
   calendarTone,
   calendarToneColors,
   calendarWindow,
-  ocharoCalendarEvents,
-  readCalendarScopes,
-  writeCalendarScopes,
+  ocharoCalendarEntry,
   type EventsCalendarEntry,
   type EventsCalendarOptions,
 } from '@/domain/events/EventsCalendar';
@@ -56,7 +53,7 @@ function item(
   } as unknown as TrackedEventModel;
 }
 const place = (events: TrackedEventModel[], override: Partial<EventsCalendarOptions> = {}): EventsCalendarEntry[] =>
-  ocharoCalendarEvents(events, { ...options, ...override });
+  events.flatMap((event) => ocharoCalendarEntry(event, { ...options, ...override }) ?? []);
 const iso = (value: Temporal.ZonedDateTime) => value.toString({ timeZoneName: 'never', offset: 'never' });
 
 describe('calendar window', () => {
@@ -253,67 +250,5 @@ describe('calendar scopes', () => {
   it('puts an event with no country, an empty one or one that is no two-letter code in no scope', () => {
     for (const country of [undefined, null, '', '  ', 'UZB', '12'])
       expect(calendarScope(inCountry('x', country)), String(country)).toBeNull();
-  });
-
-  it('draws every event when no scope is chosen, those with no country included', () => {
-    const items = [inCountry('uz', 'UZ'), inCountry('kz', 'KZ'), inCountry('fr', 'FR'), inCountry('none', undefined)];
-
-    expect(place(items).map((entry) => entry.id)).toEqual(['uz', 'kz', 'fr', 'none']);
-    expect(ocharoCalendarEvents(items, options, []).map((entry) => entry.id)).toEqual(['uz', 'kz', 'fr', 'none']);
-  });
-
-  it('draws only the events in the chosen scopes, and never one with no country', () => {
-    const items = [
-      inCountry('uz', 'UZ'),
-      inCountry('kz', 'KZ'),
-      inCountry('ru', 'RU'),
-      inCountry('fr', 'FR'),
-      inCountry('none', undefined),
-    ];
-    const ids = (scopes: string[]) => ocharoCalendarEvents(items, options, scopes).map((entry) => entry.id);
-
-    expect(ids(['national'])).toEqual(['uz']);
-    expect(ids(['central-asia'])).toEqual(['kz']);
-    expect(ids(['international'])).toEqual(['ru', 'fr']);
-    expect(ids(['national', 'central-asia'])).toEqual(['uz', 'kz']);
-    expect(ids(['national', 'central-asia', 'international'])).toEqual(['uz', 'kz', 'ru', 'fr']);
-  });
-
-  it('counts per scope the events the window draws: a closed stage, an event with no day and one with no country count in none', () => {
-    const items = [
-      inCountry('uz-1', 'UZ'),
-      inCountry('uz-2', 'UZ', 'applying'),
-      inCountry('uz-closed', 'UZ', 'skipped'),
-      item('uz-month', { value: '2026-10', precision: 'month', certainty: 'confirmed' }, undefined, null, {
-        place: { country: 'UZ' },
-      }),
-      inCountry('kz', 'KZ'),
-      inCountry('ru', 'RU'),
-      inCountry('fr', 'FR'),
-      inCountry('none', undefined),
-    ];
-
-    expect(calendarScopePills(items, options)).toEqual([
-      { value: 'national', label: 'National', count: 2 },
-      { value: 'central-asia', label: 'Central Asia', count: 1 },
-      { value: 'international', label: 'International', count: 2 },
-    ]);
-    expect(calendarScopePills([], options).map((pill) => pill.count)).toEqual([0, 0, 0]);
-  });
-
-  it('reads the scope query as the regions it names, once each, in their order, and ignores the rest', () => {
-    expect(readCalendarScopes('national,central-asia')).toEqual(['national', 'central-asia']);
-    expect(readCalendarScopes('international,national,national')).toEqual(['national', 'international']);
-    expect(readCalendarScopes(['central-asia', 'national'])).toEqual(['national', 'central-asia']);
-    expect(readCalendarScopes('local,regional,bogus,')).toEqual([]);
-    expect(readCalendarScopes(undefined)).toEqual([]);
-    expect(readCalendarScopes(null)).toEqual([]);
-  });
-
-  it('writes the chosen scopes in the regions’ order, and nothing for none', () => {
-    expect(writeCalendarScopes(['central-asia', 'national'])).toBe('national,central-asia');
-    expect(writeCalendarScopes(['international'])).toBe('international');
-    expect(writeCalendarScopes(['bogus'])).toBeUndefined();
-    expect(writeCalendarScopes([])).toBeUndefined();
   });
 });

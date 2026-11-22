@@ -1,14 +1,14 @@
 # Domain
 
-_Last updated: 2026-11-20_
+_Last updated: 2026-11-22_
 
 Framework-free models and copy: Ocharo's configuration of the `fe-events` kit (`events/Events`: the catalog, the eight
 stages with their labels and classes, the workflow's custom fields (the spec `deployment/events/ocharo-workflow.json`
-mirrors), the labels shown for a stored workflow, kinds, scopes, how a new event is proposed; the scopes are National (UZ), Central Asia (KZ, KG, TJ, TM) and International (every other country), shared by the feed's chips and the calendar's pills) and the
+mirrors), the labels shown for a stored workflow, kinds, scopes, how a new event is proposed; the scopes are National (UZ), Central Asia (KZ, KG, TJ, TM) and International (every other country), shared by the feed's chips and the calendar's region filter) and the
 page's addresses, an event image's stored copy (`events/EventImages`: the backend route that serves SCFD's copy of an image
 and the kit's `imageSrc` resolver that returns that route, absolute against the page's origin, for each image with a `fileRef` and
 `null` for one with no copy), and the calendar's model (`events/EventsCalendar`: the days one visible range needs, and how an
 event with a known day becomes an all-day or timed block, coloured by stage from theme variables, an event not yet tracked a visible quiet tint; an event known only to its month or year has
-no day and is left out; and the scope pills' model: an event's scope from its country by the feed's own rule (none for an event with no country), the events kept by the chosen scopes, the count the window draws per scope, and the `?scope=` query's reading and writing); Events' sections (`shared/EventsSections`: the feed, the calendar, the reminders and the admins'
-Telegram delivery, their groups, addresses and route metadata); the Telegram delivery's default digest (it leaves out
+no day and is left out; an event's scope comes from its country by the feed's own rule, none for an event with no country), the calendar's filters (`events/CalendarFilters`: the choices of one region, kinds, stages, cities and sources, several at once, and a search of titles, city and organizer; a city or source value is trimmed and lowercase, as Events stores it; the events a filter keeps, where a facet with no choice keeps all and an event with none of a chosen facet (no country, no city) is kept by no choice; each facet's options with the events a choice would match, counted with every other facet's choices and the search applied but not its own, plus the events matching and the events drawn; and the choices' reading and writing as the facet bar's selection and as the address's `regions` (the first value, when it is one of Ocharo's regions, as the kit reads it), `kinds`, `stages`, `cities`, `sources` and `q` keys) over the page-neutral address keys and values the kit's feed writes too (`events/EventFilterQuery`: the six keys both pages share, the feed's `when` and `sort`, a list as a repeated key, and the shared keys of an address as the query a link to the other page carries); the pills' hints (`events/EventPillHints`: the one line of each of the 3 regions and 8 kinds, a function that adds each to its option, and the starting open delay and fade of the hint card); Events' sections (`shared/EventsSections`: the feed, the calendar, the reminders and the admins'
+Telegram delivery, their groups, addresses and route metadata, and which ones hold the shared filter card); the Telegram delivery's default digest (it leaves out
 skipped and rejected events) and event links (`delivery/`), the apps menu, and the interface messages (English shown; the uz and ru texts stay in the tables for when the language choice returns).

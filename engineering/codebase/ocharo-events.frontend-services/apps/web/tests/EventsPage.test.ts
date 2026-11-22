@@ -92,6 +92,8 @@ let deadlines: unknown[] = [];
 /** What the past-events strip's query answers (OE12); none unless a test sets it. */
 let pastOpen: unknown[] = [];
 let wrapper: VueWrapper | undefined;
+/** The router the page was mounted with: the address its filters are kept in. */
+let router: Awaited<ReturnType<typeof eventsRouter>>;
 
 /** What the mirrored facets route answers for a list of `total` events: Tashkent (UZ) and Almaty (KZ), each counted once. */
 const facetsOf = (total: number) => ({
@@ -196,6 +198,8 @@ afterEach(() => {
 async function render(
   role: 'owner' | 'editor' | 'viewer',
   initialLocation: EventsLocation = { view: 'feed', eventId: null },
+  /** The address's query when the page opens, `kinds=runway&q=silk`: the filters it carries. */
+  search = '',
 ) {
   const access = {
     busy: ref(false),
@@ -205,21 +209,20 @@ async function render(
     canEdit: computed(() => role !== 'viewer'),
     canAdmin: computed(() => role === 'owner'),
   };
+  router = await eventsRouter(
+    `${
+      initialLocation.view === 'event'
+        ? `/organizations/${ORG}/events/${initialLocation.eventId}`
+        : `/organizations/${ORG}/events`
+    }${search ? `?${search}` : ''}`,
+  );
   wrapper = mount(EventsPage, {
     props: {
       access: access as unknown as EventsAccess,
       workspace: workspace as unknown as EventsWorkspace,
       initialLocation,
     },
-    global: {
-      plugins: [
-        await eventsRouter(
-          initialLocation.view === 'event'
-            ? `/organizations/${ORG}/events/${initialLocation.eventId}`
-            : `/organizations/${ORG}/events`,
-        ),
-      ],
-    },
+    global: { plugins: [router] },
     attachTo: document.body,
   });
   await flushPromises();
@@ -248,6 +251,10 @@ const chip = (label: string) => wrapper!.findAll('button').find((item) => item.t
 const facetReads = () =>
   sent.filter((item) => item.method === 'GET' && item.url.pathname === `${CATALOG}/tracking/facets`);
 const bar = () => wrapper!.getComponent(FacetBar);
+/** The one filter card above the feed, which holds the bar and the feed's own controls. */
+const filterCard = () => wrapper!.get('[data-test="event-filters"]');
+/** The address's query the page keeps its filters in. */
+const query = () => router.currentRoute.value.query;
 const facetOf = (key: string) =>
   (bar().props('facets') as readonly FacetDefinition[]).find((definition) => definition.key === key) as
     FacetChoiceDefinition | undefined;
@@ -287,7 +294,9 @@ describe('events feed through the fe-events kit', () => {
     const feed = wrapper!.getComponent(EventsFeed);
     expect(Object.keys(feed.props())).not.toContain('variant');
     expect(Object.keys(feed.props())).not.toContain('shownFields');
-    expect(wrapper!.find('[data-test="events-toolbar"]').exists()).toBe(true);
+    // The bar is the card's: the kit's own toolbar is left out, its state handed to the feed instead.
+    expect(wrapper!.find('[data-test="events-toolbar"]').exists()).toBe(false);
+    expect(feed.props('filters')).toBeDefined();
     expect(wrapper!.get('[data-facet-match]').text()).toBe('2 of 2');
     expect(facetReads().length).toBeGreaterThan(0);
     const scopes = facetOf('scope')!.options;
@@ -443,6 +452,197 @@ describe('events feed through the fe-events kit', () => {
   });
 });
 
+describe('the filter card above the feed', () => {
+  it('is one card under the heading with the bar in it, and the feed has no toolbar of its own', async () => {
+    await render('editor');
+
+    expect(wrapper!.findAll('[data-test="event-filters"]')).toHaveLength(1);
+    expect(wrapper!.findAll('[data-facet-match]')).toHaveLength(1);
+    expect(wrapper!.findAll('[data-test="events-toolbar"]')).toHaveLength(0);
+    expect(filterCard().findComponent(FacetBar).exists()).toBe(true);
+    const classes = filterCard().classes();
+    expect(classes).toContain('rounded-2xl');
+    expect(classes).toContain('p-3');
+    expect(classes).toContain('sm:p-5');
+    // The card is the first thing in the feed's block, ahead of the feed's own content.
+    const block = wrapper!.get('[data-test="events-feed"]').element;
+    expect(block.children[0]).toBe(filterCard().element);
+    expect(
+      filterCard().element.compareDocumentPosition(wrapper!.get('[data-test="event-cards"]').element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('lays the bar out as the kit’s feed does on a phone, with the kit’s class', async () => {
+    await render('editor');
+
+    expect(bar().classes()).toContain('max-sm:[&_[data-facet-inline]]:flex-nowrap');
+    expect(bar().classes()).toContain('[&_[data-facet-clear-all]]:min-h-10');
+  });
+
+  it('puts the feed’s sort, Propose and overflow controls in the card, in its one actions row', async () => {
+    await render('editor');
+
+    const mount = filterCard().get('#feed-actions');
+    const row = wrapper!.get('[data-test="events-actions"]');
+    expect(mount.element.contains(row.element)).toBe(true);
+    expect(filterCard().element.contains(row.element)).toBe(true);
+    expect(wrapper!.findAll('[data-test="events-actions"]')).toHaveLength(1);
+    expect(row.find('select[name="sort"]').exists()).toBe(true);
+    expect(row.findAll('button').some((item) => item.text().trim() === 'Propose an event')).toBe(true);
+    expect(row.find('[data-test="feed-overflow"]').exists()).toBe(true);
+    // The bar's controls row is where they sit, after Filters.
+    expect(bar().element.contains(row.element)).toBe(true);
+  });
+
+  it('offers a viewer the sort and the overflow in the card, and no Propose', async () => {
+    await render('viewer');
+
+    const row = filterCard().get('[data-test="events-actions"]');
+    expect(row.find('select[name="sort"]').exists()).toBe(true);
+    expect(row.findAll('button').some((item) => item.text().trim() === 'Propose an event')).toBe(false);
+  });
+
+  it('gives the region and kind pills their one-line hints, after a 5 second pause with a 200 ms fade', async () => {
+    await render('editor');
+
+    expect(bar().props('hintOpenDelay')).toBe(5000);
+    expect(bar().props('hintFadeDuration')).toBe(200);
+    expect(facetOf('scope')!.options.map((option) => option.hint?.description)).toEqual([
+      undefined,
+      'Events in Uzbekistan.',
+      'Events in Kazakhstan, Kyrgyzstan, Tajikistan and Turkmenistan.',
+      'Events anywhere else in the world.',
+    ]);
+    expect(facetOf('kind')!.options.map((option) => option.hint?.description)).toEqual([
+      'A fashion show where designers present collections on a catwalk.',
+      'A business fair where brands, makers and buyers meet to sell and source goods.',
+    ]);
+    expect(facetOf('stage')!.options.some((option) => option.hint !== undefined)).toBe(false);
+    expect(facetOf('city')!.options.some((option) => option.hint !== undefined)).toBe(false);
+  });
+
+  it('greys a pill with a count of 0 that is not chosen, and keeps it pressable', async () => {
+    await render('editor');
+
+    expect(chip('International').attributes('data-empty')).toBeDefined();
+    expect(chip('International').attributes('disabled')).toBeUndefined();
+    expect(chip('Central Asia').attributes('data-empty')).toBeUndefined();
+  });
+
+  it('writes a chosen kind to the address as kinds and lists the feed with that kind', async () => {
+    await render('editor');
+    const before = lists().length;
+    expect(query().kinds).toBeUndefined();
+
+    await chip('Runway show').trigger('click');
+    await flushPromises();
+
+    expect(query().kinds).toEqual(['runway']);
+    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/events`);
+    expect(lists()).toHaveLength(before + 1);
+    expect(lastList().getAll('kinds')).toEqual(['runway']);
+    expect(facetReads().at(-1)!.url.searchParams.getAll('kinds')).toEqual(['runway']);
+    expect(chip('Runway show').attributes('aria-pressed')).toBe('true');
+  });
+
+  it('writes the region, the search, the sort and the picks behind Filters under the kit’s keys, and leaves the other keys', async () => {
+    await render('editor', undefined, 'tab=x');
+
+    await chip('Central Asia').trigger('click');
+    await choose({ scope: 'central-asia', kind: ['market', 'runway'], city: ['almaty'], stage: ['candidate'] });
+    await wrapper!.get('input[aria-label="Search events"]').setValue('silk');
+    await wrapper!.get('select[name="sort"]').setValue('added');
+    await flushPromises();
+
+    expect(query()).toEqual({
+      tab: 'x',
+      regions: 'central-asia',
+      kinds: ['market', 'runway'],
+      cities: ['almaty'],
+      stages: ['candidate'],
+      q: 'silk',
+      sort: 'added',
+    });
+  });
+
+  it('leaves out of the address what is no choice: no kinds, no search, the default sort and the All region', async () => {
+    await render('editor');
+    await chip('Runway show').trigger('click');
+    await wrapper!.get('select[name="sort"]').setValue('deadline');
+    await flushPromises();
+    expect(query().kinds).toEqual(['runway']);
+    expect(query().sort).toBe('deadline');
+
+    await chip('Runway show').trigger('click');
+    await wrapper!.get('select[name="sort"]').setValue('starts');
+    await flushPromises();
+
+    expect(query()).toEqual({});
+  });
+
+  it('opens on the filters the address holds and lists the feed with them', async () => {
+    await render('editor', undefined, 'regions=central-asia&kinds=trade-fair&cities=almaty&q=silk&sort=added');
+
+    expect(chip('Central Asia').attributes('aria-pressed')).toBe('true');
+    expect(chip('Trade fair').attributes('aria-pressed')).toBe('true');
+    expect((wrapper!.get('input[aria-label="Search events"]').element as HTMLInputElement).value).toBe('silk');
+    expect((wrapper!.get('select[name="sort"]').element as HTMLSelectElement).value).toBe('added');
+    expect(wrapper!.get('[data-facet-chips]').text()).toContain('City: Almaty');
+    const read = lastList();
+    expect(read.getAll('countries')).toEqual(['KZ', 'KG', 'TJ', 'TM']);
+    expect(read.getAll('kinds')).toEqual(['trade-fair']);
+    expect(read.getAll('cities')).toEqual(['almaty']);
+    expect(read.get('text')).toBe('silk');
+    expect(read.get('sort')).toBe('added');
+  });
+
+  it('follows the address on back and forward, and reads a region that is none as no region', async () => {
+    await render('editor');
+
+    await router.replace({ query: { kinds: 'runway', regions: 'central-asia' } });
+    await flushPromises();
+    expect(chip('Runway show').attributes('aria-pressed')).toBe('true');
+    expect(chip('Central Asia').attributes('aria-pressed')).toBe('true');
+    expect(lastList().getAll('kinds')).toEqual(['runway']);
+
+    await router.replace({ query: { regions: 'nowhere' } });
+    await flushPromises();
+    expect(chip('Runway show').attributes('aria-pressed')).toBe('false');
+    expect(chip('Central Asia').attributes('aria-pressed')).toBe('false');
+    expect(lastList().has('kinds')).toBe(false);
+    expect(lastList().has('countries')).toBe(false);
+  });
+
+  it('keeps a search typed with a trailing space as typed while the address holds it trimmed', async () => {
+    await render('editor');
+
+    await wrapper!.get('input[aria-label="Search events"]').setValue('silk ');
+    await flushPromises();
+
+    expect(query().q).toBe('silk');
+    expect((wrapper!.get('input[aria-label="Search events"]').element as HTMLInputElement).value).toBe('silk ');
+  });
+
+  it('keeps the filters in the address while an event is open and when it is closed again', async () => {
+    await render('editor', undefined, 'kinds=runway');
+    await pill('deadlines').trigger('click');
+    await flushPromises();
+
+    await wrapper!.get('[data-test="deadline"] a').trigger('click');
+    await flushPromises();
+
+    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/events/${FASHION_WEEK}`);
+    expect(query().kinds).toBe('runway');
+    // The feed stays mounted behind the event, so the card and its choice are still there when it is closed.
+    await wrapper!.get('[data-test="back-to-feed"]').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.path).toBe(`/organizations/${ORG}/events`);
+    expect(query().kinds).toBe('runway');
+    expect(chip('Runway show').attributes('aria-pressed')).toBe('true');
+  });
+});
+
 /** A confirmed event that ended on 20 September: past, and still to close (OE12). */
 const endedItem = () => ({
   event: event(
@@ -473,8 +673,8 @@ describe('attention pills between the facet bar and the cards', () => {
     expect(wrapper!.find('[data-test="attention-panel"]').exists()).toBe(false);
     expect(wrapper!.find('[data-test="deadline"]').exists()).toBe(false);
     expect(wrapper!.find('[data-test="past-open"]').exists()).toBe(false);
-    // The pills sit under the bar and ahead of the cards.
-    const toolbar = wrapper!.get('[data-test="events-toolbar"]').element;
+    // The pills sit under the filter card and ahead of the cards.
+    const toolbar = filterCard().element;
     const pills = wrapper!.get('[data-test="attention-pills"]').element;
     const cards = wrapper!.get('[data-test="event-cards"]').element;
     expect(toolbar.compareDocumentPosition(pills) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

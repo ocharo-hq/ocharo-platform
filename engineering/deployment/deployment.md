@@ -1,6 +1,6 @@
 # Deployment and local runtime
 
-*Last updated: 2026-11-20*
+*Last updated: 2026-11-22*
 
 ## Artifacts and ownership
 
@@ -140,6 +140,15 @@ organization API boundary and requires current membership.
 Use the shared [port ledger](../../../../../../../../../conventions/deployment/hosting/ports.md) when adding services.
 Default Vite uses mkcert; certificate trust stays user-controlled. Development and browser checks use HTTPS only. Vite proxies `/api` to the
 HTTPS development API. Browser application and API requests remain same-origin.
+
+### Replay mode
+
+Ocharo Events' dev server can answer its whole `/api` itself from a snapshot of the dev API's real responses, for working on the
+layout locally with real events: `pnpm dev:replay` from `codebase/ocharo-events.frontend-services/` (still `https://localhost:8292`). Live dev
+data is out of reach from `localhost` (the dev Identity accepts only the dev callback, the edge rejects a `localhost` Host), so no proxy and
+no sign-in is involved: the session is synthetic, filtering, sorting, facet counts and the summary are computed over the snapshot, and
+every write answers 403. The snapshot lives in the ignored `.local/events-replay/` and is captured by hand from a signed-in dev tab;
+`apps/web/dev/dev.md` holds the capture, the served routes and the simplifications. `pnpm dev` and the production build are unchanged.
 
 ## CI and publication
 

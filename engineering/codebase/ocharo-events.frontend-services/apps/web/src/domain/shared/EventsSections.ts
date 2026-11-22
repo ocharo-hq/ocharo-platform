@@ -20,9 +20,14 @@ export interface EventsSectionEntry {
   readonly group: EventsSectionGroup;
   /** Whether only an organization admin (`events:admin`) is offered it; the page answers a member itself. */
   readonly adminOnly: boolean;
+  /**
+   * Whether the page holds the shared filter card (the feed and the calendar): a link to it carries the filters the
+   * address being left holds, so a choice made on one page is there on the other. Settings' places hold none.
+   */
+  readonly sharesFilters?: boolean;
 }
 
-/** An entry as one session sees it: its address for the session's organization. */
+/** An entry as one session sees it: its address for the session's organization, with the filters it carries. */
 export interface EventsSectionLink extends EventsSectionEntry {
   readonly href: string;
 }
@@ -33,8 +38,8 @@ export interface EventsSectionLink extends EventsSectionEntry {
  * session is offered.
  */
 export const EventsSections: readonly EventsSectionEntry[] = [
-  { id: 'feed', label: 'Feed', group: EventsSectionGroup.Main, adminOnly: false },
-  { id: 'calendar', label: 'Calendar', group: EventsSectionGroup.Main, adminOnly: false },
+  { id: 'feed', label: 'Feed', group: EventsSectionGroup.Main, adminOnly: false, sharesFilters: true },
+  { id: 'calendar', label: 'Calendar', group: EventsSectionGroup.Main, adminOnly: false, sharesFilters: true },
   { id: 'reminders', label: 'Reminders', group: EventsSectionGroup.Settings, adminOnly: false },
   {
     id: 'telegram',

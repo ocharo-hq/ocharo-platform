@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue';
-import { EventDetail, EventsFeed, type EventsClient } from '@wow-two-beta/fe-events/kit';
+import {
+  EventDetail,
+  EventsFeed,
+  eventsFacetBarLabels,
+  useEventsFilters,
+  type EventsClient,
+} from '@wow-two-beta/fe-events/kit';
 
 import { useUiLocale } from '@/application/shared/UseUiLocale';
+import { bindAddressFilters } from '@/application/events/UseAddressFilters';
 import type { EventsAccess, EventsWorkspace } from '@/application/events/UseEventsAccess';
 import { createEventsPageClient, useEventToday, useEventsNavigation } from '@/application/events/UseEvents';
 import { usePastToClose } from '@/application/events/UsePastToClose';
@@ -19,19 +26,27 @@ import {
   type EventsLocation,
 } from '@/domain/events/Events';
 import { storedImageSrc } from '@/domain/events/EventImages';
+import { feedFilterQueryKeys } from '@/domain/events/EventFilterQuery';
 
+import EventFilterCard from '../EventFilterCard.vue';
 import PastEventsStrip from '../PastEventsStrip.vue';
 
 /**
  * Records events where Ocharo could show its products; it never applies, registers or pays. The page renders WoW2 Events'
  * own screens from `fe-events`' kit (OE07) over this app's mirror of Events' routes: the organization's tracking feed
- * (`EventsFeed` v2: a facet bar with server counts, a sort, a grid of the kit's `EventMediaCard`s that loads more on
- * scroll, quick Shortlist and Skip in each card's menu; skipped and rejected hidden until asked, scope chips, "Add event"
- * publishing at once) and one event's detail: its facts and sources, with no tracking card until that is redesigned (developer,
- * 2026-11-20; the kit's `EventDetail` shows the card only when `trackable`, so the page leaves it off). The feed's attention
- * pills sit between its bar and its grid: the kit's own application deadlines in the next 14 days, and Ocharo's "past to
- * close" (`attention` + the `#attention` slot), which unfolds `PastEventsStrip` to close each ended event Ocharo was
- * pursuing (OE12); each shows its count and is gone at zero.
+ * (`EventsFeed` v2: a grid of the kit's `EventMediaCard`s that loads more on scroll, quick Shortlist and Skip in each
+ * card's menu; skipped and rejected hidden until asked, "Add event" publishing at once) and one event's detail: its facts
+ * and sources, with no tracking card until that is redesigned (developer, 2026-11-20; the kit's `EventDetail` shows the
+ * card only when `trackable`, so the page leaves it off).
+ *
+ * The filters are the kit's shared state (`useEventsFilters`, with server counts) in the filter card the calendar shares
+ * (`EventFilterCard`: a search, Region and Kind pills with hints, Stage, City, Source and the date presets behind
+ * "Filters"), above the feed (developer, 2026-11-22), which lists from that state (`filters`) and has no bar of its own:
+ * its sort, "Propose an event" and overflow menu move into the card (`actionsTo`). The address carries the state
+ * (`filters.toRouteQuery()` replaced in place, read back on load and on back and forward: `bindAddressFilters`), under the
+ * keys the calendar reads too. The feed's attention pills sit between the card and the grid: the kit's own application
+ * deadlines in the next 14 days, and Ocharo's "past to close" (`attention` + the `#attention` slot), which unfolds
+ * `PastEventsStrip` to close each ended event Ocharo was pursuing (OE12); each shows its count and is gone at zero.
  */
 defineOptions({ name: 'EventsPage' });
 const props = defineProps<{
@@ -56,6 +71,30 @@ const workflow = ocharoWorkflow();
 const kinds = ocharoKinds();
 const regions = ocharoRegions();
 const proposal = ocharoProposal();
+/**
+ * The filter state, read from the address on load and kept in it after: the card edits it and the feed lists from it.
+ * It reads through the same client as the feed, so a write that makes the feed read again refreshes the counts too.
+ */
+const filters = useEventsFilters({
+  client: feedClient,
+  catalog: OcharoEventsCatalog,
+  locale: uiLocale,
+  today,
+  kinds,
+  tracking: true,
+  workflow,
+  hiddenStages: ocharoClosedStages,
+  regions,
+});
+const { search, selection, facetDefinitions, matchCount, totalCount } = filters;
+bindAddressFilters({
+  keys: feedFilterQueryKeys,
+  write: () => filters.toRouteQuery(),
+  read: (query) => filters.fromRouteQuery(query),
+});
+const labels = computed(() => eventsFacetBarLabels(uiLocale.value));
+/** The element in the card the feed's sort, "Propose an event" and overflow menu move into. */
+const actionsId = 'feed-actions';
 const eventHref = (id: string) => eventsPath(organizationId(), { view: 'event', eventId: id });
 /** The key of Ocharo's one attention pill, which the feed hands back to the `#attention` slot. */
 const pastKey = 'past';
@@ -94,7 +133,16 @@ function refreshFeed(): void {
       <h1 class="sr-only">{{ t('Feed') }}</h1>
     </header>
     <!-- The feed stays mounted behind an open event, so its filters survive the round trip. -->
-    <div v-show="showsFeed" data-test="events-feed">
+    <div v-show="showsFeed" class="flex flex-col gap-4" data-test="events-feed">
+      <EventFilterCard
+        v-model="selection"
+        v-model:search="search"
+        :facet-definitions="facetDefinitions"
+        :labels="labels"
+        :match-count="matchCount"
+        :total-count="totalCount"
+        :actions-id="actionsId"
+      />
       <EventsFeed
         :client="feedClient"
         :catalog="OcharoEventsCatalog"
@@ -105,6 +153,8 @@ function refreshFeed(): void {
         :workflow="workflow"
         :hidden-stages="ocharoClosedStages"
         :regions="regions"
+        :filters="filters"
+        :actions-to="`#${actionsId}`"
         :quick-stages="ocharoQuickStages"
         :can-track="canTrack"
         :can-propose="canTrack"

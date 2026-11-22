@@ -53,7 +53,11 @@ export function useEventToday() {
   return today;
 }
 
-/** Moves between the feed and one event inside one document. */
+/**
+ * Moves between the feed and one event inside one document. The address keeps its query across the move, so the feed's
+ * filters, which the address carries, are still there when the event is closed and the page, which stays mounted,
+ * does not read an empty query as a clean filter.
+ */
 export function useEventsNavigation(access: EventsAccess, organizationId: () => string, initial: EventsLocation) {
   const current = shallowRef<EventsLocation>(initial);
   const route = useRoute();
@@ -61,7 +65,7 @@ export function useEventsNavigation(access: EventsAccess, organizationId: () => 
   async function open(next: EventsLocation): Promise<boolean> {
     if (access.busy.value) return false;
     const path = eventsPath(organizationId(), next);
-    if (route.path !== path && (await router.push(path))) return false;
+    if (route.path !== path && (await router.push({ path, query: route.query }))) return false;
     current.value = next;
     return true;
   }

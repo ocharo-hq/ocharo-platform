@@ -7,6 +7,7 @@ import { defineConfig, type Plugin } from 'vite';
 import mkcert from 'vite-plugin-mkcert';
 import { colorModeScript } from '@wow-two-beta/fe/foundation/primitives';
 import { proxyUnavailable } from './dev/ProxyProblem';
+import { replayApi } from './dev/ReplayApi';
 import { ThemeStorageKey } from './src/bootstrap/theme';
 
 /** Keeps development proxy overrides on verified HTTPS endpoints. */
@@ -32,34 +33,50 @@ function themeScript(): Plugin {
   };
 }
 
+/** Where the replay snapshot lives: the platform repository's ignored `.local/events-replay`. */
+const replayDir = fileURLToPath(new URL('../../../../../.local/events-replay', import.meta.url));
+
 export default defineConfig(({ command }) => {
+  // `pnpm dev:replay`: the dev server answers `/api` itself from a stored snapshot (`dev/dev.md`), with no proxy.
+  const replay = command === 'serve' && process.env.VITE_REPLAY === '1';
   return {
     define: { __APP_VERSION__: JSON.stringify(process.env.APP_VERSION || 'dev') },
     base: '/',
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
-    plugins: [vue(), tailwindcss(), themeScript(), ...(command === 'serve' ? [mkcert()] : [])],
+    plugins: [
+      vue(),
+      tailwindcss(),
+      themeScript(),
+      ...(command === 'serve' ? [mkcert()] : []),
+      ...(replay ? [replayApi({ dir: replayDir })] : []),
+    ],
     build: { outDir: 'dist', emptyOutDir: true, target: 'es2022' },
     server: {
       host: 'localhost',
       port: 8292,
       strictPort: true,
       https: {},
-      proxy: {
-        // Every API route rides this proxy, the Identity session routes too (`/api/identity/session`, `sign-in`, the
-        // OIDC `callback`, `sign-out`). `changeOrigin` stays off, so the API sees this origin: the BFF builds its
-        // callback as https://localhost:8292/api/identity/callback and the session cookie lands on this origin.
-        '/api': {
-          target: httpsTarget(process.env.VITE_API_TARGET ?? 'https://localhost:8290'),
-          changeOrigin: false,
-          secure: true,
-          configure: (proxy) => {
-            proxy.on('error', proxyUnavailable);
-          },
-          ...(command === 'serve' && process.env.VITE_API_CA_PATH
-            ? { agent: new Agent({ ca: readFileSync(process.env.VITE_API_CA_PATH) }) }
-            : {}),
-        },
-      },
+      ...(replay
+        ? {}
+        : {
+            proxy: {
+              // Every API route rides this proxy, the Identity session routes too (`/api/identity/session`,
+              // `sign-in`, the OIDC `callback`, `sign-out`). `changeOrigin` stays off, so the API sees this origin: the
+              // BFF builds its callback as https://localhost:8292/api/identity/callback and the session cookie lands on
+              // this origin.
+              '/api': {
+                target: httpsTarget(process.env.VITE_API_TARGET ?? 'https://localhost:8290'),
+                changeOrigin: false,
+                secure: true,
+                configure: (proxy) => {
+                  proxy.on('error', proxyUnavailable);
+                },
+                ...(command === 'serve' && process.env.VITE_API_CA_PATH
+                  ? { agent: new Agent({ ca: readFileSync(process.env.VITE_API_CA_PATH) }) }
+                  : {}),
+              },
+            },
+          }),
     },
   };
 });

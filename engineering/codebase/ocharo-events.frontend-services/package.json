@@ -10,6 +10,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @ocharoevents/web dev",
+    "dev:replay": "pnpm --filter @ocharoevents/web dev:replay",
     "typecheck": "pnpm --filter @ocharoevents/web typecheck",
     "build": "pnpm --filter @ocharoevents/web build",
     "deploy": "pnpm build && node scripts/deploy.mjs",
