@@ -44,7 +44,8 @@ ChatGPT builds these in the pull order of wow-two-ws `system/sessions/events-int
 | Item | Type | Notes |
 |---|---|---|
 | Sidebar tooltips | design | The sidebar's rail (collapsed) shows icons with no labels, so each menu item needs the fe sdk's own tooltip with its label and any badge or state; build it once in the SDK's `SidebarMenu` so every Ocharo app gets it, and keep phone navigation unaffected (developer, 2026-11-22). |
-| Calendar filters | design | Rework the Events calendar's filters: a quick region control plus one Filters popover shared with the feed, active filters as removable chips; analysis in the 2026-11-22 chat, built after the developer picks a layout. |
+| Events filters, one for feed and calendar | design | One filter panel, a card of its own in the page content on tablet and desktop, shared by the feed and the calendar: the same facets (region, kind, stage, city, source) in the same place and style, region as an enabled/disabled toggle row styled like the harvest console's pipeline switches, active filters as removable chips; a Today control that filters to events happening today (developer, 2026-11-22). Layout analysis in the 2026-11-22 chat; built after the developer picks one. |
+| Events layout pass | design | Review every Events page and fix its layout until it looks right at PC, tablet and phone widths, one page at a time with a review file and screenshots per width (developer, 2026-11-22: "fix all issues of layout of events ui and make sure it looks well in all pc / tablet / mobile views"). |
 | Provider delivery | feature | Connect one authorized provider with durable send receipts. |
 | Publishing recovery | engineering | Verify restart, lease expiry and crash-after-send reconciliation. |
 | Metrics observations | feature | Distinguish unknown, stale, unsupported and measured zero. |
